@@ -1,0 +1,573 @@
+schema_version: v1
+metadata:
+  generated_at: "2026-11-23T02:00:00Z"
+  scopes:
+    - projects/acme-cicd
+components:
+  - id: acme_artifact_registry
+    title: Artifact Registry (acme-apps)
+    subtitle: DOCKER / europe-southwest1
+    icon_key: artifact_registry
+    component_kind: DATASTORE
+    project_id: acme-cicd
+    backed_by:
+      - uri: //artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps
+        asset_type: artifactregistry.googleapis.com/Repository
+        project_id: acme-cicd
+    inline_meta:
+      - label: Docker Images
+        value: "643"
+  - id: acme_dev
+    title: Target Project (acme-dev)
+    subtitle: Out-of-scope deployment target
+    icon_key: project_cohort
+    component_kind: EXTERNAL_TARGET
+    project_id: acme-dev
+    backed_by:
+      - uri: //cloudresourcemanager.googleapis.com/projects/acme-dev
+        asset_type: cloudresourcemanager.googleapis.com/Project
+        project_id: acme-dev
+  - id: acme_private_modules
+    title: Terraform Modules Bucket
+    subtitle: gs://acme-private-modules
+    icon_key: cloud_storage
+    component_kind: DATASTORE
+    project_id: acme-cicd
+    backed_by:
+      - uri: //storage.googleapis.com/acme-private-modules
+        asset_type: storage.googleapis.com/Bucket
+        project_id: acme-cicd
+    inline_meta:
+      - label: Region
+        value: europe-southwest1
+  - id: acme_prod
+    title: Target Project (acme-prod)
+    subtitle: Out-of-scope deployment target
+    icon_key: project_cohort
+    component_kind: EXTERNAL_TARGET
+    project_id: acme-prod
+    backed_by:
+      - uri: //cloudresourcemanager.googleapis.com/projects/acme-prod
+        asset_type: cloudresourcemanager.googleapis.com/Project
+        project_id: acme-prod
+  - id: acme_tfstate
+    title: Terraform State Bucket
+    subtitle: gs://acme-tfstate
+    icon_key: cloud_storage
+    component_kind: DATASTORE
+    project_id: acme-cicd
+    backed_by:
+      - uri: //storage.googleapis.com/acme-tfstate
+        asset_type: storage.googleapis.com/Bucket
+        project_id: acme-cicd
+    inline_meta:
+      - label: Region
+        value: europe-southwest1
+  - id: atlantis
+    title: Atlantis PR Automation
+    subtitle: gke:cicd / ns:atlantis
+    icon_key: k8s_workload
+    component_kind: WORKLOAD
+    project_id: acme-cicd
+    backed_by:
+      - uri: //container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/apps/deployments/atlantis
+        asset_type: apps.k8s.io/Deployment
+        project_id: acme-cicd
+      - uri: //iam.googleapis.com/projects/acme-cicd/serviceAccounts/atlantis@acme-cicd.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: acme-cicd
+      - uri: //secretmanager.googleapis.com/projects/acme-cicd/secrets/github-webhook-secret
+        asset_type: secretmanager.googleapis.com/Secret
+        project_id: acme-cicd
+    inline_meta:
+      - label: Service Account
+        value: atlantis@acme-cicd.iam
+      - label: Secret
+        value: github-webhook-secret
+  - id: atlantis_https_lb
+    title: Atlantis HTTPS Ingress
+    subtitle: atlantis.cicd.example.com/events
+    icon_key: cloud_load_balancing
+    component_kind: INGRESS
+    project_id: acme-cicd
+    backed_by:
+      - uri: //compute.googleapis.com/projects/acme-cicd/global/forwardingRules/k8s2-fs-demo1234-atlantis-ingress-0001
+        asset_type: compute.googleapis.com/GlobalForwardingRule
+        project_id: acme-cicd
+      - uri: //container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/networking.k8s.io/ingresses/atlantis
+        asset_type: networking.k8s.io/Ingress
+        project_id: acme-cicd
+      - uri: //container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/services/atlantis
+        asset_type: k8s.io/Service
+        project_id: acme-cicd
+    inline_meta:
+      - label: Public IP
+        value: 203.0.113.41:443
+      - label: Backend
+        value: NEG -> svc/atlantis:4141
+  - id: cloudbuild_staging_bucket
+    title: Cloud Build Staging Bucket
+    subtitle: gs://acme-cicd_cloudbuild
+    icon_key: cloud_storage
+    component_kind: DATASTORE
+    project_id: acme-cicd
+    backed_by:
+      - uri: //storage.googleapis.com/acme-cicd_cloudbuild
+        asset_type: storage.googleapis.com/Bucket
+        project_id: acme-cicd
+    inline_meta:
+      - label: Region
+        value: europe-southwest1
+  - id: cloudbuild_triggers
+    title: Cloud Build CI/CD Pipelines
+    subtitle: 20 triggers (europe-southwest1)
+    icon_key: cloud_build
+    component_kind: PIPELINE
+    project_id: acme-cicd
+    backed_by:
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-api-dev
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-api-prod
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-frontend-dev
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-frontend-prod
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ingestion-dev
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ingestion-prod
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ml-dev
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ml-prod
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-worker-dev
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-worker-prod
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-api-dev
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-api-prod
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-frontend-dev
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-frontend-prod
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-worker-dev
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-worker-prod
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-dev
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-prod
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-dev
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-prod
+        asset_type: cloudbuild.googleapis.com/BuildTrigger
+        project_id: acme-cicd
+      - uri: //iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: acme-cicd
+    inline_meta:
+      - label: Image Builds
+        value: 10 triggers
+      - label: App Deploys
+        value: 6 triggers
+      - label: Terraform
+        value: 4 triggers
+      - label: Runner SA
+        value: cloudbuild-runner@acme-cicd
+  - id: github_acme
+    title: GitHub (github-acme)
+    subtitle: acme-corp/platform-services
+    icon_key: github
+    component_kind: EXTERNAL_CALLER
+    project_id: external
+    backed_by:
+      - uri: //github.com/acme-corp/platform-services
+        asset_type: external.github.com/Repository
+        project_id: external
+  - id: sonarqube
+    title: SonarQube Code Quality
+    subtitle: gke:cicd / ns:sonarqube
+    icon_key: k8s_workload
+    component_kind: WORKLOAD
+    project_id: acme-cicd
+    backed_by:
+      - uri: //container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/apps/deployments/sonarqube
+        asset_type: apps.k8s.io/Deployment
+        project_id: acme-cicd
+      - uri: //iam.googleapis.com/projects/acme-cicd/serviceAccounts/sonarqube@acme-cicd.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: acme-cicd
+      - uri: //secretmanager.googleapis.com/projects/acme-cicd/secrets/sonarqube-db-password
+        asset_type: secretmanager.googleapis.com/Secret
+        project_id: acme-cicd
+    inline_meta:
+      - label: Service Account
+        value: sonarqube@acme-cicd.iam
+      - label: Secret
+        value: sonarqube-db-password
+  - id: sonarqube_db
+    title: Cloud SQL (sonarqube)
+    subtitle: POSTGRES_16 / 10.100.0.5
+    icon_key: cloud_sql
+    component_kind: DATASTORE
+    project_id: acme-cicd
+    backed_by:
+      - uri: //sqladmin.googleapis.com/projects/acme-cicd/instances/sonarqube
+        asset_type: sqladmin.googleapis.com/Instance
+        project_id: acme-cicd
+    inline_meta:
+      - label: Tier
+        value: db-custom-2-7680
+      - label: PSA Tenant
+        value: p1234567890abcdef-tp
+  - id: sonarqube_https_lb
+    title: SonarQube HTTPS Ingress
+    subtitle: sonarqube.cicd.example.com/*
+    icon_key: cloud_load_balancing
+    component_kind: INGRESS
+    project_id: acme-cicd
+    backed_by:
+      - uri: //compute.googleapis.com/projects/acme-cicd/global/forwardingRules/k8s2-fs-demo1234-sonarqube-ingress-0002
+        asset_type: compute.googleapis.com/GlobalForwardingRule
+        project_id: acme-cicd
+      - uri: //container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/networking.k8s.io/ingresses/sonarqube
+        asset_type: networking.k8s.io/Ingress
+        project_id: acme-cicd
+      - uri: //container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/services/sonarqube
+        asset_type: k8s.io/Service
+        project_id: acme-cicd
+    inline_meta:
+      - label: Public IP
+        value: 203.0.113.42:443
+      - label: Backend
+        value: NEG -> svc/sonarqube:9000
+  - id: vpc_cicd_net
+    title: "VPC Network: cicd"
+    subtitle: Subnet cicd-k8s (10.10.0.0/20)
+    icon_key: virtual_private_cloud
+    component_kind: COHORT
+    project_id: acme-cicd
+    backed_by:
+      - uri: //compute.googleapis.com/projects/acme-cicd/global/networks/cicd
+        asset_type: compute.googleapis.com/Network
+        project_id: acme-cicd
+      - uri: //compute.googleapis.com/projects/acme-cicd/regions/europe-southwest1/subnetworks/cicd-k8s
+        asset_type: compute.googleapis.com/Subnetwork
+        project_id: acme-cicd
+    inline_meta:
+      - label: Routing Mode
+        value: REGIONAL
+      - label: PGA
+        value: Enabled
+containers:
+  - id: ext_deploy_targets
+    title: Deployment Target Projects
+    subtitle: Out-of-scope GCP targets
+    kind: EXTERNAL_ZONE
+  - id: ext_source
+    title: External Source Control
+    subtitle: GitHub SaaS
+    kind: EXTERNAL_ZONE
+  - id: gke_cicd
+    title: "GKE Cluster: cicd"
+    subtitle: europe-southwest1-b (Standard)
+    kind: GKE_CLUSTER
+    parent_container_id: proj_acme_cicd
+    backed_by:
+      - uri: //container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd
+        asset_type: container.googleapis.com/Cluster
+        project_id: acme-cicd
+  - id: proj_acme_cicd
+    title: "Project: acme-cicd"
+    subtitle: europe-southwest1
+    kind: PROJECT
+  - id: psa_tenant
+    title: Google PSA Backing Zone
+    subtitle: p1234567890abcdef-tp
+    kind: PSA_ZONE
+views:
+  - id: view_0_system_index
+    title: System Index Map
+    subtitle: 3 logical views across 14 architecture components
+    archetype: landscape_matrix
+    accent_mode: MIXED
+    placements:
+      - component_id: github_acme
+        column: 0
+      - component_id: cicd_delivery_pipeline
+        column: 1
+      - component_id: gke_developer_platform
+        column: 2
+      - component_id: shared_network_psa
+        column: 3
+      - component_id: acme_dev
+        column: 4
+      - component_id: acme_prod
+        column: 4
+    edges:
+      - from: cicd_delivery_pipeline
+        to: acme_dev
+        verb: deploys to
+        flow_kind: CICD
+        provenance: VERIFIED
+      - from: cicd_delivery_pipeline
+        to: acme_prod
+        verb: deploys to
+        flow_kind: CICD
+        provenance: VERIFIED
+      - from: cicd_delivery_pipeline
+        to: gke_developer_platform
+        verb: Terraform state
+        flow_kind: CICD
+        provenance: VERIFIED
+      - from: github_acme
+        to: cicd_delivery_pipeline
+        verb: triggers CI/CD
+        flow_kind: CICD
+        provenance: VERIFIED
+      - from: gke_developer_platform
+        to: shared_network_psa
+        verb: PSA topology
+        flow_kind: RUNTIME
+        provenance: VERIFIED
+  - id: cicd_delivery_pipeline
+    title: CI/CD Delivery Pipeline
+    subtitle: GitHub triggers, Docker image builds, Terraform automation, and cross-project deploys
+    archetype: stage_pipeline
+    accent_mode: CICD
+    container_ids:
+      - ext_deploy_targets
+      - ext_source
+      - proj_acme_cicd
+    placements:
+      - component_id: github_acme
+        container_id: ext_source
+        column: 0
+      - component_id: cloudbuild_triggers
+        container_id: proj_acme_cicd
+        column: 1
+      - component_id: acme_artifact_registry
+        container_id: proj_acme_cicd
+        column: 2
+      - component_id: cloudbuild_staging_bucket
+        container_id: proj_acme_cicd
+        column: 2
+      - component_id: acme_tfstate
+        container_id: proj_acme_cicd
+        column: 2
+        off_page_refs:
+          - target_view_id: gke_developer_platform
+            label: Terraform state
+            direction: OUT
+      - component_id: acme_private_modules
+        container_id: proj_acme_cicd
+        column: 2
+        off_page_refs:
+          - target_view_id: gke_developer_platform
+            label: Terraform state
+            direction: OUT
+      - component_id: acme_dev
+        container_id: ext_deploy_targets
+        column: 3
+      - component_id: acme_prod
+        container_id: ext_deploy_targets
+        column: 3
+    edges:
+      - from: cloudbuild_triggers
+        to: acme_artifact_registry
+        verb: pushes images
+        flow_kind: CICD
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - d8ea356f3ea34a0f
+        via_bus_id: cb_outputs
+      - from: cloudbuild_triggers
+        to: acme_dev
+        verb: deploys dev
+        flow_kind: CICD
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 621e8967742796ae
+        via_bus_id: cb_outputs
+      - from: cloudbuild_triggers
+        to: acme_private_modules
+        verb: reads modules
+        flow_kind: CICD
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 926a1807d4424f5b
+        via_bus_id: cb_outputs
+      - from: cloudbuild_triggers
+        to: acme_prod
+        verb: deploys prod
+        flow_kind: CICD
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - cd5449f91a78548e
+        via_bus_id: cb_outputs
+      - from: cloudbuild_triggers
+        to: acme_tfstate
+        verb: updates state
+        flow_kind: CICD
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 79a1accb3b796a4e
+        via_bus_id: cb_outputs
+      - from: cloudbuild_triggers
+        to: cloudbuild_staging_bucket
+        verb: stages builds
+        flow_kind: CICD
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 37843a63c84a755f
+        via_bus_id: cb_outputs
+      - from: github_acme
+        to: cloudbuild_triggers
+        verb: triggers builds
+        flow_kind: CICD
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 190f6dfb3f1fa702
+  - id: gke_developer_platform
+    title: GKE Developer Platform & Ingress
+    subtitle: External HTTPS Load Balancers routing through GKE cicd NEGs to Atlantis and SonarQube
+    archetype: landscape_matrix
+    accent_mode: RUNTIME
+    container_ids:
+      - gke_cicd
+      - proj_acme_cicd
+      - psa_tenant
+    placements:
+      - component_id: atlantis_https_lb
+        container_id: proj_acme_cicd
+        column: 0
+      - component_id: sonarqube_https_lb
+        container_id: proj_acme_cicd
+        column: 0
+      - component_id: atlantis
+        container_id: gke_cicd
+        column: 1
+      - component_id: sonarqube
+        container_id: gke_cicd
+        column: 1
+      - component_id: acme_tfstate
+        container_id: proj_acme_cicd
+        column: 2
+        off_page_refs:
+          - target_view_id: cicd_delivery_pipeline
+            label: CI/CD state
+            direction: IN
+      - component_id: acme_private_modules
+        container_id: proj_acme_cicd
+        column: 2
+        off_page_refs:
+          - target_view_id: cicd_delivery_pipeline
+            label: CI/CD modules
+            direction: IN
+      - component_id: sonarqube_db
+        container_id: psa_tenant
+        column: 2
+        off_page_refs:
+          - target_view_id: shared_network_psa
+            label: PSA topology
+            direction: OUT
+    edges:
+      - from: atlantis
+        to: acme_private_modules
+        verb: fetches modules
+        flow_kind: CICD
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - d96489b5c99bca73
+        via_bus_id: atlantis_gcs
+      - from: atlantis
+        to: acme_tfstate
+        verb: locks tfstate
+        flow_kind: CICD
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - c21876e6fb659711
+        via_bus_id: atlantis_gcs
+      - from: atlantis_https_lb
+        to: atlantis
+        verb: HTTPS /events
+        flow_kind: RUNTIME
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - bb189d721e6415c1
+          - 2d646bade955f34c
+      - from: sonarqube
+        to: sonarqube_db
+        verb: private IP SQL
+        flow_kind: RUNTIME
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 21fd172f5bac6a44
+      - from: sonarqube_https_lb
+        to: sonarqube
+        verb: HTTPS /*
+        flow_kind: RUNTIME
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - d314ffe57573124b
+          - 7dd1c5be5b2dbc53
+  - id: shared_network_psa
+    title: Shared Network & PSA Topology
+    subtitle: VPC cicd private peering to Google-managed PSA tenant hosting Cloud SQL sonarqube
+    archetype: hub_spoke
+    accent_mode: RUNTIME
+    container_ids:
+      - gke_cicd
+      - proj_acme_cicd
+      - psa_tenant
+    placements:
+      - component_id: atlantis
+        container_id: gke_cicd
+        column: 0
+      - component_id: sonarqube
+        container_id: gke_cicd
+        column: 0
+      - component_id: vpc_cicd_net
+        container_id: proj_acme_cicd
+        column: 1
+      - component_id: sonarqube_db
+        container_id: psa_tenant
+        column: 2
+    edges:
+      - from: sonarqube
+        to: sonarqube_db
+        verb: private IP SQL
+        flow_kind: RUNTIME
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 21fd172f5bac6a44
+      - from: vpc_cicd_net
+        to: sonarqube_db
+        verb: PSA peering
+        flow_kind: RUNTIME
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 44e5d4dcd096c550

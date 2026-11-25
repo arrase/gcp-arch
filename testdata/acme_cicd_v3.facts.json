@@ -1,0 +1,1323 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-23T02:00:00Z",
+  "scopes": [
+    "projects/acme-cicd"
+  ],
+  "hierarchy": {
+    "projects": [
+      {
+        "project_id": "acme-cicd",
+        "project_number": "100200300401",
+        "display_name": "Acme Platform CICD"
+      },
+      {
+        "project_id": "p1234567890abcdef-tp",
+        "display_name": "Google PSA Tenant (Cloud SQL)",
+        "is_psa_tenant": true
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "asset_type": "artifactregistry.googleapis.com/Repository",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "acme-apps",
+      "attributes": {
+        "format": "DOCKER",
+        "image_count": 643,
+        "mode": "STANDARD_REPOSITORY"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-api-dev",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "build-api-dev",
+      "attributes": {
+        "filename": "cloudbuild/build-api-dev.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "push:^develop$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-api-prod",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "build-api-prod",
+      "attributes": {
+        "filename": "cloudbuild/build-api-prod.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "push:^main$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-frontend-dev",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "build-frontend-dev",
+      "attributes": {
+        "filename": "cloudbuild/build-frontend-dev.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "push:^develop$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-frontend-prod",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "build-frontend-prod",
+      "attributes": {
+        "filename": "cloudbuild/build-frontend-prod.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "push:^main$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ingestion-dev",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "build-ingestion-dev",
+      "attributes": {
+        "filename": "cloudbuild/build-ingestion-dev.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "push:^develop$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ingestion-prod",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "build-ingestion-prod",
+      "attributes": {
+        "filename": "cloudbuild/build-ingestion-prod.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "push:^main$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ml-dev",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "build-ml-dev",
+      "attributes": {
+        "filename": "cloudbuild/build-ml-dev.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "push:^develop$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ml-prod",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "build-ml-prod",
+      "attributes": {
+        "filename": "cloudbuild/build-ml-prod.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "push:^main$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-worker-dev",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "build-worker-dev",
+      "attributes": {
+        "filename": "cloudbuild/build-worker-dev.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "push:^develop$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-worker-prod",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "build-worker-prod",
+      "attributes": {
+        "filename": "cloudbuild/build-worker-prod.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "push:^main$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-api-dev",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "deploy-api-dev",
+      "attributes": {
+        "filename": "cloudbuild/deploy-api-dev.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "push:^develop$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-api-prod",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "deploy-api-prod",
+      "attributes": {
+        "filename": "cloudbuild/deploy-api-prod.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "tag:^v.*$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-frontend-dev",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "deploy-frontend-dev",
+      "attributes": {
+        "filename": "cloudbuild/deploy-frontend-dev.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "push:^develop$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-frontend-prod",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "deploy-frontend-prod",
+      "attributes": {
+        "filename": "cloudbuild/deploy-frontend-prod.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "tag:^v.*$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-worker-dev",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "deploy-worker-dev",
+      "attributes": {
+        "filename": "cloudbuild/deploy-worker-dev.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "push:^develop$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-worker-prod",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "deploy-worker-prod",
+      "attributes": {
+        "filename": "cloudbuild/deploy-worker-prod.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "tag:^v.*$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-dev",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "terraform-apply-dev",
+      "attributes": {
+        "filename": "cloudbuild/terraform-apply-dev.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "push:^develop$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-prod",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "terraform-apply-prod",
+      "attributes": {
+        "filename": "cloudbuild/terraform-apply-prod.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "push:^main$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-dev",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "terraform-plan-dev",
+      "attributes": {
+        "filename": "cloudbuild/terraform-plan-dev.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "pr:^develop$"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-prod",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "terraform-plan-prod",
+      "attributes": {
+        "filename": "cloudbuild/terraform-plan-prod.yaml",
+        "repo_url": "https://github.com/acme-corp/platform-services",
+        "service_account": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+        "trigger_filter": "pr:^main$"
+      }
+    },
+    {
+      "uri": "//cloudresourcemanager.googleapis.com/projects/acme-dev",
+      "asset_type": "cloudresourcemanager.googleapis.com/Project",
+      "project_id": "acme-dev",
+      "display_name": "acme-dev",
+      "is_external": true
+    },
+    {
+      "uri": "//cloudresourcemanager.googleapis.com/projects/acme-prod",
+      "asset_type": "cloudresourcemanager.googleapis.com/Project",
+      "project_id": "acme-prod",
+      "display_name": "acme-prod",
+      "is_external": true
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/acme-cicd/global/forwardingRules/k8s2-fs-demo1234-atlantis-ingress-0001",
+      "asset_type": "compute.googleapis.com/GlobalForwardingRule",
+      "project_id": "acme-cicd",
+      "location": "global",
+      "display_name": "k8s2-fs-demo1234-atlantis-ingress-0001",
+      "attributes": {
+        "ingress_hosts": [
+          "atlantis.cicd.example.com"
+        ],
+        "ingress_paths": [
+          "/events"
+        ],
+        "ip_address": "203.0.113.41",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "EXTERNAL",
+        "port_range": "443-443",
+        "tls": true
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/acme-cicd/global/forwardingRules/k8s2-fs-demo1234-sonarqube-ingress-0002",
+      "asset_type": "compute.googleapis.com/GlobalForwardingRule",
+      "project_id": "acme-cicd",
+      "location": "global",
+      "display_name": "k8s2-fs-demo1234-sonarqube-ingress-0002",
+      "attributes": {
+        "ingress_hosts": [
+          "sonarqube.cicd.example.com"
+        ],
+        "ingress_paths": [
+          "/*"
+        ],
+        "ip_address": "203.0.113.42",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "EXTERNAL",
+        "port_range": "443-443",
+        "tls": true
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/acme-cicd/global/networks/cicd",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "acme-cicd",
+      "location": "global",
+      "display_name": "cicd",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/acme-cicd/regions/europe-southwest1/subnetworks/cicd-k8s",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "cicd-k8s",
+      "parent_uri": "//compute.googleapis.com/projects/acme-cicd/global/networks/cicd",
+      "attributes": {
+        "cidr": "10.10.0.0/20",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/acme-cicd/global/networks/cicd"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd",
+      "asset_type": "container.googleapis.com/Cluster",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1-b",
+      "display_name": "cicd",
+      "parent_uri": "//compute.googleapis.com/projects/acme-cicd/regions/europe-southwest1/subnetworks/cicd-k8s",
+      "attributes": {
+        "mode": "Standard",
+        "namespace_count": 12,
+        "node_pool_count": 2,
+        "private_nodes": true,
+        "release_channel": "REGULAR",
+        "subnet": "//compute.googleapis.com/projects/acme-cicd/regions/europe-southwest1/subnetworks/cicd-k8s",
+        "vpc": "//compute.googleapis.com/projects/acme-cicd/global/networks/cicd",
+        "workload_pool": "acme-cicd.svc.id.goog"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/apps/deployments/atlantis",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1-b",
+      "display_name": "atlantis",
+      "parent_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd",
+      "attributes": {
+        "namespace": "atlantis",
+        "replicas": 1,
+        "service_account": "atlantis@acme-cicd.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/networking.k8s.io/ingresses/atlantis",
+      "asset_type": "networking.k8s.io/Ingress",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1-b",
+      "display_name": "atlantis",
+      "parent_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd",
+      "attributes": {
+        "ingress_class": "gce",
+        "ingress_hosts": [
+          "atlantis.cicd.example.com"
+        ],
+        "ingress_paths": [
+          "/events"
+        ],
+        "namespace": "atlantis"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/services/atlantis",
+      "asset_type": "k8s.io/Service",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1-b",
+      "display_name": "atlantis",
+      "parent_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd",
+      "attributes": {
+        "namespace": "atlantis",
+        "ports": [
+          4141
+        ],
+        "service_type": "ClusterIP"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/apps/deployments/sonarqube",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1-b",
+      "display_name": "sonarqube",
+      "parent_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd",
+      "attributes": {
+        "namespace": "sonarqube",
+        "replicas": 1,
+        "service_account": "sonarqube@acme-cicd.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/networking.k8s.io/ingresses/sonarqube",
+      "asset_type": "networking.k8s.io/Ingress",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1-b",
+      "display_name": "sonarqube",
+      "parent_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd",
+      "attributes": {
+        "ingress_class": "gce",
+        "ingress_hosts": [
+          "sonarqube.cicd.example.com"
+        ],
+        "ingress_paths": [
+          "/*"
+        ],
+        "namespace": "sonarqube"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/services/sonarqube",
+      "asset_type": "k8s.io/Service",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1-b",
+      "display_name": "sonarqube",
+      "parent_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd",
+      "attributes": {
+        "namespace": "sonarqube",
+        "ports": [
+          9000
+        ],
+        "service_type": "ClusterIP"
+      }
+    },
+    {
+      "uri": "//github.com/acme-corp/platform-services",
+      "asset_type": "external.github.com/Repository",
+      "project_id": "external",
+      "display_name": "github-acme",
+      "is_external": true
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/atlantis@acme-cicd.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "acme-cicd",
+      "display_name": "atlantis@acme-cicd.iam.gserviceaccount.com",
+      "attributes": {
+        "email": "atlantis@acme-cicd.iam.gserviceaccount.com"
+      },
+      "project_capabilities": [
+        "roles/viewer"
+      ]
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "acme-cicd",
+      "display_name": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "attributes": {
+        "email": "cloudbuild-runner@acme-cicd.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/sonarqube@acme-cicd.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "acme-cicd",
+      "display_name": "sonarqube@acme-cicd.iam.gserviceaccount.com",
+      "attributes": {
+        "email": "sonarqube@acme-cicd.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/acme-cicd/secrets/github-webhook-secret",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "acme-cicd",
+      "display_name": "github-webhook-secret",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/acme-cicd/secrets/sonarqube-db-password",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "acme-cicd",
+      "display_name": "sonarqube-db-password",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//sqladmin.googleapis.com/projects/acme-cicd/instances/sonarqube",
+      "asset_type": "sqladmin.googleapis.com/Instance",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "sonarqube",
+      "parent_uri": "//compute.googleapis.com/projects/acme-cicd/global/networks/cicd",
+      "attributes": {
+        "availability_type": "ZONAL",
+        "database_version": "POSTGRES_16",
+        "private_ip": "10.100.0.5",
+        "psa_tenant_project": "p1234567890abcdef-tp",
+        "tier": "db-custom-2-7680",
+        "vpc": "//compute.googleapis.com/projects/acme-cicd/global/networks/cicd"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/acme-cicd_cloudbuild",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "acme-cicd_cloudbuild",
+      "attributes": {
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/acme-private-modules",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "acme-private-modules",
+      "attributes": {
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/acme-tfstate",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "acme-cicd",
+      "location": "europe-southwest1",
+      "display_name": "acme-tfstate",
+      "attributes": {
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "d8ea356f3ea34a0f",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-api-dev",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "d3cfca01e96399d6",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-api-dev",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "741bb77ca0fd9b49",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-api-prod",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "cfbe9713b63e079a",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-api-prod",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "b6c440eb01c7c7cc",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-frontend-dev",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "3bcf86255cd91b27",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-frontend-dev",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "956d96a83b8b6512",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-frontend-prod",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "17fc812be41a6ae4",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-frontend-prod",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "fade89455a813fcb",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ingestion-dev",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "9f3f0ea5d4989a2f",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ingestion-dev",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "ed17fdb878414fc5",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ingestion-prod",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "3a86803e70dd63cf",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ingestion-prod",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "828ac6d5b6bd844b",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ml-dev",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "f8fe84eab4a7adcb",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ml-dev",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "d885ed4b10d6929f",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ml-prod",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "0f56cadaa7858c8e",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ml-prod",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "94fb3b495d1c52af",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-worker-dev",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "20fce91cde73ceb3",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-worker-dev",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "d1c22a1d9e284855",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-worker-prod",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "668880d1aae955dd",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-worker-prod",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "e7460836e170d104",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-api-dev",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "621e8967742796ae",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-api-dev",
+      "to_uri": "//cloudresourcemanager.googleapis.com/projects/acme-dev",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "--project=acme-dev"
+    },
+    {
+      "id": "96c8bf736670cd05",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-api-dev",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "96bb7ea18ef1c793",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-api-prod",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "cd5449f91a78548e",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-api-prod",
+      "to_uri": "//cloudresourcemanager.googleapis.com/projects/acme-prod",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "--project=acme-prod"
+    },
+    {
+      "id": "07edd3e875864006",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-api-prod",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "50f41bb9a28bce47",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-frontend-dev",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "edf5d526f6bccd7d",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-frontend-dev",
+      "to_uri": "//cloudresourcemanager.googleapis.com/projects/acme-dev",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "--project=acme-dev"
+    },
+    {
+      "id": "d89ab82ba9d98425",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-frontend-dev",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "8f66b91702117d90",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-frontend-prod",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "35510c01209e9b02",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-frontend-prod",
+      "to_uri": "//cloudresourcemanager.googleapis.com/projects/acme-prod",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "--project=acme-prod"
+    },
+    {
+      "id": "63a67a4ba1e343f5",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-frontend-prod",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "e6e8dd0aa7695846",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-worker-dev",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "cb9904e60fad15bd",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-worker-dev",
+      "to_uri": "//cloudresourcemanager.googleapis.com/projects/acme-dev",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "--project=acme-dev"
+    },
+    {
+      "id": "19fa253e012c1d0c",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-worker-dev",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "891b9f1b10b50bf6",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-worker-prod",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "europe-southwest1-docker.pkg.dev/acme-cicd/acme-apps"
+    },
+    {
+      "id": "f79a903bbbe5fc73",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-worker-prod",
+      "to_uri": "//cloudresourcemanager.googleapis.com/projects/acme-prod",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "--project=acme-prod"
+    },
+    {
+      "id": "2a899c22c1c9d5ff",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-worker-prod",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "dff3194390d274f6",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-dev",
+      "to_uri": "//cloudresourcemanager.googleapis.com/projects/acme-dev",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "--project=acme-dev"
+    },
+    {
+      "id": "3b3d4cfd1ce63db3",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-dev",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "926a1807d4424f5b",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-dev",
+      "to_uri": "//storage.googleapis.com/acme-private-modules",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "gs://acme-private-modules"
+    },
+    {
+      "id": "79a1accb3b796a4e",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-dev",
+      "to_uri": "//storage.googleapis.com/acme-tfstate",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "gs://acme-tfstate"
+    },
+    {
+      "id": "4b6c485d6392afad",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-prod",
+      "to_uri": "//cloudresourcemanager.googleapis.com/projects/acme-prod",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "--project=acme-prod"
+    },
+    {
+      "id": "31560beaab25cfc5",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-prod",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "743ec8933e31599d",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-prod",
+      "to_uri": "//storage.googleapis.com/acme-private-modules",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "gs://acme-private-modules"
+    },
+    {
+      "id": "3810fc8dd75e81cb",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-prod",
+      "to_uri": "//storage.googleapis.com/acme-tfstate",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "gs://acme-tfstate"
+    },
+    {
+      "id": "de66c4e97bbc96c5",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-dev",
+      "to_uri": "//cloudresourcemanager.googleapis.com/projects/acme-dev",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "--project=acme-dev"
+    },
+    {
+      "id": "cd9a5fd32ac4d5e3",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-dev",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "e066da858b837318",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-dev",
+      "to_uri": "//storage.googleapis.com/acme-private-modules",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "gs://acme-private-modules"
+    },
+    {
+      "id": "67bfb352a7308321",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-dev",
+      "to_uri": "//storage.googleapis.com/acme-tfstate",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "gs://acme-tfstate"
+    },
+    {
+      "id": "8e1ddaf855d7fad8",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-prod",
+      "to_uri": "//cloudresourcemanager.googleapis.com/projects/acme-prod",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "--project=acme-prod"
+    },
+    {
+      "id": "4a96a0a8ad43c39c",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-prod",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "6b50797e2cc195b4",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-prod",
+      "to_uri": "//storage.googleapis.com/acme-private-modules",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "gs://acme-private-modules"
+    },
+    {
+      "id": "e8fb1fcf92ac3a3d",
+      "from_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-prod",
+      "to_uri": "//storage.googleapis.com/acme-tfstate",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "gs://acme-tfstate"
+    },
+    {
+      "id": "bb189d721e6415c1",
+      "from_uri": "//compute.googleapis.com/projects/acme-cicd/global/forwardingRules/k8s2-fs-demo1234-atlantis-ingress-0001",
+      "to_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/services/atlantis",
+      "kind": "K8S_NEG_BACKEND",
+      "detail": "/events port:4141"
+    },
+    {
+      "id": "d314ffe57573124b",
+      "from_uri": "//compute.googleapis.com/projects/acme-cicd/global/forwardingRules/k8s2-fs-demo1234-sonarqube-ingress-0002",
+      "to_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/services/sonarqube",
+      "kind": "K8S_NEG_BACKEND",
+      "detail": "/* port:9000"
+    },
+    {
+      "id": "44e5d4dcd096c550",
+      "from_uri": "//compute.googleapis.com/projects/acme-cicd/global/networks/cicd",
+      "to_uri": "//sqladmin.googleapis.com/projects/acme-cicd/instances/sonarqube",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com (p1234567890abcdef-tp)"
+    },
+    {
+      "id": "9d669eaf9dac4166",
+      "from_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/apps/deployments/atlantis",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/atlantis@acme-cicd.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "ksa:atlantis/atlantis"
+    },
+    {
+      "id": "8d4b612f4ec04140",
+      "from_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/apps/deployments/atlantis",
+      "to_uri": "//secretmanager.googleapis.com/projects/acme-cicd/secrets/github-webhook-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "d96489b5c99bca73",
+      "from_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/apps/deployments/atlantis",
+      "to_uri": "//storage.googleapis.com/acme-private-modules",
+      "kind": "CONFIG_REF",
+      "detail": "gs://acme-private-modules"
+    },
+    {
+      "id": "c21876e6fb659711",
+      "from_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/apps/deployments/atlantis",
+      "to_uri": "//storage.googleapis.com/acme-tfstate",
+      "kind": "CONFIG_REF",
+      "detail": "gs://acme-tfstate"
+    },
+    {
+      "id": "bb5e92ee20153f7a",
+      "from_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/networking.k8s.io/ingresses/atlantis",
+      "to_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/services/atlantis",
+      "kind": "K8S_INGRESS_BACKEND",
+      "detail": "atlantis.cicd.example.com/events"
+    },
+    {
+      "id": "2d646bade955f34c",
+      "from_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/services/atlantis",
+      "to_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/apps/deployments/atlantis",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "app=atlantis"
+    },
+    {
+      "id": "f885f70ed81b19ce",
+      "from_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/apps/deployments/sonarqube",
+      "to_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/sonarqube@acme-cicd.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "ksa:sonarqube/sonarqube"
+    },
+    {
+      "id": "ad7e68e87fd4baff",
+      "from_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/apps/deployments/sonarqube",
+      "to_uri": "//secretmanager.googleapis.com/projects/acme-cicd/secrets/sonarqube-db-password",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "21fd172f5bac6a44",
+      "from_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/apps/deployments/sonarqube",
+      "to_uri": "//sqladmin.googleapis.com/projects/acme-cicd/instances/sonarqube",
+      "kind": "CONFIG_REF",
+      "detail": "10.100.0.5"
+    },
+    {
+      "id": "e3e623d8eedfc634",
+      "from_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/networking.k8s.io/ingresses/sonarqube",
+      "to_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/services/sonarqube",
+      "kind": "K8S_INGRESS_BACKEND",
+      "detail": "sonarqube.cicd.example.com/*"
+    },
+    {
+      "id": "7dd1c5be5b2dbc53",
+      "from_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/services/sonarqube",
+      "to_uri": "//container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/apps/deployments/sonarqube",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "app=sonarqube"
+    },
+    {
+      "id": "190f6dfb3f1fa702",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-api-dev",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:^develop$"
+    },
+    {
+      "id": "6f1c9ad3b15e8a64",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-api-prod",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:^main$"
+    },
+    {
+      "id": "31e68005aa70df73",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-frontend-dev",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:^develop$"
+    },
+    {
+      "id": "f351a0fa61a483bb",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-frontend-prod",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:^main$"
+    },
+    {
+      "id": "c1a0d09ba9c192b4",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ingestion-dev",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:^develop$"
+    },
+    {
+      "id": "c6f77d2d010014de",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ingestion-prod",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:^main$"
+    },
+    {
+      "id": "3d199537e6d5bc5e",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ml-dev",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:^develop$"
+    },
+    {
+      "id": "78d1d0df25ddfbf4",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-ml-prod",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:^main$"
+    },
+    {
+      "id": "b7a28be3d3da8d67",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-worker-dev",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:^develop$"
+    },
+    {
+      "id": "fa02bc010b94d950",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/build-worker-prod",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:^main$"
+    },
+    {
+      "id": "1e574ee7f48ee900",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-api-dev",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:^develop$"
+    },
+    {
+      "id": "7c5c5310db4002ec",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-api-prod",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "tag:^v.*$"
+    },
+    {
+      "id": "6a451d893cf043b2",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-frontend-dev",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:^develop$"
+    },
+    {
+      "id": "b0c68f2c76d016ff",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-frontend-prod",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "tag:^v.*$"
+    },
+    {
+      "id": "494e01e3da4c8ec6",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-worker-dev",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:^develop$"
+    },
+    {
+      "id": "1fcf3a8d6d70337d",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-worker-prod",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "tag:^v.*$"
+    },
+    {
+      "id": "c211f5859b9f4f9b",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-dev",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:^develop$"
+    },
+    {
+      "id": "4170c175fd509315",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-prod",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:^main$"
+    },
+    {
+      "id": "4d4ed1b6b876a297",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-dev",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "pr:^develop$"
+    },
+    {
+      "id": "e3556b7887a25399",
+      "from_uri": "//github.com/acme-corp/platform-services",
+      "to_uri": "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-prod",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "pr:^main$"
+    },
+    {
+      "id": "d9bcb2f98af0f5b8",
+      "from_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/atlantis@acme-cicd.iam.gserviceaccount.com",
+      "to_uri": "//storage.googleapis.com/acme-private-modules",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/storage.objectViewer"
+    },
+    {
+      "id": "4169e431ac665343",
+      "from_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/atlantis@acme-cicd.iam.gserviceaccount.com",
+      "to_uri": "//storage.googleapis.com/acme-tfstate",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/storage.objectAdmin"
+    },
+    {
+      "id": "eeb34650563cea4f",
+      "from_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "to_uri": "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/artifactregistry.writer"
+    },
+    {
+      "id": "37843a63c84a755f",
+      "from_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/cloudbuild-runner@acme-cicd.iam.gserviceaccount.com",
+      "to_uri": "//storage.googleapis.com/acme-cicd_cloudbuild",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/storage.objectAdmin"
+    },
+    {
+      "id": "2ccc3b388407277e",
+      "from_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/sonarqube@acme-cicd.iam.gserviceaccount.com",
+      "to_uri": "//sqladmin.googleapis.com/projects/acme-cicd/instances/sonarqube",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudsql.client"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "admissionregistration.k8s.io/MutatingWebhookConfiguration": 4,
+    "admissionregistration.k8s.io/ValidatingWebhookConfiguration": 4,
+    "apps.k8s.io/ReplicaSet": 18,
+    "artifactregistry.googleapis.com/DockerImage": 643,
+    "cloudbuild.googleapis.com/Build": 819,
+    "compute.googleapis.com/BackendService": 4,
+    "compute.googleapis.com/Instance": 6,
+    "compute.googleapis.com/InstanceGroupManager": 2,
+    "compute.googleapis.com/InstanceTemplate": 2,
+    "compute.googleapis.com/NetworkEndpointGroup": 4,
+    "compute.googleapis.com/TargetHttpsProxy": 2,
+    "compute.googleapis.com/UrlMap": 2,
+    "container.googleapis.com/NodePool": 2,
+    "discovery.k8s.io/EndpointSlice": 9,
+    "k8s.io/ConfigMap": 14,
+    "k8s.io/Endpoints": 9,
+    "k8s.io/Namespace": 12,
+    "k8s.io/PersistentVolume": 2,
+    "k8s.io/PersistentVolumeClaim": 2,
+    "k8s.io/Pod": 45,
+    "k8s.io/ResourceQuota": 4,
+    "k8s.io/Secret": 22,
+    "k8s.io/ServiceAccount": 75,
+    "logging.googleapis.com/LogBucket": 2,
+    "servicenetworking.googleapis.com/Connection": 1,
+    "sqladmin.googleapis.com/Backup": 2,
+    "sqladmin.googleapis.com/BackupRun": 2,
+    "storage.k8s.io/StorageClass": 4
+  },
+  "out_of_scope_targets": [
+    {
+      "target_project_id": "acme-dev",
+      "synthetic_uri": "//cloudresourcemanager.googleapis.com/projects/acme-dev",
+      "referenced_by_uris": [
+        "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-api-dev",
+        "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-frontend-dev",
+        "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-worker-dev",
+        "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-dev",
+        "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-dev"
+      ],
+      "source_kind": "cloudbuild_deploy_flag"
+    },
+    {
+      "target_project_id": "acme-prod",
+      "synthetic_uri": "//cloudresourcemanager.googleapis.com/projects/acme-prod",
+      "referenced_by_uris": [
+        "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-api-prod",
+        "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-frontend-prod",
+        "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/deploy-worker-prod",
+        "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-apply-prod",
+        "//cloudbuild.googleapis.com/projects/acme-cicd/locations/europe-southwest1/triggers/terraform-plan-prod"
+      ],
+      "source_kind": "cloudbuild_deploy_flag"
+    }
+  ],
+  "coverage_ledger": [
+    {
+      "scope": "projects/acme-cicd",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/acme-cicd",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/acme-cicd",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/acme-cicd",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/acme-cicd",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}

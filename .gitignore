@@ -1,0 +1,35 @@
+# Go build outputs & binaries
+/bin/
+/gcp-arch
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go test, coverage & profiling artifacts
+*.test
+*.out
+*.prof
+
+# gcp-arch facts, rendered outputs & temp files
+facts.json
+*.facts.json
+!testdata/**/*.facts.json
+out/
+*.bak
+.gcp-arch-*.tmp
+
+# Local environment & GCP credentials
+.env
+.env.*
+application_default_credentials.json
+
+# Editors & OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

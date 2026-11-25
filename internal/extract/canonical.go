@@ -1,0 +1,398 @@
+package extract
+
+import (
+	"net/url"
+	"regexp"
+	"strings"
+)
+
+var (
+	regionalHostPrefixRe = regexp.MustCompile(`^(?:[a-z]+-[a-z]+\d+|global|us|eu)-([a-z0-9-]+\.googleapis\.com)$`)
+	apiVersionSegRe      = regexp.MustCompile(`^(?:alpha|beta|v\d+(?:(?:alpha|beta|p\d+beta|p\d+alpha)\d*)?)$`)
+	gcpZoneRe            = regexp.MustCompile(`^[a-z]+-[a-z]+\d+-[a-z][a-z0-9]*$`)
+)
+
+// BuildProjectIndex maps discovered project numbers to canonical project IDs and overlays
+// explicit user-supplied --project-alias overrides.
+func BuildProjectIndex(projects []ProjectNode, aliases map[string]string) map[string]string {
+	idx := make(map[string]string, len(projects)+len(aliases))
+	for _, p := range projects {
+		if p.ProjectNumber != "" && p.ProjectID != "" {
+			idx[p.ProjectNumber] = p.ProjectID
+		}
+	}
+	for num, id := range aliases {
+		if num != "" && id != "" {
+			idx[num] = id
+		}
+	}
+	return idx
+}
+
+// CanonicalizeAIP122 normalizes GCP resource selfLinks, full URLs, gs:// URIs, //service/... URIs,
+// and relative projects/... resource names into canonical AIP-122 format (//<service>/...)
+// while replacing known project numbers (or aliases) with their canonical project IDs.
+func CanonicalizeAIP122(raw string, projIdx map[string]string) string {
+	return CanonicalizeAIP122WithService(raw, "", projIdx)
+}
+
+// CanonicalizeAIP122WithService behaves like CanonicalizeAIP122 but uses defaultService when
+// raw is a relative resource name whose owning service cannot be inferred unambiguously.
+func CanonicalizeAIP122WithService(raw, defaultService string, projIdx map[string]string) string {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return ""
+	}
+	if i := strings.IndexAny(s, "?#"); i >= 0 {
+		s = s[:i]
+	}
+
+	if strings.HasPrefix(s, "gs://") {
+		rest := strings.TrimPrefix(s, "gs://")
+		bucket, _, _ := strings.Cut(rest, "/")
+		if bucket == "" {
+			return ""
+		}
+		return "//storage.googleapis.com/" + bucket
+	}
+
+	s = strings.TrimRight(s, "/")
+	if s == "" {
+		return ""
+	}
+
+	if strings.HasPrefix(s, "https://") || strings.HasPrefix(s, "http://") {
+		return canonicalizeHTTPURL(s, projIdx)
+	}
+
+	if strings.HasPrefix(s, "//") {
+		rest := strings.TrimPrefix(s, "//")
+		host, path, ok := strings.Cut(rest, "/")
+		if !ok {
+			return "//" + normalizeServiceHost(host)
+		}
+		svc := normalizeServiceHost(host)
+		path = stripLeadingAPIVersion(path, svc)
+		if svc == "storage.googleapis.com" {
+			if bucket, ok := extractProjectsBucket(path); ok {
+				return "//storage.googleapis.com/" + bucket
+			}
+		}
+		path = normalizeServicePath(svc, mapProjectSegments(path, projIdx))
+		return "//" + svc + "/" + path
+	}
+
+	if first, rest, ok := strings.Cut(s, "/"); ok && strings.HasSuffix(strings.ToLower(first), ".googleapis.com") {
+		svc := normalizeServiceHost(first)
+		rest = stripLeadingAPIVersion(rest, svc)
+		if svc == "storage.googleapis.com" {
+			if bucket, ok := extractProjectsBucket(rest); ok {
+				return "//storage.googleapis.com/" + bucket
+			}
+		}
+		rest = normalizeServicePath(svc, mapProjectSegments(rest, projIdx))
+		return "//" + svc + "/" + rest
+	}
+
+	mapped := mapProjectSegments(strings.TrimLeft(s, "/"), projIdx)
+	if bucket, ok := extractProjectsBucket(mapped); ok && (defaultService == "" || normalizeServiceHost(defaultService) == "storage.googleapis.com") {
+		return "//storage.googleapis.com/" + bucket
+	}
+	svc := defaultService
+	if svc == "" {
+		svc = inferServiceFromRelative(mapped)
+	}
+	if svc == "" {
+		return mapped
+	}
+	normSvc := normalizeServiceHost(svc)
+	return "//" + normSvc + "/" + normalizeServicePath(normSvc, mapped)
+}
+
+func canonicalizeHTTPURL(raw string, projIdx map[string]string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+	host := strings.ToLower(u.Hostname())
+	path := strings.Trim(u.Path, "/")
+
+	if host == "www.googleapis.com" {
+		segs := strings.Split(path, "/")
+		if len(segs) >= 4 && segs[0] == "storage" && apiVersionSegRe.MatchString(segs[1]) && segs[2] == "b" {
+			return "//storage.googleapis.com/" + segs[3]
+		}
+		if len(segs) >= 3 && apiVersionSegRe.MatchString(segs[1]) {
+			svc := shortAPIToHost(segs[0])
+			rem := normalizeServicePath(svc, mapProjectSegments(strings.Join(segs[2:], "/"), projIdx))
+			return "//" + svc + "/" + rem
+		}
+	}
+
+	if strings.HasSuffix(host, ".googleapis.com") {
+		svc := normalizeServiceHost(host)
+		if svc == "storage.googleapis.com" {
+			segs := strings.Split(path, "/")
+			if len(segs) >= 4 && segs[0] == "storage" && apiVersionSegRe.MatchString(segs[1]) && segs[2] == "b" {
+				return "//storage.googleapis.com/" + segs[3]
+			}
+			if bucket, ok := extractProjectsBucket(stripLeadingAPIVersion(path, svc)); ok {
+				return "//storage.googleapis.com/" + bucket
+			}
+			if len(segs) >= 1 && segs[0] != "" {
+				return "//storage.googleapis.com/" + segs[0]
+			}
+		}
+		trimmed := normalizeServicePath(svc, mapProjectSegments(stripLeadingAPIVersion(path, svc), projIdx))
+		return "//" + svc + "/" + trimmed
+	}
+
+	// Non-googleapis URL: strip userinfo/query/fragment cleanly.
+	u.User = nil
+	u.RawQuery = ""
+	u.Fragment = ""
+	return strings.TrimRight(u.String(), "/")
+}
+
+func normalizeServicePath(svc, path string) string {
+	segs := strings.Split(path, "/")
+	if len(segs) < 6 || segs[0] != "projects" {
+		return path
+	}
+	switch svc {
+	case "compute.googleapis.com":
+		if segs[2] == "locations" {
+			loc := segs[3]
+			if loc == "global" {
+				out := make([]string, 0, len(segs)-1)
+				out = append(out, "projects", segs[1], "global")
+				out = append(out, segs[4:]...)
+				return strings.Join(out, "/")
+			}
+			if gcpZoneRe.MatchString(loc) {
+				segs[2] = "zones"
+				return strings.Join(segs, "/")
+			}
+			segs[2] = "regions"
+			return strings.Join(segs, "/")
+		}
+	case "container.googleapis.com":
+		if segs[2] == "zones" && segs[4] == "clusters" {
+			segs[2] = "locations"
+			return strings.Join(segs, "/")
+		}
+	}
+	return path
+}
+
+func extractProjectsBucket(path string) (string, bool) {
+	segs := strings.Split(strings.Trim(path, "/"), "/")
+	if len(segs) >= 4 && segs[0] == "projects" && segs[1] != "" && segs[2] == "buckets" && segs[3] != "" {
+		return segs[3], true
+	}
+	return "", false
+}
+
+func normalizeServiceHost(host string) string {
+	h := strings.ToLower(strings.TrimSpace(host))
+	if m := regionalHostPrefixRe.FindStringSubmatch(h); len(m) == 2 {
+		return m[1]
+	}
+	return h
+}
+
+func shortAPIToHost(short string) string {
+	switch strings.ToLower(short) {
+	case "sql":
+		return "sqladmin.googleapis.com"
+	default:
+		return strings.ToLower(short) + ".googleapis.com"
+	}
+}
+
+func stripLeadingAPIVersion(path, serviceHost string) string {
+	segs := strings.Split(strings.Trim(path, "/"), "/")
+	if len(segs) == 0 {
+		return ""
+	}
+	shortSvc := strings.TrimSuffix(serviceHost, ".googleapis.com")
+	if len(segs) >= 3 && apiVersionSegRe.MatchString(segs[1]) &&
+		(segs[0] == shortSvc || (segs[0] == "sql" && shortSvc == "sqladmin") || (segs[0] == "dns" && shortSvc == "dns")) {
+		return strings.Join(segs[2:], "/")
+	}
+	if len(segs) >= 2 && apiVersionSegRe.MatchString(segs[0]) {
+		return strings.Join(segs[1:], "/")
+	}
+	return strings.Join(segs, "/")
+}
+
+func mapProjectSegments(path string, projIdx map[string]string) string {
+	if len(projIdx) == 0 || path == "" {
+		return path
+	}
+	segs := strings.Split(path, "/")
+	for i := 0; i < len(segs)-1; i++ {
+		if segs[i] == "projects" || segs[i] == "apps" {
+			if mapped, ok := projIdx[segs[i+1]]; ok && mapped != "" {
+				segs[i+1] = mapped
+			}
+		}
+	}
+	return strings.Join(segs, "/")
+}
+
+var relativeProjectCollectionService = map[string]string{
+	"topics":          "pubsub.googleapis.com",
+	"subscriptions":   "pubsub.googleapis.com",
+	"datasets":        "bigquery.googleapis.com",
+	"secrets":         "secretmanager.googleapis.com",
+	"serviceAccounts": "iam.googleapis.com",
+	"managedZones":    "dns.googleapis.com",
+	"databases":       "firestore.googleapis.com",
+}
+
+func inferServiceFromRelative(path string) string {
+	segs := strings.Split(path, "/")
+	if len(segs) == 2 && (segs[0] == "projects" || segs[0] == "folders" || segs[0] == "organizations") {
+		return "cloudresourcemanager.googleapis.com"
+	}
+	if len(segs) >= 2 && segs[0] == "apps" {
+		return "appengine.googleapis.com"
+	}
+	if len(segs) < 4 || segs[0] != "projects" {
+		return ""
+	}
+	if svc, ok := relativeProjectCollectionService[segs[2]]; ok {
+		return svc
+	}
+	return inferScopedProjectService(segs)
+}
+
+func inferScopedProjectService(segs []string) string {
+	switch segs[2] {
+	case "global":
+		if len(segs) >= 5 && isComputeScopeCollection(segs[3]) {
+			return "compute.googleapis.com"
+		}
+	case "regions":
+		if len(segs) >= 6 && isComputeScopeCollection(segs[4]) {
+			return "compute.googleapis.com"
+		}
+	case "zones":
+		return inferZonalService(segs)
+	case "instances":
+		return inferInstanceSubresourceService(segs)
+	case "locations":
+		return inferLocationsSubpathService(segs)
+	}
+	return ""
+}
+
+func inferZonalService(segs []string) string {
+	if len(segs) < 6 {
+		return ""
+	}
+	if segs[4] == "clusters" {
+		return "container.googleapis.com"
+	}
+	if isComputeScopeCollection(segs[4]) {
+		return "compute.googleapis.com"
+	}
+	return ""
+}
+
+func inferInstanceSubresourceService(segs []string) string {
+	if len(segs) < 6 {
+		return ""
+	}
+	switch segs[4] {
+	case "databases":
+		return "spanner.googleapis.com"
+	case "tables", "clusters", "appProfiles":
+		return "bigtableadmin.googleapis.com"
+	}
+	return ""
+}
+
+func inferLocationsSubpathService(segs []string) string {
+	if len(segs) < 6 {
+		return ""
+	}
+	if svc := inferLocationService(segs[4:]); svc != "" {
+		return svc
+	}
+	// "instances" under /locations/ is shared by Redis, Memcache, Filestore, etc.;
+	// only unambiguous Compute Engine collections infer compute.googleapis.com here.
+	if segs[4] != "instances" && isComputeScopeCollection(segs[4]) {
+		return "compute.googleapis.com"
+	}
+	return ""
+}
+
+func isComputeScopeCollection(coll string) bool {
+	switch coll {
+	case "networks", "subnetworks", "instances", "instanceGroups", "instanceGroupManagers", "instanceTemplates",
+		"autoscalers", "healthChecks", "disks", "routes", "firewalls", "addresses",
+		"forwardingRules", "targetHttpProxies", "targetHttpsProxies", "targetGrpcProxies",
+		"targetTcpProxies", "targetSslProxies", "sslCertificates", "urlMaps", "backendServices", "backendBuckets",
+		"securityPolicies", "networkEndpointGroups", "routers", "vpnGateways", "targetVpnGateways",
+		"externalVpnGateways", "vpnTunnels", "interconnectAttachments", "serviceAttachments":
+		return true
+	}
+	return false
+}
+
+func inferLocationService(rest []string) string {
+	switch rest[0] {
+	case "keyRings":
+		return "cloudkms.googleapis.com"
+	case "connectors":
+		return "vpcaccess.googleapis.com"
+	case "triggers":
+		return "eventarc.googleapis.com"
+	case "queues":
+		return "cloudtasks.googleapis.com"
+	case "workflows":
+		return "workflows.googleapis.com"
+	case "functions":
+		return "cloudfunctions.googleapis.com"
+	case "environments":
+		return "composer.googleapis.com"
+	case "streams", "connectionProfiles", "privateConnections":
+		return "datastream.googleapis.com"
+	case "hubs", "spokes":
+		return "networkconnectivity.googleapis.com"
+	case "storagePools", "volumes":
+		return "netapp.googleapis.com"
+	case "ragCorpora", "endpoints", "models", "indexes", "indexEndpoints",
+		"reasoningEngines", "featureOnlineStores", "featureGroups",
+		"pipelineJobs", "trainingPipelines", "customJobs", "notebookRuntimes",
+		"tensorboards", "metadataStores", "publisherModels":
+		return "aiplatform.googleapis.com"
+	case "dataStores", "collections":
+		return "discoveryengine.googleapis.com"
+	case "agents":
+		return "dialogflow.googleapis.com"
+	case "processors":
+		return "documentai.googleapis.com"
+	case "certificates", "certificateMaps":
+		return "certificatemanager.googleapis.com"
+	case "apis", "gateways":
+		return "apigateway.googleapis.com"
+	case "dataExchanges":
+		return "analyticshub.googleapis.com"
+	case "transferConfigs":
+		return "bigquerydatatransfer.googleapis.com"
+	case "lakes":
+		return "dataplex.googleapis.com"
+	case "connections":
+		return "bigqueryconnection.googleapis.com"
+	case "revisions", "services":
+		return "run.googleapis.com"
+	case "clusters":
+		if len(rest) >= 4 && rest[2] == "instances" {
+			return "alloydb.googleapis.com"
+		}
+	}
+	return ""
+}
