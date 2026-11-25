@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/auth v0.24.1-0.20261001053825-dbc26066f70a
 	cloud.google.com/go/iam v1.14.0
 	cloud.google.com/go/monitoring v1.32.1
-	github.com/chromedp/cdproto v0.160.1
+	github.com/chromedp/cdproto v0.160.4
 	github.com/chromedp/chromedp v0.24.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
