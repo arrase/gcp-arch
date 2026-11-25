@@ -25,6 +25,9 @@ out/
 .env.*
 application_default_credentials.json
 
+# MkDocs build output
+site/
+
 # Editors & OS
 .idea/
 .vscode/
