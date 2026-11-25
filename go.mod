@@ -10,7 +10,7 @@ require (
 	github.com/chromedp/cdproto v0.160.1
 	github.com/chromedp/chromedp v0.24.0
 	github.com/spf13/cobra v1.10.2
-	github.com/spf13/pflag v1.0.9
+	github.com/spf13/pflag v1.1.0
 	github.com/tidwall/gjson v1.20.4
 	golang.org/x/oauth2 v0.38.0
 	golang.org/x/sync v0.25.0
