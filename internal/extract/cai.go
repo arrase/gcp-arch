@@ -1847,8 +1847,7 @@ func extractCloudBuildTriggerStruct(rec *ingestedAsset, data *structpb.Struct, p
 
 func parseGitRepoURL(raw string) (host, owner, repo string) {
 	s := SanitizeURL(raw)
-	s = strings.TrimPrefix(s, prefixHTTPS)
-	s = strings.TrimPrefix(s, prefixHTTP)
+	s = stripHTTPURLScheme(s)
 	s = strings.TrimSuffix(s, ".git")
 	parts := strings.Split(strings.Trim(s, "/"), "/")
 	if len(parts) < 3 {

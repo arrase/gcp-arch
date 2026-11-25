@@ -1,5 +1,7 @@
 package extract
 
+import "strings"
+
 const (
 	// Service hosts.
 	svcCompute       = "compute.googleapis.com"
@@ -22,7 +24,6 @@ const (
 	prefixProjects         = "projects/"
 	prefixFolders          = "folders/"
 	prefixOrganizations    = "organizations/"
-	prefixHTTP             = "http://"
 	prefixHTTPS            = "https://"
 	prefixStorageURI       = "//storage.googleapis.com/"
 	prefixRunProjects      = "//run.googleapis.com/projects/"
@@ -50,3 +51,16 @@ const (
 	roleAIPlatformUser = "roles/aiplatform.user"
 	sourceVertexIAM    = "vertex.iam"
 )
+
+func hasHTTPURLScheme(s string) bool {
+	scheme, _, ok := strings.Cut(s, "://")
+	return ok && (scheme == "https" || scheme == "http")
+}
+
+func stripHTTPURLScheme(s string) string {
+	scheme, rest, ok := strings.Cut(s, "://")
+	if ok && (scheme == "https" || scheme == "http") {
+		return rest
+	}
+	return s
+}

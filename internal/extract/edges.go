@@ -587,7 +587,7 @@ func (st *extractState) registerCloudRunURL(rawURL, uri string) {
 	if _, exists := st.runHostToURI[low]; !exists {
 		st.runHostToURI[low] = uri
 	}
-	trimmed := strings.TrimPrefix(strings.TrimPrefix(low, prefixHTTPS), prefixHTTP)
+	trimmed := stripHTTPURLScheme(low)
 	host, _, _ := strings.Cut(trimmed, "/")
 	if host == "" {
 		return
@@ -605,7 +605,7 @@ func (st *extractState) resolveHTTPTarget(rawURL string) string {
 	if uri, ok := st.runHostToURI[su]; ok {
 		return uri
 	}
-	trimmed := strings.TrimPrefix(strings.TrimPrefix(su, prefixHTTPS), prefixHTTP)
+	trimmed := stripHTTPURLScheme(su)
 	host, path, _ := strings.Cut(trimmed, "/")
 	if uri, ok := st.runHostToURI[host]; ok && !strings.HasSuffix(host, ".cloudfunctions.net") {
 		return uri
@@ -877,7 +877,7 @@ func (st *extractState) resolveBigQueryFoldedExternalURIs() {
 }
 
 func (st *extractState) resolveSingleBigQueryExternalURI(dsURI, ext string) {
-	if strings.HasPrefix(ext, prefixHTTPS) || strings.HasPrefix(ext, prefixHTTP) {
+	if hasHTTPURLScheme(ext) {
 		if tgt := st.resolveHTTPTarget(ext); tgt != "" {
 			st.addEdge(dsURI, tgt, EdgeConfigRef, "bq_remote_fn")
 		}
@@ -967,7 +967,7 @@ func (st *extractState) resolveSingleConfigRef(srcURI, srcProj, srcNet, rawRef s
 	switch {
 	case strings.HasPrefix(s, "gs://"):
 		st.emitTargetEdge(srcURI, normalizeBucketURI(s, st.projIdx), edgeKind, s, oosKind)
-	case strings.HasPrefix(s, prefixHTTPS) || strings.HasPrefix(s, prefixHTTP):
+	case hasHTTPURLScheme(s):
 		if tgt := st.resolveHTTPTarget(s); tgt != "" {
 			st.addEdge(srcURI, tgt, edgeKind, s)
 		}

@@ -578,14 +578,15 @@
   }
 
   function edgeSegMeta(edge, busGroup, extra) {
-    return Object.assign({
+    return {
       edgeIdx: edge._idx,
       busGroup: busGroup || '',
       fromID: edge.from,
       toID: edge.to,
       flowKind: edge.flow_kind,
-      inferred: edge.provenance === 'INFERRED'
-    }, extra);
+      inferred: edge.provenance === 'INFERRED',
+      ...extra
+    };
   }
 
   function recordPillNeed(vPillReserve, corridorCol, labelW) {
@@ -715,10 +716,10 @@
 
     if (trunk.isOut) {
       pushSeg(routeCtx.segments, trunk.trunkPort.x, trunk.trunkPort.y, trunk.spineX, trunk.trunkPort.y,
-        Object.assign({ isTerminalFrom: true }, trunk.trunkMeta));
+        { isTerminalFrom: true, ...trunk.trunkMeta });
     } else {
       pushSeg(routeCtx.segments, trunk.spineX, trunk.trunkPort.y, trunk.trunkPort.x, trunk.trunkPort.y,
-        Object.assign({ isTerminalTo: true }, trunk.trunkMeta));
+        { isTerminalTo: true, ...trunk.trunkMeta });
       routeCtx.arrowHeads.push({
         x: trunk.trunkPort.x,
         y: trunk.trunkPort.y,

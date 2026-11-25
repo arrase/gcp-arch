@@ -56,7 +56,7 @@ func CanonicalizeAIP122WithService(raw, defaultService string, projIdx map[strin
 		return ""
 	}
 
-	if strings.HasPrefix(s, prefixHTTPS) || strings.HasPrefix(s, prefixHTTP) {
+	if hasHTTPURLScheme(s) {
 		return canonicalizeHTTPURL(s, projIdx)
 	}
 
