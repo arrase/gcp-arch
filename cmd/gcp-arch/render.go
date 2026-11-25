@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -20,10 +19,11 @@ import (
 const wroteLineFmt = "Wrote %s\n"
 
 type renderCmdOpts struct {
-	formatSpec string
-	outDir     string
-	chromePath string
-	quiet      bool
+	formatSpec       string
+	outDir           string
+	chromePath       string
+	configChromePath string
+	quiet            bool
 }
 
 type renderContext struct {
@@ -66,8 +66,8 @@ were skipped.`,
 			if !cmd.Flags().Changed("format") && cfg.Format != nil {
 				opts.formatSpec = strings.Join(cfg.Format, ",")
 			}
-			if !cmd.Flags().Changed("chrome-path") && strings.TrimSpace(os.Getenv("CHROME_PATH")) == "" && cfg.ChromePath != "" {
-				opts.chromePath = cfg.ChromePath
+			if !cmd.Flags().Changed("chrome-path") {
+				opts.configChromePath = cfg.ChromePath
 			}
 			rc := renderContext{stdout: stdout, stderr: stderr, deps: deps, opts: opts}
 			return rc.execute(cmd.Context(), args[0])
@@ -109,11 +109,12 @@ func (rc renderContext) execute(ctx context.Context, manifestPath string) error 
 	}
 
 	summary, err := render.Render(ctx, m, reg, render.RenderOptions{
-		Formats:       formats.list,
-		OutputDir:     rc.opts.outDir,
-		ChromePath:    rc.opts.chromePath,
-		Runner:        runner,
-		WarningWriter: rc.stderr,
+		Formats:          formats.list,
+		OutputDir:        rc.opts.outDir,
+		ChromePath:       rc.opts.chromePath,
+		ConfigChromePath: rc.opts.configChromePath,
+		Runner:           runner,
+		WarningWriter:    rc.stderr,
 	})
 	if err != nil {
 		return classifyRenderError(err)
@@ -129,7 +130,7 @@ func (rc renderContext) resolveRunner(m *manifest.Manifest, reg *icons.Registry,
 	if rc.deps.newBrowserRunner == nil {
 		return nil, false, nil
 	}
-	r, findErr := rc.deps.newBrowserRunner(rc.opts.chromePath)
+	r, findErr := rc.deps.newBrowserRunner(rc.opts.chromePath, rc.opts.configChromePath)
 	if findErr == nil {
 		return r, false, nil
 	}

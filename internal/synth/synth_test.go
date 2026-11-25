@@ -166,12 +166,6 @@ func TestAcmeExpectedManifestAndZeroLLMFastPath(t *testing.T) {
 		t.Fatalf("acme_cicd_expected.architecture.yaml failed ValidateWithFacts: %v", err)
 	}
 
-	// Coverage must account for 100% of facts resources.
-	cov := manifest.ComputeCoverage(expected)
-	if len(cov) != len(facts.Resources) {
-		t.Fatalf("ComputeCoverage rows = %d, want %d", len(cov), len(facts.Resources))
-	}
-
 	// Deterministic BuildSystemIndexView must match expected views[0].
 	v0 := BuildSystemIndexView(expected)
 	if v0 == nil {

@@ -382,20 +382,6 @@ func runE2EStage2SynthesizeAndValidate(t *testing.T, fixtureFacts *extract.Facts
 
 func assertE2ECoverageAndProvenance(t *testing.T, synthesized *manifest.Manifest, fixtureFacts *extract.FactsFile, reg *icons.Registry) {
 	t.Helper()
-	covRows := manifest.ComputeCoverage(synthesized)
-	if len(covRows) != len(fixtureFacts.Resources) {
-		t.Fatalf("ComputeCoverage rows = %d, want 100%% of facts resources (%d)", len(covRows), len(fixtureFacts.Resources))
-	}
-	covURIs := make(map[string]bool, len(covRows))
-	for _, row := range covRows {
-		covURIs[row.URI] = true
-	}
-	for _, r := range fixtureFacts.Resources {
-		if !covURIs[r.URI] {
-			t.Errorf("ComputeCoverage missing URI %s", r.URI)
-		}
-	}
-
 	if err := manifest.ValidateWithFacts(synthesized, fixtureFacts, reg); err != nil {
 		t.Fatalf("ValidateWithFacts failed: %v", err)
 	}
@@ -455,7 +441,7 @@ func runE2EStage3RenderAndCollisionGates(t *testing.T, tmp, archPath, outDir str
 	chromePath := requireChromeForE2E(t)
 
 	deps := appDeps{
-		newBrowserRunner: func(explicit string) (render.BrowserRunner, error) {
+		newBrowserRunner: func(explicit, _ string) (render.BrowserRunner, error) {
 			p := explicit
 			if p == "" {
 				p = chromePath
@@ -539,7 +525,7 @@ func assertE2ERenderedPNGs(t *testing.T, outDir string) {
 func assertE2ECardCollisionExit2(t *testing.T, realRunner *render.ChromeDPRunner, tmp, archPath string) {
 	t.Helper()
 	cardCollisionDeps := appDeps{
-		newBrowserRunner: func(_ string) (render.BrowserRunner, error) {
+		newBrowserRunner: func(_, _ string) (render.BrowserRunner, error) {
 			return &stubBrowserRunner{
 				handler: func(ctx context.Context, req render.BrowserRenderRequest) (*render.BrowserOutput, error) {
 					blocker := `<article class="arch-card" data-component-id="injected_blocker" style="position:absolute;left:120px;top:0px;width:640px;height:360px;z-index:9;">Blocker</article>`
@@ -561,7 +547,7 @@ func assertE2ECardCollisionExit2(t *testing.T, realRunner *render.ChromeDPRunner
 func assertE2ECollinearCollisionExit2(t *testing.T, realRunner *render.ChromeDPRunner, tmp, archPath string) {
 	t.Helper()
 	collinearDeps := appDeps{
-		newBrowserRunner: func(_ string) (render.BrowserRunner, error) {
+		newBrowserRunner: func(_, _ string) (render.BrowserRunner, error) {
 			return &stubBrowserRunner{
 				handler: func(ctx context.Context, req render.BrowserRenderRequest) (*render.BrowserOutput, error) {
 					var fakeEdges []string

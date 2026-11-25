@@ -10,7 +10,7 @@ This directory contains self-contained synthetic `architecture.yaml` (`schema_ve
 
 Demonstrates a CI/CD and developer tooling platform spanning GitHub triggers, Cloud Build pipelines, Artifact Registry, Terraform state/module buckets, a GKE cluster hosting Atlantis and SonarQube behind Global HTTPS Load Balancers, and Private Services Access (PSA) peering to Cloud SQL.
 
-- **Manifest:** [`platform-cicd/architecture.yaml`](platform-cicd/architecture.yaml)
+- **Manifest:** [`platform-cicd/architecture.yaml`](platform-cicd/architecture.yaml) (kept identical to the test fixture [`../testdata/acme_cicd_expected.architecture.yaml`](../testdata/acme_cicd_expected.architecture.yaml))
 - **Offline HTML Dossier:** [`platform-cicd/architecture.html`](platform-cicd/architecture.html)
 - **Vector PDF Report:** [`platform-cicd/architecture.pdf`](platform-cicd/architecture.pdf)
 - **Rendered View PNGs (`3x`):**
@@ -44,7 +44,7 @@ Demonstrates a multi-project cloud-native retail platform combining Global HTTPS
 
 ## Regenerating the Examples
 
-Build the static binary and validate + render each example completely offline (requires a local Chrome or Chromium binary for `pdf` and `png` output):
+Build the static binary and validate ([`../cmd/gcp-arch/validate.go`](../cmd/gcp-arch/validate.go)) + render ([`../cmd/gcp-arch/render.go`](../cmd/gcp-arch/render.go), [`../internal/render/`](../internal/render/)) each example completely offline (requires a local Chrome or Chromium binary for `pdf` and `png` output):
 
 ```bash
 CGO_ENABLED=0 go build -o ./bin/gcp-arch ./cmd/gcp-arch

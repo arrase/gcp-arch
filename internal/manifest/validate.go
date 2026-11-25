@@ -1,9 +1,7 @@
 package manifest
 
 import (
-	"cmp"
 	"fmt"
-	"slices"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -245,85 +243,6 @@ func validateSingleEdgeProvenance(viewID string, e Edge, compByID map[string]Com
 		})
 	}
 	return issues
-}
-
-type coverageEntry struct {
-	assetType    string
-	projectID    string
-	dispositions map[string]bool
-}
-
-func recordCoverage(byURI map[string]*coverageEntry, uri, assetType, projectID, disp string) {
-	e, ok := byURI[uri]
-	if !ok {
-		e = &coverageEntry{
-			assetType:    assetType,
-			projectID:    projectID,
-			dispositions: make(map[string]bool),
-		}
-		byURI[uri] = e
-	}
-	if e.assetType == "" && assetType != "" {
-		e.assetType = assetType
-	}
-	if e.projectID == "" && projectID != "" {
-		e.projectID = projectID
-	}
-	e.dispositions[disp] = true
-}
-
-func recordBackedCoverage(byURI map[string]*coverageEntry, backed []BackedResource, prefix, title, id string) {
-	disp := prefix + cmp.Or(title, id)
-	for _, br := range backed {
-		recordCoverage(byURI, br.URI, br.AssetType, br.ProjectID, disp)
-	}
-}
-
-func sortedDispositions(dispositions map[string]bool) string {
-	disps := make([]string, 0, len(dispositions))
-	for d := range dispositions {
-		disps = append(disps, d)
-	}
-	sort.Strings(disps)
-	return strings.Join(disps, "; ")
-}
-
-// ComputeCoverage builds the sorted Inventory Coverage Table directly from architecture.yaml
-// with zero dependency on facts.json.
-func ComputeCoverage(m *Manifest) []CoverageRow {
-	if m == nil {
-		return nil
-	}
-
-	byURI := make(map[string]*coverageEntry)
-	for _, c := range m.Components {
-		recordBackedCoverage(byURI, c.BackedBy, "Component: ", c.Title, c.ID)
-	}
-	for _, ct := range m.Containers {
-		recordBackedCoverage(byURI, ct.BackedBy, "Container: ", ct.Title, ct.ID)
-	}
-	for _, ex := range m.ExcludedResources {
-		recordCoverage(byURI, ex.URI, ex.AssetType, ex.ProjectID, "Excluded: "+ex.Reason)
-	}
-
-	rows := make([]CoverageRow, 0, len(byURI))
-	for uri, e := range byURI {
-		rows = append(rows, CoverageRow{
-			URI:         uri,
-			AssetType:   e.assetType,
-			ProjectID:   e.projectID,
-			Disposition: sortedDispositions(e.dispositions),
-		})
-	}
-	slices.SortFunc(rows, func(a, b CoverageRow) int {
-		return cmp.Or(
-			cmp.Compare(a.URI, b.URI),
-			cmp.Compare(a.AssetType, b.AssetType),
-			cmp.Compare(a.ProjectID, b.ProjectID),
-			cmp.Compare(a.Disposition, b.Disposition),
-		)
-	})
-	return rows
 }
 
 type structureValidator struct {

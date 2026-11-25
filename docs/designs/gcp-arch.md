@@ -1,8 +1,11 @@
 # GCP Architecture Topological Compiler (`gcp-arch`)
 
 *   **Author:** Juan Ezquerro LLanes
-*   **Status:** Approved
+*   **Status:** Superseded
 *   **Date:** 2026-11-18
+
+> [!WARNING]
+> **Superseded Design (v1):** This v1 Draw.io topological compiler architecture has been superseded and removed from the codebase. See [semantic-multi-view-pipeline.md](semantic-multi-view-pipeline.md) for the active, implemented v3 semantic multi-view pipeline. The historical content below is preserved for reference only.
 
 --------------------------------------------------------------------------------
 

@@ -910,7 +910,7 @@ func testRenderValidationErrors(t *testing.T, tmp, manifestPath string) {
 
 func testRenderChromeFreeFallback(t *testing.T, tmp, manifestPath string) {
 	noChromeDeps := appDeps{
-		newBrowserRunner: func(_ string) (render.BrowserRunner, error) {
+		newBrowserRunner: func(_, _ string) (render.BrowserRunner, error) {
 			return nil, errors.New("chrome binary not installed")
 		},
 	}
@@ -936,7 +936,7 @@ func testRenderChromeFreeFallback(t *testing.T, tmp, manifestPath string) {
 
 func testRenderRunnerOutcomes(t *testing.T, tmp, manifestPath string) {
 	collisionDeps := appDeps{
-		newBrowserRunner: func(_ string) (render.BrowserRunner, error) {
+		newBrowserRunner: func(_, _ string) (render.BrowserRunner, error) {
 			return &stubBrowserRunner{
 				handler: func(_ context.Context, _ render.BrowserRenderRequest) (*render.BrowserOutput, error) {
 					return &render.BrowserOutput{
@@ -961,7 +961,7 @@ func testRenderRunnerOutcomes(t *testing.T, tmp, manifestPath string) {
 	}
 
 	runErrDeps := appDeps{
-		newBrowserRunner: func(_ string) (render.BrowserRunner, error) {
+		newBrowserRunner: func(_, _ string) (render.BrowserRunner, error) {
 			return &stubBrowserRunner{
 				handler: func(_ context.Context, _ render.BrowserRenderRequest) (*render.BrowserOutput, error) {
 					return nil, errors.New("cdp crashed")
@@ -976,7 +976,7 @@ func testRenderRunnerOutcomes(t *testing.T, tmp, manifestPath string) {
 	}
 
 	okDeps := appDeps{
-		newBrowserRunner: func(_ string) (render.BrowserRunner, error) {
+		newBrowserRunner: func(_, _ string) (render.BrowserRunner, error) {
 			return &stubBrowserRunner{
 				handler: func(_ context.Context, req render.BrowserRenderRequest) (*render.BrowserOutput, error) {
 					return &render.BrowserOutput{
@@ -1092,7 +1092,11 @@ func testConfigPrecedenceEndToEnd(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	cfgYAML := `
+	cfgChrome := filepath.Join(tmp, "cfg-chrome")
+	if err := os.WriteFile(cfgChrome, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfgYAML := fmt.Sprintf(`
 org: "111"
 projects:
   - cfg-proj-a
@@ -1107,10 +1111,10 @@ model: gemini-4-neon
 thinking_level: medium
 concurrency: 2
 cloudbuild_runs: 7
-chrome_path: /cfg/chrome
+chrome_path: %q
 format:
   - html
-`
+`, cfgChrome)
 	if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgYAML), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -1118,7 +1122,7 @@ format:
 
 	assertPreflightConfigPrecedence(t)
 	assertExtractAndSynthesizeConfigPrecedence(t, tmp)
-	assertRenderConfigPrecedence(t, tmp)
+	assertRenderConfigPrecedence(t, tmp, cfgChrome)
 }
 
 func assertPreflightConfigPrecedence(t *testing.T) {
@@ -1226,15 +1230,33 @@ func assertExtractAndSynthesizeConfigPrecedence(t *testing.T, tmp string) {
 	}
 }
 
-func assertRenderConfigPrecedence(t *testing.T, tmp string) {
+func assertRenderConfigPrecedence(t *testing.T, tmp, cfgChrome string) {
 	t.Helper()
 	_, manifestPath := acmeFixturePaths(t)
+
+	envChrome := filepath.Join(tmp, "env-chrome")
+	cliChrome := filepath.Join(tmp, "cli-chrome")
+	pathDir := filepath.Join(tmp, "path-bin")
+	if err := os.MkdirAll(pathDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{envChrome, cliChrome, filepath.Join(pathDir, "google-chrome")} {
+		if err := os.WriteFile(p, []byte("#!/bin/sh\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", pathDir)
+
 	var gotChromePath string
 	var gotWantPDF, gotWantPNG bool
 	renderDeps := appDeps{
 		loadConfig: loadDefaultConfig,
-		newBrowserRunner: func(cp string) (render.BrowserRunner, error) {
-			gotChromePath = cp
+		newBrowserRunner: func(explicit, fallback string) (render.BrowserRunner, error) {
+			found, err := render.FindChrome(explicit, fallback)
+			if err != nil {
+				return nil, err
+			}
+			gotChromePath = found
 			return &stubBrowserRunner{
 				handler: func(_ context.Context, req render.BrowserRenderRequest) (*render.BrowserOutput, error) {
 					gotWantPDF = req.WantPDF
@@ -1253,27 +1275,50 @@ func assertRenderConfigPrecedence(t *testing.T, tmp string) {
 	if code := run([]string{"render", manifestPath, "-o", filepath.Join(tmp, "r1")}, &stdout, &stderr, renderDeps); code != exitOK {
 		t.Fatalf("render from config exit=%d, want 0 (stderr=%s)", code, stderr.String())
 	}
-	if gotChromePath != "/cfg/chrome" || gotWantPDF || gotWantPNG {
+	if gotChromePath != cfgChrome || gotWantPDF || gotWantPNG {
 		t.Fatalf("render config failed: chrome=%q pdf=%v png=%v", gotChromePath, gotWantPDF, gotWantPNG)
 	}
 
-	t.Setenv("CHROME_PATH", "/env/chrome")
+	// Non-existent CHROME_PATH must fall through to config.yaml chrome_path before PATH.
+	t.Setenv("CHROME_PATH", filepath.Join(tmp, "missing-env-chrome"))
 	stdout.Reset()
 	stderr.Reset()
-	if code := run([]string{"render", manifestPath, "--format", "pdf", "-o", filepath.Join(tmp, "r2")}, &stdout, &stderr, renderDeps); code != exitOK {
+	if code := run([]string{"render", manifestPath, "-o", filepath.Join(tmp, "r2")}, &stdout, &stderr, renderDeps); code != exitOK {
+		t.Fatalf("render missing env fallback exit=%d, want 0 (stderr=%s)", code, stderr.String())
+	}
+	if gotChromePath != cfgChrome {
+		t.Fatalf("render missing CHROME_PATH got %q, want config chrome_path %q", gotChromePath, cfgChrome)
+	}
+
+	// Valid CHROME_PATH overrides config.yaml chrome_path.
+	t.Setenv("CHROME_PATH", envChrome)
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"render", manifestPath, "--format", "pdf", "-o", filepath.Join(tmp, "r3")}, &stdout, &stderr, renderDeps); code != exitOK {
 		t.Fatalf("render env override exit=%d, want 0 (stderr=%s)", code, stderr.String())
 	}
-	if gotChromePath != "" || !gotWantPDF || gotWantPNG {
+	if gotChromePath != envChrome || !gotWantPDF || gotWantPNG {
 		t.Fatalf("render env/format override failed: chrome=%q pdf=%v png=%v", gotChromePath, gotWantPDF, gotWantPNG)
 	}
 
+	// Explicit --chrome-path overrides both CHROME_PATH and config.yaml.
 	stdout.Reset()
 	stderr.Reset()
-	if code := run([]string{"render", manifestPath, "--chrome-path", "/cli/chrome", "-o", filepath.Join(tmp, "r3")}, &stdout, &stderr, renderDeps); code != exitOK {
+	if code := run([]string{"render", manifestPath, "--chrome-path", cliChrome, "-o", filepath.Join(tmp, "r4")}, &stdout, &stderr, renderDeps); code != exitOK {
 		t.Fatalf("render CLI chrome override exit=%d, want 0 (stderr=%s)", code, stderr.String())
 	}
-	if gotChromePath != "/cli/chrome" {
-		t.Fatalf("render CLI chrome override got %q, want /cli/chrome", gotChromePath)
+	if gotChromePath != cliChrome {
+		t.Fatalf("render CLI chrome override got %q, want %q", gotChromePath, cliChrome)
+	}
+
+	// Non-existent explicit --chrome-path fails fast instead of falling through.
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"render", manifestPath, "--chrome-path", filepath.Join(tmp, "missing-cli-chrome"), "--format", "pdf", "-o", filepath.Join(tmp, "r5")}, &stdout, &stderr, renderDeps); code != exitRuntime {
+		t.Fatalf("render missing --chrome-path exit=%d, want 1 (stderr=%s)", code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "explicit chrome path") {
+		t.Fatalf("render missing --chrome-path stderr missing explicit error: %s", stderr.String())
 	}
 }
 

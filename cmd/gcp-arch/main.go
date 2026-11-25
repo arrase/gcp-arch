@@ -50,7 +50,7 @@ type appDeps struct {
 	probeVertexModel  func(ctx context.Context, project, location, model string) error
 	extractFacts      func(ctx context.Context, clients *extract.Clients, opts extract.ExtractOptions) (*extract.FactsFile, error)
 	newModelClient    func(ctx context.Context, opts synth.VertexClientOptions) (synth.ModelClient, error)
-	newBrowserRunner  func(chromePath string) (render.BrowserRunner, error)
+	newBrowserRunner  func(chromePath, configChromePath string) (render.BrowserRunner, error)
 }
 
 func defaultDeps() appDeps {
@@ -63,8 +63,8 @@ func defaultDeps() appDeps {
 		newModelClient: func(ctx context.Context, opts synth.VertexClientOptions) (synth.ModelClient, error) {
 			return synth.NewVertexClient(ctx, opts)
 		},
-		newBrowserRunner: func(chromePath string) (render.BrowserRunner, error) {
-			found, err := render.FindChrome(chromePath)
+		newBrowserRunner: func(chromePath, configChromePath string) (render.BrowserRunner, error) {
+			found, err := render.FindChrome(chromePath, configChromePath)
 			if err != nil {
 				return nil, err
 			}

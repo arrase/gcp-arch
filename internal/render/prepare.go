@@ -51,7 +51,6 @@ type StageBanner struct {
 type PreparedContainer struct {
 	ID           string
 	Title        string
-	Subtitle     string
 	Kind         manifest.ContainerKind
 	Depth        int
 	HasInnerTop  bool
@@ -452,7 +451,6 @@ func buildPreparedContainers(
 		prepared = append(prepared, PreparedContainer{
 			ID:           ct.ID,
 			Title:        ct.Title,
-			Subtitle:     ct.Subtitle,
 			Kind:         ct.Kind,
 			Depth:        depth,
 			HasInnerTop:  hasInnerTop[ct.ID],

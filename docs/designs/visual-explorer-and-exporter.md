@@ -1,8 +1,11 @@
 # Hierarchical Multi-Level Visual Explorer and Report Diagram Exporter (`gcp-arch`)
 
 *   **Author:** Juan Ezquerro LLanes
-*   **Status:** Proposed
+*   **Status:** Superseded
 *   **Date:** 2026-11-20
+
+> [!WARNING]
+> **Superseded Design (v2):** This v2 snapshot, loopback visual explorer, and `elk-go` SVG exporter architecture has been superseded and retired from the codebase (retaining only [internal/ioutil/atomic.go](../../internal/ioutil/atomic.go)). See [semantic-multi-view-pipeline.md](semantic-multi-view-pipeline.md) for the active, implemented v3 semantic multi-view pipeline. The historical content below is preserved for reference only.
 
 --------------------------------------------------------------------------------
 

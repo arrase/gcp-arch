@@ -390,21 +390,52 @@ func testRenderChromeFreeFallbackAndErrors(t *testing.T, m *manifest.Manifest, r
 }
 
 func testFindChromeDiscovery(t *testing.T) {
-	tmpBin := filepath.Join(t.TempDir(), "fake-chrome")
-	if err := os.WriteFile(tmpBin, []byte("#!/bin/sh\n"), 0o755); err != nil {
-		t.Fatalf("write fake chrome: %v", err)
+	dir := t.TempDir()
+	cliBin := filepath.Join(dir, "cli-chrome")
+	envBin := filepath.Join(dir, "env-chrome")
+	cfgBin := filepath.Join(dir, "cfg-chrome")
+	pathDir := filepath.Join(dir, "bin")
+	pathBin := filepath.Join(pathDir, "google-chrome")
+	if err := os.MkdirAll(pathDir, 0o755); err != nil {
+		t.Fatalf("mkdir pathDir: %v", err)
 	}
-	got, err := FindChrome(tmpBin)
-	if err != nil || got != tmpBin {
-		t.Fatalf("FindChrome explicit = (%q, %v), want %q", got, err, tmpBin)
+	for _, p := range []string{cliBin, envBin, cfgBin, pathBin} {
+		if err := os.WriteFile(p, []byte("#!/bin/sh\n"), 0o755); err != nil {
+			t.Fatalf("write fake chrome %s: %v", p, err)
+		}
 	}
-	t.Setenv("CHROME_PATH", tmpBin)
-	got, err = FindChrome("")
-	if err != nil || got != tmpBin {
-		t.Fatalf("FindChrome CHROME_PATH = (%q, %v), want %q", got, err, tmpBin)
+	t.Setenv("PATH", pathDir)
+	missing := filepath.Join(dir, "missing")
+
+	// Explicit --chrome-path wins over CHROME_PATH, config fallback, and PATH.
+	t.Setenv("CHROME_PATH", envBin)
+	got, err := FindChrome(cliBin, cfgBin)
+	if err != nil || got != cliBin {
+		t.Fatalf("FindChrome explicit = (%q, %v), want %q", got, err, cliBin)
 	}
-	if _, err := FindChrome(filepath.Join(t.TempDir(), "missing")); err == nil {
+
+	// Missing explicit --chrome-path fails fast even when CHROME_PATH, config fallback, and PATH exist.
+	if _, err := FindChrome(missing, cfgBin); err == nil {
 		t.Fatalf("expected error for missing explicit chrome path")
+	}
+
+	// Valid CHROME_PATH wins over config fallback and PATH.
+	got, err = FindChrome("", cfgBin)
+	if err != nil || got != envBin {
+		t.Fatalf("FindChrome CHROME_PATH = (%q, %v), want %q", got, err, envBin)
+	}
+
+	// Non-existent CHROME_PATH falls through to config fallback before PATH.
+	t.Setenv("CHROME_PATH", missing)
+	got, err = FindChrome("", cfgBin)
+	if err != nil || got != cfgBin {
+		t.Fatalf("FindChrome missing CHROME_PATH + valid config = (%q, %v), want %q", got, err, cfgBin)
+	}
+
+	// Missing CHROME_PATH and missing config fallback fall through to PATH.
+	got, err = FindChrome("", missing)
+	if err != nil || got != pathBin {
+		t.Fatalf("FindChrome PATH fallback = (%q, %v), want %q", got, err, pathBin)
 	}
 }
 
