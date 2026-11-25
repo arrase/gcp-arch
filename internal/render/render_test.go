@@ -181,7 +181,7 @@ func TestPrepareDocumentBarycenterWaypointsBusesAndSpans(t *testing.T) {
 					// Auto fan-out bus from b1 -> c1, c2
 					{From: "b1", To: "c1", Verb: "write 1", FlowKind: manifest.FlowCICD, Provenance: manifest.ProvenanceVerified, EvidenceEdgeIDs: []string{"e3"}},
 					{From: "b1", To: "c2", Verb: "write 2", FlowKind: manifest.FlowCICD, Provenance: manifest.ProvenanceVerified, EvidenceEdgeIDs: []string{"e4"}},
-					// Multi-column edge a1 -> c2 (must emit .edge-waypoint)
+					// Multi-column edge a1 -> c2 (must assign WaypointRow on a clear horizontal corridor)
 					{From: "a1", To: "c2", Verb: "skip col", FlowKind: manifest.FlowAdmin, Provenance: manifest.ProvenanceInferred, InferenceRationale: "admin path"},
 					// Same-column lateral edge c1 -> c2 (rightmost column -> left lateral detour)
 					{From: "c1", To: "c2", Verb: "replicate", FlowKind: manifest.FlowRuntime, Provenance: manifest.ProvenanceInferred, InferenceRationale: "replica"},
@@ -209,13 +209,26 @@ func TestPrepareDocumentBarycenterWaypointsBusesAndSpans(t *testing.T) {
 		t.Fatalf("unexpected container spans: %+v", v.Containers)
 	}
 
-	// Check waypoints generated for multi-column edge a1 -> c2.
-	if len(v.Waypoints) == 0 {
-		t.Fatalf("expected .edge-waypoint generated for multi-column edge a1 -> c2")
+	// Check auto bus grouping, multi-column WaypointRow, and lateral detours for a1->a2 & c1->c2.
+	waypointRow := assertBarycenterRoutingEdges(t, v.Edges)
+	if len(v.CorridorRows) <= waypointRow {
+		t.Fatalf("expected CorridorRows to include waypoint row %d, got %v", waypointRow, v.CorridorRows)
 	}
-
-	// Check auto bus grouping for b1 -> c1, c2 and lateral detours for a1->a2 & c1->c2.
-	assertBarycenterRoutingEdges(t, v.Edges)
+	wantTrack := fmt.Sprintf("var(--corridor-row-%d, var(--corridor-row-default))", waypointRow)
+	if !strings.Contains(v.RowTracksCSS, wantTrack) {
+		t.Fatalf("expected RowTracksCSS to contain %q, got %q", wantTrack, v.RowTracksCSS)
+	}
+	rawHTML, err := BuildHTML(m, reg)
+	if err != nil {
+		t.Fatalf("BuildHTML: %v", err)
+	}
+	htmlStr := string(rawHTML)
+	if !strings.Contains(htmlStr, fmt.Sprintf(`class="corridor-row" data-corridor-row="%d"`, waypointRow)) {
+		t.Fatalf("expected .corridor-row for waypoint row %d in rendered HTML", waypointRow)
+	}
+	if strings.Contains(htmlStr, "edge-waypoint") {
+		t.Fatalf("unexpected dead .edge-waypoint markup/CSS/JS in rendered HTML")
+	}
 	if len(v.Footnotes) != 3 {
 		t.Fatalf("expected 3 INFERRED footnotes, got %d", len(v.Footnotes))
 	}
@@ -244,9 +257,10 @@ func isLateralEdge(e RoutingEdge, from, to, side string) bool {
 	return e.From == from && e.To == to && e.LateralSide == side
 }
 
-func assertBarycenterRoutingEdges(t *testing.T, edges []RoutingEdge) {
+func assertBarycenterRoutingEdges(t *testing.T, edges []RoutingEdge) int {
 	t.Helper()
 	var foundBus, foundLeftLat, foundRightLat bool
+	waypointRow := 0
 	for _, e := range edges {
 		if isOutBusEdge(e, "b1") {
 			foundBus = true
@@ -257,10 +271,14 @@ func assertBarycenterRoutingEdges(t *testing.T, edges []RoutingEdge) {
 		if isLateralEdge(e, "a1", "a2", "right") {
 			foundRightLat = true
 		}
+		if e.From == "a1" && e.To == "c2" {
+			waypointRow = e.WaypointRow
+		}
 	}
-	if !foundBus || !foundLeftLat || !foundRightLat {
-		t.Fatalf("missing expected routing attributes: bus=%v leftLat=%v rightLat=%v", foundBus, foundLeftLat, foundRightLat)
+	if !foundBus || !foundLeftLat || !foundRightLat || waypointRow <= 0 {
+		t.Fatalf("missing expected routing attributes: bus=%v leftLat=%v rightLat=%v waypointRow=%d", foundBus, foundLeftLat, foundRightLat, waypointRow)
 	}
+	return waypointRow
 }
 
 type mockBrowserRunner struct {
@@ -357,11 +375,44 @@ func testRenderLayoutCollisionError(t *testing.T, m *manifest.Manifest, reg *ico
 func testRenderChromeFreeFallbackAndErrors(t *testing.T, m *manifest.Manifest, reg *icons.Registry) {
 	t.Helper()
 	outDir := t.TempDir()
+	missingChrome := filepath.Join(outDir, "nonexistent-chrome")
+
+	// Explicit non-existent ChromePath must fail fast even when only FormatHTML is requested.
+	explicitHTMLDir := filepath.Join(outDir, "explicit-html")
 	var warn bytes.Buffer
+	if _, err := Render(context.Background(), m, reg, RenderOptions{
+		Formats:       []Format{FormatHTML},
+		OutputDir:     explicitHTMLDir,
+		ChromePath:    missingChrome,
+		WarningWriter: &warn,
+	}); err == nil || !strings.Contains(err.Error(), "explicit chrome path") {
+		t.Fatalf("expected explicit chrome path error under FormatHTML alone, got: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(explicitHTMLDir, "architecture.html")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected no fallback architecture.html on explicit missing ChromePath, stat err=%v", err)
+	}
+
+	// Requesting PDF with missing explicit Chrome must fail cleanly.
+	if _, err := Render(context.Background(), m, reg, RenderOptions{
+		Formats:    []Format{FormatPDF},
+		OutputDir:  outDir,
+		ChromePath: missingChrome,
+	}); err == nil || !strings.Contains(err.Error(), "explicit chrome path") {
+		t.Fatalf("expected explicit chrome path error requesting pdf, got: %v", err)
+	}
+
+	// Empty ChromePath with no discoverable Chrome falls back gracefully under FormatHTML alone.
+	t.Setenv("PATH", "")
+	t.Setenv("CHROME_PATH", "")
+	origOSPaths := chromeOSPaths
+	chromeOSPaths = nil
+	t.Cleanup(func() { chromeOSPaths = origOSPaths })
+
+	fallbackDir := filepath.Join(outDir, "fallback-html")
+	warn.Reset()
 	summary, err := Render(context.Background(), m, reg, RenderOptions{
 		Formats:       []Format{FormatHTML},
-		OutputDir:     outDir,
-		ChromePath:    filepath.Join(outDir, "nonexistent-chrome"),
+		OutputDir:     fallbackDir,
 		WarningWriter: &warn,
 	})
 	if err != nil {
@@ -370,14 +421,17 @@ func testRenderChromeFreeFallbackAndErrors(t *testing.T, m *manifest.Manifest, r
 	if summary.UsedChrome || summary.HTMLPath == "" || !strings.Contains(warn.String(), "warning:") {
 		t.Fatalf("unexpected Chrome-free HTML fallback result: summary=%+v warn=%q", summary, warn.String())
 	}
+	htmlBytes, err := os.ReadFile(summary.HTMLPath)
+	if err != nil || !bytes.Contains(htmlBytes, []byte("__GCP_ARCH_RENDER_PROMISE__")) || bytes.Contains(htmlBytes, []byte(`data-gcp-arch-routed="1"`)) {
+		t.Fatalf("expected unrouted fallback HTML at %s, err=%v", summary.HTMLPath, err)
+	}
 
-	// Requesting PDF with missing explicit Chrome must fail cleanly.
+	// Empty ChromePath with no discoverable Chrome must fail when PDF is requested.
 	if _, err := Render(context.Background(), m, reg, RenderOptions{
-		Formats:    []Format{FormatPDF},
-		OutputDir:  outDir,
-		ChromePath: filepath.Join(outDir, "nonexistent-chrome"),
-	}); err == nil {
-		t.Fatalf("expected error requesting pdf without Chrome")
+		Formats:   []Format{FormatPDF},
+		OutputDir: outDir,
+	}); err == nil || !strings.Contains(err.Error(), "required for pdf/png output") {
+		t.Fatalf("expected missing Chrome error requesting pdf, got: %v", err)
 	}
 
 	// Unsupported format error.
@@ -436,6 +490,16 @@ func testFindChromeDiscovery(t *testing.T) {
 	got, err = FindChrome("", missing)
 	if err != nil || got != pathBin {
 		t.Fatalf("FindChrome PATH fallback = (%q, %v), want %q", got, err, pathBin)
+	}
+
+	// No Chrome on CHROME_PATH, config fallback, PATH, or OS paths returns an error.
+	t.Setenv("PATH", "")
+	t.Setenv("CHROME_PATH", "")
+	origOSPaths := chromeOSPaths
+	chromeOSPaths = nil
+	t.Cleanup(func() { chromeOSPaths = origOSPaths })
+	if _, err := FindChrome("", missing); err == nil {
+		t.Fatalf("expected error when no Chrome binary exists anywhere")
 	}
 }
 

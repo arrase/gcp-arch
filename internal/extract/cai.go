@@ -1348,6 +1348,7 @@ var retainedMetadataExtractors = map[string]metadataExtractor{
 	"appengine.googleapis.com/Service":                   extractAppEngineServiceMetadata,
 	"pubsub.googleapis.com/Subscription":                 extractPubSubSubMetadata,
 	"eventarc.googleapis.com/Trigger":                    extractEventarcTriggerMetadata,
+	"cloudtasks.googleapis.com/Queue":                    extractCloudTasksQueueMetadata,
 	"cloudscheduler.googleapis.com/Job":                  extractSchedulerJobMetadata,
 	"storagetransfer.googleapis.com/TransferJob":         extractStorageTransferMetadata,
 	"bigquerydatatransfer.googleapis.com/TransferConfig": extractBQDTMetadata,
@@ -1693,6 +1694,35 @@ func extractEventarcTriggerMetadata(_ *extractState, rec *ingestedAsset, data *s
 	rec.addOutRef(getStringField(dst, "cloudFunction"), "cloudfunctions.googleapis.com", detailEventarcDest, "")
 	rec.addOutRef(getStringField(dst, "workflow"), "workflows.googleapis.com", detailEventarcDest, "")
 	rec.addOutRef(getStringField(getStructField(dst, "gke"), "cluster"), "container.googleapis.com", detailEventarcDest, "")
+}
+
+func extractCloudTasksQueueMetadata(_ *extractState, rec *ingestedAsset, data *structpb.Struct) {
+	if uri := buildCloudTasksHTTPTargetURI(getStructField(getStructField(data, "httpTarget"), "uriOverride")); uri != "" {
+		rec.addOutRef(uri, "", "cloudtasks.http", "http")
+	}
+	aeSvc := strings.TrimSpace(getStringField(getStructField(data, "appEngineRoutingOverride"), "service"))
+	if aeSvc == "" {
+		aeSvc = strings.TrimSpace(getStringField(getStructField(getStructField(data, "appEngineHttpQueue"), "appEngineRoutingOverride"), "service"))
+	}
+	if aeSvc != "" && rec.projectID != "" {
+		rec.addOutRef("//appengine.googleapis.com/apps/"+rec.projectID+segServices+aeSvc, "appengine.googleapis.com", "cloudtasks.appengine", "")
+	}
+}
+
+func buildCloudTasksHTTPTargetURI(uo *structpb.Struct) string {
+	host := strings.TrimSpace(getStringField(uo, "host"))
+	if host == "" {
+		return ""
+	}
+	scheme := strings.ToLower(strings.TrimSpace(getStringField(uo, "scheme")))
+	if scheme != "http" && scheme != "https" {
+		scheme = "https"
+	}
+	path := strings.TrimSpace(getStringField(getStructField(uo, "pathOverride"), "path"))
+	if path != "" && !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	return SanitizeURL(scheme + "://" + host + path)
 }
 
 func extractSchedulerJobMetadata(_ *extractState, rec *ingestedAsset, data *structpb.Struct) {

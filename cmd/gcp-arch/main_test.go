@@ -909,8 +909,14 @@ func testRenderValidationErrors(t *testing.T, tmp, manifestPath string) {
 }
 
 func testRenderChromeFreeFallback(t *testing.T, tmp, manifestPath string) {
+	t.Setenv("PATH", "")
+	t.Setenv("CHROME_PATH", "")
+
 	noChromeDeps := appDeps{
-		newBrowserRunner: func(_, _ string) (render.BrowserRunner, error) {
+		newBrowserRunner: func(explicit, _ string) (render.BrowserRunner, error) {
+			if strings.TrimSpace(explicit) != "" {
+				return nil, fmt.Errorf("explicit chrome path %q not found", explicit)
+			}
 			return nil, errors.New("chrome binary not installed")
 		},
 	}
@@ -925,6 +931,29 @@ func testRenderChromeFreeFallback(t *testing.T, tmp, manifestPath string) {
 	htmlBytes, err := os.ReadFile(filepath.Join(outHTMLDir, "architecture.html"))
 	if err != nil || !bytes.Contains(htmlBytes, []byte("__GCP_ARCH_RENDER_PROMISE__")) {
 		t.Fatalf("fallback HTML invalid: err=%v", err)
+	}
+
+	// Explicit missing --chrome-path fails fast (exit 1) even under --format html alone.
+	missingChrome := filepath.Join(tmp, "missing-chrome")
+	for _, tc := range []struct {
+		name string
+		deps appDeps
+		dir  string
+	}{
+		{"via newBrowserRunner", noChromeDeps, filepath.Join(tmp, "explicit-html-runner")},
+		{"via render.Render", appDeps{}, filepath.Join(tmp, "explicit-html-direct")},
+	} {
+		stdout.Reset()
+		stderr.Reset()
+		if code := run([]string{"render", manifestPath, "--format", "html", "--chrome-path", missingChrome, "-o", tc.dir}, &stdout, &stderr, tc.deps); code != exitRuntime {
+			t.Fatalf("%s missing --chrome-path with --format html exit=%d, want 1 (stderr=%s)", tc.name, code, stderr.String())
+		}
+		if !strings.Contains(stderr.String(), "explicit chrome path") {
+			t.Errorf("%s stderr missing explicit chrome path error: %s", tc.name, stderr.String())
+		}
+		if _, err := os.Stat(filepath.Join(tc.dir, "architecture.html")); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("%s unexpectedly wrote fallback architecture.html (stat err=%v)", tc.name, err)
+		}
 	}
 
 	stdout.Reset()
@@ -1311,14 +1340,25 @@ func assertRenderConfigPrecedence(t *testing.T, tmp, cfgChrome string) {
 		t.Fatalf("render CLI chrome override got %q, want %q", gotChromePath, cliChrome)
 	}
 
-	// Non-existent explicit --chrome-path fails fast instead of falling through.
-	stdout.Reset()
-	stderr.Reset()
-	if code := run([]string{"render", manifestPath, "--chrome-path", filepath.Join(tmp, "missing-cli-chrome"), "--format", "pdf", "-o", filepath.Join(tmp, "r5")}, &stdout, &stderr, renderDeps); code != exitRuntime {
-		t.Fatalf("render missing --chrome-path exit=%d, want 1 (stderr=%s)", code, stderr.String())
-	}
-	if !strings.Contains(stderr.String(), "explicit chrome path") {
-		t.Fatalf("render missing --chrome-path stderr missing explicit error: %s", stderr.String())
+	// Non-existent explicit --chrome-path fails fast instead of falling through (both pdf and html-only).
+	for _, tc := range []struct {
+		format string
+		dir    string
+	}{
+		{"pdf", filepath.Join(tmp, "r5")},
+		{"html", filepath.Join(tmp, "r6")},
+	} {
+		stdout.Reset()
+		stderr.Reset()
+		if code := run([]string{"render", manifestPath, "--chrome-path", filepath.Join(tmp, "missing-cli-chrome"), "--format", tc.format, "-o", tc.dir}, &stdout, &stderr, renderDeps); code != exitRuntime {
+			t.Fatalf("render missing --chrome-path --format %s exit=%d, want 1 (stderr=%s)", tc.format, code, stderr.String())
+		}
+		if !strings.Contains(stderr.String(), "explicit chrome path") {
+			t.Fatalf("render missing --chrome-path --format %s stderr missing explicit error: %s", tc.format, stderr.String())
+		}
+		if _, err := os.Stat(filepath.Join(tc.dir, "architecture.html")); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("render missing --chrome-path --format %s unexpectedly wrote architecture.html (stat err=%v)", tc.format, err)
+		}
 	}
 }
 

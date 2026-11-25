@@ -170,6 +170,15 @@ func hasEdge(edges []FactEdge, from, to string, kind FactEdgeKind) bool {
 	return false
 }
 
+func hasEdgeDetail(edges []FactEdge, from, to string, kind FactEdgeKind, detail string) bool {
+	for _, e := range edges {
+		if e.FromURI == from && e.ToURI == to && e.Kind == kind && e.Detail == detail {
+			return true
+		}
+	}
+	return false
+}
+
 func findResource(resources []FactResource, uri string) *FactResource {
 	for i := range resources {
 		if resources[i].URI == uri {
@@ -3381,5 +3390,239 @@ func assertRecanonicalizedSpokeAndMultiProjectGKE(t *testing.T, facts *FactsFile
 	}
 	if !hasEdge(facts.Edges, exp.frB, exp.svcHostNEG, EdgeK8sNEGBackend) {
 		t.Errorf("expected cross-project K8S_NEG_BACKEND edge %s -> %s", exp.frB, exp.svcHostNEG)
+	}
+}
+
+func TestRedisClusterPSCAndPSAManagedServices(t *testing.T) {
+	vpcIn := "//compute.googleapis.com/projects/app-p/global/networks/vpc-in"
+	rcIn := "//redis.googleapis.com/projects/app-p/locations/us-central1/clusters/rc-in"
+	rcExt := "//redis.googleapis.com/projects/app-p/locations/us-central1/clusters/rc-ext"
+	riURI := "//redis.googleapis.com/projects/app-p/locations/us-central1/instances/ri-1"
+	sqlURI := "//sqladmin.googleapis.com/projects/app-p/instances/sql-1"
+	extHostStub := "//cloudresourcemanager.googleapis.com/projects/ext-host"
+
+	assetHandler := func(_ context.Context, req *assetpb.ListAssetsRequest) (*assetpb.ListAssetsResponse, error) {
+		if req.ContentType != assetpb.ContentType_RESOURCE {
+			return &assetpb.ListAssetsResponse{ReadTime: timestamppb.Now()}, nil
+		}
+		return &assetpb.ListAssetsResponse{
+			ReadTime: timestamppb.Now(),
+			Assets: []*assetpb.Asset{
+				{Name: "//cloudresourcemanager.googleapis.com/projects/app-p", AssetType: "cloudresourcemanager.googleapis.com/Project", Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{"projectId": "app-p", "projectNumber": "4001"})}},
+				{
+					Name:      vpcIn,
+					AssetType: "compute.googleapis.com/Network",
+					Ancestors: []string{"projects/app-p"},
+					Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+						"peerings": []any{map[string]any{
+							"name":    "servicenetworking-googleapis-com",
+							"network": "projects/p12345-tp/global/networks/sn-net",
+							"state":   "ACTIVE",
+						}},
+					})},
+				},
+				{
+					Name:      rcIn,
+					AssetType: "redis.googleapis.com/Cluster",
+					Ancestors: []string{"projects/app-p"},
+					Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+						"pscConfigs": []any{map[string]any{"network": "projects/app-p/global/networks/vpc-in"}},
+					})},
+				},
+				{
+					Name:      rcExt,
+					AssetType: "redis.googleapis.com/Cluster",
+					Ancestors: []string{"projects/app-p"},
+					Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+						"pscConfigs": []any{map[string]any{"network": "projects/ext-host/global/networks/shared-vpc"}},
+					})},
+				},
+				{
+					Name:      riURI,
+					AssetType: "redis.googleapis.com/Instance",
+					Ancestors: []string{"projects/app-p"},
+					Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+						"authorizedNetwork": "projects/app-p/global/networks/vpc-in",
+					})},
+				},
+				{
+					Name:      sqlURI,
+					AssetType: "sqladmin.googleapis.com/Instance",
+					Ancestors: []string{"projects/app-p"},
+					Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+						"settings": map[string]any{"ipConfiguration": map[string]any{"privateNetwork": "projects/app-p/global/networks/vpc-in"}},
+					})},
+				},
+			},
+		}, nil
+	}
+
+	clients, _ := newTestClients(t, assetHandler, nil, nil, nil)
+	facts, err := Extract(context.Background(), clients, ExtractOptions{Scopes: []string{"projects/app-p"}})
+	if err != nil {
+		t.Fatalf("Extract error: %v", err)
+	}
+
+	wantEdges := []struct {
+		from, to string
+		kind     FactEdgeKind
+		detail   string
+	}{
+		{vpcIn, rcIn, EdgeConfigRef, "psc_network"},
+		{rcExt, extHostStub, EdgeConfigRef, "shared_vpc"},
+		{vpcIn, riURI, EdgePSAPeering, "servicenetworking-googleapis-com (p12345-tp)"},
+		{vpcIn, sqlURI, EdgePSAPeering, "servicenetworking-googleapis-com (p12345-tp)"},
+	}
+	for _, want := range wantEdges {
+		if !hasEdgeDetail(facts.Edges, want.from, want.to, want.kind, want.detail) {
+			t.Errorf("missing edge %s -[%s:%s]-> %s (got %+v)", want.from, want.kind, want.detail, want.to, facts.Edges)
+		}
+	}
+	if hasEdge(facts.Edges, vpcIn, rcIn, EdgePSAPeering) {
+		t.Errorf("redis.googleapis.com/Cluster must not emit PSA_PEERING edge")
+	}
+	if rcRes := findResource(facts.Resources, rcIn); rcRes == nil {
+		t.Fatalf("missing resource %s", rcIn)
+	} else if _, hasTenant := rcRes.Attributes["psa_tenant_project"]; hasTenant {
+		t.Errorf("redis.googleapis.com/Cluster must not record psa_tenant_project attribute")
+	}
+	assertProjectSharedVPCHost(t, facts, "app-p", "ext-host")
+}
+
+func assertProjectSharedVPCHost(t *testing.T, facts *FactsFile, projectID, wantHost string) {
+	t.Helper()
+	for _, p := range facts.Hierarchy.Projects {
+		if p.ProjectID == projectID {
+			if p.SharedVPCHostProject != wantHost {
+				t.Errorf("%s SharedVPCHostProject = %q, want %q", projectID, p.SharedVPCHostProject, wantHost)
+			}
+			return
+		}
+	}
+	t.Errorf("project %s not found in hierarchy", projectID)
+}
+
+func TestCloudTasksQueueStructuralRefs(t *testing.T) {
+	runURI := "//run.googleapis.com/projects/tasks-p/locations/us-central1/services/worker-api"
+	fnURI := "//cloudfunctions.googleapis.com/projects/tasks-p/locations/us-central1/functions/fn-hook"
+	aeWorkerURI := "//appengine.googleapis.com/apps/tasks-p/services/worker"
+	aeLegacyURI := "//appengine.googleapis.com/apps/tasks-p/services/legacy"
+	qHTTPRun := "//cloudtasks.googleapis.com/projects/tasks-p/locations/us-central1/queues/q-http-run"
+	qHTTPFn := "//cloudtasks.googleapis.com/projects/tasks-p/locations/us-central1/queues/q-http-fn"
+	qHTTPNoHost := "//cloudtasks.googleapis.com/projects/tasks-p/locations/us-central1/queues/q-http-nohost"
+	qAEV2 := "//cloudtasks.googleapis.com/projects/tasks-p/locations/us-central1/queues/q-ae-v2"
+	qAEV2Beta3 := "//cloudtasks.googleapis.com/projects/tasks-p/locations/us-central1/queues/q-ae-v2beta3"
+
+	assetHandler := func(_ context.Context, req *assetpb.ListAssetsRequest) (*assetpb.ListAssetsResponse, error) {
+		if req.ContentType != assetpb.ContentType_RESOURCE {
+			return &assetpb.ListAssetsResponse{ReadTime: timestamppb.Now()}, nil
+		}
+		return &assetpb.ListAssetsResponse{
+			ReadTime: timestamppb.Now(),
+			Assets: []*assetpb.Asset{
+				{Name: "//cloudresourcemanager.googleapis.com/projects/3003", AssetType: "cloudresourcemanager.googleapis.com/Project", Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{"projectId": "tasks-p", "projectNumber": "3003"})}},
+				{
+					Name:      "//run.googleapis.com/projects/3003/locations/us-central1/services/worker-api",
+					AssetType: "run.googleapis.com/Service",
+					Resource:  &assetpb.Resource{Location: "us-central1", Data: mustStruct(t, map[string]any{"uri": "https://worker-api-abcdef-uc.a.run.app"})},
+				},
+				{
+					Name:      "//cloudfunctions.googleapis.com/projects/3003/locations/us-central1/functions/fn-hook",
+					AssetType: "cloudfunctions.googleapis.com/CloudFunction",
+					Resource:  &assetpb.Resource{Location: "us-central1", Data: mustStruct(t, map[string]any{"httpsTrigger": map[string]any{"url": "https://us-central1-tasks-p.cloudfunctions.net/fn-hook"}})},
+				},
+				{Name: "//appengine.googleapis.com/apps/3003/services/worker", AssetType: "appengine.googleapis.com/Service"},
+				{Name: "//appengine.googleapis.com/apps/3003/services/legacy", AssetType: "appengine.googleapis.com/Service"},
+				{
+					Name:      "//cloudtasks.googleapis.com/projects/3003/locations/us-central1/queues/q-http-run",
+					AssetType: "cloudtasks.googleapis.com/Queue",
+					Resource: &assetpb.Resource{Location: "us-central1", Data: mustStruct(t, map[string]any{
+						"state": "RUNNING",
+						"httpTarget": map[string]any{
+							"uriOverride": map[string]any{
+								"scheme":       "HTTPS",
+								"host":         "worker-api-abcdef-uc.a.run.app",
+								"pathOverride": map[string]any{"path": "dispatch?token=secret#frag"},
+							},
+							"oidcToken": map[string]any{"serviceAccountEmail": "tasks@tasks-p.iam.gserviceaccount.com"},
+						},
+					})},
+				},
+				{
+					Name:      "//cloudtasks.googleapis.com/projects/3003/locations/us-central1/queues/q-http-fn",
+					AssetType: "cloudtasks.googleapis.com/Queue",
+					Resource: &assetpb.Resource{Location: "us-central1", Data: mustStruct(t, map[string]any{
+						"state": "RUNNING",
+						"httpTarget": map[string]any{
+							"uriOverride": map[string]any{
+								"scheme":       "SCHEME_UNSPECIFIED",
+								"host":         "us-central1-tasks-p.cloudfunctions.net",
+								"pathOverride": map[string]any{"path": "/fn-hook"},
+							},
+							"oauthToken": map[string]any{"serviceAccountEmail": "oauth@tasks-p.iam.gserviceaccount.com"},
+						},
+					})},
+				},
+				{
+					Name:      "//cloudtasks.googleapis.com/projects/3003/locations/us-central1/queues/q-http-nohost",
+					AssetType: "cloudtasks.googleapis.com/Queue",
+					Resource: &assetpb.Resource{Location: "us-central1", Data: mustStruct(t, map[string]any{
+						"state":      "RUNNING",
+						"httpTarget": map[string]any{"uriOverride": map[string]any{"scheme": "HTTP"}},
+					})},
+				},
+				{
+					Name:      "//cloudtasks.googleapis.com/projects/3003/locations/us-central1/queues/q-ae-v2",
+					AssetType: "cloudtasks.googleapis.com/Queue",
+					Resource: &assetpb.Resource{Location: "us-central1", Data: mustStruct(t, map[string]any{
+						"state":                    "RUNNING",
+						"appEngineRoutingOverride": map[string]any{"service": "worker"},
+					})},
+				},
+				{
+					Name:      "//cloudtasks.googleapis.com/projects/3003/locations/us-central1/queues/q-ae-v2beta3",
+					AssetType: "cloudtasks.googleapis.com/Queue",
+					Resource: &assetpb.Resource{Location: "us-central1", Data: mustStruct(t, map[string]any{
+						"state": "RUNNING",
+						"appEngineHttpQueue": map[string]any{
+							"appEngineRoutingOverride": map[string]any{"service": "legacy"},
+						},
+					})},
+				},
+			},
+		}, nil
+	}
+
+	clients, _ := newTestClients(t, assetHandler, nil, nil, nil)
+	facts, err := Extract(context.Background(), clients, ExtractOptions{Scopes: []string{"projects/tasks-p"}})
+	if err != nil {
+		t.Fatalf("Extract error: %v", err)
+	}
+
+	wantEdges := []struct {
+		from, to string
+		kind     FactEdgeKind
+		detail   string
+	}{
+		{qHTTPRun, runURI, EdgeConfigRef, "cloudtasks.http"},
+		{qHTTPFn, fnURI, EdgeConfigRef, "cloudtasks.http"},
+		{qAEV2, aeWorkerURI, EdgeConfigRef, "cloudtasks.appengine"},
+		{qAEV2Beta3, aeLegacyURI, EdgeConfigRef, "cloudtasks.appengine"},
+	}
+	for _, want := range wantEdges {
+		if !hasEdgeDetail(facts.Edges, want.from, want.to, want.kind, want.detail) {
+			t.Errorf("missing edge %s -[%s:%s]-> %s (got %+v)", want.from, want.kind, want.detail, want.to, facts.Edges)
+		}
+	}
+	for _, e := range facts.Edges {
+		if e.FromURI == qHTTPNoHost {
+			t.Errorf("queue without httpTarget.uriOverride.host must not emit outbound edge: %+v", e)
+		}
+	}
+	if qRes := findResource(facts.Resources, qHTTPRun); qRes == nil || qRes.Attributes["service_account"] != "tasks@tasks-p.iam.gserviceaccount.com" {
+		t.Errorf("expected q-http-run oidcToken service_account attribute, got %+v", qRes)
+	}
+	if qRes := findResource(facts.Resources, qHTTPFn); qRes == nil || qRes.Attributes["service_account"] != "oauth@tasks-p.iam.gserviceaccount.com" {
+		t.Errorf("expected q-http-fn oauthToken service_account attribute, got %+v", qRes)
 	}
 }

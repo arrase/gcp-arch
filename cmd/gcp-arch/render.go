@@ -134,6 +134,9 @@ func (rc renderContext) resolveRunner(m *manifest.Manifest, reg *icons.Registry,
 	if findErr == nil {
 		return r, false, nil
 	}
+	if strings.TrimSpace(rc.opts.chromePath) != "" {
+		return nil, false, runtimeErr(findErr)
+	}
 	if !htmlOnly {
 		return nil, false, runtimeErr(fmt.Errorf("Chrome/Chromium binary required for pdf/png output: %w", findErr))
 	}

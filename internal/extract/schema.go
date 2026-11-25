@@ -39,12 +39,11 @@ type CoverageState string
 
 // Supported CoverageState values.
 const (
-	CoverageOK                 CoverageState = "OK"
-	CoverageIAMDenied          CoverageState = "IAM_DENIED"
-	CoverageVPCSCBlocked       CoverageState = "VPC_SC_BLOCKED"
-	CoverageServiceDisabled    CoverageState = "SERVICE_DISABLED"
-	CoverageUnknownOrgRequired CoverageState = "UNKNOWN_ORG_REQUIRED"
-	CoverageTruncatingCap      CoverageState = "TRUNCATING_CAP"
+	CoverageOK              CoverageState = "OK"
+	CoverageIAMDenied       CoverageState = "IAM_DENIED"
+	CoverageVPCSCBlocked    CoverageState = "VPC_SC_BLOCKED"
+	CoverageServiceDisabled CoverageState = "SERVICE_DISABLED"
+	CoverageTruncatingCap   CoverageState = "TRUNCATING_CAP"
 )
 
 // FactsFile is the on-disk v3 contract emitted by Stage 1 extraction.

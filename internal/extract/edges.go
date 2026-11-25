@@ -384,8 +384,11 @@ func (st *extractState) emitPSAPeeringAndSharedVPC() {
 			continue
 		}
 		st.recordSharedVPCHost(a, vpc)
-		if isPSAManagedService(a.assetType) {
+		switch {
+		case isPSAManagedService(a.assetType):
 			st.emitPSAPeeringEdge(a, vpc)
+		case a.assetType == "redis.googleapis.com/Cluster" && st.assetsByURI[vpc] != nil:
+			st.addEdge(vpc, a.uri, EdgeConfigRef, "psc_network")
 		}
 	}
 }
@@ -463,7 +466,6 @@ func isPSAManagedService(assetType string) bool {
 	case "sqladmin.googleapis.com/Instance",
 		"alloydb.googleapis.com/Cluster",
 		"redis.googleapis.com/Instance",
-		"redis.googleapis.com/Cluster",
 		"memcache.googleapis.com/Instance",
 		"file.googleapis.com/Instance":
 		return true

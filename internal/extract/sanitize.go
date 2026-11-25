@@ -491,7 +491,7 @@ var assetAttrProjectors = map[string]attrProjectorFn{
 	"pubsub.googleapis.com/Subscription":                 projectPubSubSubAttrs,
 	"managedkafka.googleapis.com/Cluster":                projectManagedKafkaAttrs,
 	"eventarc.googleapis.com/Trigger":                    projectEventarcTriggerAttrs,
-	"cloudtasks.googleapis.com/Queue":                    projectStateOnlyAttr,
+	"cloudtasks.googleapis.com/Queue":                    projectCloudTasksQueueAttrs,
 	"cloudscheduler.googleapis.com/Job":                  projectSchedulerJobAttrs,
 	"workflows.googleapis.com/Workflow":                  projectWorkflowAttrs,
 	"dataflow.googleapis.com/Job":                        projectDataflowJobAttrs,
@@ -972,16 +972,27 @@ func projectStateOnlyAttr(p *attrProjector, data *structpb.Struct) {
 	p.setStr("state", getStringField(data, "state"))
 }
 
+func projectCloudTasksQueueAttrs(p *attrProjector, data *structpb.Struct) {
+	p.setStr("state", getStringField(data, "state"))
+	projectHTTPTargetServiceAccount(p, data)
+}
+
 func projectSchedulerJobAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("schedule", getStringField(data, "schedule"))
 	p.setStr("state", getStringField(data, "state"))
-	if ht := getStructField(data, "httpTarget"); ht != nil {
-		sa := getStringField(getStructField(ht, "oidcToken"), "serviceAccountEmail")
-		if sa == "" {
-			sa = getStringField(getStructField(ht, "oauthToken"), "serviceAccountEmail")
-		}
-		p.setStr("service_account", sa)
+	projectHTTPTargetServiceAccount(p, data)
+}
+
+func projectHTTPTargetServiceAccount(p *attrProjector, data *structpb.Struct) {
+	ht := getStructField(data, "httpTarget")
+	if ht == nil {
+		return
 	}
+	sa := getStringField(getStructField(ht, "oidcToken"), "serviceAccountEmail")
+	if sa == "" {
+		sa = getStringField(getStructField(ht, "oauthToken"), "serviceAccountEmail")
+	}
+	p.setStr("service_account", sa)
 }
 
 func projectWorkflowAttrs(p *attrProjector, data *structpb.Struct) {

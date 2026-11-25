@@ -137,6 +137,9 @@ func Render(ctx context.Context, m *manifest.Manifest, reg *icons.Registry, opts
 
 	runner, chromePath, err := resolveRenderRunner(opts)
 	if err != nil {
+		if strings.TrimSpace(opts.ChromePath) != "" {
+			return nil, err
+		}
 		if wantHTML && !wantPDF && !wantPNG {
 			return writeHTMLOnlyFallback(outDir, rawHTML, opts.WarningWriter, err)
 		}
@@ -244,6 +247,23 @@ func parseFormats(formats []Format) (pdf, png, html bool, err error) {
 	return pdf, png, html, nil
 }
 
+var chromeOSPaths = defaultChromeOSPaths()
+
+func defaultChromeOSPaths() []string {
+	if runtime.GOOS == "darwin" {
+		return []string{
+			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+			"/Applications/Chromium.app/Contents/MacOS/Chromium",
+		}
+	}
+	return []string{
+		"/usr/bin/google-chrome",
+		"/usr/bin/google-chrome-stable",
+		"/usr/bin/chromium",
+		"/usr/bin/chromium-browser",
+	}
+}
+
 // FindChrome locates a local Chrome or Chromium binary via explicitPath (failing fast if missing),
 // CHROME_PATH, optional fallbackPaths (such as config.yaml chrome_path), PATH, or standard OS
 // installation paths.
@@ -270,22 +290,7 @@ func FindChrome(explicitPath string, fallbackPaths ...string) (string, error) {
 		}
 	}
 
-	var osPaths []string
-	switch runtime.GOOS {
-	case "darwin":
-		osPaths = []string{
-			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-			"/Applications/Chromium.app/Contents/MacOS/Chromium",
-		}
-	default:
-		osPaths = []string{
-			"/usr/bin/google-chrome",
-			"/usr/bin/google-chrome-stable",
-			"/usr/bin/chromium",
-			"/usr/bin/chromium-browser",
-		}
-	}
-	for _, p := range osPaths {
+	for _, p := range chromeOSPaths {
 		if isExistingFile(p) {
 			return p, nil
 		}

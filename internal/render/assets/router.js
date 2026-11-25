@@ -154,14 +154,6 @@
       hCorridors[idx] = box;
     });
 
-    const waypoints = {};
-    sheet.querySelectorAll('.edge-waypoint').forEach(function (el) {
-      const eIdx = Number.parseInt(el.dataset.edgeIdx || '-1', 10);
-      if (eIdx < 0) return;
-      if (!waypoints[eIdx]) waypoints[eIdx] = [];
-      waypoints[eIdx].push(rel(el));
-    });
-
     return {
       width: sr.width,
       height: sr.height,
@@ -169,8 +161,7 @@
       cardList: cardList,
       badges: badges,
       vCorridors: vCorridors,
-      hCorridors: hCorridors,
-      waypoints: waypoints
+      hCorridors: hCorridors
     };
   }
 

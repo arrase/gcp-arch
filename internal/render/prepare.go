@@ -36,7 +36,6 @@ type PreparedView struct {
 	CorridorRows    []int
 	Containers      []PreparedContainer
 	Cards           []PreparedCard
-	Waypoints       []PreparedWaypoint
 	Edges           []RoutingEdge
 	Footnotes       []PreparedFootnote
 }
@@ -73,13 +72,6 @@ type PreparedCard struct {
 	MinHeightPx int
 	InlineMeta  []manifest.InlineMeta
 	OffPageRefs []manifest.OffPageRef
-}
-
-// PreparedWaypoint marks an intermediate horizontal corridor cell traversed by a multi-column edge.
-type PreparedWaypoint struct {
-	EdgeIdx    int
-	CSSGridCol int
-	CSSGridRow int
 }
 
 // RoutingEdge is serialized to JSON for router.js to measure and route orthogonal SVG connectors.
@@ -185,7 +177,7 @@ func prepareView(
 
 	preparedContainers, hasInnerTopAtRow, badgeAtRowCol := buildPreparedContainers(v.ContainerIDs, cols, viewContSet, contByID)
 	busGroup, busKind := assignBusGroups(v.Edges, slotsByID)
-	routingEdges, waypoints, footnotes, portCounts, hasRightEdgeCol := buildRoutingEdges(v.Edges, slotsByID, busGroup, busKind, numCols, numRows, badgeAtRowCol)
+	routingEdges, footnotes, portCounts, hasRightEdgeCol := buildRoutingEdges(v.Edges, slotsByID, busGroup, busKind, numCols, numRows, badgeAtRowCol)
 	cards := buildPreparedCards(v.ID, cols, compByID, detailByID, reg, usedIcons, portCounts)
 	colTracks, rowTracks, corridorCols, corridorRows := buildGridTracks(numCols, numRows, hasRightEdgeCol, routingEdges, hasInnerTopAtRow, badgeAtRowCol)
 	banners := buildStageBanners(v.Archetype, origCols, cards, compByID)
@@ -207,7 +199,6 @@ func prepareView(
 		CorridorRows:    corridorRows,
 		Containers:      preparedContainers,
 		Cards:           cards,
-		Waypoints:       waypoints,
 		Edges:           routingEdges,
 		Footnotes:       footnotes,
 	}
@@ -620,10 +611,9 @@ func buildRoutingEdges(
 	busGroup, busKind []string,
 	numCols, numRows int,
 	badgeAtRowCol map[[2]int]bool,
-) ([]RoutingEdge, []PreparedWaypoint, []PreparedFootnote, map[string]int, bool) {
+) ([]RoutingEdge, []PreparedFootnote, map[string]int, bool) {
 	hasRightEdgeCol := false
 	routingEdges := make([]RoutingEdge, 0, len(edges))
-	var waypoints []PreparedWaypoint
 	var footnotes []PreparedFootnote
 	portCounts := make(map[string]int)
 	countedBusPort := make(map[string]bool)
@@ -660,20 +650,12 @@ func buildRoutingEdges(
 
 		if absInt(ts.gridCol-fs.gridCol) > 1 {
 			loCol, hiCol := min(fs.gridCol, ts.gridCol), max(fs.gridCol, ts.gridCol)
-			hRow := pickClearWaypointRow(loCol, hiCol, fs.row, ts.row, numRows, badgeAtRowCol)
-			re.WaypointRow = hRow
-			for mid := loCol + 1; mid < hiCol; mid++ {
-				waypoints = append(waypoints, PreparedWaypoint{
-					EdgeIdx:    len(routingEdges),
-					CSSGridCol: 2*mid + 1,
-					CSSGridRow: 2*hRow + 1,
-				})
-			}
+			re.WaypointRow = pickClearWaypointRow(loCol, hiCol, fs.row, ts.row, numRows, badgeAtRowCol)
 		}
 
 		routingEdges = append(routingEdges, re)
 	}
-	return routingEdges, waypoints, footnotes, portCounts, hasRightEdgeCol
+	return routingEdges, footnotes, portCounts, hasRightEdgeCol
 }
 
 func recordEdgePorts(

@@ -46,7 +46,7 @@ gcloud auth application-default login
 
 `gcp-arch render` locates a local Chrome or Chromium binary automatically in this order:
 
-1. `--chrome-path <BINARY>` (fails fast if the specified path does not exist)
+1. `--chrome-path <BINARY>` (fails fast with exit code `1` if the specified path does not exist, for all formats including `--format html` alone)
 2. `CHROME_PATH` environment variable (falls back to `config.yaml` if unset or pointing to a non-existent path)
 3. `chrome_path` in `~/.config/gcp-arch/config.yaml` (falls back to `PATH` if unset or pointing to a non-existent path)
 4. `PATH` (`google-chrome`, `google-chrome-stable`, `chromium`, `chromium-browser`)
@@ -55,18 +55,19 @@ gcloud auth application-default login
 Chrome runs in an isolated ephemeral `--user-data-dir` (safe even when a desktop Chrome session is already open) with `--headless=new` and `--disable-background-networking`.
 
 - **`pdf` and `png` exports** require local Chrome/Chromium (exit code `1` if absent).
-- **`--format html` alone** works even without Chrome installed: `gcp-arch` writes a self-contained `out/architecture.html` with the embedded JS router and prints a notice on `stderr` that CLI collision verification was skipped.
+- **`--format html` alone (without an explicit `--chrome-path`)** works even when Chrome/Chromium auto-discovery finds no binary: `gcp-arch` writes a self-contained unrouted `out/architecture.html` with the embedded JS router and prints a warning on `stderr` that CLI collision verification was skipped. Passing an explicit missing `--chrome-path` still fails fast with exit code `1`.
 
 ### User Configuration File (`~/.config/gcp-arch/config.yaml`)
 
 To avoid repeating common flags across invocations, `gcp-arch` automatically reads `~/.config/gcp-arch/config.yaml` (or `$XDG_CONFIG_HOME/gcp-arch/config.yaml` when `XDG_CONFIG_HOME` is set) if the file exists (see [`cmd/gcp-arch/config.go`](cmd/gcp-arch/config.go)).
 
-**Precedence:** `CLI flags` > `environment variables` > `config.yaml` > `built-in defaults`.
+**Precedence:** `CLI flags` > `environment variables` (`CHROME_PATH` for Chrome binary discovery; `XDG_CONFIG_HOME` for config file location) > `config.yaml` > `built-in defaults`.
 
-Unknown keys or invalid values in `config.yaml` fail fast with exit code `2`. Passing any scope flag (`--org`, `--folder`, or `--projects`/`--project`) on the CLI completely replaces the default scopes from `config.yaml`; `--project-alias` flags overlay `project_aliases` from `config.yaml`.
+When present, `~/.config/gcp-arch/config.yaml` is strictly validated on **all** subcommands (including `validate`); unknown keys or invalid values fail fast with exit code `2`. List fields (`org`, `folder`, `projects`, and `format`) accept either a YAML list or a single scalar value. Passing any scope flag (`--org`, `--folder`, or `--projects`/`--project`) on the CLI completely replaces the default scopes from `config.yaml`; `--project-alias` flags overlay `project_aliases` from `config.yaml`.
 
 ```yaml
 # ~/.config/gcp-arch/config.yaml
+# org, folder, projects, and format accept either a YAML list or a single scalar.
 org: []
 folder: []
 projects:
@@ -102,7 +103,7 @@ format:
 | Organization / Folder | `roles/resourcemanager.folderViewer` | Resolve human-readable `Folder` display names on `--org` / `--folder` scans | Recommended for org/folder |
 | Target project(s) | `roles/monitoring.viewer` | 7-day `consumed_api` runtime traffic grouped by `resource.labels.method` (`<= 10` QPS); when `aiplatform.googleapis.com` is enabled, also queries Vertex AI `PublisherModel` metrics (`model_invocation_count`, `consumed_token_throughput`) to synthesize `aiplatform.googleapis.com/PublisherModel` resources and `MONITORING_TRAFFIC` edges ([`internal/extract/enrichers.go`](internal/extract/enrichers.go)) | Recommended |
 | Target project(s) | `roles/bigquery.resourceViewer` | 7-day `bigquery.jobs.list` SQL lineage metadata (USD 0 SQL slot cost; raw SQL never read) | Recommended |
-| Target project(s) | `roles/dataflow.viewer` | Active streaming Dataflow job pipeline links (`<= 10` QPS, gated on enabled API) | Optional |
+| Target project(s) | `roles/dataflow.viewer` | Active Dataflow job pipeline links (streaming and batch jobs, `<= 10` QPS, gated on enabled API) | Optional |
 | Caller `--quota-project` | `roles/serviceusage.serviceUsageConsumer` | Quota attribution for target-scope read-only API calls (defaults to ADC `quota_project_id`) | Required on quota project |
 | `--vertex-project` | `roles/aiplatform.user` | Vertex AI Gemini 4 calls (`aiplatform.endpoints.predict` + model metadata check) | Required for `synthesize` |
 
@@ -164,7 +165,7 @@ gcp-arch synthesize facts.json --reconcile architecture.yaml --vertex-project co
 ```
 
 Flags:
-- `--vertex-project <ID>`: Billing project for Vertex AI calls (required on Day 1; optional on Day 2 when hitting the `0`-LLM fast path).
+- `--vertex-project <ID>`: Billing project for Vertex AI calls (required on Day 1; optional on Day 2 on the `0`-LLM unchanged or deletion-only prune paths).
 - `--vertex-location <LOC>`: Vertex AI location (default `global`).
 - `--model <MODEL>`: Vertex AI model ID (default `gemini-4-carbon`).
 - `--thinking-level <LEVEL>`: Vertex AI thinking/effort level (`minimal`, `low`, `medium`, `high`, `xhigh`; omitted by default so Vertex AI uses the model default).
@@ -214,7 +215,7 @@ Flags:
 | Exit Code | Meaning |
 | :--- | :--- |
 | `0` | Success. |
-| `1` | Runtime or external I/O failure: ADC/GCP authentication or quota error, Vertex AI RPC error, missing input file, or missing Chrome/Chromium binary when `pdf`/`png` is requested. |
+| `1` | Runtime or external I/O failure: ADC/GCP authentication or quota error, Vertex AI RPC error, missing input file, or missing Chrome/Chromium binary (when `pdf`/`png` is requested, or when an explicit `--chrome-path` does not exist). |
 | `2` | Usage, schema, scale, validation, or layout failure: invalid CLI flags/args, `> 500` active resources (`ScaleLimitError`), invalid YAML or unknown fields (`KnownFields`), `validate` rule/provenance/coverage violation (`ValidationError`), or unresolved card/badge/pill/collinear overlap during `render` (`LayoutCollisionError`). |
 
 ---
@@ -285,7 +286,8 @@ When your environment changes after teams have edited titles, `notes`, or `rejec
 1. Re-run `gcp-arch extract --projects <p> -o facts.json`.
 2. Run `gcp-arch synthesize facts.json --reconcile architecture.yaml --vertex-project <ai-proj>`.
    - **No resource or inter-component edge drift:** completes in `< 100 ms` with `0` Vertex AI calls (even without `--vertex-project`) and leaves `architecture.yaml` untouched.
-   - **Resource or edge drift detected:** prunes vanished URIs/edges, freezes all existing view IDs, archetypes, curated component titles, `notes`, and `rejected_edges` tombstones, requests a delta patch from Gemini 4 for unclaimed resources/edges (retrying up to `2` times on validation errors — `maxValidationRetries = 2`, up to 3 calls total — before failing; [`internal/synth/pipeline.go`](internal/synth/pipeline.go)), rebuilds `View 0`, validates with `ValidateWithFacts`, and atomically writes `architecture.yaml`.
+   - **Deletion-only drift (vanished URIs/edges with zero unclaimed resources and zero new inter-component edges):** prunes vanished URIs/edges (removing any existing detail view whose placements all vanish, along with `off_page_refs` targeting it), rebuilds `View 0`, validates with `ValidateWithFacts`, and atomically writes `architecture.yaml` in `0` Vertex AI calls without `--vertex-project`.
+   - **New resource or inter-component edge drift detected:** prunes vanished URIs/edges (and removes any detail view whose placements all vanish, along with `off_page_refs` targeting it), freezes all existing view IDs, archetypes, curated component titles, `notes`, and `rejected_edges` tombstones, requests a delta patch from Gemini 4 for unclaimed resources/edges (retrying up to `2` times on validation errors — `maxValidationRetries = 2`, up to 3 calls total — before failing; [`internal/synth/pipeline.go`](internal/synth/pipeline.go)), rebuilds `View 0`, validates with `ValidateWithFacts`, and atomically writes `architecture.yaml`.
 3. Re-render via `gcp-arch render architecture.yaml -o out/`.
 
 ---
