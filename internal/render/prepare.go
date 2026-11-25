@@ -36,7 +36,6 @@ type PreparedView struct {
 	CorridorRows    []int
 	Containers      []PreparedContainer
 	Cards           []PreparedCard
-	Waypoints       []PreparedWaypoint
 	Edges           []RoutingEdge
 	Footnotes       []PreparedFootnote
 }
@@ -51,7 +50,6 @@ type StageBanner struct {
 type PreparedContainer struct {
 	ID           string
 	Title        string
-	Subtitle     string
 	Kind         manifest.ContainerKind
 	Depth        int
 	HasInnerTop  bool
@@ -74,13 +72,6 @@ type PreparedCard struct {
 	MinHeightPx int
 	InlineMeta  []manifest.InlineMeta
 	OffPageRefs []manifest.OffPageRef
-}
-
-// PreparedWaypoint marks an intermediate horizontal corridor cell traversed by a multi-column edge.
-type PreparedWaypoint struct {
-	EdgeIdx    int
-	CSSGridCol int
-	CSSGridRow int
 }
 
 // RoutingEdge is serialized to JSON for router.js to measure and route orthogonal SVG connectors.
@@ -186,7 +177,7 @@ func prepareView(
 
 	preparedContainers, hasInnerTopAtRow, badgeAtRowCol := buildPreparedContainers(v.ContainerIDs, cols, viewContSet, contByID)
 	busGroup, busKind := assignBusGroups(v.Edges, slotsByID)
-	routingEdges, waypoints, footnotes, portCounts, hasRightEdgeCol := buildRoutingEdges(v.Edges, slotsByID, busGroup, busKind, numCols, numRows, badgeAtRowCol)
+	routingEdges, footnotes, portCounts, hasRightEdgeCol := buildRoutingEdges(v.Edges, slotsByID, busGroup, busKind, numCols, numRows, badgeAtRowCol)
 	cards := buildPreparedCards(v.ID, cols, compByID, detailByID, reg, usedIcons, portCounts)
 	colTracks, rowTracks, corridorCols, corridorRows := buildGridTracks(numCols, numRows, hasRightEdgeCol, routingEdges, hasInnerTopAtRow, badgeAtRowCol)
 	banners := buildStageBanners(v.Archetype, origCols, cards, compByID)
@@ -208,7 +199,6 @@ func prepareView(
 		CorridorRows:    corridorRows,
 		Containers:      preparedContainers,
 		Cards:           cards,
-		Waypoints:       waypoints,
 		Edges:           routingEdges,
 		Footnotes:       footnotes,
 	}
@@ -434,21 +424,7 @@ func buildPreparedContainers(
 	sortedContIDs := slices.Clone(containerIDs)
 	sort.Strings(sortedContIDs)
 
-	hasInnerTop := make(map[string]bool)
-	hasInnerTopAtRow := make(map[int]bool)
-	for _, cid := range sortedContIDs {
-		sp := spans[cid]
-		if sp == nil || !sp.hasMember {
-			continue
-		}
-		ct := contByID[cid]
-		if ct.ParentContainerID != "" && viewContSet[ct.ParentContainerID] {
-			if psp := spans[ct.ParentContainerID]; psp != nil && psp.minRow == sp.minRow {
-				hasInnerTop[ct.ParentContainerID] = true
-				hasInnerTopAtRow[psp.minRow] = true
-			}
-		}
-	}
+	hasInnerTop, hasInnerTopAtRow := findContainersWithInnerTop(sortedContIDs, spans, viewContSet, contByID)
 
 	badgeAtRowCol := make(map[[2]int]bool)
 	var prepared []PreparedContainer
@@ -459,14 +435,13 @@ func buildPreparedContainers(
 		}
 		ct := contByID[cid]
 		depth := 1
-		if ct.ParentContainerID != "" && viewContSet[ct.ParentContainerID] {
+		if isChildContainerInView(ct, viewContSet) {
 			depth = 2
 		}
 		badgeAtRowCol[[2]int{sp.minRow, sp.minCol}] = true
 		prepared = append(prepared, PreparedContainer{
 			ID:           ct.ID,
 			Title:        ct.Title,
-			Subtitle:     ct.Subtitle,
 			Kind:         ct.Kind,
 			Depth:        depth,
 			HasInnerTop:  hasInnerTop[ct.ID],
@@ -480,6 +455,35 @@ func buildPreparedContainers(
 		return cmp.Or(cmp.Compare(a.Depth, b.Depth), cmp.Compare(a.ID, b.ID))
 	})
 	return prepared, hasInnerTopAtRow, badgeAtRowCol
+}
+
+func isChildContainerInView(ct manifest.Container, viewContSet map[string]bool) bool {
+	return ct.ParentContainerID != "" && viewContSet[ct.ParentContainerID]
+}
+
+func findContainersWithInnerTop(
+	sortedContIDs []string,
+	spans map[string]*containerSpan,
+	viewContSet map[string]bool,
+	contByID map[string]manifest.Container,
+) (map[string]bool, map[int]bool) {
+	hasInnerTop := make(map[string]bool)
+	hasInnerTopAtRow := make(map[int]bool)
+	for _, cid := range sortedContIDs {
+		sp := spans[cid]
+		if sp == nil || !sp.hasMember {
+			continue
+		}
+		ct := contByID[cid]
+		if !isChildContainerInView(ct, viewContSet) {
+			continue
+		}
+		if psp := spans[ct.ParentContainerID]; psp != nil && psp.minRow == sp.minRow {
+			hasInnerTop[ct.ParentContainerID] = true
+			hasInnerTopAtRow[psp.minRow] = true
+		}
+	}
+	return hasInnerTop, hasInnerTopAtRow
 }
 
 func computeContainerSpans(cols [][]*cardSlot, viewContSet map[string]bool, contByID map[string]manifest.Container) map[string]*containerSpan {
@@ -607,10 +611,9 @@ func buildRoutingEdges(
 	busGroup, busKind []string,
 	numCols, numRows int,
 	badgeAtRowCol map[[2]int]bool,
-) ([]RoutingEdge, []PreparedWaypoint, []PreparedFootnote, map[string]int, bool) {
+) ([]RoutingEdge, []PreparedFootnote, map[string]int, bool) {
 	hasRightEdgeCol := false
 	routingEdges := make([]RoutingEdge, 0, len(edges))
-	var waypoints []PreparedWaypoint
 	var footnotes []PreparedFootnote
 	portCounts := make(map[string]int)
 	countedBusPort := make(map[string]bool)
@@ -647,20 +650,12 @@ func buildRoutingEdges(
 
 		if absInt(ts.gridCol-fs.gridCol) > 1 {
 			loCol, hiCol := min(fs.gridCol, ts.gridCol), max(fs.gridCol, ts.gridCol)
-			hRow := pickClearWaypointRow(loCol, hiCol, fs.row, ts.row, numRows, badgeAtRowCol)
-			re.WaypointRow = hRow
-			for mid := loCol + 1; mid < hiCol; mid++ {
-				waypoints = append(waypoints, PreparedWaypoint{
-					EdgeIdx:    len(routingEdges),
-					CSSGridCol: 2*mid + 1,
-					CSSGridRow: 2*hRow + 1,
-				})
-			}
+			re.WaypointRow = pickClearWaypointRow(loCol, hiCol, fs.row, ts.row, numRows, badgeAtRowCol)
 		}
 
 		routingEdges = append(routingEdges, re)
 	}
-	return routingEdges, waypoints, footnotes, portCounts, hasRightEdgeCol
+	return routingEdges, footnotes, portCounts, hasRightEdgeCol
 }
 
 func recordEdgePorts(

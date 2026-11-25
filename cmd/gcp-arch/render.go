@@ -1,10 +1,10 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -16,11 +16,32 @@ import (
 	"github.com/arrase/gcp-arch/internal/render"
 )
 
+const wroteLineFmt = "Wrote %s\n"
+
 type renderCmdOpts struct {
-	formatSpec string
-	outDir     string
-	chromePath string
-	quiet      bool
+	formatSpec       string
+	outDir           string
+	chromePath       string
+	configChromePath string
+	quiet            bool
+}
+
+type renderContext struct {
+	stdout io.Writer
+	stderr io.Writer
+	deps   appDeps
+	opts   renderCmdOpts
+}
+
+type renderFormats struct {
+	list     []render.Format
+	wantPDF  bool
+	wantPNG  bool
+	wantHTML bool
+}
+
+func (f renderFormats) htmlOnly() bool {
+	return f.wantHTML && !f.wantPDF && !f.wantPNG
 }
 
 func newRenderCmd(stdout, stderr io.Writer, deps appDeps, cfg *appConfig) *cobra.Command {
@@ -45,10 +66,11 @@ were skipped.`,
 			if !cmd.Flags().Changed("format") && cfg.Format != nil {
 				opts.formatSpec = strings.Join(cfg.Format, ",")
 			}
-			if !cmd.Flags().Changed("chrome-path") && strings.TrimSpace(os.Getenv("CHROME_PATH")) == "" && cfg.ChromePath != "" {
-				opts.chromePath = cfg.ChromePath
+			if !cmd.Flags().Changed("chrome-path") {
+				opts.configChromePath = cfg.ChromePath
 			}
-			return executeRender(cmd, args[0], stdout, stderr, deps, opts)
+			rc := renderContext{stdout: stdout, stderr: stderr, deps: deps, opts: opts}
+			return rc.execute(cmd.Context(), args[0])
 		},
 	}
 
@@ -60,12 +82,12 @@ were skipped.`,
 	return cmd
 }
 
-func executeRender(cmd *cobra.Command, manifestPath string, stdout, stderr io.Writer, deps appDeps, opts renderCmdOpts) error {
-	formats, wantPDF, wantPNG, wantHTML, err := parseRenderFormats(opts.formatSpec)
+func (rc renderContext) execute(ctx context.Context, manifestPath string) error {
+	formats, err := parseRenderFormats(rc.opts.formatSpec)
 	if err != nil {
 		return err
 	}
-	if strings.TrimSpace(opts.outDir) == "" {
+	if strings.TrimSpace(rc.opts.outDir) == "" {
 		return usageErr(fmt.Errorf("-o/--out directory cannot be empty"))
 	}
 
@@ -81,99 +103,101 @@ func executeRender(cmd *cobra.Command, manifestPath string, stdout, stderr io.Wr
 		return err
 	}
 
-	runner, fallbackDone, err := resolveRenderRunner(m, reg, stdout, stderr, deps, opts, wantPDF, wantPNG, wantHTML)
+	runner, fallbackDone, err := rc.resolveRunner(m, reg, formats.htmlOnly())
 	if err != nil || fallbackDone {
 		return err
 	}
 
-	summary, err := render.Render(cmd.Context(), m, reg, render.RenderOptions{
-		Formats:       formats,
-		OutputDir:     opts.outDir,
-		ChromePath:    opts.chromePath,
-		Runner:        runner,
-		WarningWriter: stderr,
+	summary, err := render.Render(ctx, m, reg, render.RenderOptions{
+		Formats:          formats.list,
+		OutputDir:        rc.opts.outDir,
+		ChromePath:       rc.opts.chromePath,
+		ConfigChromePath: rc.opts.configChromePath,
+		Runner:           runner,
+		WarningWriter:    rc.stderr,
 	})
 	if err != nil {
-		var ve *manifest.ValidationError
-		var lce *render.LayoutCollisionError
-		if errors.As(err, &ve) || errors.As(err, &lce) {
-			return err
-		}
-		return runtimeErr(err)
+		return classifyRenderError(err)
 	}
 
-	if !opts.quiet {
-		writeRenderSummary(stdout, summary)
+	if !rc.opts.quiet {
+		writeRenderSummary(rc.stdout, summary)
 	}
 	return nil
 }
 
-func resolveRenderRunner(
-	m *manifest.Manifest,
-	reg *icons.Registry,
-	stdout, stderr io.Writer,
-	deps appDeps,
-	opts renderCmdOpts,
-	wantPDF, wantPNG, wantHTML bool,
-) (render.BrowserRunner, bool, error) {
-	if deps.newBrowserRunner == nil {
+func (rc renderContext) resolveRunner(m *manifest.Manifest, reg *icons.Registry, htmlOnly bool) (render.BrowserRunner, bool, error) {
+	if rc.deps.newBrowserRunner == nil {
 		return nil, false, nil
 	}
-	r, findErr := deps.newBrowserRunner(opts.chromePath)
+	r, findErr := rc.deps.newBrowserRunner(rc.opts.chromePath, rc.opts.configChromePath)
 	if findErr == nil {
 		return r, false, nil
 	}
-	if !wantHTML || wantPDF || wantPNG {
+	if strings.TrimSpace(rc.opts.chromePath) != "" {
+		return nil, false, runtimeErr(findErr)
+	}
+	if !htmlOnly {
 		return nil, false, runtimeErr(fmt.Errorf("Chrome/Chromium binary required for pdf/png output: %w", findErr))
 	}
 	rawHTML, htmlErr := render.BuildHTML(m, reg)
 	if htmlErr != nil {
 		return nil, false, runtimeErr(htmlErr)
 	}
-	htmlPath := filepath.Join(opts.outDir, "architecture.html")
+	htmlPath := filepath.Join(rc.opts.outDir, "architecture.html")
 	if writeErr := ioutil.WriteFileAtomic(htmlPath, rawHTML, 0o644, 0o755); writeErr != nil {
 		return nil, false, runtimeErr(writeErr)
 	}
-	_, _ = fmt.Fprintf(stderr, "warning: Chrome/Chromium not found (%v); wrote self-contained %s without CLI collision verification\n", findErr, htmlPath)
-	if !opts.quiet {
-		_, _ = fmt.Fprintf(stdout, "Wrote %s\n", htmlPath)
+	_, _ = fmt.Fprintf(rc.stderr, "warning: Chrome/Chromium not found (%v); wrote self-contained %s without CLI collision verification\n", findErr, htmlPath)
+	if !rc.opts.quiet {
+		_, _ = fmt.Fprintf(rc.stdout, wroteLineFmt, htmlPath)
 	}
 	return nil, true, nil
 }
 
-func parseRenderFormats(raw string) (formats []render.Format, wantPDF, wantPNG, wantHTML bool, err error) {
-	if strings.TrimSpace(raw) == "" {
-		return nil, false, false, false, usageErr(fmt.Errorf("--format cannot be empty (allowed: pdf, png, html)"))
+func classifyRenderError(err error) error {
+	var ve *manifest.ValidationError
+	var lce *render.LayoutCollisionError
+	if errors.As(err, &ve) || errors.As(err, &lce) {
+		return err
 	}
+	return runtimeErr(err)
+}
+
+func parseRenderFormats(raw string) (renderFormats, error) {
+	if strings.TrimSpace(raw) == "" {
+		return renderFormats{}, usageErr(fmt.Errorf("--format cannot be empty (allowed: pdf, png, html)"))
+	}
+	var out renderFormats
 	seen := make(map[render.Format]bool, 3)
 	for _, part := range strings.Split(raw, ",") {
 		f := render.Format(strings.ToLower(strings.TrimSpace(part)))
 		switch f {
 		case render.FormatPDF:
-			wantPDF = true
+			out.wantPDF = true
 		case render.FormatPNG:
-			wantPNG = true
+			out.wantPNG = true
 		case render.FormatHTML:
-			wantHTML = true
+			out.wantHTML = true
 		default:
-			return nil, false, false, false, usageErr(fmt.Errorf("unsupported --format value %q (allowed: pdf, png, html)", part))
+			return renderFormats{}, usageErr(fmt.Errorf("unsupported --format value %q (allowed: pdf, png, html)", part))
 		}
 		if !seen[f] {
 			seen[f] = true
-			formats = append(formats, f)
+			out.list = append(out.list, f)
 		}
 	}
-	return formats, wantPDF, wantPNG, wantHTML, nil
+	return out, nil
 }
 
 func writeRenderSummary(w io.Writer, summary *render.RenderSummary) {
 	if summary.PDFPath != "" {
-		_, _ = fmt.Fprintf(w, "Wrote %s\n", summary.PDFPath)
+		_, _ = fmt.Fprintf(w, wroteLineFmt, summary.PDFPath)
 	}
 	if len(summary.PNGPaths) > 0 {
 		_, _ = fmt.Fprintf(w, "Wrote %d view PNG(s) in %s\n", len(summary.PNGPaths), filepath.Dir(summary.PNGPaths[0]))
 	}
 	if summary.HTMLPath != "" {
-		_, _ = fmt.Fprintf(w, "Wrote %s\n", summary.HTMLPath)
+		_, _ = fmt.Fprintf(w, wroteLineFmt, summary.HTMLPath)
 	}
 }

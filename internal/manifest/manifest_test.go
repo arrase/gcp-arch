@@ -867,6 +867,48 @@ func TestValidateWithFactsProvenanceAndAccounting(t *testing.T) {
 	_ = assertHasValidationCode(t, ValidateWithFacts(mBlankEv, fBlankEv, reg), ErrMissingEvidenceEdgeIDs)
 }
 
+func placementComponentIDs(placements []Placement) []string {
+	ids := make([]string, len(placements))
+	for i, p := range placements {
+		ids[i] = p.ComponentID
+	}
+	return ids
+}
+
+func findEdgeEvidence(edges []Edge, from, to string) []string {
+	for _, e := range edges {
+		if e.From == from && e.To == to {
+			return e.EvidenceEdgeIDs
+		}
+	}
+	return nil
+}
+
+func assertLoadedRoundTripOrder(t *testing.T, loaded *Manifest, origPlacementOrder, origEvidenceOrder []string) {
+	t.Helper()
+	if !reflect.DeepEqual(loaded.Metadata.Scopes, []string{"projects/a", "projects/z"}) {
+		t.Fatalf("Scopes not sorted: %v", loaded.Metadata.Scopes)
+	}
+	if loaded.Views[0].ID != SystemIndexViewID || loaded.Views[1].ID != "a_network" || loaded.Views[2].ID != "gke_platform" {
+		t.Fatalf("Views order wrong: %q, %q, %q", loaded.Views[0].ID, loaded.Views[1].ID, loaded.Views[2].ID)
+	}
+
+	// Verify Placements order preserved on gke_platform.
+	gotPlacementOrder := placementComponentIDs(loaded.Views[2].Placements)
+	if !reflect.DeepEqual(gotPlacementOrder, origPlacementOrder) {
+		t.Fatalf("Placements order altered: got %v, want %v", gotPlacementOrder, origPlacementOrder)
+	}
+	if !reflect.DeepEqual(loaded.Views[2].Placements[0].OffPageRefs[0].TargetViewID, "a_view") {
+		t.Fatalf("OffPageRefs not sorted: %+v", loaded.Views[2].Placements[0].OffPageRefs)
+	}
+
+	// Verify EvidenceEdgeIDs order preserved on https_lb -> atlantis edge.
+	gotEv := findEdgeEvidence(loaded.Views[2].Edges, "https_lb", "atlantis")
+	if !reflect.DeepEqual(gotEv, origEvidenceOrder) {
+		t.Fatalf("EvidenceEdgeIDs order altered: got %v, want %v", gotEv, origEvidenceOrder)
+	}
+}
+
 func TestMarshalWriteLoadRoundTripAndOrderPreservation(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "architecture.yaml")
@@ -885,10 +927,7 @@ func TestMarshalWriteLoadRoundTripAndOrderPreservation(t *testing.T) {
 		{TargetViewID: "a_view", Label: "A", Direction: "IN"},
 	}
 
-	origPlacementOrder := make([]string, len(m.Views[0].Placements))
-	for i, p := range m.Views[0].Placements {
-		origPlacementOrder[i] = p.ComponentID
-	}
+	origPlacementOrder := placementComponentIDs(m.Views[0].Placements)
 	origEvidenceOrder := append([]string(nil), m.Views[0].Edges[0].EvidenceEdgeIDs...)
 
 	v2 := View{ID: "a_network", Title: "Network", Archetype: ArchetypeHubSpoke, AccentMode: AccentMixed, Placements: []Placement{{ComponentID: "atlantis", Column: 1}}}
@@ -916,35 +955,7 @@ func TestMarshalWriteLoadRoundTripAndOrderPreservation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load error: %v", err)
 	}
-	if !reflect.DeepEqual(loaded.Metadata.Scopes, []string{"projects/a", "projects/z"}) {
-		t.Fatalf("Scopes not sorted: %v", loaded.Metadata.Scopes)
-	}
-	if loaded.Views[0].ID != SystemIndexViewID || loaded.Views[1].ID != "a_network" || loaded.Views[2].ID != "gke_platform" {
-		t.Fatalf("Views order wrong: %q, %q, %q", loaded.Views[0].ID, loaded.Views[1].ID, loaded.Views[2].ID)
-	}
-
-	// Verify Placements order preserved on gke_platform.
-	gotPlacementOrder := make([]string, len(loaded.Views[2].Placements))
-	for i, p := range loaded.Views[2].Placements {
-		gotPlacementOrder[i] = p.ComponentID
-	}
-	if !reflect.DeepEqual(gotPlacementOrder, origPlacementOrder) {
-		t.Fatalf("Placements order altered: got %v, want %v", gotPlacementOrder, origPlacementOrder)
-	}
-	if !reflect.DeepEqual(loaded.Views[2].Placements[0].OffPageRefs[0].TargetViewID, "a_view") {
-		t.Fatalf("OffPageRefs not sorted: %+v", loaded.Views[2].Placements[0].OffPageRefs)
-	}
-
-	// Verify EvidenceEdgeIDs order preserved on https_lb -> atlantis edge.
-	var gotEv []string
-	for _, e := range loaded.Views[2].Edges {
-		if e.From == "https_lb" && e.To == "atlantis" {
-			gotEv = e.EvidenceEdgeIDs
-		}
-	}
-	if !reflect.DeepEqual(gotEv, origEvidenceOrder) {
-		t.Fatalf("EvidenceEdgeIDs order altered: got %v, want %v", gotEv, origEvidenceOrder)
-	}
+	assertLoadedRoundTripOrder(t, loaded, origPlacementOrder, origEvidenceOrder)
 
 	// Re-marshaling must be byte-identical.
 	b1, err := os.ReadFile(path)
@@ -958,7 +969,9 @@ func TestMarshalWriteLoadRoundTripAndOrderPreservation(t *testing.T) {
 	if !bytes.Equal(b1, b2) {
 		t.Fatalf("Marshal not byte-deterministic:\n%s\nvs\n%s", b1, b2)
 	}
+}
 
+func TestMarshalNilAndEdgeSortTieBreakers(t *testing.T) {
 	if _, err := Marshal(nil); err == nil {
 		t.Fatal("expected error marshaling nil manifest")
 	}
@@ -1034,56 +1047,5 @@ func TestLoadStrictKnownFieldsAndErrors(t *testing.T) {
 	// Missing file rejected.
 	if _, err := Load(filepath.Join(dir, "does-not-exist.yaml")); err == nil {
 		t.Fatal("expected error loading missing file")
-	}
-}
-
-func TestComputeCoverageDeterminism(t *testing.T) {
-	if rows := ComputeCoverage(nil); rows != nil {
-		t.Fatalf("ComputeCoverage(nil) = %v, want nil", rows)
-	}
-
-	m1, facts := baseFixture()
-	rows1 := ComputeCoverage(m1)
-	if len(rows1) != len(facts.Resources) {
-		t.Fatalf("ComputeCoverage returned %d rows, want %d (100%% of facts)", len(rows1), len(facts.Resources))
-	}
-
-	// Shuffle all slices in a second copy and verify identical sorted coverage output.
-	m2, _ := baseFixture()
-	for i, j := 0, len(m2.Components)-1; i < j; i, j = i+1, j-1 {
-		m2.Components[i], m2.Components[j] = m2.Components[j], m2.Components[i]
-	}
-	m2.Containers[0], m2.Containers[1] = m2.Containers[1], m2.Containers[0]
-	m2.ExcludedResources[0], m2.ExcludedResources[1] = m2.ExcludedResources[1], m2.ExcludedResources[0]
-
-	rows2 := ComputeCoverage(m2)
-	if !reflect.DeepEqual(rows1, rows2) {
-		t.Fatalf("ComputeCoverage not deterministic across slice permutations:\n%v\nvs\n%v", rows1, rows2)
-	}
-
-	// Verify disposition prefixes for component, container, and excluded entries,
-	// plus fallback to ID when Title is empty and merging dispositions for shared URIs.
-	var sawComp, sawCont, sawExcl bool
-	for _, r := range rows1 {
-		switch {
-		case strings.HasPrefix(r.Disposition, "Component: "):
-			sawComp = true
-		case strings.HasPrefix(r.Disposition, "Container: "):
-			sawCont = true
-		case strings.HasPrefix(r.Disposition, "Excluded: "):
-			sawExcl = true
-		}
-	}
-	if !sawComp || !sawCont || !sawExcl {
-		t.Fatalf("expected Component, Container, and Excluded dispositions; got %+v", rows1)
-	}
-
-	shared := &Manifest{
-		Components: []Component{{ID: "comp_a", BackedBy: []BackedResource{{URI: "//u/1", AssetType: "t/A", ProjectID: "p"}}}},
-		Containers: []Container{{ID: "cont_b", BackedBy: []BackedResource{{URI: "//u/1"}}}},
-	}
-	sRows := ComputeCoverage(shared)
-	if len(sRows) != 1 || sRows[0].Disposition != "Component: comp_a; Container: cont_b" {
-		t.Fatalf("shared URI coverage = %+v", sRows)
 	}
 }

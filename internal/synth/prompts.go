@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -156,9 +157,19 @@ func BuildPass2UserPrompt(view Pass1DetailView, plan *Pass1Plan, table *InternTa
 	compViews := buildOtherViewMemberships(view.ID, plan.DetailViews)
 	viewComps, viewResSet, resToComp := collectPass2ViewComponents(plan.Components, compSet)
 	bridgeSet := buildPass1BridgeSet(plan)
-	incidentEdges, crossNeighbors, neededRes := collectPass2EdgesAndNeighbors(view, table, compSet, compViews, viewResSet, resToComp, bridgeSet)
+	collector := &pass2Collector{
+		table:        table,
+		compSet:      compSet,
+		compViews:    compViews,
+		viewResSet:   viewResSet,
+		resToComp:    resToComp,
+		bridgeSet:    bridgeSet,
+		neighborSeen: make(map[string]bool),
+		neededRes:    maps.Clone(viewResSet),
+	}
+	collector.collect(view.ComponentIDs)
 
-	resDescs := buildSortedResourceDescs(neededRes, table)
+	resDescs := buildSortedResourceDescs(collector.neededRes, table)
 	otherViewIDs := collectOtherViewIDs(view.ID, plan.DetailViews)
 
 	payload := struct {
@@ -177,9 +188,9 @@ func BuildPass2UserPrompt(view Pass1DetailView, plan *Pass1Plan, table *InternTa
 		Components:         viewComps,
 		ContainerDefs:      plan.ContainerDefs,
 		Resources:          resDescs,
-		IncidentEdges:      incidentEdges,
+		IncidentEdges:      collector.incidentEdges,
 		OtherViewIDs:       otherViewIDs,
-		CrossViewNeighbors: crossNeighbors,
+		CrossViewNeighbors: collector.crossNeighbors,
 		ValidationFeedback: feedback,
 	}
 
@@ -238,105 +249,112 @@ func buildPass1BridgeSet(plan *Pass1Plan) map[string]bool {
 	return bridgeSet
 }
 
-func collectPass2EdgesAndNeighbors(
-	view Pass1DetailView,
-	table *InternTable,
-	compSet map[string]bool,
-	compViews map[string][]string,
-	viewResSet map[string]bool,
-	resToComp map[string][]string,
-	bridgeSet map[string]bool,
-) ([]internedEdgeDesc, []crossNeighbor, map[string]bool) {
-	neighborSeen := make(map[string]bool)
-	var crossNeighbors []crossNeighbor
-	var incidentEdges []internedEdgeDesc
-	neededRes := make(map[string]bool, len(viewResSet))
-	for rid := range viewResSet {
-		neededRes[rid] = true
-	}
+type pass2Collector struct {
+	table          *InternTable
+	compSet        map[string]bool
+	compViews      map[string][]string
+	viewResSet     map[string]bool
+	resToComp      map[string][]string
+	bridgeSet      map[string]bool
+	neighborSeen   map[string]bool
+	incidentEdges  []internedEdgeDesc
+	crossNeighbors []crossNeighbor
+	neededRes      map[string]bool
+}
 
-	for _, eid := range table.EdgeIDs() {
-		fe, _ := table.EdgeByID(eid)
-		fromRID, okF := table.ResourceID(fe.FromURI)
-		toRID, okT := table.ResourceID(fe.ToURI)
-		if !okF || !okT {
-			continue
-		}
-		inViewFrom := viewResSet[fromRID]
-		inViewTo := viewResSet[toRID]
-		if (inViewFrom && (inViewTo || bridgeSet[toRID])) || (inViewTo && bridgeSet[fromRID]) {
-			incidentEdges = append(incidentEdges, internedEdgeDesc{
-				ID:     eid,
-				FromID: fromRID,
-				ToID:   toRID,
-				Kind:   fe.Kind,
-				Detail: fe.Detail,
-			})
-			neededRes[fromRID] = true
-			neededRes[toRID] = true
-		}
-		if inViewFrom && !inViewTo {
-			crossNeighbors = appendCrossNeighbors(crossNeighbors, neighborSeen, resToComp[fromRID], resToComp[toRID], "OUT", compSet, compViews)
-		} else if inViewTo && !inViewFrom {
-			crossNeighbors = appendCrossNeighbors(crossNeighbors, neighborSeen, resToComp[toRID], resToComp[fromRID], "IN", compSet, compViews)
-		}
+func (c *pass2Collector) collect(componentIDs []string) {
+	for _, eid := range c.table.EdgeIDs() {
+		c.inspectEdge(eid)
 	}
-
-	for _, cid := range view.ComponentIDs {
-		if len(compViews[cid]) == 0 {
-			continue
-		}
-		key := cid + "|SHARED|" + cid
-		if !neighborSeen[key] {
-			neighborSeen[key] = true
-			crossNeighbors = append(crossNeighbors, crossNeighbor{
-				LocalComponentID:  cid,
-				RemoteComponentID: cid,
-				RemoteViewIDs:     compViews[cid],
-				Direction:         "OUT",
-			})
-		}
-	}
-	slices.SortFunc(crossNeighbors, func(a, b crossNeighbor) int {
+	c.addSharedViewNeighbors(componentIDs)
+	slices.SortFunc(c.crossNeighbors, func(a, b crossNeighbor) int {
 		return cmp.Or(
 			cmp.Compare(a.LocalComponentID, b.LocalComponentID),
 			cmp.Compare(a.Direction, b.Direction),
 			cmp.Compare(a.RemoteComponentID, b.RemoteComponentID),
 		)
 	})
-	return incidentEdges, crossNeighbors, neededRes
 }
 
-func appendCrossNeighbors(
-	dst []crossNeighbor,
-	seen map[string]bool,
-	localComps, remoteComps []string,
-	dir string,
-	compSet map[string]bool,
-	compViews map[string][]string,
-) []crossNeighbor {
-	for _, localCID := range localComps {
-		if !compSet[localCID] {
+func (c *pass2Collector) inspectEdge(eid string) {
+	fe, _ := c.table.EdgeByID(eid)
+	fromRID, okF := c.table.ResourceID(fe.FromURI)
+	toRID, okT := c.table.ResourceID(fe.ToURI)
+	if !okF || !okT {
+		return
+	}
+	inViewFrom := c.viewResSet[fromRID]
+	inViewTo := c.viewResSet[toRID]
+	if isIncidentEdge(inViewFrom, inViewTo, c.bridgeSet[fromRID], c.bridgeSet[toRID]) {
+		c.incidentEdges = append(c.incidentEdges, internedEdgeDesc{
+			ID:     eid,
+			FromID: fromRID,
+			ToID:   toRID,
+			Kind:   fe.Kind,
+			Detail: fe.Detail,
+		})
+		c.neededRes[fromRID] = true
+		c.neededRes[toRID] = true
+	}
+	if inViewFrom && !inViewTo {
+		c.addCrossNeighbors(c.resToComp[fromRID], c.resToComp[toRID], "OUT")
+	} else if inViewTo && !inViewFrom {
+		c.addCrossNeighbors(c.resToComp[toRID], c.resToComp[fromRID], "IN")
+	}
+}
+
+func isIncidentEdge(inViewFrom, inViewTo, bridgeFrom, bridgeTo bool) bool {
+	if inViewFrom {
+		return inViewTo || bridgeTo
+	}
+	return inViewTo && bridgeFrom
+}
+
+func (c *pass2Collector) addSharedViewNeighbors(componentIDs []string) {
+	for _, cid := range componentIDs {
+		if len(c.compViews[cid]) == 0 {
 			continue
 		}
-		for _, remoteCID := range remoteComps {
-			if compSet[remoteCID] || len(compViews[remoteCID]) == 0 {
-				continue
-			}
-			key := localCID + "|" + dir + "|" + remoteCID
-			if seen[key] {
-				continue
-			}
-			seen[key] = true
-			dst = append(dst, crossNeighbor{
-				LocalComponentID:  localCID,
-				RemoteComponentID: remoteCID,
-				RemoteViewIDs:     compViews[remoteCID],
-				Direction:         dir,
-			})
+		key := cid + "|SHARED|" + cid
+		if c.neighborSeen[key] {
+			continue
 		}
+		c.neighborSeen[key] = true
+		c.crossNeighbors = append(c.crossNeighbors, crossNeighbor{
+			LocalComponentID:  cid,
+			RemoteComponentID: cid,
+			RemoteViewIDs:     c.compViews[cid],
+			Direction:         "OUT",
+		})
 	}
-	return dst
+}
+
+func (c *pass2Collector) addCrossNeighbors(localComps, remoteComps []string, dir string) {
+	for _, localCID := range localComps {
+		if !c.compSet[localCID] {
+			continue
+		}
+		c.addCrossNeighborsForLocal(localCID, remoteComps, dir)
+	}
+}
+
+func (c *pass2Collector) addCrossNeighborsForLocal(localCID string, remoteComps []string, dir string) {
+	for _, remoteCID := range remoteComps {
+		if c.compSet[remoteCID] || len(c.compViews[remoteCID]) == 0 {
+			continue
+		}
+		key := localCID + "|" + dir + "|" + remoteCID
+		if c.neighborSeen[key] {
+			continue
+		}
+		c.neighborSeen[key] = true
+		c.crossNeighbors = append(c.crossNeighbors, crossNeighbor{
+			LocalComponentID:  localCID,
+			RemoteComponentID: remoteCID,
+			RemoteViewIDs:     c.compViews[remoteCID],
+			Direction:         dir,
+		})
+	}
 }
 
 func buildSortedResourceDescs(neededRes map[string]bool, table *InternTable) []internedResourceDesc {
@@ -371,17 +389,61 @@ type ReconcileDelta struct {
 	NewEdgeIDs           []string
 }
 
+type reconcileCompHeader struct {
+	ID            string                 `json:"id"`
+	Title         string                 `json:"title"`
+	ComponentKind manifest.ComponentKind `json:"component_kind"`
+	ProjectID     string                 `json:"project_id"`
+	BackedByIDs   []string               `json:"backed_by_ids"`
+}
+
+type reconcileContHeader struct {
+	ID                string                 `json:"id"`
+	Title             string                 `json:"title"`
+	Kind              manifest.ContainerKind `json:"kind"`
+	ParentContainerID string                 `json:"parent_container_id,omitempty"`
+}
+
+type reconcileViewCapacity struct {
+	ID                string             `json:"id"`
+	Title             string             `json:"title"`
+	Archetype         manifest.Archetype `json:"archetype"`
+	MaxColumn         int                `json:"max_column"`
+	RemainingCapacity int                `json:"remaining_capacity"`
+	ContainerIDs      []string           `json:"container_ids,omitempty"`
+	PlacedComponents  []string           `json:"placed_components"`
+}
+
 // BuildReconcileUserPrompt builds the deterministic JSON prompt for Day-2 reconciliation.
 func BuildReconcileUserPrompt(existing *manifest.Manifest, delta ReconcileDelta, table *InternTable, feedback []string) (string, error) {
-	type compHeader struct {
-		ID            string                 `json:"id"`
-		Title         string                 `json:"title"`
-		ComponentKind manifest.ComponentKind `json:"component_kind"`
-		ProjectID     string                 `json:"project_id"`
-		BackedByIDs   []string               `json:"backed_by_ids"`
+	payload := struct {
+		FrozenComponents   []reconcileCompHeader   `json:"frozen_components"`
+		FrozenContainers   []reconcileContHeader   `json:"frozen_containers"`
+		ExistingViews      []reconcileViewCapacity `json:"existing_views"`
+		RejectedEdges      []manifest.RejectedEdge `json:"rejected_edges,omitempty"`
+		UnclaimedResources []internedResourceDesc  `json:"unclaimed_resources,omitempty"`
+		DeltaEdges         []internedEdgeDesc      `json:"delta_edges,omitempty"`
+		ValidationFeedback []string                `json:"validation_feedback,omitempty"`
+	}{
+		FrozenComponents:   buildReconcileCompHeaders(existing.Components, table),
+		FrozenContainers:   buildReconcileContHeaders(existing.Containers),
+		ExistingViews:      buildReconcileViewCapacities(existing.Views),
+		RejectedEdges:      existing.RejectedEdges,
+		UnclaimedResources: buildReconcileUnclaimedDescs(delta.UnclaimedResourceIDs, table),
+		DeltaEdges:         buildReconcileDeltaEdges(delta.NewEdgeIDs, table),
+		ValidationFeedback: feedback,
 	}
-	comps := make([]compHeader, 0, len(existing.Components))
-	for _, c := range existing.Components {
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return "", fmt.Errorf("marshal reconcile prompt: %w", err)
+	}
+	return string(data), nil
+}
+
+func buildReconcileCompHeaders(components []manifest.Component, table *InternTable) []reconcileCompHeader {
+	comps := make([]reconcileCompHeader, 0, len(components))
+	for _, c := range components {
 		var rids []string
 		for _, br := range c.BackedBy {
 			if rid, ok := table.ResourceID(br.URI); ok {
@@ -389,7 +451,7 @@ func BuildReconcileUserPrompt(existing *manifest.Manifest, delta ReconcileDelta,
 			}
 		}
 		slices.Sort(rids)
-		comps = append(comps, compHeader{
+		comps = append(comps, reconcileCompHeader{
 			ID:            c.ID,
 			Title:         c.Title,
 			ComponentKind: c.ComponentKind,
@@ -397,36 +459,27 @@ func BuildReconcileUserPrompt(existing *manifest.Manifest, delta ReconcileDelta,
 			BackedByIDs:   rids,
 		})
 	}
-	slices.SortFunc(comps, func(a, b compHeader) int { return cmp.Compare(a.ID, b.ID) })
+	slices.SortFunc(comps, func(a, b reconcileCompHeader) int { return cmp.Compare(a.ID, b.ID) })
+	return comps
+}
 
-	type contHeader struct {
-		ID                string                 `json:"id"`
-		Title             string                 `json:"title"`
-		Kind              manifest.ContainerKind `json:"kind"`
-		ParentContainerID string                 `json:"parent_container_id,omitempty"`
-	}
-	conts := make([]contHeader, 0, len(existing.Containers))
-	for _, ct := range existing.Containers {
-		conts = append(conts, contHeader{
+func buildReconcileContHeaders(containers []manifest.Container) []reconcileContHeader {
+	conts := make([]reconcileContHeader, 0, len(containers))
+	for _, ct := range containers {
+		conts = append(conts, reconcileContHeader{
 			ID:                ct.ID,
 			Title:             ct.Title,
 			Kind:              ct.Kind,
 			ParentContainerID: ct.ParentContainerID,
 		})
 	}
-	slices.SortFunc(conts, func(a, b contHeader) int { return cmp.Compare(a.ID, b.ID) })
+	slices.SortFunc(conts, func(a, b reconcileContHeader) int { return cmp.Compare(a.ID, b.ID) })
+	return conts
+}
 
-	type viewCapacity struct {
-		ID                string             `json:"id"`
-		Title             string             `json:"title"`
-		Archetype         manifest.Archetype `json:"archetype"`
-		MaxColumn         int                `json:"max_column"`
-		RemainingCapacity int                `json:"remaining_capacity"`
-		ContainerIDs      []string           `json:"container_ids,omitempty"`
-		PlacedComponents  []string           `json:"placed_components"`
-	}
-	var views []viewCapacity
-	for _, v := range existing.Views {
+func buildReconcileViewCapacities(manifestViews []manifest.View) []reconcileViewCapacity {
+	var views []reconcileViewCapacity
+	for _, v := range manifestViews {
 		if v.ID == manifest.SystemIndexViewID {
 			continue
 		}
@@ -439,23 +492,22 @@ func BuildReconcileUserPrompt(existing *manifest.Manifest, delta ReconcileDelta,
 			placed = append(placed, p.ComponentID)
 		}
 		slices.Sort(placed)
-		rem := 12 - len(v.Placements)
-		if rem < 0 {
-			rem = 0
-		}
-		views = append(views, viewCapacity{
+		views = append(views, reconcileViewCapacity{
 			ID:                v.ID,
 			Title:             v.Title,
 			Archetype:         v.Archetype,
 			MaxColumn:         maxCol,
-			RemainingCapacity: rem,
+			RemainingCapacity: max(0, 12-len(v.Placements)),
 			ContainerIDs:      slices.Clone(v.ContainerIDs),
 			PlacedComponents:  placed,
 		})
 	}
-	slices.SortFunc(views, func(a, b viewCapacity) int { return cmp.Compare(a.ID, b.ID) })
+	slices.SortFunc(views, func(a, b reconcileViewCapacity) int { return cmp.Compare(a.ID, b.ID) })
+	return views
+}
 
-	unclaimedIDs := slices.Clone(delta.UnclaimedResourceIDs)
+func buildReconcileUnclaimedDescs(ids []string, table *InternTable) []internedResourceDesc {
+	unclaimedIDs := slices.Clone(ids)
 	slices.Sort(unclaimedIDs)
 	unclaimed := make([]internedResourceDesc, 0, len(unclaimedIDs))
 	for _, rid := range unclaimedIDs {
@@ -463,47 +515,29 @@ func BuildReconcileUserPrompt(existing *manifest.Manifest, delta ReconcileDelta,
 			unclaimed = append(unclaimed, makeResourceDesc(rid, r, table))
 		}
 	}
+	return unclaimed
+}
 
-	newEdgeIDs := slices.Clone(delta.NewEdgeIDs)
+func buildReconcileDeltaEdges(ids []string, table *InternTable) []internedEdgeDesc {
+	newEdgeIDs := slices.Clone(ids)
 	slices.Sort(newEdgeIDs)
 	newEdges := make([]internedEdgeDesc, 0, len(newEdgeIDs))
 	for _, eid := range newEdgeIDs {
-		if fe, ok := table.EdgeByID(eid); ok {
-			fromRID, okF := table.ResourceID(fe.FromURI)
-			toRID, okT := table.ResourceID(fe.ToURI)
-			if okF && okT {
-				newEdges = append(newEdges, internedEdgeDesc{
-					ID:     eid,
-					FromID: fromRID,
-					ToID:   toRID,
-					Kind:   fe.Kind,
-					Detail: fe.Detail,
-				})
-			}
+		fe, ok := table.EdgeByID(eid)
+		if !ok {
+			continue
+		}
+		fromRID, okF := table.ResourceID(fe.FromURI)
+		toRID, okT := table.ResourceID(fe.ToURI)
+		if okF && okT {
+			newEdges = append(newEdges, internedEdgeDesc{
+				ID:     eid,
+				FromID: fromRID,
+				ToID:   toRID,
+				Kind:   fe.Kind,
+				Detail: fe.Detail,
+			})
 		}
 	}
-
-	payload := struct {
-		FrozenComponents   []compHeader            `json:"frozen_components"`
-		FrozenContainers   []contHeader            `json:"frozen_containers"`
-		ExistingViews      []viewCapacity          `json:"existing_views"`
-		RejectedEdges      []manifest.RejectedEdge `json:"rejected_edges,omitempty"`
-		UnclaimedResources []internedResourceDesc  `json:"unclaimed_resources,omitempty"`
-		DeltaEdges         []internedEdgeDesc      `json:"delta_edges,omitempty"`
-		ValidationFeedback []string                `json:"validation_feedback,omitempty"`
-	}{
-		FrozenComponents:   comps,
-		FrozenContainers:   conts,
-		ExistingViews:      views,
-		RejectedEdges:      existing.RejectedEdges,
-		UnclaimedResources: unclaimed,
-		DeltaEdges:         newEdges,
-		ValidationFeedback: feedback,
-	}
-
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return "", fmt.Errorf("marshal reconcile prompt: %w", err)
-	}
-	return string(data), nil
+	return newEdges
 }

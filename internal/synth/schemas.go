@@ -189,264 +189,159 @@ func enumSchema(desc string, values []string) *genai.Schema {
 	return &genai.Schema{Type: genai.TypeString, Format: "enum", Enum: values, Description: desc}
 }
 
+func arraySchema(desc string, items *genai.Schema) *genai.Schema {
+	return &genai.Schema{Type: genai.TypeArray, Description: desc, Items: items}
+}
+
+func objectSchema(props map[string]*genai.Schema, required ...string) *genai.Schema {
+	return &genai.Schema{Type: genai.TypeObject, Properties: props, Required: required}
+}
+
 func stringArraySchema(desc string) *genai.Schema {
-	return &genai.Schema{
-		Type:        genai.TypeArray,
-		Description: desc,
-		Items:       &genai.Schema{Type: genai.TypeString},
-	}
+	return arraySchema(desc, &genai.Schema{Type: genai.TypeString})
 }
 
 func componentSchema() *genai.Schema {
-	return &genai.Schema{
-		Type: genai.TypeObject,
-		Properties: map[string]*genai.Schema{
-			"id":             stringSchema("Canonical snake_case component slug"),
-			"title":          stringSchema("Human-readable block title"),
-			"subtitle":       stringSchema("Concise technical sublabel"),
-			"icon_key":       stringSchema("Registered icon slug validated against the allowed icon list"),
-			"component_kind": enumSchema("Architectural role of the component", componentKindEnum),
-			"project_id":     stringSchema("Owning GCP project ID or external"),
-			"backed_by_ids":  stringArraySchema("Interned r_XXXX handles owned or 1:1-folded into this component"),
-			"inline_meta": {
-				Type:        genai.TypeArray,
-				Description: "Up to 4 concise key/value metadata rows displayed inside the card",
-				Items: &genai.Schema{
-					Type: genai.TypeObject,
-					Properties: map[string]*genai.Schema{
-						"label": stringSchema("Short metadata key"),
-						"value": stringSchema("Short metadata value"),
-					},
-					Required: []string{"label", "value"},
-				},
-			},
-		},
-		Required: []string{"id", "title", "icon_key", "component_kind", "project_id", "backed_by_ids"},
-	}
+	inlineMetaItem := objectSchema(map[string]*genai.Schema{
+		"label": stringSchema("Short metadata key"),
+		"value": stringSchema("Short metadata value"),
+	}, "label", "value")
+
+	return objectSchema(map[string]*genai.Schema{
+		"id":             stringSchema("Canonical snake_case component slug"),
+		"title":          stringSchema("Human-readable block title"),
+		"subtitle":       stringSchema("Concise technical sublabel"),
+		"icon_key":       stringSchema("Registered icon slug validated against the allowed icon list"),
+		"component_kind": enumSchema("Architectural role of the component", componentKindEnum),
+		"project_id":     stringSchema("Owning GCP project ID or external"),
+		"backed_by_ids":  stringArraySchema("Interned r_XXXX handles owned or 1:1-folded into this component"),
+		"inline_meta":    arraySchema("Up to 4 concise key/value metadata rows displayed inside the card", inlineMetaItem),
+	}, "id", "title", "icon_key", "component_kind", "project_id", "backed_by_ids")
 }
 
 func containerDefSchema() *genai.Schema {
-	return &genai.Schema{
-		Type: genai.TypeObject,
-		Properties: map[string]*genai.Schema{
-			"id":                  stringSchema("Canonical snake_case container slug"),
-			"title":               stringSchema("Human-readable container title"),
-			"subtitle":            stringSchema("Region or scope subtitle"),
-			"kind":                enumSchema("Container semantic kind", containerKindEnum),
-			"parent_container_id": stringSchema("Optional parent container ID (max nesting depth 2)"),
-			"backed_by_ids":       stringArraySchema("Optional interned r_XXXX handles represented by this container"),
-		},
-		Required: []string{"id", "title", "kind"},
-	}
+	return objectSchema(map[string]*genai.Schema{
+		"id":                  stringSchema("Canonical snake_case container slug"),
+		"title":               stringSchema("Human-readable container title"),
+		"subtitle":            stringSchema("Region or scope subtitle"),
+		"kind":                enumSchema("Container semantic kind", containerKindEnum),
+		"parent_container_id": stringSchema("Optional parent container ID (max nesting depth 2)"),
+		"backed_by_ids":       stringArraySchema("Optional interned r_XXXX handles represented by this container"),
+	}, "id", "title", "kind")
 }
 
 func excludedResourceSchema() *genai.Schema {
-	return &genai.Schema{
-		Type: genai.TypeObject,
-		Properties: map[string]*genai.Schema{
-			"resource_id": stringSchema("Interned r_XXXX handle intentionally excluded from diagram cards"),
-			"reason":      stringSchema("Concise audit reason for exclusion"),
-		},
-		Required: []string{"resource_id", "reason"},
-	}
+	return objectSchema(map[string]*genai.Schema{
+		"resource_id": stringSchema("Interned r_XXXX handle intentionally excluded from diagram cards"),
+		"reason":      stringSchema("Concise audit reason for exclusion"),
+	}, "resource_id", "reason")
 }
 
 func placementSchema() *genai.Schema {
-	return &genai.Schema{
-		Type: genai.TypeObject,
-		Properties: map[string]*genai.Schema{
-			"component_id": stringSchema("Locked component ID placed in this view"),
-			"container_id": stringSchema("Optional active container ID from container_ids"),
-			"column":       {Type: genai.TypeInteger, Description: "0-based archetype column index"},
-			"off_page_refs": {
-				Type:        genai.TypeArray,
-				Description: "Cross-view navigation badges for neighbors in other detail views",
-				Items: &genai.Schema{
-					Type: genai.TypeObject,
-					Properties: map[string]*genai.Schema{
-						"target_view_id": stringSchema("Target detail view ID"),
-						"label":          stringSchema("Short badge label"),
-						"direction":      enumSchema("Cross-view flow direction", directionEnum),
-					},
-					Required: []string{"target_view_id", "label", "direction"},
-				},
-			},
-		},
-		Required: []string{"component_id", "column"},
-	}
+	offPageRefItem := objectSchema(map[string]*genai.Schema{
+		"target_view_id": stringSchema("Target detail view ID"),
+		"label":          stringSchema("Short badge label"),
+		"direction":      enumSchema("Cross-view flow direction", directionEnum),
+	}, "target_view_id", "label", "direction")
+
+	return objectSchema(map[string]*genai.Schema{
+		"component_id":  stringSchema("Locked component ID placed in this view"),
+		"container_id":  stringSchema("Optional active container ID from container_ids"),
+		"column":        {Type: genai.TypeInteger, Description: "0-based archetype column index"},
+		"off_page_refs": arraySchema("Cross-view navigation badges for neighbors in other detail views", offPageRefItem),
+	}, "component_id", "column")
 }
 
 func edgeSchema() *genai.Schema {
-	return &genai.Schema{
-		Type: genai.TypeObject,
-		Properties: map[string]*genai.Schema{
-			"from":                stringSchema("Source component ID placed in this view"),
-			"to":                  stringSchema("Target component ID placed in this view"),
-			"verb":                stringSchema("Short action verb (max 16 chars)"),
-			"flow_kind":           enumSchema("Semantic flow category", flowKindEnum),
-			"provenance":          enumSchema("Evidence provenance classification", provenanceEnum),
-			"evidence_edge_ids":   stringArraySchema("Interned e_XXXX IDs forming a directed walk from -> to (required for VERIFIED)"),
-			"inference_rationale": stringSchema("Concise rationale required when provenance is INFERRED"),
-			"via_bus_id":          stringSchema("Optional shared bus ID for edges sharing one source or one target"),
-		},
-		Required: []string{"from", "to", "verb", "flow_kind", "provenance"},
+	return objectSchema(map[string]*genai.Schema{
+		"from":                stringSchema("Source component ID placed in this view"),
+		"to":                  stringSchema("Target component ID placed in this view"),
+		"verb":                stringSchema("Short action verb (max 16 chars)"),
+		"flow_kind":           enumSchema("Semantic flow category", flowKindEnum),
+		"provenance":          enumSchema("Evidence provenance classification", provenanceEnum),
+		"evidence_edge_ids":   stringArraySchema("Interned e_XXXX IDs forming a directed walk from -> to (required for VERIFIED)"),
+		"inference_rationale": stringSchema("Concise rationale required when provenance is INFERRED"),
+		"via_bus_id":          stringSchema("Optional shared bus ID for edges sharing one source or one target"),
+	}, "from", "to", "verb", "flow_kind", "provenance")
+}
+
+func viewHeaderProps(idDesc, titleDesc, subtitleDesc, accentDesc string) map[string]*genai.Schema {
+	return map[string]*genai.Schema{
+		"id":          stringSchema(idDesc),
+		"title":       stringSchema(titleDesc),
+		"subtitle":    stringSchema(subtitleDesc),
+		"archetype":   enumSchema("Layout archetype", archetypeEnum),
+		"accent_mode": enumSchema(accentDesc, accentModeEnum),
 	}
+}
+
+func detailViewSchema() *genai.Schema {
+	props := viewHeaderProps(
+		"Canonical snake_case view ID (never view_0_system_index)",
+		"Human-readable view title",
+		"One-line view summary",
+		"Primary visual accent mode",
+	)
+	props["component_ids"] = stringArraySchema("1-12 component IDs assigned to this view")
+	return objectSchema(props, "id", "title", "archetype", "accent_mode", "component_ids")
+}
+
+func appendBackedBySchema(idKey, idDesc string) *genai.Schema {
+	return objectSchema(map[string]*genai.Schema{
+		idKey:          stringSchema(idDesc),
+		"resource_ids": stringArraySchema("Unclaimed r_XXXX IDs to append"),
+	}, idKey, "resource_ids")
+}
+
+func viewScopedSchema(itemKey string, item *genai.Schema) *genai.Schema {
+	return objectSchema(map[string]*genai.Schema{
+		"view_id": stringSchema("Existing detail view ID"),
+		itemKey:   item,
+	}, "view_id", itemKey)
+}
+
+func reconcileNewViewSchema() *genai.Schema {
+	props := viewHeaderProps(
+		"New snake_case detail view ID",
+		"View title",
+		"View subtitle",
+		"Primary accent mode",
+	)
+	props["container_ids"] = stringArraySchema("Active container IDs")
+	props["placements"] = arraySchema("", placementSchema())
+	props["edges"] = arraySchema("", edgeSchema())
+	return objectSchema(props, "id", "title", "archetype", "accent_mode", "placements")
 }
 
 // Pass1PlanSchema returns the non-recursive Vertex AI ResponseSchema for Pass 1 planning.
 func Pass1PlanSchema() *genai.Schema {
-	return &genai.Schema{
-		Type: genai.TypeObject,
-		Properties: map[string]*genai.Schema{
-			"components": {
-				Type:        genai.TypeArray,
-				Description: "Logical architecture blocks covering primary resources",
-				Items:       componentSchema(),
-			},
-			"container_defs": {
-				Type:        genai.TypeArray,
-				Description: "Global container frame definitions (max depth 2)",
-				Items:       containerDefSchema(),
-			},
-			"excluded_resources": {
-				Type:        genai.TypeArray,
-				Description: "Active resources intentionally omitted from visual cards",
-				Items:       excludedResourceSchema(),
-			},
-			"detail_views": {
-				Type:        genai.TypeArray,
-				Description: "Focused logical views (target 6-12 components each)",
-				Items: &genai.Schema{
-					Type: genai.TypeObject,
-					Properties: map[string]*genai.Schema{
-						"id":            stringSchema("Canonical snake_case view ID (never view_0_system_index)"),
-						"title":         stringSchema("Human-readable view title"),
-						"subtitle":      stringSchema("One-line view summary"),
-						"archetype":     enumSchema("Layout archetype", archetypeEnum),
-						"accent_mode":   enumSchema("Primary visual accent mode", accentModeEnum),
-						"component_ids": stringArraySchema("1-12 component IDs assigned to this view"),
-					},
-					Required: []string{"id", "title", "archetype", "accent_mode", "component_ids"},
-				},
-			},
-		},
-		Required: []string{"components", "container_defs", "excluded_resources", "detail_views"},
-	}
+	return objectSchema(map[string]*genai.Schema{
+		"components":         arraySchema("Logical architecture blocks covering primary resources", componentSchema()),
+		"container_defs":     arraySchema("Global container frame definitions (max depth 2)", containerDefSchema()),
+		"excluded_resources": arraySchema("Active resources intentionally omitted from visual cards", excludedResourceSchema()),
+		"detail_views":       arraySchema("Focused logical views (target 6-12 components each)", detailViewSchema()),
+	}, "components", "container_defs", "excluded_resources", "detail_views")
 }
 
 // Pass2ViewSchema returns the non-recursive Vertex AI ResponseSchema for Pass 2 per-view population.
 func Pass2ViewSchema() *genai.Schema {
-	return &genai.Schema{
-		Type: genai.TypeObject,
-		Properties: map[string]*genai.Schema{
-			"container_ids": stringArraySchema("Container IDs active in this view (max nesting depth 2)"),
-			"placements": {
-				Type:        genai.TypeArray,
-				Description: "Ordered placements (1-12) for components in this view",
-				Items:       placementSchema(),
-			},
-			"edges": {
-				Type:        genai.TypeArray,
-				Description: "Provenance-checked directed edges between placed components",
-				Items:       edgeSchema(),
-			},
-		},
-		Required: []string{"container_ids", "placements", "edges"},
-	}
+	return objectSchema(map[string]*genai.Schema{
+		"container_ids": stringArraySchema("Container IDs active in this view (max nesting depth 2)"),
+		"placements":    arraySchema("Ordered placements (1-12) for components in this view", placementSchema()),
+		"edges":         arraySchema("Provenance-checked directed edges between placed components", edgeSchema()),
+	}, "container_ids", "placements", "edges")
 }
 
 // ReconcilePatchSchema returns the non-recursive Vertex AI ResponseSchema for Day-2 delta reconciliation.
 func ReconcilePatchSchema() *genai.Schema {
-	return &genai.Schema{
-		Type: genai.TypeObject,
-		Properties: map[string]*genai.Schema{
-			"append_backed_by": {
-				Type:        genai.TypeArray,
-				Description: "Unclaimed r_XXXX resources to fold into existing components without changing titles/notes",
-				Items: &genai.Schema{
-					Type: genai.TypeObject,
-					Properties: map[string]*genai.Schema{
-						"component_id": stringSchema("Existing component ID"),
-						"resource_ids": stringArraySchema("Unclaimed r_XXXX IDs to append"),
-					},
-					Required: []string{"component_id", "resource_ids"},
-				},
-			},
-			"append_container_backed_by": {
-				Type:        genai.TypeArray,
-				Description: "Unclaimed r_XXXX resources to fold into existing containers",
-				Items: &genai.Schema{
-					Type: genai.TypeObject,
-					Properties: map[string]*genai.Schema{
-						"container_id": stringSchema("Existing container ID"),
-						"resource_ids": stringArraySchema("Unclaimed r_XXXX IDs to append"),
-					},
-					Required: []string{"container_id", "resource_ids"},
-				},
-			},
-			"new_components": {
-				Type:        genai.TypeArray,
-				Description: "Brand-new components for unclaimed resources",
-				Items:       componentSchema(),
-			},
-			"new_containers": {
-				Type:        genai.TypeArray,
-				Description: "Brand-new containers if required",
-				Items:       containerDefSchema(),
-			},
-			"new_excluded_resources": {
-				Type:        genai.TypeArray,
-				Description: "Unclaimed resources intentionally excluded with audit reason",
-				Items:       excludedResourceSchema(),
-			},
-			"new_placements": {
-				Type:        genai.TypeArray,
-				Description: "Placements for new components inside existing detail views with remaining capacity",
-				Items: &genai.Schema{
-					Type: genai.TypeObject,
-					Properties: map[string]*genai.Schema{
-						"view_id":   stringSchema("Existing detail view ID"),
-						"placement": placementSchema(),
-					},
-					Required: []string{"view_id", "placement"},
-				},
-			},
-			"new_edges": {
-				Type:        genai.TypeArray,
-				Description: "New edges to append into existing detail views",
-				Items: &genai.Schema{
-					Type: genai.TypeObject,
-					Properties: map[string]*genai.Schema{
-						"view_id": stringSchema("Existing detail view ID"),
-						"edge":    edgeSchema(),
-					},
-					Required: []string{"view_id", "edge"},
-				},
-			},
-			"new_views": {
-				Type:        genai.TypeArray,
-				Description: "Overflow detail views (1-12 placements) if existing views lack capacity",
-				Items: &genai.Schema{
-					Type: genai.TypeObject,
-					Properties: map[string]*genai.Schema{
-						"id":            stringSchema("New snake_case detail view ID"),
-						"title":         stringSchema("View title"),
-						"subtitle":      stringSchema("View subtitle"),
-						"archetype":     enumSchema("Layout archetype", archetypeEnum),
-						"accent_mode":   enumSchema("Primary accent mode", accentModeEnum),
-						"container_ids": stringArraySchema("Active container IDs"),
-						"placements": {
-							Type:  genai.TypeArray,
-							Items: placementSchema(),
-						},
-						"edges": {
-							Type:  genai.TypeArray,
-							Items: edgeSchema(),
-						},
-					},
-					Required: []string{"id", "title", "archetype", "accent_mode", "placements"},
-				},
-			},
-		},
-	}
+	return objectSchema(map[string]*genai.Schema{
+		"append_backed_by":           arraySchema("Unclaimed r_XXXX resources to fold into existing components without changing titles/notes", appendBackedBySchema("component_id", "Existing component ID")),
+		"append_container_backed_by": arraySchema("Unclaimed r_XXXX resources to fold into existing containers", appendBackedBySchema("container_id", "Existing container ID")),
+		"new_components":             arraySchema("Brand-new components for unclaimed resources", componentSchema()),
+		"new_containers":             arraySchema("Brand-new containers if required", containerDefSchema()),
+		"new_excluded_resources":     arraySchema("Unclaimed resources intentionally excluded with audit reason", excludedResourceSchema()),
+		"new_placements":             arraySchema("Placements for new components inside existing detail views with remaining capacity", viewScopedSchema("placement", placementSchema())),
+		"new_edges":                  arraySchema("New edges to append into existing detail views", viewScopedSchema("edge", edgeSchema())),
+		"new_views":                  arraySchema("Overflow detail views (1-12 placements) if existing views lack capacity", reconcileNewViewSchema()),
+	})
 }

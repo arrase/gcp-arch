@@ -242,14 +242,6 @@ func (e *ValidationError) Report() ValidationReport {
 	}
 }
 
-// CoverageRow represents one audited inventory URI in the rendered Inventory Coverage Table.
-type CoverageRow struct {
-	URI         string `json:"uri"`
-	AssetType   string `json:"asset_type"`
-	ProjectID   string `json:"project_id"`
-	Disposition string `json:"disposition"`
-}
-
 // Load decodes an architecture.yaml manifest using strict KnownFields(true) YAML parsing.
 func Load(path string) (*Manifest, error) {
 	data, err := os.ReadFile(path)

@@ -6,6 +6,13 @@ import (
 	"strings"
 )
 
+const (
+	oosConfigRefCrossProject = "config_ref_cross_project"
+	oosCloudBuildDeployFlag  = "cloudbuild_deploy_flag"
+	detailNCCSpoke           = "ncc_spoke"
+	assetTypeGKECluster      = "container.googleapis.com/Cluster"
+)
+
 type netIPKey struct {
 	netURI string
 	ip     string
@@ -73,7 +80,7 @@ var (
 		{"roles/secretmanager.", []string{"secretmanager.googleapis.com/Secret"}},
 		{"roles/artifactregistry.", []string{"artifactregistry.googleapis.com/Repository"}},
 		{"roles/cloudkms.", []string{"cloudkms.googleapis.com/CryptoKey"}},
-		{"roles/run.", []string{"run.googleapis.com/Service"}},
+		{"roles/run.", []string{assetTypeRunService}},
 		{"roles/cloudfunctions.", []string{"cloudfunctions.googleapis.com/CloudFunction"}},
 		{"roles/discoveryengine.", []string{"discoveryengine.googleapis.com/Engine", "discoveryengine.googleapis.com/DataStore"}},
 		{"roles/dialogflow.", []string{"dialogflow.googleapis.com/Agent"}},
@@ -89,78 +96,92 @@ func (st *extractState) resolveStructuralAndIAM() {
 	st.resolveIAMBindings()
 }
 
+type forwardingRuleTracer struct {
+	st              *extractState
+	out             tracedForwardingRule
+	backendPaths    map[string][]string
+	orderedBackends []string
+}
+
 // traceForwardingRule follows ForwardingRule -> Target*Proxy -> UrlMap -> BackendService/BackendBucket
 // across suppressed LB intermediate records.
 func (st *extractState) traceForwardingRule(fr *ingestedAsset) tracedForwardingRule {
-	var out tracedForwardingRule
-	backendPaths := make(map[string][]string)
-	var orderedBackends []string
-
-	recordBackend := func(uri string, paths []string) {
-		if uri == "" {
-			return
-		}
-		if _, exists := backendPaths[uri]; !exists {
-			orderedBackends = append(orderedBackends, uri)
-			backendPaths[uri] = nil
-		}
-		for _, p := range paths {
-			if p != "" {
-				list := backendPaths[uri]
-				appendUnique(&list, p)
-				backendPaths[uri] = list
-				appendUnique(&out.paths, p)
-			}
-		}
+	t := forwardingRuleTracer{
+		st:           st,
+		backendPaths: make(map[string][]string),
 	}
+	t.recordBackend(fr.frBackendSvc, nil)
+	t.visitTarget(fr.frTarget)
+	return t.finalize()
+}
 
-	visitUrlMap := func(umURI string) {
-		um := st.lbAssets[umURI]
-		if um == nil {
-			return
-		}
-		for _, h := range um.urlMapHosts {
-			appendUnique(&out.hosts, h)
-		}
-		if um.defaultService != "" {
-			recordBackend(um.defaultService, nil)
-		}
-		for _, entry := range um.urlMapBackends {
-			recordBackend(entry.backendURI, entry.paths)
-		}
+func (t *forwardingRuleTracer) recordBackend(uri string, paths []string) {
+	if uri == "" {
+		return
 	}
+	if _, exists := t.backendPaths[uri]; !exists {
+		t.orderedBackends = append(t.orderedBackends, uri)
+		t.backendPaths[uri] = nil
+	}
+	for _, p := range paths {
+		if p == "" {
+			continue
+		}
+		list := t.backendPaths[uri]
+		appendUnique(&list, p)
+		t.backendPaths[uri] = list
+		appendUnique(&t.out.paths, p)
+	}
+}
 
-	if fr.frBackendSvc != "" {
-		recordBackend(fr.frBackendSvc, nil)
+func (t *forwardingRuleTracer) visitTarget(targetURI string) {
+	if targetURI == "" {
+		return
 	}
-	if fr.frTarget != "" {
-		if lb := st.lbAssets[fr.frTarget]; lb != nil {
-			if lb.isTLS {
-				out.tls = true
-			}
-			switch lb.assetType {
-			case "compute.googleapis.com/TargetHttpProxy",
-				"compute.googleapis.com/TargetHttpsProxy",
-				"compute.googleapis.com/TargetGrpcProxy":
-				visitUrlMap(lb.urlMap)
-			case "compute.googleapis.com/TargetTcpProxy",
-				"compute.googleapis.com/TargetSslProxy":
-				recordBackend(lb.service, nil)
-			case "compute.googleapis.com/BackendService",
-				"compute.googleapis.com/BackendBucket":
-				recordBackend(lb.uri, nil)
-			}
-		}
+	lb := t.st.lbAssets[targetURI]
+	if lb == nil {
+		return
 	}
+	if lb.isTLS {
+		t.out.tls = true
+	}
+	switch lb.assetType {
+	case "compute.googleapis.com/TargetHttpProxy",
+		"compute.googleapis.com/TargetHttpsProxy",
+		"compute.googleapis.com/TargetGrpcProxy":
+		t.visitURLMap(lb.urlMap)
+	case "compute.googleapis.com/TargetTcpProxy",
+		"compute.googleapis.com/TargetSslProxy":
+		t.recordBackend(lb.service, nil)
+	case "compute.googleapis.com/BackendService",
+		"compute.googleapis.com/BackendBucket":
+		t.recordBackend(lb.uri, nil)
+	}
+}
 
-	for _, bURI := range orderedBackends {
-		b := st.lbAssets[bURI]
+func (t *forwardingRuleTracer) visitURLMap(umURI string) {
+	um := t.st.lbAssets[umURI]
+	if um == nil {
+		return
+	}
+	for _, h := range um.urlMapHosts {
+		appendUnique(&t.out.hosts, h)
+	}
+	t.recordBackend(um.defaultService, nil)
+	for _, entry := range um.urlMapBackends {
+		t.recordBackend(entry.backendURI, entry.paths)
+	}
+}
+
+func (t *forwardingRuleTracer) finalize() tracedForwardingRule {
+	for _, bURI := range t.orderedBackends {
+		b := t.st.lbAssets[bURI]
 		if b == nil {
 			continue
 		}
-		paths := backendPaths[bURI]
+		paths := t.backendPaths[bURI]
 		sort.Strings(paths)
-		out.backends = append(out.backends, tracedBackend{
+		t.out.backends = append(t.out.backends, tracedBackend{
 			backendURI:    bURI,
 			backendType:   b.assetType,
 			bucketName:    b.bucketName,
@@ -168,48 +189,54 @@ func (st *extractState) traceForwardingRule(fr *ingestedAsset) tracedForwardingR
 			paths:         paths,
 		})
 	}
-	sort.Strings(out.hosts)
-	sort.Strings(out.paths)
-	return out
+	sort.Strings(t.out.hosts)
+	sort.Strings(t.out.paths)
+	return t.out
 }
 
 func (st *extractState) suppressGKENodeInfra() {
-	clusterNamesByProj := make(map[string][]string)
-	gkeMIGURIs := make(map[string]bool)
-	for _, a := range st.assets {
-		if a.assetType != "container.googleapis.com/Cluster" || a.suppressed {
-			continue
-		}
-		cName := shortResourceName(a.uri)
-		clusterNamesByProj[a.projectID] = append(clusterNamesByProj[a.projectID], cName)
-		for _, ig := range st.gke.clusterIGURLs[a.uri] {
-			gkeMIGURIs[normalizeMIGURI(ig, st.projIdx)] = true
-		}
-	}
+	clusterNamesByProj, gkeMIGURIs := st.collectGKEClusterNodeInfo()
 	if len(clusterNamesByProj) == 0 {
 		return
 	}
-
 	for _, a := range st.assets {
 		if a.suppressed {
 			continue
 		}
-		clusters := clusterNamesByProj[a.projectID]
-		if len(clusters) == 0 {
+		if clusters := clusterNamesByProj[a.projectID]; len(clusters) > 0 {
+			st.suppressIfGKENodeAsset(a, clusters, gkeMIGURIs)
+		}
+	}
+}
+
+func (st *extractState) collectGKEClusterNodeInfo() (map[string][]string, map[string]bool) {
+	clusterNamesByProj := make(map[string][]string)
+	gkeMIGURIs := make(map[string]bool)
+	for _, a := range st.assets {
+		if a.assetType != assetTypeGKECluster || a.suppressed {
 			continue
 		}
-		switch a.assetType {
-		case "compute.googleapis.com/InstanceGroupManager":
-			if gkeMIGURIs[normalizeMIGURI(a.uri, st.projIdx)] || matchesAnyGKEClusterPrefix(shortResourceName(a.uri), clusters) {
-				a.suppressed = true
-				st.suppressed[a.assetType]++
-				gkeMIGURIs[normalizeMIGURI(a.uri, st.projIdx)] = true
-			}
-		case "compute.googleapis.com/Instance":
-			if isGKEWorkerVM(a, clusters, gkeMIGURIs, st.projIdx) {
-				a.suppressed = true
-				st.suppressed[a.assetType]++
-			}
+		clusterNamesByProj[a.projectID] = append(clusterNamesByProj[a.projectID], shortResourceName(a.uri))
+		for _, ig := range st.gke.clusterIGURLs[a.uri] {
+			gkeMIGURIs[normalizeMIGURI(ig, st.projIdx)] = true
+		}
+	}
+	return clusterNamesByProj, gkeMIGURIs
+}
+
+func (st *extractState) suppressIfGKENodeAsset(a *ingestedAsset, clusters []string, gkeMIGURIs map[string]bool) {
+	switch a.assetType {
+	case "compute.googleapis.com/InstanceGroupManager":
+		migURI := normalizeMIGURI(a.uri, st.projIdx)
+		if gkeMIGURIs[migURI] || matchesAnyGKEClusterPrefix(shortResourceName(a.uri), clusters) {
+			a.suppressed = true
+			st.suppressed[a.assetType]++
+			gkeMIGURIs[migURI] = true
+		}
+	case "compute.googleapis.com/Instance":
+		if isGKEWorkerVM(a, clusters, gkeMIGURIs, st.projIdx) {
+			a.suppressed = true
+			st.suppressed[a.assetType]++
 		}
 	}
 }
@@ -242,7 +269,7 @@ func isGKEWorkerVM(vm *ingestedAsset, clusters []string, gkeMIGURIs map[string]b
 }
 
 func normalizeMIGURI(raw string, projIdx map[string]string) string {
-	canon := CanonicalizeAIP122WithService(raw, "compute.googleapis.com", projIdx)
+	canon := CanonicalizeAIP122WithService(raw, svcCompute, projIdx)
 	return strings.Replace(canon, "/instanceGroups/", "/instanceGroupManagers/", 1)
 }
 
@@ -260,7 +287,7 @@ func (st *extractState) indexSubnetsAndConnectors() {
 			continue
 		}
 		switch a.assetType {
-		case "compute.googleapis.com/Subnetwork":
+		case assetTypeSubnetwork:
 			if vpc := getAttrString(a.attrs, "vpc"); vpc != "" {
 				st.subnetToVPC[a.uri] = vpc
 			}
@@ -285,9 +312,9 @@ func (st *extractState) indexVPCConnector(a *ingestedAsset) {
 		if subProj == "" {
 			subProj = a.projectID
 		}
-		subURI = "//compute.googleapis.com/projects/" + subProj + "/regions/" + a.location + "/subnetworks/" + sub
+		subURI = prefixComputeProjects + subProj + "/regions/" + a.location + "/subnetworks/" + sub
 	} else {
-		subURI = CanonicalizeAIP122WithService(sub, "compute.googleapis.com", st.projIdx)
+		subURI = CanonicalizeAIP122WithService(sub, svcCompute, st.projIdx)
 	}
 	if vpc := st.subnetToVPC[subURI]; vpc != "" {
 		st.connectorToVPC[a.uri] = vpc
@@ -326,7 +353,7 @@ func (st *extractState) indexSingleVPCPeering(a *ingestedAsset, peer vpcPeeringI
 		}
 		st.addEdge(src, dst, EdgeVPCPeering, peer.name)
 	} else if peerProj != "" && !st.inScopeProjects[peerProj] {
-		if stubURI := st.registerOutOfScopeProject(peerProj, a.uri, "config_ref_cross_project"); stubURI != "" {
+		if stubURI := st.registerOutOfScopeProject(peerProj, a.uri, oosConfigRefCrossProject); stubURI != "" {
 			st.addEdge(a.uri, stubURI, EdgeVPCPeering, peer.name)
 		}
 	}
@@ -357,8 +384,11 @@ func (st *extractState) emitPSAPeeringAndSharedVPC() {
 			continue
 		}
 		st.recordSharedVPCHost(a, vpc)
-		if isPSAManagedService(a.assetType) {
+		switch {
+		case isPSAManagedService(a.assetType):
 			st.emitPSAPeeringEdge(a, vpc)
+		case a.assetType == "redis.googleapis.com/Cluster" && st.assetsByURI[vpc] != nil:
+			st.addEdge(vpc, a.uri, EdgeConfigRef, "psc_network")
 		}
 	}
 }
@@ -373,7 +403,7 @@ func (st *extractState) recordSharedVPCHost(a *ingestedAsset, vpc string) {
 		st.projects[a.projectID] = p
 	}
 	if !st.inScopeProjects[vpcProj] {
-		if stubURI := st.registerOutOfScopeProject(vpcProj, a.uri, "config_ref_cross_project"); stubURI != "" {
+		if stubURI := st.registerOutOfScopeProject(vpcProj, a.uri, oosConfigRefCrossProject); stubURI != "" {
 			st.addEdge(a.uri, stubURI, EdgeConfigRef, "shared_vpc")
 		}
 	}
@@ -436,7 +466,6 @@ func isPSAManagedService(assetType string) bool {
 	case "sqladmin.googleapis.com/Instance",
 		"alloydb.googleapis.com/Cluster",
 		"redis.googleapis.com/Instance",
-		"redis.googleapis.com/Cluster",
 		"memcache.googleapis.com/Instance",
 		"file.googleapis.com/Instance":
 		return true
@@ -500,17 +529,22 @@ func (st *extractState) assetNetworkURI(a *ingestedAsset) string {
 			return vpc
 		}
 	}
-	if a.parentURI != "" {
-		if strings.Contains(a.parentURI, "/networks/") {
-			return a.parentURI
-		}
-		if vpc := st.subnetToVPC[a.parentURI]; vpc != "" {
-			return vpc
-		}
-		// GKE workloads inherit VPC from their parent container.googleapis.com/Cluster.
-		if parent := st.assetsByURI[a.parentURI]; parent != nil && parent != a {
-			return st.assetNetworkURI(parent)
-		}
+	return st.parentNetworkURI(a)
+}
+
+func (st *extractState) parentNetworkURI(a *ingestedAsset) string {
+	if a.parentURI == "" {
+		return ""
+	}
+	if strings.Contains(a.parentURI, "/networks/") {
+		return a.parentURI
+	}
+	if vpc := st.subnetToVPC[a.parentURI]; vpc != "" {
+		return vpc
+	}
+	// GKE workloads inherit VPC from their parent container.googleapis.com/Cluster.
+	if parent := st.assetsByURI[a.parentURI]; parent != nil && parent != a {
+		return st.assetNetworkURI(parent)
 	}
 	return ""
 }
@@ -521,46 +555,47 @@ func normalizeComputeNetworkURI(raw, projID string, projIdx map[string]string) s
 		return ""
 	}
 	if !strings.Contains(s, "/") && projID != "" {
-		return "//compute.googleapis.com/projects/" + mapProject(projID, projIdx) + "/global/networks/" + s
+		return prefixComputeProjects + mapProject(projID, projIdx) + "/global/networks/" + s
 	}
-	return CanonicalizeAIP122WithService(s, "compute.googleapis.com", projIdx)
+	return CanonicalizeAIP122WithService(s, svcCompute, projIdx)
 }
 
 func (st *extractState) indexCloudRunHosts() {
-	registerURL := func(rawURL, uri string) {
-		su := SanitizeURL(rawURL)
-		if su == "" {
-			return
-		}
-		low := strings.ToLower(su)
-		if _, exists := st.runHostToURI[low]; !exists {
-			st.runHostToURI[low] = uri
-		}
-		trimmed := strings.TrimPrefix(strings.TrimPrefix(low, "https://"), "http://")
-		host, _, _ := strings.Cut(trimmed, "/")
-		if host != "" {
-			if _, exists := st.runHostToURI[host]; !exists {
-				st.runHostToURI[host] = uri
-			}
-		}
-	}
-
 	for _, a := range st.assets {
-		if a.suppressed {
-			continue
-		}
-		if a.assetType != "run.googleapis.com/Service" && a.assetType != "cloudfunctions.googleapis.com/CloudFunction" {
+		if !isServerlessHTTPAsset(a) {
 			continue
 		}
 		for _, u := range a.runURLs {
-			registerURL(u, a.uri)
+			st.registerCloudRunURL(u, a.uri)
 		}
-		name := strings.ToLower(shortResourceName(a.uri))
-		if name != "" {
+		if name := strings.ToLower(shortResourceName(a.uri)); name != "" {
 			list := st.runNameToURIs[name]
 			appendUnique(&list, a.uri)
 			st.runNameToURIs[name] = list
 		}
+	}
+}
+
+func isServerlessHTTPAsset(a *ingestedAsset) bool {
+	return !a.suppressed && (a.assetType == assetTypeRunService || a.assetType == "cloudfunctions.googleapis.com/CloudFunction")
+}
+
+func (st *extractState) registerCloudRunURL(rawURL, uri string) {
+	su := SanitizeURL(rawURL)
+	if su == "" {
+		return
+	}
+	low := strings.ToLower(su)
+	if _, exists := st.runHostToURI[low]; !exists {
+		st.runHostToURI[low] = uri
+	}
+	trimmed := stripHTTPURLScheme(low)
+	host, _, _ := strings.Cut(trimmed, "/")
+	if host == "" {
+		return
+	}
+	if _, exists := st.runHostToURI[host]; !exists {
+		st.runHostToURI[host] = uri
 	}
 }
 
@@ -572,7 +607,7 @@ func (st *extractState) resolveHTTPTarget(rawURL string) string {
 	if uri, ok := st.runHostToURI[su]; ok {
 		return uri
 	}
-	trimmed := strings.TrimPrefix(strings.TrimPrefix(su, "https://"), "http://")
+	trimmed := stripHTTPURLScheme(su)
 	host, path, _ := strings.Cut(trimmed, "/")
 	if uri, ok := st.runHostToURI[host]; ok && !strings.HasSuffix(host, ".cloudfunctions.net") {
 		return uri
@@ -613,7 +648,7 @@ func (st *extractState) resolveSingleNonGKEBackend(frURI string, be tracedBacken
 	detail := strings.Join(be.paths, ",")
 	if be.backendType == "compute.googleapis.com/BackendBucket" && be.bucketName != "" {
 		bktURI := normalizeBucketURI(be.bucketName, st.projIdx)
-		st.emitTargetEdge(frURI, bktURI, EdgeConfigRef, detail, "config_ref_cross_project")
+		st.emitTargetEdge(frURI, bktURI, EdgeConfigRef, detail, oosConfigRefCrossProject)
 		return
 	}
 	for _, grpURI := range be.backendGroups {
@@ -644,16 +679,16 @@ func (st *extractState) emitServerlessOrPSCNEGEdge(frURI, grpURI string, neg *lb
 	}
 	switch {
 	case neg.negCloudRunSvc != "":
-		uri := "//run.googleapis.com/projects/" + neg.projectID + "/locations/" + loc + "/services/" + neg.negCloudRunSvc
-		st.emitTargetEdge(frURI, uri, EdgeConfigRef, detail, "config_ref_cross_project")
+		uri := prefixRunProjects + neg.projectID + segLocations + loc + segServices + neg.negCloudRunSvc
+		st.emitTargetEdge(frURI, uri, EdgeConfigRef, detail, oosConfigRefCrossProject)
 	case neg.negCloudFn != "":
-		uri := "//cloudfunctions.googleapis.com/projects/" + neg.projectID + "/locations/" + loc + "/functions/" + neg.negCloudFn
-		st.emitTargetEdge(frURI, uri, EdgeConfigRef, detail, "config_ref_cross_project")
+		uri := "//cloudfunctions.googleapis.com/projects/" + neg.projectID + segLocations + loc + "/functions/" + neg.negCloudFn
+		st.emitTargetEdge(frURI, uri, EdgeConfigRef, detail, oosConfigRefCrossProject)
 	case neg.negAppEngineSvc != "":
-		uri := "//appengine.googleapis.com/apps/" + neg.projectID + "/services/" + neg.negAppEngineSvc
-		st.emitTargetEdge(frURI, uri, EdgeConfigRef, detail, "config_ref_cross_project")
+		uri := "//appengine.googleapis.com/apps/" + neg.projectID + segServices + neg.negAppEngineSvc
+		st.emitTargetEdge(frURI, uri, EdgeConfigRef, detail, oosConfigRefCrossProject)
 	case neg.negPSCTarget != "":
-		st.emitTargetEdge(frURI, neg.negPSCTarget, EdgeConfigRef, detail, "config_ref_cross_project")
+		st.emitTargetEdge(frURI, neg.negPSCTarget, EdgeConfigRef, detail, oosConfigRefCrossProject)
 	}
 }
 
@@ -668,9 +703,9 @@ func (st *extractState) resolveStructuralRefs() {
 				continue
 			}
 			if ref.direction == "in" {
-				st.emitTargetEdge(targetURI, a.uri, EdgeConfigRef, ref.detail, "config_ref_cross_project")
+				st.emitTargetEdge(targetURI, a.uri, EdgeConfigRef, ref.detail, oosConfigRefCrossProject)
 			} else {
-				st.emitTargetEdge(a.uri, targetURI, EdgeConfigRef, ref.detail, "config_ref_cross_project")
+				st.emitTargetEdge(a.uri, targetURI, EdgeConfigRef, ref.detail, oosConfigRefCrossProject)
 			}
 		}
 	}
@@ -685,38 +720,52 @@ func (st *extractState) resolveStructuralTarget(src *ingestedAsset, ref structur
 	case "bq_dataset":
 		return normalizeBQDatasetURI(ref.targetURI, src.projectID, st.projIdx)
 	case "cloudsql":
-		if uri := cloudSQLConnNameToURI(ref.targetURI, st.projIdx); uri != "" {
-			return uri
-		}
-		if !strings.Contains(ref.targetURI, "/") {
-			return "//sqladmin.googleapis.com/projects/" + src.projectID + "/instances/" + ref.targetURI
-		}
-		return CanonicalizeAIP122WithService(ref.targetURI, "sqladmin.googleapis.com", st.projIdx)
+		return st.resolveCloudSQLRef(ref.targetURI, src.projectID)
 	case "datastore_id":
-		if strings.Contains(ref.targetURI, "/") {
-			return CanonicalizeAIP122WithService(ref.targetURI, "discoveryengine.googleapis.com", st.projIdx)
-		}
-		for _, cand := range st.assets {
-			if !cand.suppressed && cand.assetType == "discoveryengine.googleapis.com/DataStore" &&
-				cand.projectID == src.projectID && shortResourceName(cand.uri) == ref.targetURI {
-				return cand.uri
-			}
-		}
-		return ""
+		return st.resolveDataStoreIDRef(ref.targetURI, src.projectID)
 	}
 
 	canon := CanonicalizeAIP122WithService(ref.targetURI, ref.defaultSvc, st.projIdx)
 	if !strings.HasPrefix(canon, "//") {
 		return ""
 	}
+	return st.resolveAbsorbedTargetURI(canon)
+}
+
+func (st *extractState) resolveCloudSQLRef(targetURI, srcProj string) string {
+	if uri := cloudSQLConnNameToURI(targetURI, st.projIdx); uri != "" {
+		return uri
+	}
+	if !strings.Contains(targetURI, "/") {
+		return prefixSQLProjects + srcProj + segInstances + targetURI
+	}
+	return CanonicalizeAIP122WithService(targetURI, "sqladmin.googleapis.com", st.projIdx)
+}
+
+func (st *extractState) resolveDataStoreIDRef(targetURI, srcProj string) string {
+	if strings.Contains(targetURI, "/") {
+		return CanonicalizeAIP122WithService(targetURI, "discoveryengine.googleapis.com", st.projIdx)
+	}
+	for _, cand := range st.assets {
+		if !cand.suppressed && cand.assetType == "discoveryengine.googleapis.com/DataStore" &&
+			cand.projectID == srcProj && shortResourceName(cand.uri) == targetURI {
+			return cand.uri
+		}
+	}
+	return ""
+}
+
+func (st *extractState) resolveAbsorbedTargetURI(canon string) string {
 	// Resolve VpnTunnel -> VpnGateway transparently when Router links a VpnTunnel.
-	if ab := st.absorbed[canon]; ab != nil {
-		if ab.assetType == "compute.googleapis.com/VpnTunnel" && ab.vpnGateway != "" {
-			return ab.vpnGateway
-		}
-		if ab.assetType == "datastream.googleapis.com/ConnectionProfile" {
-			return "" // Handled in resolveAbsorbedBridges for Datastream Stream.
-		}
+	ab := st.absorbed[canon]
+	if ab == nil {
+		return canon
+	}
+	if ab.assetType == "compute.googleapis.com/VpnTunnel" && ab.vpnGateway != "" {
+		return ab.vpnGateway
+	}
+	if ab.assetType == "datastream.googleapis.com/ConnectionProfile" {
+		return "" // Handled in resolveAbsorbedBridges for Datastream Stream.
 	}
 	return canon
 }
@@ -729,31 +778,36 @@ func (st *extractState) resolveAbsorbedBridges() {
 
 func (st *extractState) resolveAbsorbedResourceBridges() {
 	for _, uri := range sortedMapKeys(st.absorbed) {
-		ab := st.absorbed[uri]
-		switch ab.assetType {
-		case "compute.googleapis.com/VpnTunnel":
-			if ab.router != "" && ab.vpnGateway != "" {
-				st.emitTargetEdge(ab.router, ab.vpnGateway, EdgeConfigRef, "vpn_tunnel", "config_ref_cross_project")
-			}
-		case "networkconnectivity.googleapis.com/Spoke":
-			st.resolveNCCSpokeBridge(ab)
-		case "aiplatform.googleapis.com/FeatureView":
-			if ab.parentURI != "" && ab.bqSourceURI != "" {
-				dsURI := normalizeBQDatasetURI(ab.bqSourceURI, ab.projectID, st.projIdx)
-				st.emitTargetEdge(dsURI, ab.parentURI, EdgeConfigRef, "feature_sync", "config_ref_cross_project")
-			}
-		case "analyticshub.googleapis.com/Listing":
-			if ab.parentURI != "" && ab.bqSourceURI != "" {
-				dsURI := normalizeBQDatasetURI(ab.bqSourceURI, ab.projectID, st.projIdx)
-				st.emitTargetEdge(dsURI, ab.parentURI, EdgeConfigRef, "analytics_hub_listing", "config_ref_cross_project")
-			}
-		case "dataplex.googleapis.com/Asset":
-			if ab.parentURI != "" && ab.resourceSpecName != "" {
-				tgt := CanonicalizeAIP122(ab.resourceSpecName, st.projIdx)
-				st.emitTargetEdge(ab.parentURI, tgt, EdgeConfigRef, "dataplex_asset", "config_ref_cross_project")
-			}
+		st.resolveSingleAbsorbedBridge(st.absorbed[uri])
+	}
+}
+
+func (st *extractState) resolveSingleAbsorbedBridge(ab *absorbedRecord) {
+	switch ab.assetType {
+	case "compute.googleapis.com/VpnTunnel":
+		if ab.router != "" && ab.vpnGateway != "" {
+			st.emitTargetEdge(ab.router, ab.vpnGateway, EdgeConfigRef, "vpn_tunnel", oosConfigRefCrossProject)
+		}
+	case "networkconnectivity.googleapis.com/Spoke":
+		st.resolveNCCSpokeBridge(ab)
+	case "aiplatform.googleapis.com/FeatureView":
+		st.emitAbsorbedBQSourceEdge(ab, "feature_sync")
+	case "analyticshub.googleapis.com/Listing":
+		st.emitAbsorbedBQSourceEdge(ab, "analytics_hub_listing")
+	case "dataplex.googleapis.com/Asset":
+		if ab.parentURI != "" && ab.resourceSpecName != "" {
+			tgt := CanonicalizeAIP122(ab.resourceSpecName, st.projIdx)
+			st.emitTargetEdge(ab.parentURI, tgt, EdgeConfigRef, "dataplex_asset", oosConfigRefCrossProject)
 		}
 	}
+}
+
+func (st *extractState) emitAbsorbedBQSourceEdge(ab *absorbedRecord, detail string) {
+	if ab.parentURI == "" || ab.bqSourceURI == "" {
+		return
+	}
+	dsURI := normalizeBQDatasetURI(ab.bqSourceURI, ab.projectID, st.projIdx)
+	st.emitTargetEdge(dsURI, ab.parentURI, EdgeConfigRef, detail, oosConfigRefCrossProject)
 }
 
 func (st *extractState) resolveNCCSpokeBridge(ab *absorbedRecord) {
@@ -761,15 +815,15 @@ func (st *extractState) resolveNCCSpokeBridge(ab *absorbedRecord) {
 		return
 	}
 	if ab.linkedVPC != "" {
-		st.emitTargetEdge(ab.hub, ab.linkedVPC, EdgeConfigRef, "ncc_spoke", "config_ref_cross_project")
+		st.emitTargetEdge(ab.hub, ab.linkedVPC, EdgeConfigRef, detailNCCSpoke, oosConfigRefCrossProject)
 	}
 	for _, v := range ab.linkedVPNs {
 		if tun := st.absorbed[v]; tun != nil && tun.vpnGateway != "" {
-			st.emitTargetEdge(ab.hub, tun.vpnGateway, EdgeConfigRef, "ncc_spoke", "config_ref_cross_project")
+			st.emitTargetEdge(ab.hub, tun.vpnGateway, EdgeConfigRef, detailNCCSpoke, oosConfigRefCrossProject)
 		}
 	}
 	for _, ic := range ab.linkedInterconnects {
-		st.emitTargetEdge(ab.hub, ic, EdgeConfigRef, "ncc_spoke", "config_ref_cross_project")
+		st.emitTargetEdge(ab.hub, ic, EdgeConfigRef, detailNCCSpoke, oosConfigRefCrossProject)
 	}
 }
 
@@ -785,7 +839,7 @@ func (st *extractState) resolveDatastreamStreamBridges() {
 }
 
 func (st *extractState) resolveDatastreamStreamRef(a *ingestedAsset, ref structuralRef) {
-	cpURI := CanonicalizeAIP122WithService(ref.targetURI, "datastream.googleapis.com", st.projIdx)
+	cpURI := CanonicalizeAIP122WithService(ref.targetURI, svcDatastream, st.projIdx)
 	cp := st.absorbed[cpURI]
 	if cp == nil || cp.assetType != "datastream.googleapis.com/ConnectionProfile" {
 		return
@@ -793,7 +847,7 @@ func (st *extractState) resolveDatastreamStreamRef(a *ingestedAsset, ref structu
 	if ref.direction != "in" {
 		if cp.gcsBucket != "" {
 			bktURI := normalizeBucketURI(cp.gcsBucket, st.projIdx)
-			st.emitTargetEdge(a.uri, bktURI, EdgeConfigRef, "datastream.gcs", "config_ref_cross_project")
+			st.emitTargetEdge(a.uri, bktURI, EdgeConfigRef, "datastream.gcs", oosConfigRefCrossProject)
 		}
 		return
 	}
@@ -819,19 +873,25 @@ func (st *extractState) resolveBigQueryFoldedExternalURIs() {
 			continue
 		}
 		for _, ext := range st.foldedExternalURIs[dsURI] {
-			if strings.HasPrefix(ext, "https://") || strings.HasPrefix(ext, "http://") {
-				if tgt := st.resolveHTTPTarget(ext); tgt != "" {
-					st.addEdge(dsURI, tgt, EdgeConfigRef, "bq_remote_fn")
-				}
-				continue
-			}
-			canon := CanonicalizeAIP122(ext, st.projIdx)
-			if strings.HasPrefix(canon, "//storage.googleapis.com/") {
-				st.emitTargetEdge(canon, dsURI, EdgeConfigRef, "biglake", "config_ref_cross_project")
-			} else if strings.HasPrefix(canon, "//") {
-				st.emitTargetEdge(dsURI, canon, EdgeConfigRef, "bq_external", "config_ref_cross_project")
-			}
+			st.resolveSingleBigQueryExternalURI(dsURI, ext)
 		}
+	}
+}
+
+func (st *extractState) resolveSingleBigQueryExternalURI(dsURI, ext string) {
+	if hasHTTPURLScheme(ext) {
+		if tgt := st.resolveHTTPTarget(ext); tgt != "" {
+			st.addEdge(dsURI, tgt, EdgeConfigRef, "bq_remote_fn")
+		}
+		return
+	}
+	canon := CanonicalizeAIP122(ext, st.projIdx)
+	if strings.HasPrefix(canon, prefixStorageURI) {
+		st.emitTargetEdge(canon, dsURI, EdgeConfigRef, "biglake", oosConfigRefCrossProject)
+		return
+	}
+	if strings.HasPrefix(canon, "//") {
+		st.emitTargetEdge(dsURI, canon, EdgeConfigRef, "bq_external", oosConfigRefCrossProject)
 	}
 }
 
@@ -842,59 +902,62 @@ func (st *extractState) resolveEnvAndSecretRefs() {
 		}
 		srcNet := st.assetNetworkURI(a)
 		for _, ref := range a.envRefs {
-			st.resolveSingleConfigRef(a.uri, a.projectID, srcNet, ref, EdgeConfigRef, "config_ref_cross_project")
+			st.resolveSingleConfigRef(a.uri, a.projectID, srcNet, ref, EdgeConfigRef, oosConfigRefCrossProject)
 		}
 		for _, sec := range a.secretRefs {
 			secURI := stripSecretVersion(CanonicalizeAIP122WithService(sec, "secretmanager.googleapis.com", st.projIdx))
-			st.emitTargetEdge(a.uri, secURI, EdgeConfigRef, "secret_ref", "config_ref_cross_project")
+			st.emitTargetEdge(a.uri, secURI, EdgeConfigRef, "secret_ref", oosConfigRefCrossProject)
 		}
 	}
 }
 
 func (st *extractState) resolveCloudBuildRefList(sourceURI, srcProj string, refs, secRefs []string) {
 	// Capture any explicit --project=<id> target in this build so --cluster / run-deploy know target project.
+	targetProjects := extractCloudBuildTargetProjects(refs)
+	for _, ref := range refs {
+		st.resolveSingleCloudBuildRef(sourceURI, srcProj, ref, targetProjects)
+	}
+	for _, sec := range secRefs {
+		secURI := stripSecretVersion(CanonicalizeAIP122WithService(sec, "secretmanager.googleapis.com", st.projIdx))
+		st.emitTargetEdge(sourceURI, secURI, EdgeCloudBuildStepRef, "secret_ref", oosCloudBuildDeployFlag)
+	}
+}
+
+func extractCloudBuildTargetProjects(refs []string) []string {
 	var targetProjects []string
 	for _, r := range refs {
-		if strings.HasPrefix(r, "--project=") {
-			proj := strings.TrimPrefix(r, "--project=")
+		if proj, ok := strings.CutPrefix(r, flagProjectPrefix); ok {
 			appendUnique(&targetProjects, proj)
 		}
 	}
+	return targetProjects
+}
 
-	for _, ref := range refs {
-		switch {
-		case strings.HasPrefix(ref, "--project="):
-			proj := strings.TrimPrefix(ref, "--project=")
-			if proj != "" && !st.inScopeProjects[proj] {
-				if stubURI := st.registerOutOfScopeProject(proj, sourceURI, "cloudbuild_deploy_flag"); stubURI != "" {
-					st.addEdge(sourceURI, stubURI, EdgeCloudBuildStepRef, ref)
-				}
-			}
-		case strings.HasPrefix(ref, "gcr.io/"):
-			proj := strings.TrimPrefix(ref, "gcr.io/")
-			if proj != "" && !st.inScopeProjects[proj] {
-				if stubURI := st.registerOutOfScopeProject(proj, sourceURI, "cloudbuild_deploy_flag"); stubURI != "" {
-					st.addEdge(sourceURI, stubURI, EdgeCloudBuildStepRef, ref)
-				}
-			}
-		case strings.HasPrefix(ref, "--cluster="):
-			clusterName := strings.TrimPrefix(ref, "--cluster=")
-			if tgt := st.findClusterByName(clusterName, srcProj, targetProjects); tgt != "" {
-				st.addEdge(sourceURI, tgt, EdgeCloudBuildStepRef, ref)
-			}
-		case strings.HasPrefix(ref, "run-deploy:"):
-			svcName := strings.TrimPrefix(ref, "run-deploy:")
-			if tgt := st.findCloudRunByName(svcName, srcProj, targetProjects); tgt != "" {
-				st.addEdge(sourceURI, tgt, EdgeCloudBuildStepRef, ref)
-			}
-		default:
-			st.resolveSingleConfigRef(sourceURI, srcProj, "", ref, EdgeCloudBuildStepRef, "cloudbuild_deploy_flag")
+func (st *extractState) resolveSingleCloudBuildRef(sourceURI, srcProj, ref string, targetProjects []string) {
+	switch {
+	case strings.HasPrefix(ref, flagProjectPrefix):
+		st.emitOutOfScopeProjectEdge(sourceURI, strings.TrimPrefix(ref, flagProjectPrefix), ref, EdgeCloudBuildStepRef, oosCloudBuildDeployFlag)
+	case strings.HasPrefix(ref, prefixGCR):
+		st.emitOutOfScopeProjectEdge(sourceURI, strings.TrimPrefix(ref, prefixGCR), ref, EdgeCloudBuildStepRef, oosCloudBuildDeployFlag)
+	case strings.HasPrefix(ref, flagClusterPrefix):
+		if tgt := st.findUniqueAssetByName(assetTypeGKECluster, strings.TrimPrefix(ref, flagClusterPrefix), srcProj, targetProjects); tgt != "" {
+			st.addEdge(sourceURI, tgt, EdgeCloudBuildStepRef, ref)
 		}
+	case strings.HasPrefix(ref, prefixRunDeploy):
+		if tgt := st.findUniqueAssetByName(assetTypeRunService, strings.TrimPrefix(ref, prefixRunDeploy), srcProj, targetProjects); tgt != "" {
+			st.addEdge(sourceURI, tgt, EdgeCloudBuildStepRef, ref)
+		}
+	default:
+		st.resolveSingleConfigRef(sourceURI, srcProj, "", ref, EdgeCloudBuildStepRef, oosCloudBuildDeployFlag)
 	}
+}
 
-	for _, sec := range secRefs {
-		secURI := stripSecretVersion(CanonicalizeAIP122WithService(sec, "secretmanager.googleapis.com", st.projIdx))
-		st.emitTargetEdge(sourceURI, secURI, EdgeCloudBuildStepRef, "secret_ref", "cloudbuild_deploy_flag")
+func (st *extractState) emitOutOfScopeProjectEdge(srcURI, proj, detail string, edgeKind FactEdgeKind, oosKind string) {
+	if proj == "" || st.inScopeProjects[proj] {
+		return
+	}
+	if stubURI := st.registerOutOfScopeProject(proj, srcURI, oosKind); stubURI != "" {
+		st.addEdge(srcURI, stubURI, edgeKind, detail)
 	}
 }
 
@@ -906,13 +969,13 @@ func (st *extractState) resolveSingleConfigRef(srcURI, srcProj, srcNet, rawRef s
 	switch {
 	case strings.HasPrefix(s, "gs://"):
 		st.emitTargetEdge(srcURI, normalizeBucketURI(s, st.projIdx), edgeKind, s, oosKind)
-	case strings.HasPrefix(s, "https://") || strings.HasPrefix(s, "http://"):
+	case hasHTTPURLScheme(s):
 		if tgt := st.resolveHTTPTarget(s); tgt != "" {
 			st.addEdge(srcURI, tgt, edgeKind, s)
 		}
-	case strings.HasPrefix(s, "//") || strings.HasPrefix(s, "projects/"):
+	case strings.HasPrefix(s, "//") || strings.HasPrefix(s, prefixProjects):
 		st.resolveAIP122ConfigRef(srcURI, s, edgeKind, oosKind)
-	case strings.HasPrefix(s, "--cluster="), strings.HasPrefix(s, "run-deploy:"), strings.HasPrefix(s, "--project="):
+	case strings.HasPrefix(s, flagClusterPrefix), strings.HasPrefix(s, prefixRunDeploy), strings.HasPrefix(s, flagProjectPrefix):
 		st.resolveCommandFlagConfigRef(srcURI, srcProj, s, edgeKind, oosKind)
 	default:
 		st.resolveIPOrDatasetConfigRef(srcURI, srcNet, s, edgeKind, oosKind)
@@ -933,21 +996,16 @@ func (st *extractState) resolveAIP122ConfigRef(srcURI, s string, edgeKind FactEd
 
 func (st *extractState) resolveCommandFlagConfigRef(srcURI, srcProj, s string, edgeKind FactEdgeKind, oosKind string) {
 	switch {
-	case strings.HasPrefix(s, "--cluster="):
-		if tgt := st.findClusterByName(strings.TrimPrefix(s, "--cluster="), srcProj, nil); tgt != "" {
+	case strings.HasPrefix(s, flagClusterPrefix):
+		if tgt := st.findUniqueAssetByName(assetTypeGKECluster, strings.TrimPrefix(s, flagClusterPrefix), srcProj, nil); tgt != "" {
 			st.addEdge(srcURI, tgt, edgeKind, s)
 		}
-	case strings.HasPrefix(s, "run-deploy:"):
-		if tgt := st.findCloudRunByName(strings.TrimPrefix(s, "run-deploy:"), srcProj, nil); tgt != "" {
+	case strings.HasPrefix(s, prefixRunDeploy):
+		if tgt := st.findUniqueAssetByName(assetTypeRunService, strings.TrimPrefix(s, prefixRunDeploy), srcProj, nil); tgt != "" {
 			st.addEdge(srcURI, tgt, edgeKind, s)
 		}
-	case strings.HasPrefix(s, "--project="):
-		proj := strings.TrimPrefix(s, "--project=")
-		if proj != "" && !st.inScopeProjects[proj] {
-			if stubURI := st.registerOutOfScopeProject(proj, srcURI, oosKind); stubURI != "" {
-				st.addEdge(srcURI, stubURI, edgeKind, s)
-			}
-		}
+	case strings.HasPrefix(s, flagProjectPrefix):
+		st.emitOutOfScopeProjectEdge(srcURI, strings.TrimPrefix(s, flagProjectPrefix), s, edgeKind, oosKind)
 	}
 }
 
@@ -961,7 +1019,7 @@ func (st *extractState) resolveIPOrDatasetConfigRef(srcURI, srcNet, s string, ed
 		return
 	}
 	if proj, ds, ok := parseProjectDatasetRef(s, st.projIdx); ok && st.isKnownProjectID(proj) {
-		dsURI := "//bigquery.googleapis.com/projects/" + proj + "/datasets/" + ds
+		dsURI := prefixBQProjects + proj + segDatasets + ds
 		st.emitTargetEdge(srcURI, dsURI, edgeKind, proj+"."+ds, oosKind)
 	}
 }
@@ -986,27 +1044,11 @@ func (st *extractState) emitTargetEdge(fromURI, toURI string, kind FactEdgeKind,
 		return
 	}
 
-	resolveEndpoint := func(uri string, inScope bool, peerURI string) (string, bool) {
-		if inScope {
-			return uri, true
-		}
-		if _, ext := st.externalResources[uri]; ext {
-			return uri, true
-		}
-		proj := extractProjectID(uri, nil, st.projIdx)
-		if proj != "" && !st.inScopeProjects[proj] {
-			if stubURI := st.registerOutOfScopeProject(proj, peerURI, oosKind); stubURI != "" {
-				return stubURI, true
-			}
-		}
-		return "", false
-	}
-
-	resolvedFrom, okFrom := resolveEndpoint(fromURI, fromInScope, toURI)
+	resolvedFrom, okFrom := st.resolveTargetEndpoint(fromURI, fromInScope, toURI, oosKind)
 	if !okFrom {
 		return
 	}
-	resolvedTo, okTo := resolveEndpoint(toURI, toInScope, fromURI)
+	resolvedTo, okTo := st.resolveTargetEndpoint(toURI, toInScope, fromURI, oosKind)
 	if !okTo || resolvedFrom == resolvedTo {
 		return
 	}
@@ -1017,6 +1059,23 @@ func (st *extractState) emitTargetEdge(fromURI, toURI string, kind FactEdgeKind,
 		st.referencedURIs[resolvedTo] = true
 	}
 	st.addEdge(resolvedFrom, resolvedTo, kind, detail)
+}
+
+func (st *extractState) resolveTargetEndpoint(uri string, inScope bool, peerURI, oosKind string) (string, bool) {
+	if inScope {
+		return uri, true
+	}
+	if _, ext := st.externalResources[uri]; ext {
+		return uri, true
+	}
+	proj := extractProjectID(uri, nil, st.projIdx)
+	if proj == "" || st.inScopeProjects[proj] {
+		return "", false
+	}
+	if stubURI := st.registerOutOfScopeProject(proj, peerURI, oosKind); stubURI != "" {
+		return stubURI, true
+	}
+	return "", false
 }
 
 type projAssetTypeKey struct {
@@ -1037,7 +1096,7 @@ func (st *extractState) resolveIAMBindings() {
 	for _, b := range st.iamBindings {
 		isAncestor := b.assetType == "cloudresourcemanager.googleapis.com/Organization" ||
 			b.assetType == "cloudresourcemanager.googleapis.com/Folder" ||
-			b.assetType == "cloudresourcemanager.googleapis.com/Project"
+			b.assetType == assetTypeProject
 		for _, member := range b.members {
 			st.resolveSingleIAMBindingMember(b, member, isAncestor, byProjType)
 		}
@@ -1073,27 +1132,39 @@ func (st *extractState) resolveIAMTargets(b *iamBindingRecord, isAncestor bool, 
 		}
 		return nil
 	}
-	if b.assetType != "cloudresourcemanager.googleapis.com/Project" {
+	if b.assetType != assetTypeProject {
+		return nil
+	}
+	if targets := st.resolveConditionPinnedTargets(b.conditionExpr); len(targets) > 0 {
+		return targets
+	}
+	if isDefaultServiceAccount(email) {
+		return nil
+	}
+	return resolveUnambiguousRoleTarget(b.projectID, b.role, byProjType)
+}
+
+func (st *extractState) resolveConditionPinnedTargets(expr string) []*ingestedAsset {
+	if expr == "" {
 		return nil
 	}
 	var targets []*ingestedAsset
-	if b.conditionExpr != "" {
-		for _, tgtURI := range extractConditionPinnedURIs(b.conditionExpr, st.projIdx) {
-			if target := st.assetsByURI[tgtURI]; target != nil && !target.suppressed {
-				targets = append(targets, target)
-			}
+	for _, tgtURI := range extractConditionPinnedURIs(expr, st.projIdx) {
+		if target := st.assetsByURI[tgtURI]; target != nil && !target.suppressed {
+			targets = append(targets, target)
 		}
 	}
-	if len(targets) > 0 || isDefaultServiceAccount(email) {
-		return targets
-	}
-	targetTypes := matchServiceRoleTargetTypes(b.role)
+	return targets
+}
+
+func resolveUnambiguousRoleTarget(projectID, role string, byProjType map[projAssetTypeKey][]*ingestedAsset) []*ingestedAsset {
+	targetTypes := matchServiceRoleTargetTypes(role)
 	if len(targetTypes) == 0 {
 		return nil
 	}
 	var candidates []*ingestedAsset
 	for _, tt := range targetTypes {
-		candidates = append(candidates, byProjType[projAssetTypeKey{project: b.projectID, assetType: tt}]...)
+		candidates = append(candidates, byProjType[projAssetTypeKey{project: projectID, assetType: tt}]...)
 	}
 	if len(candidates) == 1 {
 		return candidates
@@ -1181,14 +1252,14 @@ func (st *extractState) registerOutOfScopeProject(targetProj, referencedByURI, s
 	if _, exists := st.externalResources[syntheticURI]; !exists {
 		st.externalResources[syntheticURI] = FactResource{
 			URI:         syntheticURI,
-			AssetType:   "cloudresourcemanager.googleapis.com/Project",
+			AssetType:   assetTypeProject,
 			ProjectID:   proj,
 			DisplayName: proj,
 			IsExternal:  true,
 		}
 	}
 	if sourceKind == "" {
-		sourceKind = "config_ref_cross_project"
+		sourceKind = oosConfigRefCrossProject
 	}
 	k := oosKey{targetProjectID: proj, sourceKind: sourceKind}
 	hint, ok := st.outOfScope[k]
@@ -1219,8 +1290,8 @@ func (st *extractState) serviceAccountURI(email, fallbackProj string) string {
 	saProj := ""
 	if local, domain, ok := strings.Cut(low, "@"); ok {
 		switch {
-		case strings.HasPrefix(local, "service-") && isNumeric(strings.TrimPrefix(local, "service-")):
-			saProj = mapProject(strings.TrimPrefix(local, "service-"), st.projIdx)
+		case strings.HasPrefix(local, prefixServiceDash) && isNumeric(strings.TrimPrefix(local, prefixServiceDash)):
+			saProj = mapProject(strings.TrimPrefix(local, prefixServiceDash), st.projIdx)
 		case domain == "cloudservices.gserviceaccount.com" || domain == "cloudbuild.gserviceaccount.com":
 			if isNumeric(local) {
 				saProj = mapProject(local, st.projIdx)
@@ -1247,7 +1318,7 @@ func (st *extractState) ensureInScopeServiceAccount(uri, projID, email string) {
 	low := strings.ToLower(strings.TrimSpace(email))
 	rec := &ingestedAsset{
 		uri:         uri,
-		assetType:   "iam.googleapis.com/ServiceAccount",
+		assetType:   assetTypeServiceAccount,
 		projectID:   projID,
 		displayName: low,
 		attrs:       map[string]any{"email": low},
@@ -1270,43 +1341,22 @@ func (st *extractState) markServiceAccountRef(srcURI, srcProj, email string) {
 	}
 }
 
-func (st *extractState) findClusterByName(name, srcProj string, targetProjs []string) string {
-	allowedProjs := make(map[string]bool)
+func buildAllowedProjects(srcProj string, targetProjs []string) map[string]bool {
+	allowed := make(map[string]bool, len(targetProjs))
 	for _, p := range targetProjs {
-		allowedProjs[p] = true
+		allowed[p] = true
 	}
-	if len(allowedProjs) == 0 && srcProj != "" {
-		allowedProjs[srcProj] = true
+	if len(allowed) == 0 && srcProj != "" {
+		allowed[srcProj] = true
 	}
-	var matches []string
-	for _, a := range st.assets {
-		if a.suppressed || a.assetType != "container.googleapis.com/Cluster" {
-			continue
-		}
-		if len(allowedProjs) > 0 && !allowedProjs[a.projectID] {
-			continue
-		}
-		if shortResourceName(a.uri) == name {
-			matches = append(matches, a.uri)
-		}
-	}
-	if len(matches) == 1 {
-		return matches[0]
-	}
-	return ""
+	return allowed
 }
 
-func (st *extractState) findCloudRunByName(name, srcProj string, targetProjs []string) string {
-	allowedProjs := make(map[string]bool)
-	for _, p := range targetProjs {
-		allowedProjs[p] = true
-	}
-	if len(allowedProjs) == 0 && srcProj != "" {
-		allowedProjs[srcProj] = true
-	}
+func (st *extractState) findUniqueAssetByName(assetType, name, srcProj string, targetProjs []string) string {
+	allowedProjs := buildAllowedProjects(srcProj, targetProjs)
 	var matches []string
 	for _, a := range st.assets {
-		if a.suppressed || a.assetType != "run.googleapis.com/Service" {
+		if a.suppressed || a.assetType != assetType {
 			continue
 		}
 		if len(allowedProjs) > 0 && !allowedProjs[a.projectID] {
@@ -1343,9 +1393,9 @@ func normalizeBucketURI(raw string, projIdx map[string]string) string {
 		return ""
 	}
 	if strings.HasPrefix(s, "gs://") || strings.HasPrefix(s, "//") || strings.HasPrefix(s, "http") || strings.Contains(s, "/") {
-		return CanonicalizeAIP122WithService(s, "storage.googleapis.com", projIdx)
+		return CanonicalizeAIP122WithService(s, svcStorage, projIdx)
 	}
-	return "//storage.googleapis.com/" + s
+	return prefixStorageURI + s
 }
 
 func normalizeBQDatasetURI(raw, defaultProj string, projIdx map[string]string) string {
@@ -1353,18 +1403,18 @@ func normalizeBQDatasetURI(raw, defaultProj string, projIdx map[string]string) s
 	if s == "" {
 		return ""
 	}
-	if strings.HasPrefix(s, "//") || strings.HasPrefix(s, "projects/") || strings.HasPrefix(s, "http") {
-		canon := CanonicalizeAIP122WithService(s, "bigquery.googleapis.com", projIdx)
+	if strings.HasPrefix(s, "//") || strings.HasPrefix(s, prefixProjects) || strings.HasPrefix(s, "http") {
+		canon := CanonicalizeAIP122WithService(s, svcBigQuery, projIdx)
 		if idx := strings.Index(canon, "/tables/"); idx > 0 {
 			return canon[:idx]
 		}
 		return canon
 	}
 	if proj, ds, ok := parseProjectDatasetRef(s, projIdx); ok {
-		return "//bigquery.googleapis.com/projects/" + proj + "/datasets/" + ds
+		return prefixBQProjects + proj + segDatasets + ds
 	}
 	if !strings.Contains(s, "/") && defaultProj != "" {
-		return "//bigquery.googleapis.com/projects/" + mapProject(defaultProj, projIdx) + "/datasets/" + s
+		return prefixBQProjects + mapProject(defaultProj, projIdx) + segDatasets + s
 	}
 	return ""
 }

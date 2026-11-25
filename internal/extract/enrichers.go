@@ -1,6 +1,7 @@
 package extract
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"regexp"
@@ -30,6 +31,10 @@ const (
 	dailyAlignmentSecond = 86400
 
 	bqJobListFields = googleapi.Field("jobs(id,jobReference,user_email,principal_subject,configuration(query/destinationTable,load/destinationTable,copy(sourceTable,sourceTables,destinationTable)),statistics/query/referencedTables),nextPageToken")
+
+	sourceBQJobs             = "bq_jobs"
+	sourceDataflowJobs       = "dataflow_jobs"
+	callerKindServiceAccount = "serviceaccount"
 )
 
 var (
@@ -39,10 +44,10 @@ var (
 	// companionAPIHostMap aliases GCP companion API hosts to their canonical service host
 	// (salvaged from base_catalog.yaml).
 	companionAPIHostMap = map[string]string{
-		"storage-component.googleapis.com":   "storage.googleapis.com",
-		"storage-api.googleapis.com":         "storage.googleapis.com",
-		"bigquerystorage.googleapis.com":     "bigquery.googleapis.com",
-		"bigquerymigration.googleapis.com":   "bigquery.googleapis.com",
+		"storage-component.googleapis.com":   svcStorage,
+		"storage-api.googleapis.com":         svcStorage,
+		"bigquerystorage.googleapis.com":     svcBigQuery,
+		"bigquerymigration.googleapis.com":   svcBigQuery,
 		"containerfilesystem.googleapis.com": "container.googleapis.com",
 		"bigtable.googleapis.com":            "bigtableadmin.googleapis.com",
 	}
@@ -53,7 +58,7 @@ var (
 		"logging.googleapis.com":          true,
 		"monitoring.googleapis.com":       true,
 		"secretmanager.googleapis.com":    true,
-		"cloudkms.googleapis.com":         true,
+		svcCloudKMS:                       true,
 		"dlp.googleapis.com":              true,
 		"artifactregistry.googleapis.com": true,
 		"cloudbuild.googleapis.com":       true,
@@ -61,8 +66,8 @@ var (
 	}
 
 	consumedAPITargetTypes = map[string][]string{
-		"storage.googleapis.com":         {"storage.googleapis.com/Bucket"},
-		"bigquery.googleapis.com":        {"bigquery.googleapis.com/Dataset"},
+		svcStorage:                       {"storage.googleapis.com/Bucket"},
+		svcBigQuery:                      {"bigquery.googleapis.com/Dataset"},
 		"sqladmin.googleapis.com":        {"sqladmin.googleapis.com/Instance"},
 		"alloydb.googleapis.com":         {"alloydb.googleapis.com/Cluster"},
 		"spanner.googleapis.com":         {"spanner.googleapis.com/Instance"},
@@ -70,10 +75,10 @@ var (
 		"bigtableadmin.googleapis.com":   {"bigtableadmin.googleapis.com/Instance"},
 		"redis.googleapis.com":           {"redis.googleapis.com/Instance", "redis.googleapis.com/Cluster"},
 		"memcache.googleapis.com":        {"memcache.googleapis.com/Instance"},
-		"pubsub.googleapis.com":          {"pubsub.googleapis.com/Topic"},
+		svcPubSub:                        {"pubsub.googleapis.com/Topic"},
 		"cloudtasks.googleapis.com":      {"cloudtasks.googleapis.com/Queue"},
 		"workflows.googleapis.com":       {"workflows.googleapis.com/Workflow"},
-		"run.googleapis.com":             {"run.googleapis.com/Service"},
+		svcRun:                           {assetTypeRunService},
 		"cloudfunctions.googleapis.com":  {"cloudfunctions.googleapis.com/CloudFunction"},
 		"discoveryengine.googleapis.com": {"discoveryengine.googleapis.com/Engine", "discoveryengine.googleapis.com/DataStore"},
 		"dialogflow.googleapis.com":      {"dialogflow.googleapis.com/Agent"},
@@ -207,14 +212,57 @@ func (st *extractState) runEnrichers(ctx context.Context, clients *Clients) erro
 	return nil
 }
 
-func (st *extractState) fetchBigQueryJobs(ctx context.Context, clients *Clients) ([]*bqJobLink, error) {
-	allProjects := st.allDiscoveredProjects()
-	projects := make([]string, 0, len(allProjects))
-	for _, proj := range allProjects {
-		if st.isServiceMaybeEnabled(proj, "bigquery.googleapis.com") {
+func (st *extractState) enabledProjects(candidates []string, serviceHost string) []string {
+	projects := make([]string, 0, len(candidates))
+	for _, proj := range candidates {
+		if st.isServiceMaybeEnabled(proj, serviceHost) {
 			projects = append(projects, proj)
 		}
 	}
+	return projects
+}
+
+func fetchProjectItemsConcurrently[T any](
+	ctx context.Context,
+	clients *Clients,
+	projects []string,
+	progressFmt string,
+	fetchFn func(context.Context, string) ([]T, error),
+) ([]T, error) {
+	var (
+		mu        sync.Mutex
+		items     []T
+		completed atomic.Int32
+	)
+	total := len(projects)
+
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(maxEnrichWorkers)
+
+	for _, proj := range projects {
+		g.Go(func() error {
+			projItems, err := fetchFn(gctx, proj)
+			if err != nil {
+				return err
+			}
+			if len(projItems) > 0 {
+				mu.Lock()
+				items = append(items, projItems...)
+				mu.Unlock()
+			}
+			done := completed.Add(1)
+			clients.ReportProgress(false, progressFmt, done, total)
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (st *extractState) fetchBigQueryJobs(ctx context.Context, clients *Clients) ([]*bqJobLink, error) {
+	projects := st.enabledProjects(st.allDiscoveredProjects(), svcBigQuery)
 	if len(projects) == 0 {
 		return nil, nil
 	}
@@ -222,88 +270,73 @@ func (st *extractState) fetchBigQueryJobs(ctx context.Context, clients *Clients)
 	endTime := st.effectiveReadTime()
 	minCreationMs := uint64(endTime.Add(-enrichmentLookback).UnixMilli())
 
-	var mu sync.Mutex
-	var links []*bqJobLink
-	var completed atomic.Int32
-	total := len(projects)
-
-	g, gctx := errgroup.WithContext(ctx)
-	g.SetLimit(maxEnrichWorkers)
-
-	for _, proj := range projects {
-		proj := proj
-		g.Go(func() error {
-			projLinks, err := st.fetchProjectBigQueryJobs(gctx, clients, proj, minCreationMs)
-			if err != nil {
-				return err
-			}
-			if len(projLinks) > 0 {
-				mu.Lock()
-				links = append(links, projLinks...)
-				mu.Unlock()
-			}
-			done := completed.Add(1)
-			clients.ReportProgress(false, "Enrich BigQuery jobs: %d/%d projects", done, total)
-			return nil
-		})
-	}
-	if err := g.Wait(); err != nil {
+	links, err := fetchProjectItemsConcurrently(ctx, clients, projects, "Enrich BigQuery jobs: %d/%d projects", func(gctx context.Context, proj string) ([]*bqJobLink, error) {
+		return st.fetchProjectBigQueryJobs(gctx, clients, proj, minCreationMs)
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	sort.Slice(links, func(i, j int) bool {
-		if links[i].projectID != links[j].projectID {
-			return links[i].projectID < links[j].projectID
-		}
-		return links[i].jobID < links[j].jobID
+	slices.SortFunc(links, func(a, b *bqJobLink) int {
+		return cmp.Or(cmp.Compare(a.projectID, b.projectID), cmp.Compare(a.jobID, b.jobID))
 	})
 	return links, nil
 }
 
 func (st *extractState) fetchProjectBigQueryJobs(ctx context.Context, clients *Clients, proj string, minCreationMs uint64) ([]*bqJobLink, error) {
-	scope := "projects/" + proj
+	scope := prefixProjects + proj
 	projNum := st.projectNumberFor(proj)
 	pageToken := ""
-	isDegraded := false
-	truncated := false
 	var projLinks []*bqJobLink
 
 	for page := 1; page <= maxBQJobPages; page++ {
-		resp, err := listBigQueryJobsPage(ctx, clients, proj, minCreationMs, pageToken)
+		pageLinks, nextToken, degraded, err := st.fetchProjectBigQueryPage(ctx, clients, proj, projNum, scope, minCreationMs, pageToken)
 		if err != nil {
-			if deg, fatalErr := st.handleEnrichError(err, clients, proj, projNum, scope, "bq_jobs"); fatalErr != nil {
-				return nil, fatalErr
-			} else if deg {
-				isDegraded = true
-				break
-			}
-			return nil, fmt.Errorf("bigquery jobs.list(%s): %w", proj, err)
+			return nil, err
 		}
-
-		for _, job := range resp.Jobs {
-			if link := extractBQJobLink(proj, job, st.projIdx); link != nil {
-				projLinks = append(projLinks, link)
-			}
+		if degraded {
+			return projLinks, nil
 		}
-
-		pageToken = resp.NextPageToken
+		projLinks = append(projLinks, pageLinks...)
+		pageToken = nextToken
 		if pageToken == "" {
-			break
-		}
-		if page == maxBQJobPages {
-			truncated = true
-			st.addCoverage(CoverageEntry{
-				Scope:  scope,
-				Source: "bq_jobs",
-				State:  CoverageTruncatingCap,
-				Detail: fmt.Sprintf("reached %d-page BigQuery jobs.list cap within 7-day window", maxBQJobPages),
-			})
+			st.addCoverage(CoverageEntry{Scope: scope, Source: sourceBQJobs, State: CoverageOK})
+			return projLinks, nil
 		}
 	}
-	if !isDegraded && !truncated {
-		st.addCoverage(CoverageEntry{Scope: scope, Source: "bq_jobs", State: CoverageOK})
-	}
+	st.addCoverage(CoverageEntry{
+		Scope:  scope,
+		Source: sourceBQJobs,
+		State:  CoverageTruncatingCap,
+		Detail: fmt.Sprintf("reached %d-page BigQuery jobs.list cap within 7-day window", maxBQJobPages),
+	})
 	return projLinks, nil
+}
+
+func (st *extractState) fetchProjectBigQueryPage(
+	ctx context.Context,
+	clients *Clients,
+	proj, projNum, scope string,
+	minCreationMs uint64,
+	pageToken string,
+) (links []*bqJobLink, nextToken string, degraded bool, err error) {
+	resp, listErr := listBigQueryJobsPage(ctx, clients, proj, minCreationMs, pageToken)
+	if listErr != nil {
+		deg, fatalErr := st.handleEnrichError(listErr, clients, proj, projNum, scope, sourceBQJobs)
+		if fatalErr != nil {
+			return nil, "", false, fatalErr
+		}
+		if deg {
+			return nil, "", true, nil
+		}
+		return nil, "", false, fmt.Errorf("bigquery jobs.list(%s): %w", proj, listErr)
+	}
+	for _, job := range resp.Jobs {
+		if link := extractBQJobLink(proj, job, st.projIdx); link != nil {
+			links = append(links, link)
+		}
+	}
+	return links, resp.NextPageToken, false, nil
 }
 
 func listBigQueryJobsPage(ctx context.Context, clients *Clients, proj string, minCreationMs uint64, pageToken string) (*bigquery.JobList, error) {
@@ -333,52 +366,72 @@ func extractBQJobLink(projectID string, job *bigquery.JobListJobs, projIdx map[s
 	if job == nil {
 		return nil
 	}
-	var refTables []string
-	if job.Statistics != nil && job.Statistics.Query != nil {
-		for _, tr := range job.Statistics.Query.ReferencedTables {
-			if uri := canonicalBQTableRef(tr, projIdx); uri != "" {
-				appendUnique(&refTables, uri)
-			}
-		}
-	}
-
-	var destTable string
-	if job.Configuration != nil {
-		switch {
-		case job.Configuration.Query != nil && job.Configuration.Query.DestinationTable != nil:
-			destTable = canonicalBQTableRef(job.Configuration.Query.DestinationTable, projIdx)
-		case job.Configuration.Load != nil && job.Configuration.Load.DestinationTable != nil:
-			destTable = canonicalBQTableRef(job.Configuration.Load.DestinationTable, projIdx)
-		case job.Configuration.Copy != nil:
-			if job.Configuration.Copy.DestinationTable != nil {
-				destTable = canonicalBQTableRef(job.Configuration.Copy.DestinationTable, projIdx)
-			}
-			if uri := canonicalBQTableRef(job.Configuration.Copy.SourceTable, projIdx); uri != "" {
-				appendUnique(&refTables, uri)
-			}
-			for _, tr := range job.Configuration.Copy.SourceTables {
-				if uri := canonicalBQTableRef(tr, projIdx); uri != "" {
-					appendUnique(&refTables, uri)
-				}
-			}
-		}
+	refTables := collectBQQueryReferencedTables(job.Statistics, projIdx)
+	destTable, copyRefs := extractBQJobConfigTables(job.Configuration, projIdx)
+	for _, uri := range copyRefs {
+		appendUnique(&refTables, uri)
 	}
 	if len(refTables) == 0 && destTable == "" {
 		return nil
 	}
 	sort.Strings(refTables)
-	jobID := job.Id
-	if job.JobReference != nil && job.JobReference.JobId != "" {
-		jobID = job.JobReference.JobId
-	}
 	return &bqJobLink{
 		projectID:        projectID,
-		jobID:            jobID,
+		jobID:            extractBQJobID(job),
 		userEmail:        job.UserEmail,
 		principalSubject: job.PrincipalSubject,
 		referencedTables: refTables,
 		destinationTable: destTable,
 	}
+}
+
+func collectBQQueryReferencedTables(stats *bigquery.JobStatistics, projIdx map[string]string) []string {
+	if stats == nil || stats.Query == nil {
+		return nil
+	}
+	var refs []string
+	for _, tr := range stats.Query.ReferencedTables {
+		if uri := canonicalBQTableRef(tr, projIdx); uri != "" {
+			appendUnique(&refs, uri)
+		}
+	}
+	return refs
+}
+
+func extractBQJobConfigTables(cfg *bigquery.JobConfiguration, projIdx map[string]string) (string, []string) {
+	if cfg == nil {
+		return "", nil
+	}
+	switch {
+	case cfg.Query != nil && cfg.Query.DestinationTable != nil:
+		return canonicalBQTableRef(cfg.Query.DestinationTable, projIdx), nil
+	case cfg.Load != nil && cfg.Load.DestinationTable != nil:
+		return canonicalBQTableRef(cfg.Load.DestinationTable, projIdx), nil
+	case cfg.Copy != nil:
+		return extractBQCopyTables(cfg.Copy, projIdx)
+	}
+	return "", nil
+}
+
+func extractBQCopyTables(cp *bigquery.JobConfigurationTableCopy, projIdx map[string]string) (string, []string) {
+	dest := canonicalBQTableRef(cp.DestinationTable, projIdx)
+	var refs []string
+	if uri := canonicalBQTableRef(cp.SourceTable, projIdx); uri != "" {
+		appendUnique(&refs, uri)
+	}
+	for _, tr := range cp.SourceTables {
+		if uri := canonicalBQTableRef(tr, projIdx); uri != "" {
+			appendUnique(&refs, uri)
+		}
+	}
+	return dest, refs
+}
+
+func extractBQJobID(job *bigquery.JobListJobs) string {
+	if job.JobReference != nil && job.JobReference.JobId != "" {
+		return job.JobReference.JobId
+	}
+	return job.Id
 }
 
 func canonicalBQTableRef(tr *bigquery.TableReference, projIdx map[string]string) string {
@@ -389,7 +442,7 @@ func canonicalBQTableRef(tr *bigquery.TableReference, projIdx map[string]string)
 		return ""
 	}
 	proj := mapProject(tr.ProjectId, projIdx)
-	return "//bigquery.googleapis.com/projects/" + proj + "/datasets/" + tr.DatasetId + "/tables/" + tr.TableId
+	return prefixBQProjects + proj + segDatasets + tr.DatasetId + "/tables/" + tr.TableId
 }
 
 func (st *extractState) applyBigQueryLinks(links []*bqJobLink) {
@@ -397,34 +450,46 @@ func (st *extractState) applyBigQueryLinks(links []*bqJobLink) {
 		return
 	}
 	saWorkloads := st.indexSAEmailToWorkloads()
-
 	for _, job := range links {
-		destDS := normalizeBQDatasetURI(job.destinationTable, job.projectID, st.projIdx)
-		var refDatasets []string
-		for _, tbl := range job.referencedTables {
-			if ds := normalizeBQDatasetURI(tbl, job.projectID, st.projIdx); ds != "" {
-				appendUnique(&refDatasets, ds)
-			}
-		}
+		st.applySingleBigQueryLink(job, saWorkloads)
+	}
+}
 
-		if destDS != "" {
-			for _, refDS := range refDatasets {
-				if refDS != destDS {
-					st.emitTargetEdge(refDS, destDS, EdgeBQLineage, "sql_elt", "config_ref_cross_project")
-				}
-			}
-		}
+func (st *extractState) applySingleBigQueryLink(job *bqJobLink, saWorkloads map[string][]string) {
+	destDS := normalizeBQDatasetURI(job.destinationTable, job.projectID, st.projIdx)
+	refDatasets := st.collectBQReferencedDatasets(job)
+	st.emitBQLineageEdges(refDatasets, destDS)
 
-		touched := appendUniqueDataset(refDatasets, destDS)
-		if len(touched) == 0 {
-			continue
+	touched := appendUniqueDataset(refDatasets, destDS)
+	if len(touched) == 0 {
+		return
+	}
+	srcURI := st.resolveBQJobPrincipalSource(job, saWorkloads)
+	if srcURI == "" {
+		return
+	}
+	for _, dsURI := range touched {
+		st.emitTargetEdge(srcURI, dsURI, EdgeBQLineage, "bq_job", oosConfigRefCrossProject)
+	}
+}
+
+func (st *extractState) collectBQReferencedDatasets(job *bqJobLink) []string {
+	var refDatasets []string
+	for _, tbl := range job.referencedTables {
+		if ds := normalizeBQDatasetURI(tbl, job.projectID, st.projIdx); ds != "" {
+			appendUnique(&refDatasets, ds)
 		}
-		srcURI := st.resolveBQJobPrincipalSource(job, saWorkloads)
-		if srcURI == "" {
-			continue
-		}
-		for _, dsURI := range touched {
-			st.emitTargetEdge(srcURI, dsURI, EdgeBQLineage, "bq_job", "config_ref_cross_project")
+	}
+	return refDatasets
+}
+
+func (st *extractState) emitBQLineageEdges(refDatasets []string, destDS string) {
+	if destDS == "" {
+		return
+	}
+	for _, refDS := range refDatasets {
+		if refDS != destDS {
+			st.emitTargetEdge(refDS, destDS, EdgeBQLineage, "sql_elt", oosConfigRefCrossProject)
 		}
 	}
 }
@@ -456,64 +521,33 @@ func extractPrincipalEmail(principalSubject, userEmail string) string {
 	if m := principalSASubjRe.FindStringSubmatch(s); len(m) == 2 {
 		return strings.ToLower(m[1])
 	}
-	if strings.HasPrefix(strings.ToLower(s), "serviceaccount:") {
-		return strings.ToLower(strings.TrimSpace(s[len("serviceAccount:"):]))
+	if strings.HasPrefix(strings.ToLower(s), prefixServiceAccount) {
+		return strings.ToLower(strings.TrimSpace(s[len(prefixServiceAccount):]))
 	}
 	return strings.ToLower(strings.TrimSpace(userEmail))
 }
 
 func (st *extractState) fetchDataflowJobs(ctx context.Context, clients *Clients) ([]*dataflowJobLink, error) {
-	allProjects := st.allDiscoveredProjects()
-	projects := make([]string, 0, len(allProjects))
-	for _, proj := range allProjects {
-		if st.isServiceMaybeEnabled(proj, "dataflow.googleapis.com") {
-			projects = append(projects, proj)
-		}
-	}
+	projects := st.enabledProjects(st.allDiscoveredProjects(), "dataflow.googleapis.com")
 	if len(projects) == 0 {
 		return nil, nil
 	}
 
-	var mu sync.Mutex
-	var links []*dataflowJobLink
-	var completed atomic.Int32
-	total := len(projects)
-
-	g, gctx := errgroup.WithContext(ctx)
-	g.SetLimit(maxEnrichWorkers)
-
-	for _, proj := range projects {
-		proj := proj
-		g.Go(func() error {
-			projLinks, err := st.fetchProjectDataflowJobs(gctx, clients, proj)
-			if err != nil {
-				return err
-			}
-			if len(projLinks) > 0 {
-				mu.Lock()
-				links = append(links, projLinks...)
-				mu.Unlock()
-			}
-			done := completed.Add(1)
-			clients.ReportProgress(false, "Enrich Dataflow jobs: %d/%d projects", done, total)
-			return nil
-		})
-	}
-	if err := g.Wait(); err != nil {
+	links, err := fetchProjectItemsConcurrently(ctx, clients, projects, "Enrich Dataflow jobs: %d/%d projects", func(gctx context.Context, proj string) ([]*dataflowJobLink, error) {
+		return st.fetchProjectDataflowJobs(gctx, clients, proj)
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	sort.Slice(links, func(i, j int) bool {
-		if links[i].projectID != links[j].projectID {
-			return links[i].projectID < links[j].projectID
-		}
-		return links[i].jobID < links[j].jobID
+	slices.SortFunc(links, func(a, b *dataflowJobLink) int {
+		return cmp.Or(cmp.Compare(a.projectID, b.projectID), cmp.Compare(a.jobID, b.jobID))
 	})
 	return links, nil
 }
 
 func (st *extractState) fetchProjectDataflowJobs(ctx context.Context, clients *Clients, proj string) ([]*dataflowJobLink, error) {
-	scope := "projects/" + proj
+	scope := prefixProjects + proj
 	projNum := st.projectNumberFor(proj)
 	pageToken := ""
 	degraded := false
@@ -522,7 +556,7 @@ func (st *extractState) fetchProjectDataflowJobs(ctx context.Context, clients *C
 	for {
 		resp, err := listDataflowJobsPage(ctx, clients, proj, pageToken)
 		if err != nil {
-			if deg, fatalErr := st.handleEnrichError(err, clients, proj, projNum, scope, "dataflow_jobs"); fatalErr != nil {
+			if deg, fatalErr := st.handleEnrichError(err, clients, proj, projNum, scope, sourceDataflowJobs); fatalErr != nil {
 				return nil, fatalErr
 			} else if deg {
 				degraded = true
@@ -546,7 +580,7 @@ func (st *extractState) fetchProjectDataflowJobs(ctx context.Context, clients *C
 		}
 	}
 	if !degraded {
-		st.addCoverage(CoverageEntry{Scope: scope, Source: "dataflow_jobs", State: CoverageOK})
+		st.addCoverage(CoverageEntry{Scope: scope, Source: sourceDataflowJobs, State: CoverageOK})
 	}
 	return projLinks, nil
 }
@@ -588,7 +622,7 @@ func (st *extractState) fetchDataflowJobDetails(ctx context.Context, clients *Cl
 			return doErr
 		})
 		if err != nil {
-			if deg, fatalErr := st.handleEnrichError(err, clients, proj, projNum, scope, "dataflow_jobs"); fatalErr != nil {
+			if deg, fatalErr := st.handleEnrichError(err, clients, proj, projNum, scope, sourceDataflowJobs); fatalErr != nil {
 				return nil, false, fatalErr
 			} else if deg {
 				return links, true, nil
@@ -609,107 +643,125 @@ func extractDataflowJobLink(proj, loc string, job *dataflow.Job, projIdx map[str
 		jobType:   job.Type,
 		state:     job.CurrentState,
 	}
-
 	var refs []string
-	collectRef := func(raw string) {
-		eRefs, _ := ExtractSanitizedRefs(raw, projIdx)
-		for _, r := range eRefs {
-			appendUnique(&refs, r)
-		}
-	}
-
-	if job.Environment != nil {
-		link.serviceAccount = job.Environment.ServiceAccountEmail
-		if job.Environment.TempStoragePrefix != "" {
-			collectRef(job.Environment.TempStoragePrefix)
-		}
-		if job.Environment.Dataset != "" {
-			collectRef(job.Environment.Dataset)
-		}
-		for _, wp := range job.Environment.WorkerPools {
-			if wp.Network != "" && link.networkURI == "" {
-				link.networkURI = normalizeComputeNetworkURI(wp.Network, proj, projIdx)
-			}
-			if wp.Subnetwork != "" && link.subnetURI == "" {
-				link.subnetURI = CanonicalizeAIP122WithService(wp.Subnetwork, "compute.googleapis.com", projIdx)
-			}
-		}
-	}
-	if job.PipelineDescription != nil {
-		for _, dd := range job.PipelineDescription.DisplayData {
-			collectRef(dd.StrValue)
-			collectRef(dd.Url)
-		}
-		for _, tr := range job.PipelineDescription.OriginalPipelineTransform {
-			for _, dd := range tr.DisplayData {
-				collectRef(dd.StrValue)
-				collectRef(dd.Url)
-			}
-		}
-	}
+	extractDataflowEnvironment(link, job.Environment, projIdx, &refs)
+	extractDataflowPipelineRefs(job.PipelineDescription, projIdx, &refs)
 	sort.Strings(refs)
 	link.resourceURIs = refs
 	return link
 }
 
-func (st *extractState) applyDataflowLinks(links []*dataflowJobLink) {
-	for _, dl := range links {
-		uri := "//dataflow.googleapis.com/projects/" + dl.projectID + "/locations/" + dl.location + "/jobs/" + dl.jobID
-		a := st.assetsByURI[uri]
-		if a == nil {
-			dn := dl.jobName
-			if dn == "" {
-				dn = dl.jobID
-			}
-			attrs := map[string]any{}
-			if dl.jobType != "" {
-				attrs["job_type"] = dl.jobType
-			}
-			if dl.state != "" {
-				attrs["state"] = dl.state
-			}
-			if dl.serviceAccount != "" {
-				attrs["service_account"] = dl.serviceAccount
-			}
-			if dl.networkURI != "" {
-				attrs["vpc"] = dl.networkURI
-			}
-			if dl.subnetURI != "" {
-				attrs["subnet"] = dl.subnetURI
-			}
-			parentURI := dl.subnetURI
-			if parentURI == "" {
-				parentURI = dl.networkURI
-			}
-			a = &ingestedAsset{
-				uri:         uri,
-				assetType:   "dataflow.googleapis.com/Job",
-				projectID:   dl.projectID,
-				location:    dl.location,
-				displayName: dn,
-				parentURI:   parentURI,
-				attrs:       attrs,
-			}
-			st.assets = append(st.assets, a)
-			st.assetsByURI[uri] = a
+func appendSanitizedRefs(dst *[]string, raw string, projIdx map[string]string) {
+	if raw == "" {
+		return
+	}
+	eRefs, _ := ExtractSanitizedRefs(raw, projIdx)
+	for _, r := range eRefs {
+		appendUnique(dst, r)
+	}
+}
+
+func extractDataflowEnvironment(link *dataflowJobLink, env *dataflow.Environment, projIdx map[string]string, refs *[]string) {
+	if env == nil {
+		return
+	}
+	link.serviceAccount = env.ServiceAccountEmail
+	appendSanitizedRefs(refs, env.TempStoragePrefix, projIdx)
+	appendSanitizedRefs(refs, env.Dataset, projIdx)
+	for _, wp := range env.WorkerPools {
+		if wp.Network != "" && link.networkURI == "" {
+			link.networkURI = normalizeComputeNetworkURI(wp.Network, link.projectID, projIdx)
 		}
-		if dl.serviceAccount != "" {
-			st.markServiceAccountRef(a.uri, dl.projectID, dl.serviceAccount)
-		}
-		for _, ref := range dl.resourceURIs {
-			st.resolveSingleConfigRef(a.uri, dl.projectID, dl.networkURI, ref, EdgeConfigRef, "config_ref_cross_project")
+		if wp.Subnetwork != "" && link.subnetURI == "" {
+			link.subnetURI = CanonicalizeAIP122WithService(wp.Subnetwork, svcCompute, projIdx)
 		}
 	}
 }
 
-func (st *extractState) fetchMonitoring(ctx context.Context, clients *Clients) (*monitoringResult, error) {
-	candidates := st.nonEmptyProjects()
-	projects := make([]string, 0, len(candidates))
-	for _, proj := range candidates {
-		if st.isServiceMaybeEnabled(proj, "monitoring.googleapis.com") {
-			projects = append(projects, proj)
+func extractDataflowPipelineRefs(desc *dataflow.PipelineDescription, projIdx map[string]string, refs *[]string) {
+	if desc == nil {
+		return
+	}
+	appendDisplayDataRefs(refs, desc.DisplayData, projIdx)
+	for _, tr := range desc.OriginalPipelineTransform {
+		appendDisplayDataRefs(refs, tr.DisplayData, projIdx)
+	}
+}
+
+func appendDisplayDataRefs(refs *[]string, items []*dataflow.DisplayData, projIdx map[string]string) {
+	for _, dd := range items {
+		appendSanitizedRefs(refs, dd.StrValue, projIdx)
+		appendSanitizedRefs(refs, dd.Url, projIdx)
+	}
+}
+
+func (st *extractState) applyDataflowLinks(links []*dataflowJobLink) {
+	for _, dl := range links {
+		a := st.ensureDataflowAsset(dl)
+		if dl.serviceAccount != "" {
+			st.markServiceAccountRef(a.uri, dl.projectID, dl.serviceAccount)
+		}
+		for _, ref := range dl.resourceURIs {
+			st.resolveSingleConfigRef(a.uri, dl.projectID, dl.networkURI, ref, EdgeConfigRef, oosConfigRefCrossProject)
 		}
 	}
+}
+
+func (st *extractState) ensureDataflowAsset(dl *dataflowJobLink) *ingestedAsset {
+	uri := "//dataflow.googleapis.com/projects/" + dl.projectID + segLocations + dl.location + "/jobs/" + dl.jobID
+	if a := st.assetsByURI[uri]; a != nil {
+		return a
+	}
+	dn := dl.jobName
+	if dn == "" {
+		dn = dl.jobID
+	}
+	parentURI := dl.subnetURI
+	if parentURI == "" {
+		parentURI = dl.networkURI
+	}
+	a := &ingestedAsset{
+		uri:         uri,
+		assetType:   "dataflow.googleapis.com/Job",
+		projectID:   dl.projectID,
+		location:    dl.location,
+		displayName: dn,
+		parentURI:   parentURI,
+		attrs:       buildDataflowAttrs(dl),
+	}
+	st.assets = append(st.assets, a)
+	st.assetsByURI[uri] = a
+	return a
+}
+
+func buildDataflowAttrs(dl *dataflowJobLink) map[string]any {
+	attrs := map[string]any{}
+	if dl.jobType != "" {
+		attrs["job_type"] = dl.jobType
+	}
+	if dl.state != "" {
+		attrs["state"] = dl.state
+	}
+	if dl.serviceAccount != "" {
+		attrs["service_account"] = dl.serviceAccount
+	}
+	if dl.networkURI != "" {
+		attrs["vpc"] = dl.networkURI
+	}
+	if dl.subnetURI != "" {
+		attrs["subnet"] = dl.subnetURI
+	}
+	return attrs
+}
+
+type monitoringQueryParams struct {
+	proj        string
+	interval    *monitoringpb.TimeInterval
+	dailyPeriod *durationpb.Duration
+}
+
+func (st *extractState) fetchMonitoring(ctx context.Context, clients *Clients) (*monitoringResult, error) {
+	projects := st.enabledProjects(st.nonEmptyProjects(), "monitoring.googleapis.com")
 	if len(projects) == 0 {
 		return nil, nil
 	}
@@ -731,9 +783,9 @@ func (st *extractState) fetchMonitoring(ctx context.Context, clients *Clients) (
 	g.SetLimit(maxEnrichWorkers)
 
 	for _, proj := range projects {
-		proj := proj
 		g.Go(func() error {
-			localConsumed, localPub, err := st.fetchProjectMonitoring(gctx, clients, proj, interval, dailyPeriod)
+			params := monitoringQueryParams{proj: proj, interval: interval, dailyPeriod: dailyPeriod}
+			localConsumed, localPub, err := st.fetchProjectMonitoring(gctx, clients, params)
 			if err != nil {
 				return err
 			}
@@ -757,55 +809,64 @@ func (st *extractState) fetchMonitoring(ctx context.Context, clients *Clients) (
 func (st *extractState) fetchProjectMonitoring(
 	ctx context.Context,
 	clients *Clients,
-	proj string,
-	interval *monitoringpb.TimeInterval,
-	dailyPeriod *durationpb.Duration,
+	params monitoringQueryParams,
 ) (map[consumedAPIKey]int64, map[publisherModelKey]*publisherModelStat, error) {
-	scope := "projects/" + proj
-	projNum := st.projectNumberFor(proj)
+	scope := prefixProjects + params.proj
+	projNum := st.projectNumberFor(params.proj)
 	localConsumed := make(map[consumedAPIKey]int64)
 	localPub := make(map[publisherModelKey]*publisherModelStat)
-	degraded := false
 
-	runQuery := func(label string, fn func() error) error {
-		err := fn()
-		if err == nil {
-			return nil
-		}
-		if deg, fatalErr := st.handleEnrichError(err, clients, proj, projNum, scope, "monitoring"); fatalErr != nil {
-			return fatalErr
-		} else if deg {
-			degraded = true
-			return nil
-		}
-		return fmt.Errorf("monitoring %s(%s): %w", label, proj, err)
-	}
-
-	if err := runQuery("consumed_api", func() error {
-		return queryConsumedAPI(ctx, clients, proj, interval, dailyPeriod, localConsumed)
-	}); err != nil {
+	degraded, err := st.runMonitoringQuery(clients, params.proj, projNum, scope, "consumed_api", func() error {
+		return queryConsumedAPI(ctx, clients, params, localConsumed)
+	})
+	if err != nil {
 		return nil, nil, err
 	}
-
-	if !degraded && st.isServiceMaybeEnabled(proj, "aiplatform.googleapis.com") {
-		if err := runQuery("PublisherModel invocations", func() error {
-			return queryPublisherInvocations(ctx, clients, proj, interval, dailyPeriod, localPub)
-		}); err != nil {
+	if !degraded && st.isServiceMaybeEnabled(params.proj, "aiplatform.googleapis.com") {
+		degraded, err = st.fetchProjectPublisherMetrics(ctx, clients, params, projNum, scope, localPub)
+		if err != nil {
 			return nil, nil, err
 		}
-		if !degraded && len(localPub) > 0 {
-			if err := runQuery("PublisherModel throughput", func() error {
-				return queryPublisherThroughput(ctx, clients, proj, interval, dailyPeriod, localPub)
-			}); err != nil {
-				return nil, nil, err
-			}
-		}
 	}
-
 	if !degraded {
 		st.addCoverage(CoverageEntry{Scope: scope, Source: "monitoring", State: CoverageOK})
 	}
 	return localConsumed, localPub, nil
+}
+
+func (st *extractState) runMonitoringQuery(
+	clients *Clients,
+	proj, projNum, scope, label string,
+	fn func() error,
+) (bool, error) {
+	err := fn()
+	if err == nil {
+		return false, nil
+	}
+	if deg, fatalErr := st.handleEnrichError(err, clients, proj, projNum, scope, "monitoring"); fatalErr != nil {
+		return false, fatalErr
+	} else if deg {
+		return true, nil
+	}
+	return false, fmt.Errorf("monitoring %s(%s): %w", label, proj, err)
+}
+
+func (st *extractState) fetchProjectPublisherMetrics(
+	ctx context.Context,
+	clients *Clients,
+	params monitoringQueryParams,
+	projNum, scope string,
+	localPub map[publisherModelKey]*publisherModelStat,
+) (bool, error) {
+	degraded, err := st.runMonitoringQuery(clients, params.proj, projNum, scope, "PublisherModel invocations", func() error {
+		return queryPublisherInvocations(ctx, clients, params, localPub)
+	})
+	if err != nil || degraded || len(localPub) == 0 {
+		return degraded, err
+	}
+	return st.runMonitoringQuery(clients, params.proj, projNum, scope, "PublisherModel throughput", func() error {
+		return queryPublisherThroughput(ctx, clients, params, localPub)
+	})
 }
 
 func mergeMonitoringMaps(
@@ -873,28 +934,23 @@ func buildMonitoringResult(consumedAgg map[consumedAPIKey]int64, pubAgg map[publ
 	return res
 }
 
-func queryConsumedAPI(
+func listSummedTimeSeries(
 	ctx context.Context,
 	clients *Clients,
-	proj string,
-	interval *monitoringpb.TimeInterval,
-	dailyPeriod *durationpb.Duration,
-	agg map[consumedAPIKey]int64,
+	params monitoringQueryParams,
+	filter string,
+	groupBy []string,
+	onSeries func(proj string, rLabels, mLabels map[string]string, total int64),
 ) error {
 	return listAllTimeSeries(ctx, clients, &monitoringpb.ListTimeSeriesRequest{
-		Name:     "projects/" + proj,
-		Filter:   `metric.type = "serviceruntime.googleapis.com/api/request_count" AND resource.type = "consumed_api"`,
-		Interval: interval,
+		Name:     prefixProjects + params.proj,
+		Filter:   filter,
+		Interval: params.interval,
 		Aggregation: &monitoringpb.Aggregation{
-			AlignmentPeriod:    dailyPeriod,
+			AlignmentPeriod:    params.dailyPeriod,
 			PerSeriesAligner:   monitoringpb.Aggregation_ALIGN_SUM,
 			CrossSeriesReducer: monitoringpb.Aggregation_REDUCE_SUM,
-			GroupByFields: []string{
-				"resource.labels.project_id",
-				"resource.labels.service",
-				"resource.labels.credential_id",
-				"resource.labels.method",
-			},
+			GroupByFields:      groupBy,
 		},
 		View: monitoringpb.ListTimeSeriesRequest_FULL,
 	}, func(ts *monitoringpb.TimeSeries) {
@@ -905,11 +961,29 @@ func queryConsumedAPI(
 		rLabels := ts.GetResource().GetLabels()
 		p := rLabels["project_id"]
 		if p == "" {
-			p = proj
+			p = params.proj
 		}
+		onSeries(p, rLabels, ts.GetMetric().GetLabels(), total)
+	})
+}
+
+func queryConsumedAPI(
+	ctx context.Context,
+	clients *Clients,
+	params monitoringQueryParams,
+	agg map[consumedAPIKey]int64,
+) error {
+	filter := `metric.type = "serviceruntime.googleapis.com/api/request_count" AND resource.type = "consumed_api"`
+	groupBy := []string{
+		labelResourceProjectID,
+		"resource.labels.service",
+		"resource.labels.credential_id",
+		"resource.labels.method",
+	}
+	return listSummedTimeSeries(ctx, clients, params, filter, groupBy, func(proj string, rLabels, _ map[string]string, total int64) {
 		kind, saUID := parseCredentialID(rLabels["credential_id"])
 		k := consumedAPIKey{
-			proj:   p,
+			proj:   proj,
 			saID:   saUID,
 			svc:    strings.ToLower(rLabels["service"]),
 			method: rLabels["method"],
@@ -919,48 +993,43 @@ func queryConsumedAPI(
 	})
 }
 
-func queryPublisherInvocations(
+func queryPublisherModelMetric(
 	ctx context.Context,
 	clients *Clients,
-	proj string,
-	interval *monitoringpb.TimeInterval,
-	dailyPeriod *durationpb.Duration,
-	agg map[publisherModelKey]*publisherModelStat,
+	params monitoringQueryParams,
+	metricType string,
+	onPoint func(k publisherModelKey, total int64, dedicated bool),
 ) error {
-	err := listAllTimeSeries(ctx, clients, &monitoringpb.ListTimeSeriesRequest{
-		Name:     "projects/" + proj,
-		Filter:   `metric.type = "aiplatform.googleapis.com/publisher/online_serving/model_invocation_count" AND resource.type = "aiplatform.googleapis.com/PublisherModel"`,
-		Interval: interval,
-		Aggregation: &monitoringpb.Aggregation{
-			AlignmentPeriod:    dailyPeriod,
-			PerSeriesAligner:   monitoringpb.Aggregation_ALIGN_SUM,
-			CrossSeriesReducer: monitoringpb.Aggregation_REDUCE_SUM,
-			GroupByFields: []string{
-				"resource.labels.project_id",
-				"resource.labels.location",
-				"resource.labels.publisher",
-				"resource.labels.model_user_id",
-				"metric.labels.request_type",
-			},
-		},
-		View: monitoringpb.ListTimeSeriesRequest_FULL,
-	}, func(ts *monitoringpb.TimeSeries) {
-		total := sumPointsInt64(ts.GetPoints())
-		if total <= 0 {
-			return
-		}
-		rLabels := ts.GetResource().GetLabels()
-		mLabels := ts.GetMetric().GetLabels()
-		p := rLabels["project_id"]
-		if p == "" {
-			p = proj
-		}
+	filter := fmt.Sprintf(`metric.type = "%s" AND resource.type = "aiplatform.googleapis.com/PublisherModel"`, metricType)
+	groupBy := []string{
+		labelResourceProjectID,
+		"resource.labels.location",
+		"resource.labels.publisher",
+		"resource.labels.model_user_id",
+		"metric.labels.request_type",
+	}
+	err := listSummedTimeSeries(ctx, clients, params, filter, groupBy, func(proj string, rLabels, mLabels map[string]string, total int64) {
 		k := publisherModelKey{
-			proj:  p,
+			proj:  proj,
 			loc:   rLabels["location"],
 			pub:   rLabels["publisher"],
 			model: rLabels["model_user_id"],
 		}
+		onPoint(k, total, mLabels["request_type"] == "dedicated")
+	})
+	if isGRPCNotFound(err) {
+		return nil
+	}
+	return err
+}
+
+func queryPublisherInvocations(
+	ctx context.Context,
+	clients *Clients,
+	params monitoringQueryParams,
+	agg map[publisherModelKey]*publisherModelStat,
+) error {
+	return queryPublisherModelMetric(ctx, clients, params, "aiplatform.googleapis.com/publisher/online_serving/model_invocation_count", func(k publisherModelKey, total int64, dedicated bool) {
 		stat, ok := agg[k]
 		if !ok {
 			stat = &publisherModelStat{
@@ -972,69 +1041,26 @@ func queryPublisherInvocations(
 			agg[k] = stat
 		}
 		stat.invocations += total
-		if mLabels["request_type"] == "dedicated" {
+		if dedicated {
 			stat.dedicatedThroughput = true
 		}
 	})
-	if isGRPCNotFound(err) {
-		return nil
-	}
-	return err
 }
 
 func queryPublisherThroughput(
 	ctx context.Context,
 	clients *Clients,
-	proj string,
-	interval *monitoringpb.TimeInterval,
-	dailyPeriod *durationpb.Duration,
+	params monitoringQueryParams,
 	agg map[publisherModelKey]*publisherModelStat,
 ) error {
-	err := listAllTimeSeries(ctx, clients, &monitoringpb.ListTimeSeriesRequest{
-		Name:     "projects/" + proj,
-		Filter:   `metric.type = "aiplatform.googleapis.com/publisher/online_serving/consumed_token_throughput" AND resource.type = "aiplatform.googleapis.com/PublisherModel"`,
-		Interval: interval,
-		Aggregation: &monitoringpb.Aggregation{
-			AlignmentPeriod:    dailyPeriod,
-			PerSeriesAligner:   monitoringpb.Aggregation_ALIGN_SUM,
-			CrossSeriesReducer: monitoringpb.Aggregation_REDUCE_SUM,
-			GroupByFields: []string{
-				"resource.labels.project_id",
-				"resource.labels.location",
-				"resource.labels.publisher",
-				"resource.labels.model_user_id",
-				"metric.labels.request_type",
-			},
-		},
-		View: monitoringpb.ListTimeSeriesRequest_FULL,
-	}, func(ts *monitoringpb.TimeSeries) {
-		total := sumPointsInt64(ts.GetPoints())
-		if total <= 0 {
+	return queryPublisherModelMetric(ctx, clients, params, "aiplatform.googleapis.com/publisher/online_serving/consumed_token_throughput", func(k publisherModelKey, _ int64, dedicated bool) {
+		if !dedicated {
 			return
-		}
-		rLabels := ts.GetResource().GetLabels()
-		mLabels := ts.GetMetric().GetLabels()
-		if mLabels["request_type"] != "dedicated" {
-			return
-		}
-		p := rLabels["project_id"]
-		if p == "" {
-			p = proj
-		}
-		k := publisherModelKey{
-			proj:  p,
-			loc:   rLabels["location"],
-			pub:   rLabels["publisher"],
-			model: rLabels["model_user_id"],
 		}
 		if stat, ok := agg[k]; ok {
 			stat.dedicatedThroughput = true
 		}
 	})
-	if isGRPCNotFound(err) {
-		return nil
-	}
-	return err
 }
 
 type monitoringAggKey struct {
@@ -1134,7 +1160,7 @@ func (st *extractState) aggregateConsumedAPICalls(consumed []*consumedAPIStat) (
 			accumulateGenAICall(s, proj, canonHost, genTotals, hasNonSAGenAI)
 			continue
 		}
-		if s.callerKind != "serviceaccount" || s.saUniqueID == "" {
+		if s.callerKind != callerKindServiceAccount || s.saUniqueID == "" {
 			continue
 		}
 		if _, ok := consumedAPITargetTypes[canonHost]; ok {
@@ -1149,7 +1175,7 @@ func accumulateGenAICall(s *consumedAPIStat, proj, canonHost string, genTotals m
 	if !strings.Contains(low, "generatecontent") && !strings.Contains(low, "embedcontent") {
 		return
 	}
-	if s.callerKind != "serviceaccount" || s.saUniqueID == "" {
+	if s.callerKind != callerKindServiceAccount || s.saUniqueID == "" {
 		hasNonSAGenAI[proj] = true
 		return
 	}
@@ -1208,7 +1234,7 @@ func (st *extractState) emitConsumedAPIEdges(totals map[monitoringAggKey]int64, 
 	}
 }
 
-func (st *extractState) emitPublisherModelEdges(genTotals map[monitoringAggKey]int64, hasNonSAGenAI map[string]bool, pubByProj map[string][]string, saWorkloads map[string][]string) {
+func (st *extractState) emitPublisherModelEdges(genTotals map[monitoringAggKey]int64, hasNonSAGenAI map[string]bool, pubByProj, saWorkloads map[string][]string) {
 	genKeys := make([]monitoringAggKey, 0, len(genTotals))
 	for k := range genTotals {
 		genKeys = append(genKeys, k)
@@ -1239,7 +1265,7 @@ func (st *extractState) emitPublisherModelEdges(genTotals map[monitoringAggKey]i
 func (st *extractState) indexSAEmailToWorkloads() map[string][]string {
 	out := make(map[string][]string)
 	for _, a := range st.assets {
-		if a.suppressed || a.assetType == "iam.googleapis.com/ServiceAccount" {
+		if a.suppressed || a.assetType == assetTypeServiceAccount {
 			continue
 		}
 		sa := strings.ToLower(strings.TrimSpace(getAttrString(a.attrs, "service_account")))
@@ -1292,8 +1318,8 @@ func listAllTimeSeries(
 }
 
 func parseCredentialID(credID string) (callerKind, saUniqueID string) {
-	if strings.HasPrefix(credID, "serviceaccount:") {
-		return "serviceaccount", strings.TrimPrefix(credID, "serviceaccount:")
+	if strings.HasPrefix(credID, prefixServiceAccount) {
+		return callerKindServiceAccount, strings.TrimPrefix(credID, prefixServiceAccount)
 	}
 	if credID == "" {
 		return "unknown", ""

@@ -50,7 +50,7 @@ type appDeps struct {
 	probeVertexModel  func(ctx context.Context, project, location, model string) error
 	extractFacts      func(ctx context.Context, clients *extract.Clients, opts extract.ExtractOptions) (*extract.FactsFile, error)
 	newModelClient    func(ctx context.Context, opts synth.VertexClientOptions) (synth.ModelClient, error)
-	newBrowserRunner  func(chromePath string) (render.BrowserRunner, error)
+	newBrowserRunner  func(chromePath, configChromePath string) (render.BrowserRunner, error)
 }
 
 func defaultDeps() appDeps {
@@ -63,8 +63,8 @@ func defaultDeps() appDeps {
 		newModelClient: func(ctx context.Context, opts synth.VertexClientOptions) (synth.ModelClient, error) {
 			return synth.NewVertexClient(ctx, opts)
 		},
-		newBrowserRunner: func(chromePath string) (render.BrowserRunner, error) {
-			found, err := render.FindChrome(chromePath)
+		newBrowserRunner: func(chromePath, configChromePath string) (render.BrowserRunner, error) {
+			found, err := render.FindChrome(chromePath, configChromePath)
 			if err != nil {
 				return nil, err
 			}
@@ -209,42 +209,51 @@ func (f *scopeFlags) parse() (parsedScopes, error) {
 	var out parsedScopes
 	seenCanon := make(map[string]struct{})
 
-	parseKind := func(rawVals []string, flagName, prefix string, target *[]string) error {
-		seenID := make(map[string]struct{})
-		for _, raw := range rawVals {
-			for _, part := range strings.Split(raw, ",") {
-				v := strings.TrimSpace(part)
-				if v == "" {
-					return usageErr(fmt.Errorf("empty value provided to --%s", flagName))
-				}
-				id := strings.TrimPrefix(v, prefix)
-				if id == "" || strings.ContainsAny(id, "/ \t\r\n") {
-					return usageErr(fmt.Errorf("invalid --%s value %q", flagName, v))
-				}
-				if _, dup := seenID[id]; !dup {
-					seenID[id] = struct{}{}
-					*target = append(*target, id)
-				}
-				canon := prefix + id
-				if _, dup := seenCanon[canon]; !dup {
-					seenCanon[canon] = struct{}{}
-					out.canonical = append(out.canonical, canon)
-				}
-			}
-		}
-		return nil
-	}
-
-	if err := parseKind(f.orgs, "org", "organizations/", &out.orgs); err != nil {
+	if err := out.appendKind(f.orgs, "org", "organizations/", &out.orgs, seenCanon); err != nil {
 		return out, err
 	}
-	if err := parseKind(f.folders, "folder", "folders/", &out.folders); err != nil {
+	if err := out.appendKind(f.folders, "folder", "folders/", &out.folders, seenCanon); err != nil {
 		return out, err
 	}
-	if err := parseKind(f.projects, "projects", "projects/", &out.projects); err != nil {
+	if err := out.appendKind(f.projects, "projects", "projects/", &out.projects, seenCanon); err != nil {
 		return out, err
 	}
 	return out, nil
+}
+
+func (p *parsedScopes) appendKind(rawVals []string, flagName, prefix string, target *[]string, seenCanon map[string]struct{}) error {
+	seenID := make(map[string]struct{})
+	for _, raw := range rawVals {
+		for _, part := range strings.Split(raw, ",") {
+			id, err := parseScopeToken(part, flagName, prefix)
+			if err != nil {
+				return err
+			}
+			appendUnique(target, seenID, id)
+			appendUnique(&p.canonical, seenCanon, prefix+id)
+		}
+	}
+	return nil
+}
+
+func parseScopeToken(part, flagName, prefix string) (string, error) {
+	v := strings.TrimSpace(part)
+	if v == "" {
+		return "", usageErr(fmt.Errorf("empty value provided to --%s", flagName))
+	}
+	id := strings.TrimPrefix(v, prefix)
+	if id == "" || strings.ContainsAny(id, "/ \t\r\n") {
+		return "", usageErr(fmt.Errorf("invalid --%s value %q", flagName, v))
+	}
+	return id, nil
+}
+
+func appendUnique(dst *[]string, seen map[string]struct{}, val string) {
+	if _, dup := seen[val]; dup {
+		return
+	}
+	seen[val] = struct{}{}
+	*dst = append(*dst, val)
 }
 
 func parseProjectAliases(raw []string) (map[string]string, error) {

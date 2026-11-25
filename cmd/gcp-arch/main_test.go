@@ -166,30 +166,31 @@ func testPreflightFlagValidation(t *testing.T) {
 	}
 }
 
-func testPreflightJSONAndTableOutput(t *testing.T) {
-	var (
-		gotQuota      string
-		gotAliases    map[string]string
-		gotScopes     []string
-		gotVertexOpts extract.VertexPreflightOptions
-		probeCalled   bool
-	)
-	deps := appDeps{
+type preflightTestSpy struct {
+	quota       string
+	aliases     map[string]string
+	scopes      []string
+	vertexOpts  extract.VertexPreflightOptions
+	probeCalled bool
+}
+
+func newPreflightTestDeps(spy *preflightTestSpy) appDeps {
+	return appDeps{
 		newExtractClients: func(_ context.Context, opts extract.ClientOptions) (*extract.Clients, error) {
-			gotQuota = opts.QuotaProject
-			gotAliases = opts.ProjectAliases
+			spy.quota = opts.QuotaProject
+			spy.aliases = opts.ProjectAliases
 			return &extract.Clients{QuotaProject: opts.QuotaProject}, nil
 		},
 		probeVertexModel: func(_ context.Context, project, location, model string) error {
-			probeCalled = true
+			spy.probeCalled = true
 			if project != "ai-sandbox" || location != "us-central1" || model != "gemini-4-carbon" {
 				return fmt.Errorf("unexpected vertex probe params: %s %s %s", project, location, model)
 			}
 			return nil
 		},
 		runPreflight: func(ctx context.Context, _ *extract.Clients, scopes []string, vertexOpts extract.VertexPreflightOptions) (*extract.PreflightReport, error) {
-			gotScopes = scopes
-			gotVertexOpts = vertexOpts
+			spy.scopes = scopes
+			spy.vertexOpts = vertexOpts
 			if vertexOpts.ModelProbe != nil {
 				if err := vertexOpts.ModelProbe(ctx, vertexOpts.Project, vertexOpts.Location, vertexOpts.Model); err != nil {
 					return nil, err
@@ -206,7 +207,17 @@ func testPreflightJSONAndTableOutput(t *testing.T) {
 			}, nil
 		},
 	}
+}
 
+func testPreflightJSONAndTableOutput(t *testing.T) {
+	var spy preflightTestSpy
+	deps := newPreflightTestDeps(&spy)
+	assertPreflightJSONRun(t, &spy, deps)
+	assertPreflightTableRun(t, &spy, deps)
+}
+
+func assertPreflightJSONRun(t *testing.T, spy *preflightTestSpy, deps appDeps) {
+	t.Helper()
 	var stdout, stderr bytes.Buffer
 	code := run([]string{
 		"preflight",
@@ -218,26 +229,28 @@ func testPreflightJSONAndTableOutput(t *testing.T) {
 	if code != exitOK {
 		t.Fatalf("preflight --json exit=%d, want 0 (stderr=%s)", code, stderr.String())
 	}
-	if gotQuota != "billing-qp" || gotAliases["999000"] != "shared-host" || len(gotScopes) != 3 {
-		t.Fatalf("preflight wiring mismatch: quota=%q aliases=%+v scopes=%v", gotQuota, gotAliases, gotScopes)
+	if spy.quota != "billing-qp" || spy.aliases["999000"] != "shared-host" || len(spy.scopes) != 3 {
+		t.Fatalf("preflight wiring mismatch: quota=%q aliases=%+v scopes=%v", spy.quota, spy.aliases, spy.scopes)
 	}
-	if !probeCalled || gotVertexOpts.Project != "ai-sandbox" || gotVertexOpts.Location != "us-central1" || gotVertexOpts.Model != "gemini-4-carbon" {
-		t.Fatalf("vertex preflight wiring failed: called=%v opts=%+v", probeCalled, gotVertexOpts)
+	if !spy.probeCalled || spy.vertexOpts.Project != "ai-sandbox" || spy.vertexOpts.Location != "us-central1" || spy.vertexOpts.Model != "gemini-4-carbon" {
+		t.Fatalf("vertex preflight wiring failed: called=%v opts=%+v", spy.probeCalled, spy.vertexOpts)
 	}
 
 	var rep PreflightReport
 	if err := json.Unmarshal(stdout.Bytes(), &rep); err != nil || rep.GrantedCount != 2 || rep.MissingCount != 1 {
 		t.Fatalf("unexpected PreflightReport: err=%v rep=%+v", err, rep)
 	}
+}
 
-	probeCalled = false
-	stdout.Reset()
-	stderr.Reset()
-	if code = run([]string{"preflight", "--project", "app-prod,data-prod"}, &stdout, &stderr, deps); code != exitOK {
+func assertPreflightTableRun(t *testing.T, spy *preflightTestSpy, deps appDeps) {
+	t.Helper()
+	spy.probeCalled = false
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"preflight", "--project", "app-prod,data-prod"}, &stdout, &stderr, deps); code != exitOK {
 		t.Fatalf("preflight table exit=%d, want 0 (stderr=%s)", code, stderr.String())
 	}
-	if probeCalled || gotVertexOpts.Project != "" || gotVertexOpts.ModelProbe != nil {
-		t.Fatalf("expected no vertex probe when --vertex-project omitted, got called=%v opts=%+v", probeCalled, gotVertexOpts)
+	if spy.probeCalled || spy.vertexOpts.Project != "" || spy.vertexOpts.ModelProbe != nil {
+		t.Fatalf("expected no vertex probe when --vertex-project omitted, got called=%v opts=%+v", spy.probeCalled, spy.vertexOpts)
 	}
 	outStr := stdout.String()
 	for _, want := range []string{"Quota Project: billing-qp", "GRANTED", "VPC_SC_BLOCKED", "[vpc_sc_uuid=uuid-1234]", "Remediation:"} {
@@ -447,7 +460,7 @@ func minimalModelStub(facts *extract.FactsFile) *stubModelClient {
 	e1ID, _ := table.EdgeID(facts.Edges[0].ID)
 
 	return &stubModelClient{
-		handler: func(call int, _ string, _ string, _ *genai.Schema) ([]byte, error) {
+		handler: func(call int, _, _ string, _ *genai.Schema) ([]byte, error) {
 			if call == 0 {
 				return json.Marshal(synth.Pass1Plan{
 					Components: []synth.Pass1Component{
@@ -807,24 +820,7 @@ func assertValidateUnknownFieldAndStructural(t *testing.T, tmp, manifestPath str
 
 func assertValidateProvenanceViolation(t *testing.T, tmp, factsPath, manifestPath string) {
 	t.Helper()
-	m2, err := manifest.Load(manifestPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for i := range m2.Views {
-		if m2.Views[i].ID == "gke_developer_platform" {
-			m2.Views[i].Edges[0].EvidenceEdgeIDs = []string{"190f6dfb3f1fa702"}
-		}
-	}
-	for i := range m2.Components {
-		if m2.Components[i].ID == "atlantis" && len(m2.Components[i].BackedBy) > 1 {
-			m2.Components[i].BackedBy = m2.Components[i].BackedBy[:1]
-		}
-	}
-	badProvPath := filepath.Join(tmp, "bad_prov.yaml")
-	if err := manifest.Write(badProvPath, m2); err != nil {
-		t.Fatal(err)
-	}
+	badProvPath := writeBrokenProvenanceManifest(t, tmp, manifestPath)
 	var stdout, stderr bytes.Buffer
 	if code := run([]string{"validate", badProvPath, "--facts", factsPath, "--json"}, &stdout, &stderr, appDeps{}); code != exitUsage {
 		t.Fatalf("provenance violation exit=%d, want 2", code)
@@ -833,18 +829,36 @@ func assertValidateProvenanceViolation(t *testing.T, tmp, factsPath, manifestPat
 	if err := json.Unmarshal(stdout.Bytes(), &provRep); err != nil || provRep.Valid {
 		t.Fatalf("unexpected provenance report: err=%v rep=%+v", err, provRep)
 	}
-	var sawUnaccounted, sawBadProv bool
+	codes := make(map[string]bool, len(provRep.Errors))
 	for _, iss := range provRep.Errors {
-		if iss.Code == manifest.ErrUnaccountedFactResource {
-			sawUnaccounted = true
-		}
-		if iss.Code == manifest.ErrInvalidEdgeProvenance {
-			sawBadProv = true
-		}
+		codes[iss.Code] = true
 	}
-	if !sawUnaccounted || !sawBadProv {
+	if !codes[manifest.ErrUnaccountedFactResource] || !codes[manifest.ErrInvalidEdgeProvenance] {
 		t.Fatalf("expected UNACCOUNTED_FACT_RESOURCE and INVALID_EDGE_PROVENANCE, got %+v", provRep.Errors)
 	}
+}
+
+func writeBrokenProvenanceManifest(t *testing.T, tmp, manifestPath string) string {
+	t.Helper()
+	m, err := manifest.Load(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range m.Views {
+		if m.Views[i].ID == "gke_developer_platform" {
+			m.Views[i].Edges[0].EvidenceEdgeIDs = []string{"190f6dfb3f1fa702"}
+		}
+	}
+	for i := range m.Components {
+		if m.Components[i].ID == "atlantis" && len(m.Components[i].BackedBy) > 1 {
+			m.Components[i].BackedBy = m.Components[i].BackedBy[:1]
+		}
+	}
+	badProvPath := filepath.Join(tmp, "bad_prov.yaml")
+	if err := manifest.Write(badProvPath, m); err != nil {
+		t.Fatal(err)
+	}
+	return badProvPath
 }
 
 func TestRenderSubcommand(t *testing.T) {
@@ -895,8 +909,14 @@ func testRenderValidationErrors(t *testing.T, tmp, manifestPath string) {
 }
 
 func testRenderChromeFreeFallback(t *testing.T, tmp, manifestPath string) {
+	t.Setenv("PATH", "")
+	t.Setenv("CHROME_PATH", "")
+
 	noChromeDeps := appDeps{
-		newBrowserRunner: func(_ string) (render.BrowserRunner, error) {
+		newBrowserRunner: func(explicit, _ string) (render.BrowserRunner, error) {
+			if strings.TrimSpace(explicit) != "" {
+				return nil, fmt.Errorf("explicit chrome path %q not found", explicit)
+			}
 			return nil, errors.New("chrome binary not installed")
 		},
 	}
@@ -913,6 +933,29 @@ func testRenderChromeFreeFallback(t *testing.T, tmp, manifestPath string) {
 		t.Fatalf("fallback HTML invalid: err=%v", err)
 	}
 
+	// Explicit missing --chrome-path fails fast (exit 1) even under --format html alone.
+	missingChrome := filepath.Join(tmp, "missing-chrome")
+	for _, tc := range []struct {
+		name string
+		deps appDeps
+		dir  string
+	}{
+		{"via newBrowserRunner", noChromeDeps, filepath.Join(tmp, "explicit-html-runner")},
+		{"via render.Render", appDeps{}, filepath.Join(tmp, "explicit-html-direct")},
+	} {
+		stdout.Reset()
+		stderr.Reset()
+		if code := run([]string{"render", manifestPath, "--format", "html", "--chrome-path", missingChrome, "-o", tc.dir}, &stdout, &stderr, tc.deps); code != exitRuntime {
+			t.Fatalf("%s missing --chrome-path with --format html exit=%d, want 1 (stderr=%s)", tc.name, code, stderr.String())
+		}
+		if !strings.Contains(stderr.String(), "explicit chrome path") {
+			t.Errorf("%s stderr missing explicit chrome path error: %s", tc.name, stderr.String())
+		}
+		if _, err := os.Stat(filepath.Join(tc.dir, "architecture.html")); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("%s unexpectedly wrote fallback architecture.html (stat err=%v)", tc.name, err)
+		}
+	}
+
 	stdout.Reset()
 	stderr.Reset()
 	if code := run([]string{"render", manifestPath, "--format", "pdf,png,html", "-o", filepath.Join(tmp, "fail-pdf")}, &stdout, &stderr, noChromeDeps); code != exitRuntime {
@@ -922,7 +965,7 @@ func testRenderChromeFreeFallback(t *testing.T, tmp, manifestPath string) {
 
 func testRenderRunnerOutcomes(t *testing.T, tmp, manifestPath string) {
 	collisionDeps := appDeps{
-		newBrowserRunner: func(_ string) (render.BrowserRunner, error) {
+		newBrowserRunner: func(_, _ string) (render.BrowserRunner, error) {
 			return &stubBrowserRunner{
 				handler: func(_ context.Context, _ render.BrowserRenderRequest) (*render.BrowserOutput, error) {
 					return &render.BrowserOutput{
@@ -947,7 +990,7 @@ func testRenderRunnerOutcomes(t *testing.T, tmp, manifestPath string) {
 	}
 
 	runErrDeps := appDeps{
-		newBrowserRunner: func(_ string) (render.BrowserRunner, error) {
+		newBrowserRunner: func(_, _ string) (render.BrowserRunner, error) {
 			return &stubBrowserRunner{
 				handler: func(_ context.Context, _ render.BrowserRenderRequest) (*render.BrowserOutput, error) {
 					return nil, errors.New("cdp crashed")
@@ -962,7 +1005,7 @@ func testRenderRunnerOutcomes(t *testing.T, tmp, manifestPath string) {
 	}
 
 	okDeps := appDeps{
-		newBrowserRunner: func(_ string) (render.BrowserRunner, error) {
+		newBrowserRunner: func(_, _ string) (render.BrowserRunner, error) {
 			return &stubBrowserRunner{
 				handler: func(_ context.Context, req render.BrowserRenderRequest) (*render.BrowserOutput, error) {
 					return &render.BrowserOutput{
@@ -1078,7 +1121,11 @@ func testConfigPrecedenceEndToEnd(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	cfgYAML := `
+	cfgChrome := filepath.Join(tmp, "cfg-chrome")
+	if err := os.WriteFile(cfgChrome, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfgYAML := fmt.Sprintf(`
 org: "111"
 projects:
   - cfg-proj-a
@@ -1093,10 +1140,10 @@ model: gemini-4-neon
 thinking_level: medium
 concurrency: 2
 cloudbuild_runs: 7
-chrome_path: /cfg/chrome
+chrome_path: %q
 format:
   - html
-`
+`, cfgChrome)
 	if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgYAML), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -1104,7 +1151,7 @@ format:
 
 	assertPreflightConfigPrecedence(t)
 	assertExtractAndSynthesizeConfigPrecedence(t, tmp)
-	assertRenderConfigPrecedence(t, tmp)
+	assertRenderConfigPrecedence(t, tmp, cfgChrome)
 }
 
 func assertPreflightConfigPrecedence(t *testing.T) {
@@ -1212,15 +1259,33 @@ func assertExtractAndSynthesizeConfigPrecedence(t *testing.T, tmp string) {
 	}
 }
 
-func assertRenderConfigPrecedence(t *testing.T, tmp string) {
+func assertRenderConfigPrecedence(t *testing.T, tmp, cfgChrome string) {
 	t.Helper()
 	_, manifestPath := acmeFixturePaths(t)
+
+	envChrome := filepath.Join(tmp, "env-chrome")
+	cliChrome := filepath.Join(tmp, "cli-chrome")
+	pathDir := filepath.Join(tmp, "path-bin")
+	if err := os.MkdirAll(pathDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{envChrome, cliChrome, filepath.Join(pathDir, "google-chrome")} {
+		if err := os.WriteFile(p, []byte("#!/bin/sh\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", pathDir)
+
 	var gotChromePath string
 	var gotWantPDF, gotWantPNG bool
 	renderDeps := appDeps{
 		loadConfig: loadDefaultConfig,
-		newBrowserRunner: func(cp string) (render.BrowserRunner, error) {
-			gotChromePath = cp
+		newBrowserRunner: func(explicit, fallback string) (render.BrowserRunner, error) {
+			found, err := render.FindChrome(explicit, fallback)
+			if err != nil {
+				return nil, err
+			}
+			gotChromePath = found
 			return &stubBrowserRunner{
 				handler: func(_ context.Context, req render.BrowserRenderRequest) (*render.BrowserOutput, error) {
 					gotWantPDF = req.WantPDF
@@ -1239,27 +1304,61 @@ func assertRenderConfigPrecedence(t *testing.T, tmp string) {
 	if code := run([]string{"render", manifestPath, "-o", filepath.Join(tmp, "r1")}, &stdout, &stderr, renderDeps); code != exitOK {
 		t.Fatalf("render from config exit=%d, want 0 (stderr=%s)", code, stderr.String())
 	}
-	if gotChromePath != "/cfg/chrome" || gotWantPDF || gotWantPNG {
+	if gotChromePath != cfgChrome || gotWantPDF || gotWantPNG {
 		t.Fatalf("render config failed: chrome=%q pdf=%v png=%v", gotChromePath, gotWantPDF, gotWantPNG)
 	}
 
-	t.Setenv("CHROME_PATH", "/env/chrome")
+	// Non-existent CHROME_PATH must fall through to config.yaml chrome_path before PATH.
+	t.Setenv("CHROME_PATH", filepath.Join(tmp, "missing-env-chrome"))
 	stdout.Reset()
 	stderr.Reset()
-	if code := run([]string{"render", manifestPath, "--format", "pdf", "-o", filepath.Join(tmp, "r2")}, &stdout, &stderr, renderDeps); code != exitOK {
+	if code := run([]string{"render", manifestPath, "-o", filepath.Join(tmp, "r2")}, &stdout, &stderr, renderDeps); code != exitOK {
+		t.Fatalf("render missing env fallback exit=%d, want 0 (stderr=%s)", code, stderr.String())
+	}
+	if gotChromePath != cfgChrome {
+		t.Fatalf("render missing CHROME_PATH got %q, want config chrome_path %q", gotChromePath, cfgChrome)
+	}
+
+	// Valid CHROME_PATH overrides config.yaml chrome_path.
+	t.Setenv("CHROME_PATH", envChrome)
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"render", manifestPath, "--format", "pdf", "-o", filepath.Join(tmp, "r3")}, &stdout, &stderr, renderDeps); code != exitOK {
 		t.Fatalf("render env override exit=%d, want 0 (stderr=%s)", code, stderr.String())
 	}
-	if gotChromePath != "" || !gotWantPDF || gotWantPNG {
+	if gotChromePath != envChrome || !gotWantPDF || gotWantPNG {
 		t.Fatalf("render env/format override failed: chrome=%q pdf=%v png=%v", gotChromePath, gotWantPDF, gotWantPNG)
 	}
 
+	// Explicit --chrome-path overrides both CHROME_PATH and config.yaml.
 	stdout.Reset()
 	stderr.Reset()
-	if code := run([]string{"render", manifestPath, "--chrome-path", "/cli/chrome", "-o", filepath.Join(tmp, "r3")}, &stdout, &stderr, renderDeps); code != exitOK {
+	if code := run([]string{"render", manifestPath, "--chrome-path", cliChrome, "-o", filepath.Join(tmp, "r4")}, &stdout, &stderr, renderDeps); code != exitOK {
 		t.Fatalf("render CLI chrome override exit=%d, want 0 (stderr=%s)", code, stderr.String())
 	}
-	if gotChromePath != "/cli/chrome" {
-		t.Fatalf("render CLI chrome override got %q, want /cli/chrome", gotChromePath)
+	if gotChromePath != cliChrome {
+		t.Fatalf("render CLI chrome override got %q, want %q", gotChromePath, cliChrome)
+	}
+
+	// Non-existent explicit --chrome-path fails fast instead of falling through (both pdf and html-only).
+	for _, tc := range []struct {
+		format string
+		dir    string
+	}{
+		{"pdf", filepath.Join(tmp, "r5")},
+		{"html", filepath.Join(tmp, "r6")},
+	} {
+		stdout.Reset()
+		stderr.Reset()
+		if code := run([]string{"render", manifestPath, "--chrome-path", filepath.Join(tmp, "missing-cli-chrome"), "--format", tc.format, "-o", tc.dir}, &stdout, &stderr, renderDeps); code != exitRuntime {
+			t.Fatalf("render missing --chrome-path --format %s exit=%d, want 1 (stderr=%s)", tc.format, code, stderr.String())
+		}
+		if !strings.Contains(stderr.String(), "explicit chrome path") {
+			t.Fatalf("render missing --chrome-path --format %s stderr missing explicit error: %s", tc.format, stderr.String())
+		}
+		if _, err := os.Stat(filepath.Join(tc.dir, "architecture.html")); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("render missing --chrome-path --format %s unexpectedly wrote architecture.html (stat err=%v)", tc.format, err)
+		}
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -62,32 +63,11 @@ var statefulDatastoreAssetTypes = map[string]bool{
 // Synthesize runs two-pass closed-world synthesis over facts, projecting View 0 when >= 2 detail
 // views exist and validating the final manifest with manifest.ValidateWithFacts.
 func Synthesize(ctx context.Context, facts *extract.FactsFile, client ModelClient, reg *icons.Registry, opts Options) (*manifest.Manifest, error) {
-	if facts == nil {
-		return nil, fmt.Errorf("facts file must not be nil")
-	}
-	if client == nil {
-		return nil, fmt.Errorf("model client must not be nil")
-	}
-	if reg == nil {
-		return nil, fmt.Errorf("icons registry must not be nil")
-	}
-	if len(facts.Resources) > MaxActiveResources {
-		return nil, &ScaleLimitError{ResourceCount: len(facts.Resources), MaxAllowed: MaxActiveResources}
+	if err := validateSynthesizeInputs(facts, client, reg); err != nil {
+		return nil, err
 	}
 
-	concurrency := opts.Concurrency
-	if concurrency <= 0 {
-		concurrency = DefaultConcurrency
-	}
-	generatedAt := strings.TrimSpace(opts.GeneratedAt)
-	if generatedAt == "" {
-		if facts.ReadTime != "" {
-			generatedAt = facts.ReadTime
-		} else {
-			generatedAt = time.Now().UTC().Format(time.RFC3339)
-		}
-	}
-
+	concurrency, generatedAt := resolveSynthesizeOptions(facts, opts)
 	table := NewInternTable(facts)
 
 	// Pass 1: Plan suite + Pre-Pass-2 Gate (up to 2 retries with exact offending IDs).
@@ -97,47 +77,13 @@ func Synthesize(ctx context.Context, facts *extract.FactsFile, client ModelClien
 	}
 
 	components, containers, excluded := materializePlanGlobals(plan, table)
-	compByID := make(map[string]manifest.Component, len(components))
-	for _, c := range components {
-		compByID[c.ID] = c
-	}
-	contByID := make(map[string]manifest.Container, len(containers))
-	for _, ct := range containers {
-		contByID[ct.ID] = ct
-	}
-	factEdgeByID := make(map[string]extract.FactEdge, len(table.EdgeIDs()))
-	for _, eid := range table.EdgeIDs() {
-		fe, _ := table.EdgeByID(eid)
-		factEdgeByID[fe.ID] = fe
-	}
-	allDetailViewIDs := make(map[string]bool, len(plan.DetailViews))
-	for _, dv := range plan.DetailViews {
-		allDetailViewIDs[dv.ID] = true
-	}
 
 	// Pass 2: Populate each detail view concurrently with bounded errgroup + per-view retries.
-	detailViews := make([]manifest.View, len(plan.DetailViews))
-	g, gctx := errgroup.WithContext(ctx)
-	g.SetLimit(concurrency)
-
-	for i, dv := range plan.DetailViews {
-		i, dv := i, dv
-		g.Go(func() error {
-			populated, err := runPass2View(gctx, dv, plan, table, compByID, contByID, factEdgeByID, allDetailViewIDs, client)
-			if err != nil {
-				return err
-			}
-			detailViews[i] = populated
-			return nil
-		})
-	}
-	if err := g.Wait(); err != nil {
+	runner := newPass2Runner(plan, table, components, containers, client)
+	detailViews, err := runner.populateViews(ctx, concurrency)
+	if err != nil {
 		return nil, err
 	}
-
-	slices.SortFunc(detailViews, func(a, b manifest.View) int {
-		return cmp.Compare(a.ID, b.ID)
-	})
 
 	m := &manifest.Manifest{
 		SchemaVersion: manifest.SchemaVersion,
@@ -159,6 +105,37 @@ func Synthesize(ctx context.Context, facts *extract.FactsFile, client ModelClien
 		return nil, err
 	}
 	return m, nil
+}
+
+func validateSynthesizeInputs(facts *extract.FactsFile, client ModelClient, reg *icons.Registry) error {
+	if facts == nil {
+		return fmt.Errorf("facts file must not be nil")
+	}
+	if client == nil {
+		return fmt.Errorf("model client must not be nil")
+	}
+	if reg == nil {
+		return fmt.Errorf("icons registry must not be nil")
+	}
+	if len(facts.Resources) > MaxActiveResources {
+		return &ScaleLimitError{ResourceCount: len(facts.Resources), MaxAllowed: MaxActiveResources}
+	}
+	return nil
+}
+
+func resolveSynthesizeOptions(facts *extract.FactsFile, opts Options) (int, string) {
+	concurrency := opts.Concurrency
+	if concurrency <= 0 {
+		concurrency = DefaultConcurrency
+	}
+	generatedAt := strings.TrimSpace(opts.GeneratedAt)
+	if generatedAt != "" {
+		return concurrency, generatedAt
+	}
+	if facts.ReadTime != "" {
+		return concurrency, facts.ReadTime
+	}
+	return concurrency, time.Now().UTC().Format(time.RFC3339)
 }
 
 func runPass1(ctx context.Context, facts *extract.FactsFile, table *InternTable, client ModelClient, reg *icons.Registry) (*Pass1Plan, error) {
@@ -354,22 +331,7 @@ func validatePass1Views(views []Pass1DetailView, compIDs map[string]bool) []stri
 	viewIDs := make(map[string]bool, len(views))
 	placedComp := make(map[string]bool, len(compIDs))
 	for _, dv := range views {
-		if strings.TrimSpace(dv.ID) == "" || dv.ID == manifest.SystemIndexViewID {
-			issues = append(issues, fmt.Sprintf("invalid detail view id %q", dv.ID))
-		} else if viewIDs[dv.ID] {
-			issues = append(issues, fmt.Sprintf("duplicate detail view id %q", dv.ID))
-		}
-		viewIDs[dv.ID] = true
-		if len(dv.ComponentIDs) < 1 || len(dv.ComponentIDs) > 12 {
-			issues = append(issues, fmt.Sprintf("detail view %q has %d components (allowed 1..12)", dv.ID, len(dv.ComponentIDs)))
-		}
-		for _, cid := range dv.ComponentIDs {
-			if !compIDs[cid] {
-				issues = append(issues, fmt.Sprintf("detail view %q references unknown component_id %q", dv.ID, cid))
-				continue
-			}
-			placedComp[cid] = true
-		}
+		issues = append(issues, validateSinglePass1View(dv, compIDs, viewIDs, placedComp)...)
 	}
 
 	var unplaced []string
@@ -381,6 +343,27 @@ func validatePass1Views(views []Pass1DetailView, compIDs map[string]bool) []stri
 	slices.Sort(unplaced)
 	if len(unplaced) > 0 {
 		issues = append(issues, fmt.Sprintf("components not assigned to any detail view: %s", strings.Join(unplaced, ", ")))
+	}
+	return issues
+}
+
+func validateSinglePass1View(dv Pass1DetailView, compIDs, viewIDs, placedComp map[string]bool) []string {
+	var issues []string
+	if strings.TrimSpace(dv.ID) == "" || dv.ID == manifest.SystemIndexViewID {
+		issues = append(issues, fmt.Sprintf("invalid detail view id %q", dv.ID))
+	} else if viewIDs[dv.ID] {
+		issues = append(issues, fmt.Sprintf("duplicate detail view id %q", dv.ID))
+	}
+	viewIDs[dv.ID] = true
+	if len(dv.ComponentIDs) < 1 || len(dv.ComponentIDs) > 12 {
+		issues = append(issues, fmt.Sprintf("detail view %q has %d components (allowed 1..12)", dv.ID, len(dv.ComponentIDs)))
+	}
+	for _, cid := range dv.ComponentIDs {
+		if !compIDs[cid] {
+			issues = append(issues, fmt.Sprintf("detail view %q references unknown component_id %q", dv.ID, cid))
+			continue
+		}
+		placedComp[cid] = true
 	}
 	return issues
 }
@@ -464,27 +447,87 @@ func materializeContainer(ct Pass1ContainerDef, table *InternTable) manifest.Con
 	}
 }
 
-func runPass2View(
-	ctx context.Context,
-	dv Pass1DetailView,
+type pass2Runner struct {
+	plan             *Pass1Plan
+	table            *InternTable
+	compByID         map[string]manifest.Component
+	contByID         map[string]manifest.Container
+	factEdgeByID     map[string]extract.FactEdge
+	allDetailViewIDs map[string]bool
+	client           ModelClient
+}
+
+func newPass2Runner(
 	plan *Pass1Plan,
 	table *InternTable,
-	compByID map[string]manifest.Component,
-	contByID map[string]manifest.Container,
-	factEdgeByID map[string]extract.FactEdge,
-	allDetailViewIDs map[string]bool,
+	components []manifest.Component,
+	containers []manifest.Container,
 	client ModelClient,
-) (manifest.View, error) {
+) *pass2Runner {
+	compByID := make(map[string]manifest.Component, len(components))
+	for _, c := range components {
+		compByID[c.ID] = c
+	}
+	contByID := make(map[string]manifest.Container, len(containers))
+	for _, ct := range containers {
+		contByID[ct.ID] = ct
+	}
+	factEdgeByID := make(map[string]extract.FactEdge, len(table.EdgeIDs()))
+	for _, eid := range table.EdgeIDs() {
+		fe, _ := table.EdgeByID(eid)
+		factEdgeByID[fe.ID] = fe
+	}
+	allDetailViewIDs := make(map[string]bool, len(plan.DetailViews))
+	for _, dv := range plan.DetailViews {
+		allDetailViewIDs[dv.ID] = true
+	}
+	return &pass2Runner{
+		plan:             plan,
+		table:            table,
+		compByID:         compByID,
+		contByID:         contByID,
+		factEdgeByID:     factEdgeByID,
+		allDetailViewIDs: allDetailViewIDs,
+		client:           client,
+	}
+}
+
+func (r *pass2Runner) populateViews(ctx context.Context, concurrency int) ([]manifest.View, error) {
+	detailViews := make([]manifest.View, len(r.plan.DetailViews))
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(concurrency)
+
+	for i, dv := range r.plan.DetailViews {
+		g.Go(func() error {
+			populated, err := r.populateView(gctx, dv)
+			if err != nil {
+				return err
+			}
+			detailViews[i] = populated
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	slices.SortFunc(detailViews, func(a, b manifest.View) int {
+		return cmp.Compare(a.ID, b.ID)
+	})
+	return detailViews, nil
+}
+
+func (r *pass2Runner) populateView(ctx context.Context, dv Pass1DetailView) (manifest.View, error) {
 	sysPrompt := Pass2SystemPrompt()
 	schema := Pass2ViewSchema()
 	var feedback []string
 
 	for attempt := 0; attempt <= maxValidationRetries; attempt++ {
-		userPrompt, err := BuildPass2UserPrompt(dv, plan, table, feedback)
+		userPrompt, err := BuildPass2UserPrompt(dv, r.plan, r.table, feedback)
 		if err != nil {
 			return manifest.View{}, err
 		}
-		raw, err := client.GenerateJSON(ctx, sysPrompt, userPrompt, schema)
+		raw, err := r.client.GenerateJSON(ctx, sysPrompt, userPrompt, schema)
 		if err != nil {
 			return manifest.View{}, fmt.Errorf("pass 2 view %q attempt %d: %w", dv.ID, attempt+1, err)
 		}
@@ -494,8 +537,8 @@ func runPass2View(
 			continue
 		}
 
-		mv, convIssues := materializePass2View(dv, pv, table)
-		issues := slices.Concat(convIssues, validatePopulatedView(mv, dv.ComponentIDs, compByID, contByID, factEdgeByID, allDetailViewIDs))
+		mv, convIssues := materializePass2View(dv, pv, r.table)
+		issues := slices.Concat(convIssues, validatePopulatedView(mv, dv.ComponentIDs, r.compByID, r.contByID, r.factEdgeByID, r.allDetailViewIDs))
 		if len(issues) == 0 {
 			return mv, nil
 		}
@@ -630,8 +673,7 @@ func validatePopulatedViewPlacements(
 	expectedCompIDs []string,
 	maxCol int,
 	compByID map[string]manifest.Component,
-	viewContSet map[string]bool,
-	allDetailViewIDs map[string]bool,
+	viewContSet, allDetailViewIDs map[string]bool,
 ) (map[string]bool, []string) {
 	var issues []string
 	if len(v.Placements) < 1 || len(v.Placements) > 12 {
@@ -640,24 +682,7 @@ func validatePopulatedViewPlacements(
 
 	placed := make(map[string]bool, len(v.Placements))
 	for _, p := range v.Placements {
-		if placed[p.ComponentID] {
-			issues = append(issues, fmt.Sprintf("duplicate placement for component %q", p.ComponentID))
-		}
-		placed[p.ComponentID] = true
-		if _, ok := compByID[p.ComponentID]; !ok {
-			issues = append(issues, fmt.Sprintf("placement references unknown component %q", p.ComponentID))
-		}
-		if p.ContainerID != "" && !viewContSet[p.ContainerID] {
-			issues = append(issues, fmt.Sprintf("placement %q container_id %q not in container_ids", p.ComponentID, p.ContainerID))
-		}
-		if p.Column < 0 || p.Column > maxCol {
-			issues = append(issues, fmt.Sprintf("placement %q column %d out of bounds 0..%d", p.ComponentID, p.Column, maxCol))
-		}
-		for _, ref := range p.OffPageRefs {
-			if !allDetailViewIDs[ref.TargetViewID] || ref.TargetViewID == v.ID {
-				issues = append(issues, fmt.Sprintf("placement %q off_page_ref target_view_id %q invalid", p.ComponentID, ref.TargetViewID))
-			}
-		}
+		issues = append(issues, validateSinglePopulatedPlacement(p, v.ID, maxCol, compByID, placed, viewContSet, allDetailViewIDs)...)
 	}
 	for _, cid := range expectedCompIDs {
 		if !placed[cid] {
@@ -665,6 +690,35 @@ func validatePopulatedViewPlacements(
 		}
 	}
 	return placed, issues
+}
+
+func validateSinglePopulatedPlacement(
+	p manifest.Placement,
+	viewID string,
+	maxCol int,
+	compByID map[string]manifest.Component,
+	placed, viewContSet, allDetailViewIDs map[string]bool,
+) []string {
+	var issues []string
+	if placed[p.ComponentID] {
+		issues = append(issues, fmt.Sprintf("duplicate placement for component %q", p.ComponentID))
+	}
+	placed[p.ComponentID] = true
+	if _, ok := compByID[p.ComponentID]; !ok {
+		issues = append(issues, fmt.Sprintf("placement references unknown component %q", p.ComponentID))
+	}
+	if p.ContainerID != "" && !viewContSet[p.ContainerID] {
+		issues = append(issues, fmt.Sprintf("placement %q container_id %q not in container_ids", p.ComponentID, p.ContainerID))
+	}
+	if p.Column < 0 || p.Column > maxCol {
+		issues = append(issues, fmt.Sprintf("placement %q column %d out of bounds 0..%d", p.ComponentID, p.Column, maxCol))
+	}
+	for _, ref := range p.OffPageRefs {
+		if !allDetailViewIDs[ref.TargetViewID] || ref.TargetViewID == viewID {
+			issues = append(issues, fmt.Sprintf("placement %q off_page_ref target_view_id %q invalid", p.ComponentID, ref.TargetViewID))
+		}
+	}
+	return issues
 }
 
 func validatePopulatedViewEdges(
@@ -791,7 +845,16 @@ func Reconcile(ctx context.Context, facts *extract.FactsFile, existing *manifest
 		return nil, fmt.Errorf("reconcile detected %d unclaimed resource(s) and %d new inter-component edge(s); vertex AI model client is required", len(unclaimedRIDs), len(deltaEdgeIDs))
 	}
 	delta := ReconcileDelta{UnclaimedResourceIDs: unclaimedRIDs, NewEdgeIDs: deltaEdgeIDs}
-	return runReconcilePatchLoop(ctx, cur, facts, delta, table, client, reg, opts)
+	runner := &reconcileRunner{
+		cur:    cur,
+		facts:  facts,
+		delta:  delta,
+		table:  table,
+		client: client,
+		reg:    reg,
+		opts:   opts,
+	}
+	return runner.run(ctx)
 }
 
 func validateReconcileInputs(facts *extract.FactsFile, existing *manifest.Manifest, reg *icons.Registry) error {
@@ -914,27 +977,28 @@ func refreshSingleVerifiedEdge(
 	return false
 }
 
-func runReconcilePatchLoop(
-	ctx context.Context,
-	cur *manifest.Manifest,
-	facts *extract.FactsFile,
-	delta ReconcileDelta,
-	table *InternTable,
-	client ModelClient,
-	reg *icons.Registry,
-	opts Options,
-) (*manifest.Manifest, error) {
-	sysPrompt := ReconcileSystemPrompt(reg.ValidKeys())
+type reconcileRunner struct {
+	cur    *manifest.Manifest
+	facts  *extract.FactsFile
+	delta  ReconcileDelta
+	table  *InternTable
+	client ModelClient
+	reg    *icons.Registry
+	opts   Options
+}
+
+func (r *reconcileRunner) run(ctx context.Context) (*manifest.Manifest, error) {
+	sysPrompt := ReconcileSystemPrompt(r.reg.ValidKeys())
 	schema := ReconcilePatchSchema()
 
 	var feedback []string
 	var lastValErr *manifest.ValidationError
 	for attempt := 0; attempt <= maxValidationRetries; attempt++ {
-		userPrompt, err := BuildReconcileUserPrompt(cur, delta, table, feedback)
+		userPrompt, err := BuildReconcileUserPrompt(r.cur, r.delta, r.table, feedback)
 		if err != nil {
 			return nil, err
 		}
-		raw, err := client.GenerateJSON(ctx, sysPrompt, userPrompt, schema)
+		raw, err := r.client.GenerateJSON(ctx, sysPrompt, userPrompt, schema)
 		if err != nil {
 			return nil, fmt.Errorf("reconcile attempt %d: %w", attempt+1, err)
 		}
@@ -945,32 +1009,37 @@ func runReconcilePatchLoop(
 			continue
 		}
 
-		candidate := cloneManifest(cur)
-		mergeIssues := applyReconcilePatch(candidate, &patch, table)
-		rebuildSystemIndex(candidate)
-		if opts.GeneratedAt != "" {
-			candidate.Metadata.GeneratedAt = opts.GeneratedAt
+		candidate, nextFeedback, valErr := r.tryApplyAndValidate(&patch)
+		if candidate != nil {
+			return candidate, nil
 		}
-
-		if len(mergeIssues) > 0 {
-			feedback = mergeIssues
-			lastValErr = validationErrorFromFeedback("RECONCILE_MERGE_FAILED", "", mergeIssues)
-			continue
-		}
-		if err := manifest.ValidateWithFacts(candidate, facts, reg); err != nil {
-			feedback = []string{err.Error()}
-			var ve *manifest.ValidationError
-			if errors.As(err, &ve) {
-				lastValErr = ve
-			} else {
-				lastValErr = validationErrorFromFeedback("RECONCILE_VALIDATION_FAILED", "", feedback)
-			}
-			continue
-		}
-		return candidate, nil
+		feedback = nextFeedback
+		lastValErr = valErr
 	}
 
 	return nil, fmt.Errorf("reconcile failed validation after %d retries: %w", maxValidationRetries, lastValErr)
+}
+
+func (r *reconcileRunner) tryApplyAndValidate(patch *ReconcilePatch) (*manifest.Manifest, []string, *manifest.ValidationError) {
+	candidate := cloneManifest(r.cur)
+	mergeIssues := applyReconcilePatch(candidate, patch, r.table)
+	rebuildSystemIndex(candidate)
+	if r.opts.GeneratedAt != "" {
+		candidate.Metadata.GeneratedAt = r.opts.GeneratedAt
+	}
+
+	if len(mergeIssues) > 0 {
+		return nil, mergeIssues, validationErrorFromFeedback("RECONCILE_MERGE_FAILED", "", mergeIssues)
+	}
+	if err := manifest.ValidateWithFacts(candidate, r.facts, r.reg); err != nil {
+		feedback := []string{err.Error()}
+		var ve *manifest.ValidationError
+		if errors.As(err, &ve) {
+			return nil, feedback, ve
+		}
+		return nil, feedback, validationErrorFromFeedback("RECONCILE_VALIDATION_FAILED", "", feedback)
+	}
+	return candidate, nil, nil
 }
 
 func pruneManifest(m *manifest.Manifest, vanished map[string]bool, factEdgeByID map[string]extract.FactEdge, allFactEdges []extract.FactEdge) {
@@ -1181,33 +1250,53 @@ func applyAppendBackedBy(m *manifest.Manifest, patch *ReconcilePatch, compIdx, c
 
 func applyNewEntities(m *manifest.Manifest, patch *ReconcilePatch, compIdx, contIdx map[string]int, table *InternTable) []string {
 	var issues []string
-	for _, nc := range patch.NewComponents {
+	issues = append(issues, applyNewComponents(m, patch.NewComponents, compIdx, table)...)
+	issues = append(issues, applyNewContainers(m, patch.NewContainers, contIdx, table)...)
+	issues = append(issues, applyNewExcludedResources(m, patch.NewExcludedResources, table)...)
+	return issues
+}
+
+func checkKnownResourceIDs(kind, id string, resourceIDs []string, table *InternTable) []string {
+	var issues []string
+	for _, rid := range resourceIDs {
+		if _, ok := table.ResourceByID(rid); !ok {
+			issues = append(issues, fmt.Sprintf("%s %q references unknown resource %q", kind, id, rid))
+		}
+	}
+	return issues
+}
+
+func applyNewComponents(m *manifest.Manifest, newComps []Pass1Component, compIdx map[string]int, table *InternTable) []string {
+	var issues []string
+	for _, nc := range newComps {
 		if _, dup := compIdx[nc.ID]; dup {
 			issues = append(issues, fmt.Sprintf("new_components id %q collides with existing component", nc.ID))
 			continue
 		}
-		for _, rid := range nc.BackedByIDs {
-			if _, ok := table.ResourceByID(rid); !ok {
-				issues = append(issues, fmt.Sprintf("new_components %q references unknown resource %q", nc.ID, rid))
-			}
-		}
+		issues = append(issues, checkKnownResourceIDs("new_components", nc.ID, nc.BackedByIDs, table)...)
 		compIdx[nc.ID] = len(m.Components)
 		m.Components = append(m.Components, materializeComponent(nc, table))
 	}
-	for _, nct := range patch.NewContainers {
+	return issues
+}
+
+func applyNewContainers(m *manifest.Manifest, newConts []Pass1ContainerDef, contIdx map[string]int, table *InternTable) []string {
+	var issues []string
+	for _, nct := range newConts {
 		if _, dup := contIdx[nct.ID]; dup {
 			issues = append(issues, fmt.Sprintf("new_containers id %q collides with existing container", nct.ID))
 			continue
 		}
-		for _, rid := range nct.BackedByIDs {
-			if _, ok := table.ResourceByID(rid); !ok {
-				issues = append(issues, fmt.Sprintf("new_containers %q references unknown resource %q", nct.ID, rid))
-			}
-		}
+		issues = append(issues, checkKnownResourceIDs("new_containers", nct.ID, nct.BackedByIDs, table)...)
 		contIdx[nct.ID] = len(m.Containers)
 		m.Containers = append(m.Containers, materializeContainer(nct, table))
 	}
-	for _, nex := range patch.NewExcludedResources {
+	return issues
+}
+
+func applyNewExcludedResources(m *manifest.Manifest, newExcl []Pass1ExcludedResource, table *InternTable) []string {
+	var issues []string
+	for _, nex := range newExcl {
 		r, ok := table.ResourceByID(nex.ResourceID)
 		if !ok {
 			issues = append(issues, fmt.Sprintf("new_excluded_resources unknown resource %q", nex.ResourceID))
@@ -1337,12 +1426,7 @@ func findReconcileDeltaEdgeIDs(m *manifest.Manifest, unclaimedRIDs []string, tab
 }
 
 func addUnclaimedIncidentEdges(m *manifest.Manifest, unclaimedRIDs []string, table *InternTable, included map[string]bool) {
-	unclaimedURIs := make(map[string]bool, len(unclaimedRIDs))
-	for _, rid := range unclaimedRIDs {
-		if r, ok := table.ResourceByID(rid); ok {
-			unclaimedURIs[r.URI] = true
-		}
-	}
+	unclaimedURIs := resolveResourceURISet(unclaimedRIDs, table)
 	bridgeURIs := manifestBridgeURISet(m)
 
 	activeBridges := make(map[string]bool)
@@ -1353,19 +1437,36 @@ func addUnclaimedIncidentEdges(m *manifest.Manifest, unclaimedRIDs []string, tab
 			continue
 		}
 		included[eid] = true
-		if fromUnc && bridgeURIs[fe.ToURI] {
-			activeBridges[fe.ToURI] = true
-		}
-		if toUnc && bridgeURIs[fe.FromURI] {
-			activeBridges[fe.FromURI] = true
+		markActiveBridge(fe, fromUnc, toUnc, bridgeURIs, activeBridges)
+	}
+	if len(activeBridges) > 0 {
+		includeEdgesTouchingURIs(table, activeBridges, included)
+	}
+}
+
+func resolveResourceURISet(rids []string, table *InternTable) map[string]bool {
+	out := make(map[string]bool, len(rids))
+	for _, rid := range rids {
+		if r, ok := table.ResourceByID(rid); ok {
+			out[r.URI] = true
 		}
 	}
-	if len(activeBridges) == 0 {
-		return
+	return out
+}
+
+func markActiveBridge(fe extract.FactEdge, fromUnc, toUnc bool, bridgeURIs, activeBridges map[string]bool) {
+	if fromUnc && bridgeURIs[fe.ToURI] {
+		activeBridges[fe.ToURI] = true
 	}
+	if toUnc && bridgeURIs[fe.FromURI] {
+		activeBridges[fe.FromURI] = true
+	}
+}
+
+func includeEdgesTouchingURIs(table *InternTable, uris, included map[string]bool) {
 	for _, eid := range table.EdgeIDs() {
 		fe, _ := table.EdgeByID(eid)
-		if activeBridges[fe.FromURI] || activeBridges[fe.ToURI] {
+		if uris[fe.FromURI] || uris[fe.ToURI] {
 			included[eid] = true
 		}
 	}
@@ -1442,14 +1543,8 @@ func hasDirectedWalk(edgeIDs []string, factEdgeByID map[string]extract.FactEdge,
 		}
 		cited = append(cited, fe)
 	}
-	fromSet := make(map[string]bool, len(fromBacked))
-	for _, br := range fromBacked {
-		fromSet[br.URI] = true
-	}
-	toSet := make(map[string]bool, len(toBacked))
-	for _, br := range toBacked {
-		toSet[br.URI] = true
-	}
+	fromSet := backedURISet(fromBacked)
+	toSet := backedURISet(toBacked)
 
 	fwd := make(map[string][]string, len(cited))
 	rev := make(map[string][]string, len(cited))
@@ -1467,60 +1562,64 @@ func hasDirectedWalk(edgeIDs []string, factEdgeByID map[string]extract.FactEdge,
 	return true
 }
 
-func findShortestWalkIDs(edges []extract.FactEdge, fromBacked, toBacked []manifest.BackedResource) []string {
-	fromSet := make(map[string]bool, len(fromBacked))
-	for _, br := range fromBacked {
-		fromSet[br.URI] = true
-	}
-	toSet := make(map[string]bool, len(toBacked))
-	for _, br := range toBacked {
-		toSet[br.URI] = true
-	}
+type walkStep struct {
+	fromURI string
+	edgeID  string
+}
 
+func backedURISet(backed []manifest.BackedResource) map[string]bool {
+	out := make(map[string]bool, len(backed))
+	for _, br := range backed {
+		out[br.URI] = true
+	}
+	return out
+}
+
+func sortedMapKeys(m map[string]bool) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+	return keys
+}
+
+func buildFactEdgeAdjacency(edges []extract.FactEdge) map[string][]extract.FactEdge {
 	adj := make(map[string][]extract.FactEdge)
 	for _, fe := range edges {
 		adj[fe.FromURI] = append(adj[fe.FromURI], fe)
 	}
+	return adj
+}
 
-	type prevStep struct {
-		fromURI string
-		edgeID  string
+func reconstructWalkIDs(lastEdgeID, startURI string, parent map[string]walkStep) []string {
+	path := []string{lastEdgeID}
+	for step, ok := parent[startURI]; ok; step, ok = parent[step.fromURI] {
+		path = append(path, step.edgeID)
 	}
-	visited := make(map[string]bool, len(fromSet))
-	parent := make(map[string]prevStep)
-	queue := make([]string, 0, len(fromSet))
-	fromURIs := make([]string, 0, len(fromSet))
-	for u := range fromSet {
-		fromURIs = append(fromURIs, u)
-	}
-	slices.Sort(fromURIs)
-	for _, u := range fromURIs {
-		visited[u] = true
-		queue = append(queue, u)
-	}
+	slices.Reverse(path)
+	return path
+}
+
+func findShortestWalkIDs(edges []extract.FactEdge, fromBacked, toBacked []manifest.BackedResource) []string {
+	fromSet := backedURISet(fromBacked)
+	toSet := backedURISet(toBacked)
+	adj := buildFactEdgeAdjacency(edges)
+
+	visited := maps.Clone(fromSet)
+	parent := make(map[string]walkStep)
+	queue := sortedMapKeys(fromSet)
 
 	for len(queue) > 0 {
 		cur := queue[0]
 		queue = queue[1:]
 		for _, fe := range adj[cur] {
 			if toSet[fe.ToURI] {
-				var path []string
-				path = append(path, fe.ID)
-				u := cur
-				for {
-					step, ok := parent[u]
-					if !ok {
-						break
-					}
-					path = append(path, step.edgeID)
-					u = step.fromURI
-				}
-				slices.Reverse(path)
-				return path
+				return reconstructWalkIDs(fe.ID, cur, parent)
 			}
 			if !visited[fe.ToURI] {
 				visited[fe.ToURI] = true
-				parent[fe.ToURI] = prevStep{fromURI: cur, edgeID: fe.ID}
+				parent[fe.ToURI] = walkStep{fromURI: cur, edgeID: fe.ID}
 				queue = append(queue, fe.ToURI)
 			}
 		}
@@ -1549,55 +1648,73 @@ func bfsURI(seeds map[string]bool, adj map[string][]string) map[string]bool {
 }
 
 func cloneManifest(m *manifest.Manifest) *manifest.Manifest {
-	out := &manifest.Manifest{
+	return &manifest.Manifest{
 		SchemaVersion: m.SchemaVersion,
 		Metadata: manifest.Metadata{
 			GeneratedAt: m.Metadata.GeneratedAt,
 			Scopes:      slices.Clone(m.Metadata.Scopes),
 		},
+		Components:        cloneComponents(m.Components),
+		Containers:        cloneContainers(m.Containers),
 		ExcludedResources: slices.Clone(m.ExcludedResources),
 		RejectedEdges:     slices.Clone(m.RejectedEdges),
+		Views:             cloneViews(m.Views),
 	}
-	if len(m.Components) > 0 {
-		out.Components = make([]manifest.Component, len(m.Components))
-		for i, c := range m.Components {
-			cc := c
-			cc.BackedBy = slices.Clone(c.BackedBy)
-			cc.InlineMeta = slices.Clone(c.InlineMeta)
-			out.Components[i] = cc
-		}
+}
+
+func cloneComponents(in []manifest.Component) []manifest.Component {
+	if len(in) == 0 {
+		return nil
 	}
-	if len(m.Containers) > 0 {
-		out.Containers = make([]manifest.Container, len(m.Containers))
-		for i, ct := range m.Containers {
-			ctc := ct
-			ctc.BackedBy = slices.Clone(ct.BackedBy)
-			out.Containers[i] = ctc
-		}
-	}
-	if len(m.Views) > 0 {
-		out.Views = make([]manifest.View, len(m.Views))
-		for i, v := range m.Views {
-			vc := v
-			vc.ContainerIDs = slices.Clone(v.ContainerIDs)
-			if len(v.Placements) > 0 {
-				vc.Placements = make([]manifest.Placement, len(v.Placements))
-				for j, p := range v.Placements {
-					pc := p
-					pc.OffPageRefs = slices.Clone(p.OffPageRefs)
-					vc.Placements[j] = pc
-				}
-			}
-			if len(v.Edges) > 0 {
-				vc.Edges = make([]manifest.Edge, len(v.Edges))
-				for j, e := range v.Edges {
-					ec := e
-					ec.EvidenceEdgeIDs = slices.Clone(e.EvidenceEdgeIDs)
-					vc.Edges[j] = ec
-				}
-			}
-			out.Views[i] = vc
-		}
+	out := make([]manifest.Component, len(in))
+	for i, c := range in {
+		c.BackedBy = slices.Clone(c.BackedBy)
+		c.InlineMeta = slices.Clone(c.InlineMeta)
+		out[i] = c
 	}
 	return out
+}
+
+func cloneContainers(in []manifest.Container) []manifest.Container {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]manifest.Container, len(in))
+	for i, ct := range in {
+		ct.BackedBy = slices.Clone(ct.BackedBy)
+		out[i] = ct
+	}
+	return out
+}
+
+func cloneViews(in []manifest.View) []manifest.View {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]manifest.View, len(in))
+	for i, v := range in {
+		out[i] = cloneView(v)
+	}
+	return out
+}
+
+func cloneView(v manifest.View) manifest.View {
+	v.ContainerIDs = slices.Clone(v.ContainerIDs)
+	if len(v.Placements) > 0 {
+		placements := make([]manifest.Placement, len(v.Placements))
+		for i, p := range v.Placements {
+			p.OffPageRefs = slices.Clone(p.OffPageRefs)
+			placements[i] = p
+		}
+		v.Placements = placements
+	}
+	if len(v.Edges) > 0 {
+		edges := make([]manifest.Edge, len(v.Edges))
+		for i, e := range v.Edges {
+			e.EvidenceEdgeIDs = slices.Clone(e.EvidenceEdgeIDs)
+			edges[i] = e
+		}
+		v.Edges = edges
+	}
+	return v
 }

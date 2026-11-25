@@ -135,9 +135,6 @@ var documentTemplate = template.Must(template.New("architecture").Funcs(template
       {{- range .CorridorRows}}
       <div class="corridor-row" data-corridor-row="{{.}}" style="grid-column: 1 / -1; grid-row: {{add (mul . 2) 1}};"></div>
       {{- end}}
-      {{- range .Waypoints}}
-      <div class="edge-waypoint" data-edge-idx="{{.EdgeIdx}}" style="grid-column: {{.CSSGridCol}}; grid-row: {{.CSSGridRow}};"></div>
-      {{- end}}
       {{- range .Containers}}
       <div class="arch-container" data-container-id="{{.ID}}" data-depth="{{.Depth}}" data-kind="{{.Kind}}"{{if .HasInnerTop}} data-has-inner-top="1"{{end}} style="grid-column: {{.GridColSpec | css}}; grid-row: {{.GridRowSpec | css}};"></div>
       <span class="arch-container-badge" data-container-id="{{.ID}}" data-depth="{{.Depth}}"{{if .HasInnerTop}} data-has-inner-top="1"{{end}} style="grid-column: {{.BadgeGridCol}}; grid-row: {{.BadgeGridRow}};">{{.Title}}</span>

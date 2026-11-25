@@ -161,7 +161,19 @@ func ClassifyGCPError(err error, callerQuotaProject, targetProjectID, targetProj
 }
 
 func extractRESTErrorInfo(gerr *googleapi.Error, out *ClassifiedError) {
-	for _, raw := range gerr.Details {
+	if extractErrorInfoFromDetails(gerr.Details, out) {
+		return
+	}
+	if extractErrorInfoFromBody(gerr.Body, out) {
+		return
+	}
+	if out.Reason == "" && len(gerr.Errors) > 0 {
+		out.Reason = gerr.Errors[0].Reason
+	}
+}
+
+func extractErrorInfoFromDetails(details []any, out *ClassifiedError) bool {
+	for _, raw := range details {
 		m, ok := raw.(map[string]any)
 		if !ok {
 			continue
@@ -170,42 +182,83 @@ func extractRESTErrorInfo(gerr *googleapi.Error, out *ClassifiedError) {
 		if !strings.HasSuffix(typeURL, "google.rpc.ErrorInfo") {
 			continue
 		}
-		if r, ok := m["reason"].(string); ok {
-			out.Reason = r
-		}
-		if d, ok := m["domain"].(string); ok {
-			out.Domain = d
-		}
-		if meta, ok := m["metadata"].(map[string]any); ok {
-			out.Metadata = make(map[string]string, len(meta))
-			for k, v := range meta {
-				if s, ok := v.(string); ok {
-					out.Metadata[k] = s
-				}
-			}
-		}
-		return
+		applyErrorInfoMap(m, out)
+		return true
 	}
-	if gerr.Body != "" {
-		details := gjson.Get(gerr.Body, "error.details")
-		for _, item := range details.Array() {
-			if strings.HasSuffix(item.Get("@type").String(), "google.rpc.ErrorInfo") {
-				out.Reason = item.Get("reason").String()
-				out.Domain = item.Get("domain").String()
-				if meta := item.Get("metadata"); meta.IsObject() {
-					out.Metadata = make(map[string]string)
-					meta.ForEach(func(k, v gjson.Result) bool {
-						out.Metadata[k.String()] = v.String()
-						return true
-					})
-				}
-				return
-			}
+	return false
+}
+
+func applyErrorInfoMap(m map[string]any, out *ClassifiedError) {
+	if r, ok := m["reason"].(string); ok {
+		out.Reason = r
+	}
+	if d, ok := m["domain"].(string); ok {
+		out.Domain = d
+	}
+	if meta, ok := m["metadata"].(map[string]any); ok {
+		out.Metadata = extractStringAnyMap(meta)
+	}
+}
+
+func extractStringAnyMap(meta map[string]any) map[string]string {
+	out := make(map[string]string, len(meta))
+	for k, v := range meta {
+		if s, ok := v.(string); ok {
+			out[k] = s
 		}
 	}
-	if out.Reason == "" && len(gerr.Errors) > 0 {
-		out.Reason = gerr.Errors[0].Reason
+	return out
+}
+
+func extractErrorInfoFromBody(body string, out *ClassifiedError) bool {
+	if body == "" {
+		return false
 	}
+	for _, item := range gjson.Get(body, "error.details").Array() {
+		if !strings.HasSuffix(item.Get("@type").String(), "google.rpc.ErrorInfo") {
+			continue
+		}
+		out.Reason = item.Get("reason").String()
+		out.Domain = item.Get("domain").String()
+		if meta := item.Get("metadata"); meta.IsObject() {
+			out.Metadata = make(map[string]string)
+			meta.ForEach(func(k, v gjson.Result) bool {
+				out.Metadata[k.String()] = v.String()
+				return true
+			})
+		}
+		return true
+	}
+	return false
+}
+
+func trimProjectPrefix(s string) string {
+	return strings.TrimPrefix(strings.TrimSpace(s), prefixProjects)
+}
+
+func matchesTargetProject(candidate, targetID, targetNum string) bool {
+	if candidate == "" {
+		return false
+	}
+	return (targetID != "" && candidate == targetID) || (targetNum != "" && candidate == targetNum)
+}
+
+func classifyDisabledServiceKind(consumer, callerQuotaProject, targetProjectID, targetProjectNumber string) ErrorKind {
+	c := trimProjectPrefix(consumer)
+	callerQP := trimProjectPrefix(callerQuotaProject)
+	targetID := trimProjectPrefix(targetProjectID)
+	targetNum := trimProjectPrefix(targetProjectNumber)
+
+	if targetID == "" && targetNum == "" {
+		return ErrorKindQuotaFatal
+	}
+	if !matchesTargetProject(c, targetID, targetNum) {
+		return ErrorKindQuotaFatal
+	}
+	if matchesTargetProject(callerQP, targetID, targetNum) || (callerQP != "" && c == callerQP) {
+		return ErrorKindQuotaFatal
+	}
+	return ErrorKindTargetServiceDisabled
 }
 
 func classifyFromReasonAndCode(
@@ -214,10 +267,8 @@ func classifyFromReasonAndCode(
 	httpCode int,
 	callerQuotaProject, targetProjectID, targetProjectNumber string,
 ) {
-	if out.Metadata != nil {
-		if uuid := out.Metadata["vpcServiceControlsUniqueIdentifier"]; uuid != "" {
-			out.VPCSCUUID = uuid
-		}
+	if uuid := out.Metadata["vpcServiceControlsUniqueIdentifier"]; uuid != "" {
+		out.VPCSCUUID = uuid
 	}
 
 	switch out.Reason {
@@ -225,19 +276,7 @@ func classifyFromReasonAndCode(
 		out.Kind = ErrorKindQuotaFatal
 		return
 	case "SERVICE_DISABLED", "BILLING_DISABLED":
-		consumer := strings.TrimPrefix(strings.TrimSpace(out.Metadata["consumer"]), "projects/")
-		callerQP := strings.TrimPrefix(strings.TrimSpace(callerQuotaProject), "projects/")
-		targetID := strings.TrimPrefix(strings.TrimSpace(targetProjectID), "projects/")
-		targetNum := strings.TrimPrefix(strings.TrimSpace(targetProjectNumber), "projects/")
-		hasTarget := targetID != "" || targetNum != ""
-		matchesTarget := consumer != "" && ((targetID != "" && consumer == targetID) || (targetNum != "" && consumer == targetNum))
-		targetIsCaller := callerQP != "" && ((targetID != "" && callerQP == targetID) || (targetNum != "" && callerQP == targetNum))
-		matchesCaller := targetIsCaller || (consumer != "" && callerQP != "" && consumer == callerQP)
-		if hasTarget && matchesTarget && !matchesCaller {
-			out.Kind = ErrorKindTargetServiceDisabled
-		} else {
-			out.Kind = ErrorKindQuotaFatal
-		}
+		out.Kind = classifyDisabledServiceKind(out.Metadata["consumer"], callerQuotaProject, targetProjectID, targetProjectNumber)
 		return
 	case "SECURITY_POLICY_VIOLATED", "VPC_SERVICE_CONTROLS":
 		out.Kind = ErrorKindVPCSCBlocked
@@ -247,17 +286,13 @@ func classifyFromReasonAndCode(
 		return
 	}
 
-	if out.VPCSCUUID != "" {
+	switch {
+	case out.VPCSCUUID != "":
 		out.Kind = ErrorKindVPCSCBlocked
-		return
-	}
-	if grpcCode == codes.Unauthenticated || httpCode == http.StatusUnauthorized {
+	case grpcCode == codes.Unauthenticated || httpCode == http.StatusUnauthorized:
 		out.Kind = ErrorKindUnauthenticated
-		return
-	}
-	if grpcCode == codes.PermissionDenied || httpCode == http.StatusForbidden {
+	case grpcCode == codes.PermissionDenied || httpCode == http.StatusForbidden:
 		out.Kind = ErrorKindIAMDenied
-		return
 	}
 }
 
@@ -403,6 +438,37 @@ func ResolveQuotaProject(creds *google.Credentials, explicitQuotaProject string)
 // NewClients initializes strictly read-only GCP clients (cloud-platform.read-only) with
 // shared CAI (<= 80 RPM) and Monitoring/BigQuery/Dataflow (<= 10 QPS) rate limiters.
 func NewClients(ctx context.Context, opts ClientOptions) (*Clients, error) {
+	c := newClientsWithLimiters(opts)
+
+	baseOpts, qp, err := resolveReadOnlyBaseOptions(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	c.QuotaProject = qp
+
+	assetConn, err := dialOrReuse(ctx, opts.AssetConn, defaultAssetEndpoint, baseOpts, &c.closers)
+	if err != nil {
+		_ = c.Close()
+		return nil, fmt.Errorf("dial Cloud Asset Inventory: %w", err)
+	}
+	c.Asset = assetpb.NewAssetServiceClient(assetConn)
+
+	monConn, err := dialOrReuse(ctx, opts.MonitoringConn, defaultMonitoringEndpoint, baseOpts, &c.closers)
+	if err != nil {
+		_ = c.Close()
+		return nil, fmt.Errorf("dial Cloud Monitoring: %w", err)
+	}
+	c.Monitoring = monitoringpb.NewMetricServiceClient(monConn)
+
+	if err := initRESTServices(ctx, c, opts, baseOpts); err != nil {
+		_ = c.Close()
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func newClientsWithLimiters(opts ClientOptions) *Clients {
 	caiRate := opts.CAIRateLimit
 	if caiRate <= 0 {
 		caiRate = rate.Every(time.Minute / DefaultCAIRPM)
@@ -420,7 +486,7 @@ func NewClients(ctx context.Context, opts ClientOptions) (*Clients, error) {
 		dfLimiter = rate.NewLimiter(rate.Limit(DefaultEnricherQPS), DefaultEnricherQPS)
 	}
 
-	c := &Clients{
+	return &Clients{
 		ProjectAliases:    opts.ProjectAliases,
 		CAILimiter:        rate.NewLimiter(caiRate, 1),
 		MonitoringLimiter: rate.NewLimiter(monRate, 1),
@@ -429,71 +495,56 @@ func NewClients(ctx context.Context, opts ClientOptions) (*Clients, error) {
 		ProgressWriter:    opts.ProgressWriter,
 		retryBackoff:      opts.RetryBackoff,
 	}
+}
 
-	var baseOpts []option.ClientOption
-	needADC := opts.AssetConn == nil || opts.MonitoringConn == nil || opts.HTTPClient == nil
-	if needADC {
-		creds, err := google.FindDefaultCredentials(ctx, cloudPlatformReadOnlyScope)
-		if err != nil {
-			return nil, fmt.Errorf("load Application Default Credentials: %w", err)
-		}
-		c.QuotaProject = ResolveQuotaProject(creds, opts.QuotaProject)
-		baseOpts = append(baseOpts, option.WithCredentials(creds))
-		if c.QuotaProject != "" {
-			baseOpts = append(baseOpts, option.WithQuotaProject(c.QuotaProject))
-		}
-	} else {
-		c.QuotaProject = strings.TrimSpace(opts.QuotaProject)
+func resolveReadOnlyBaseOptions(ctx context.Context, opts ClientOptions) ([]option.ClientOption, string, error) {
+	if opts.AssetConn != nil && opts.MonitoringConn != nil && opts.HTTPClient != nil {
+		return nil, strings.TrimSpace(opts.QuotaProject), nil
 	}
-
-	assetConn, err := dialOrReuse(ctx, opts.AssetConn, defaultAssetEndpoint, baseOpts, &c.closers)
+	creds, err := google.FindDefaultCredentials(ctx, cloudPlatformReadOnlyScope)
 	if err != nil {
-		_ = c.Close()
-		return nil, fmt.Errorf("dial Cloud Asset Inventory: %w", err)
+		return nil, "", fmt.Errorf("load Application Default Credentials: %w", err)
 	}
-	c.Asset = assetpb.NewAssetServiceClient(assetConn)
-
-	monConn, err := dialOrReuse(ctx, opts.MonitoringConn, defaultMonitoringEndpoint, baseOpts, &c.closers)
-	if err != nil {
-		_ = c.Close()
-		return nil, fmt.Errorf("dial Cloud Monitoring: %w", err)
+	qp := ResolveQuotaProject(creds, opts.QuotaProject)
+	baseOpts := []option.ClientOption{option.WithCredentials(creds)}
+	if qp != "" {
+		baseOpts = append(baseOpts, option.WithQuotaProject(qp))
 	}
-	c.Monitoring = monitoringpb.NewMetricServiceClient(monConn)
+	return baseOpts, qp, nil
+}
 
+func initRESTServices(ctx context.Context, c *Clients, opts ClientOptions, baseOpts []option.ClientOption) error {
 	if opts.HTTPClient != nil {
 		c.HTTPClient = opts.HTTPClient
 	} else {
 		hc, _, err := htransport.NewClient(ctx, baseOpts...)
 		if err != nil {
-			_ = c.Close()
-			return nil, fmt.Errorf("create oauth2 HTTP client: %w", err)
+			return fmt.Errorf("create oauth2 HTTP client: %w", err)
 		}
 		c.HTTPClient = hc
 	}
 
-	bqOpts := []option.ClientOption{option.WithHTTPClient(c.HTTPClient)}
-	if opts.BigQueryEndpoint != "" {
-		bqOpts = append(bqOpts, option.WithEndpoint(opts.BigQueryEndpoint))
-	}
-	bqSvc, err := bigquery.NewService(ctx, bqOpts...)
+	bqSvc, err := bigquery.NewService(ctx, restClientOptions(c.HTTPClient, opts.BigQueryEndpoint)...)
 	if err != nil {
-		_ = c.Close()
-		return nil, fmt.Errorf("init BigQuery client: %w", err)
+		return fmt.Errorf("init BigQuery client: %w", err)
 	}
 	c.BigQuery = bqSvc
 
-	dfOpts := []option.ClientOption{option.WithHTTPClient(c.HTTPClient)}
-	if opts.DataflowEndpoint != "" {
-		dfOpts = append(dfOpts, option.WithEndpoint(opts.DataflowEndpoint))
-	}
-	dfSvc, err := dataflow.NewService(ctx, dfOpts...)
+	dfSvc, err := dataflow.NewService(ctx, restClientOptions(c.HTTPClient, opts.DataflowEndpoint)...)
 	if err != nil {
-		_ = c.Close()
-		return nil, fmt.Errorf("init Dataflow client: %w", err)
+		return fmt.Errorf("init Dataflow client: %w", err)
 	}
 	c.Dataflow = dfSvc
 
-	return c, nil
+	return nil
+}
+
+func restClientOptions(hc *http.Client, endpoint string) []option.ClientOption {
+	opts := []option.ClientOption{option.WithHTTPClient(hc)}
+	if endpoint != "" {
+		opts = append(opts, option.WithEndpoint(endpoint))
+	}
+	return opts
 }
 
 func dialOrReuse(
@@ -627,8 +678,8 @@ func (ps *preflightState) probeCAIScopes(ctx context.Context, sortedScopes []str
 	var projectIDs []string
 	var sampleProject string
 	for _, scope := range sortedScopes {
-		if strings.HasPrefix(scope, "projects/") {
-			projectIDs = append(projectIDs, strings.TrimPrefix(scope, "projects/"))
+		if strings.HasPrefix(scope, prefixProjects) {
+			projectIDs = append(projectIDs, strings.TrimPrefix(scope, prefixProjects))
 		}
 		if err := waitLimiter(ctx, ps.clients.CAILimiter); err != nil {
 			return nil, err
@@ -642,7 +693,7 @@ func (ps *preflightState) probeCAIScopes(ctx context.Context, sortedScopes []str
 		if err == nil && sampleProject == "" {
 			sampleProject = firstProjectFromAssets(resp.GetAssets(), ps.clients.ProjectAliases)
 		}
-		if strings.HasPrefix(scope, "organizations/") || strings.HasPrefix(scope, "folders/") {
+		if strings.HasPrefix(scope, prefixOrganizations) || strings.HasPrefix(scope, prefixFolders) {
 			if err := ps.probeCAIFolderAccess(ctx, scope); err != nil {
 				return nil, err
 			}
@@ -657,8 +708,8 @@ func (ps *preflightState) probeCAIScopes(ctx context.Context, sortedScopes []str
 func firstProjectFromAssets(assets []*assetpb.Asset, aliases map[string]string) string {
 	for _, a := range assets {
 		for _, anc := range a.GetAncestors() {
-			if strings.HasPrefix(anc, "projects/") {
-				return mapProject(strings.TrimPrefix(anc, "projects/"), aliases)
+			if strings.HasPrefix(anc, prefixProjects) {
+				return mapProject(strings.TrimPrefix(anc, prefixProjects), aliases)
 			}
 		}
 	}
@@ -676,25 +727,25 @@ func (ps *preflightState) probeCAIFolderAccess(ctx context.Context, scope string
 		PageSize:    1,
 	})
 	if folderErr != nil {
-		ps.recordProbe(scope, "", "cai.folders", "roles/resourcemanager.folderViewer", folderErr)
+		ps.recordProbe(scope, "", sourceCAIFolders, roleFolderViewer, folderErr)
 		return nil
 	}
 	assets := folderResp.GetAssets()
 	if len(assets) > 0 && strings.TrimSpace(getStringField(assets[0].GetResource().GetData(), "displayName")) == "" {
 		ps.report.Probes = append(ps.report.Probes, PreflightProbe{
 			Scope:        scope,
-			Source:       "cai.folders",
-			RequiredRole: "roles/resourcemanager.folderViewer",
+			Source:       sourceCAIFolders,
+			RequiredRole: roleFolderViewer,
 			Status:       ProbeDenied,
 			Detail:       "Folder displayName is empty; grant roles/resourcemanager.folderViewer to resolve folder names",
-			Remediation:  iamRemediation(scope, "roles/resourcemanager.folderViewer"),
+			Remediation:  iamRemediation(scope, roleFolderViewer),
 		})
 		return nil
 	}
 	ps.report.Probes = append(ps.report.Probes, PreflightProbe{
 		Scope:        scope,
-		Source:       "cai.folders",
-		RequiredRole: "roles/resourcemanager.folderViewer",
+		Source:       sourceCAIFolders,
+		RequiredRole: roleFolderViewer,
 		Status:       ProbeGranted,
 	})
 	return nil
@@ -703,7 +754,7 @@ func (ps *preflightState) probeCAIFolderAccess(ctx context.Context, scope string
 func (ps *preflightState) probeProjectEnrichers(ctx context.Context, projectIDs []string) error {
 	now := time.Now().UTC()
 	for _, proj := range projectIDs {
-		scope := "projects/" + proj
+		scope := prefixProjects + proj
 		if err := waitLimiter(ctx, ps.clients.MonitoringLimiter); err != nil {
 			return err
 		}
@@ -723,7 +774,7 @@ func (ps *preflightState) probeProjectEnrichers(ctx context.Context, projectIDs 
 			return err
 		}
 		_, err = ps.clients.BigQuery.Jobs.List(proj).AllUsers(true).MaxResults(1).Context(ctx).Do()
-		ps.recordProbe(scope, proj, "bigquery.googleapis.com", "roles/bigquery.resourceViewer", err)
+		ps.recordProbe(scope, proj, svcBigQuery, "roles/bigquery.resourceViewer", err)
 
 		if err := waitLimiter(ctx, ps.clients.DataflowLimiter); err != nil {
 			return err
@@ -739,7 +790,7 @@ func (ps *preflightState) probeVertexReadiness(ctx context.Context, vertexOpts V
 	if vertexProj == "" {
 		return
 	}
-	vertexScope := "projects/" + vertexProj
+	vertexScope := prefixProjects + vertexProj
 	location := strings.TrimSpace(vertexOpts.Location)
 	if location == "" {
 		location = DefaultVertexLocation
@@ -754,7 +805,7 @@ func (ps *preflightState) probeVertexReadiness(ctx context.Context, vertexOpts V
 		var authErr error
 		vhc, authErr = newCloudPlatformHTTPClient(ctx, vertexProj)
 		if authErr != nil {
-			ps.recordProbe(vertexScope, vertexProj, "vertex.iam", "roles/aiplatform.user", authErr)
+			ps.recordProbe(vertexScope, vertexProj, sourceVertexIAM, roleAIPlatformUser, authErr)
 			return
 		}
 	}
@@ -762,21 +813,21 @@ func (ps *preflightState) probeVertexReadiness(ctx context.Context, vertexOpts V
 	granted, err := probeVertexIAMPermission(ctx, vhc, vertexOpts.CRMEndpoint, vertexProj)
 	switch {
 	case err != nil:
-		ps.recordProbe(vertexScope, vertexProj, "vertex.iam", "roles/aiplatform.user", err)
+		ps.recordProbe(vertexScope, vertexProj, sourceVertexIAM, roleAIPlatformUser, err)
 	case !granted:
 		ps.report.Probes = append(ps.report.Probes, PreflightProbe{
 			Scope:        vertexScope,
-			Source:       "vertex.iam",
-			RequiredRole: "roles/aiplatform.user",
+			Source:       sourceVertexIAM,
+			RequiredRole: roleAIPlatformUser,
 			Status:       ProbeDenied,
 			Detail:       "missing aiplatform.endpoints.predict permission on Vertex AI project",
-			Remediation:  iamRemediation(vertexScope, "roles/aiplatform.user"),
+			Remediation:  iamRemediation(vertexScope, roleAIPlatformUser),
 		})
 	default:
 		ps.report.Probes = append(ps.report.Probes, PreflightProbe{
 			Scope:        vertexScope,
-			Source:       "vertex.iam",
-			RequiredRole: "roles/aiplatform.user",
+			Source:       sourceVertexIAM,
+			RequiredRole: roleAIPlatformUser,
 			Status:       ProbeGranted,
 		})
 	}
@@ -787,7 +838,7 @@ func (ps *preflightState) probeVertexReadiness(ctx context.Context, vertexOpts V
 	} else {
 		modelErr = probeVertexModelREST(ctx, vhc, vertexOpts.VertexEndpoint, vertexProj, location, model)
 	}
-	ps.recordProbe(vertexScope, vertexProj, "vertex.model", "roles/aiplatform.user", modelErr)
+	ps.recordProbe(vertexScope, vertexProj, "vertex.model", roleAIPlatformUser, modelErr)
 }
 
 func (ps *preflightState) firstError() error {
@@ -932,14 +983,14 @@ func parseHTTPError(resp *http.Response) error {
 
 func iamRemediation(scope, role string) string {
 	switch {
-	case strings.HasPrefix(scope, "projects/"):
-		id := strings.TrimPrefix(scope, "projects/")
+	case strings.HasPrefix(scope, prefixProjects):
+		id := strings.TrimPrefix(scope, prefixProjects)
 		return fmt.Sprintf("gcloud projects add-iam-policy-binding %s --member=<PRINCIPAL> --role=%s", id, role)
-	case strings.HasPrefix(scope, "folders/"):
-		id := strings.TrimPrefix(scope, "folders/")
+	case strings.HasPrefix(scope, prefixFolders):
+		id := strings.TrimPrefix(scope, prefixFolders)
 		return fmt.Sprintf("gcloud resource-manager folders add-iam-policy-binding %s --member=<PRINCIPAL> --role=%s", id, role)
-	case strings.HasPrefix(scope, "organizations/"):
-		id := strings.TrimPrefix(scope, "organizations/")
+	case strings.HasPrefix(scope, prefixOrganizations):
+		id := strings.TrimPrefix(scope, prefixOrganizations)
 		return fmt.Sprintf("gcloud organizations add-iam-policy-binding %s --member=<PRINCIPAL> --role=%s", id, role)
 	default:
 		return fmt.Sprintf("Grant %s on %s", role, scope)

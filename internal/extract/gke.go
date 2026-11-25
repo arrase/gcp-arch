@@ -212,48 +212,16 @@ func (g *gkeState) indexK8sIngress(uri, clusterURI, ns, projID string, data *str
 		"ingress.kubernetes.io/forwarding-rule",
 		"ingress.kubernetes.io/https-forwarding-rule",
 	} {
-		if fr := strings.TrimSpace(getStringField(ann, key)); fr != "" {
-			appendUnique(&im.forwardingRuleNames, fr)
-		}
+		appendUnique(&im.forwardingRuleNames, strings.TrimSpace(getStringField(ann, key)))
 	}
 
 	for _, tlsVal := range getListField(spec, "tls") {
-		if tlsObj := tlsVal.GetStructValue(); tlsObj != nil {
-			for _, h := range getStringListField(tlsObj, "hosts") {
-				appendUnique(&im.hosts, h)
-			}
+		for _, h := range getStringListField(tlsVal.GetStructValue(), "hosts") {
+			appendUnique(&im.hosts, h)
 		}
 	}
 
-	for _, ruleVal := range getListField(spec, "rules") {
-		rule := ruleVal.GetStructValue()
-		if rule == nil {
-			continue
-		}
-		host := strings.TrimSpace(getStringField(rule, "host"))
-		if host != "" {
-			appendUnique(&im.hosts, host)
-		}
-		httpBlock := getStructField(rule, "http")
-		for _, pVal := range getListField(httpBlock, "paths") {
-			p := pVal.GetStructValue()
-			if p == nil {
-				continue
-			}
-			pathStr := strings.TrimSpace(getStringField(p, "path"))
-			if pathStr != "" {
-				appendUnique(&im.paths, pathStr)
-			}
-			svcName := extractIngressBackendServiceName(getStructField(p, "backend"))
-			if svcName != "" {
-				im.backends = append(im.backends, k8sIngressBackend{
-					serviceName: svcName,
-					host:        host,
-					path:        pathStr,
-				})
-			}
-		}
-	}
+	im.collectRules(spec)
 
 	// Default backend (v1 defaultBackend or v1beta1 backend).
 	for _, key := range []string{"defaultBackend", "backend"} {
@@ -266,6 +234,36 @@ func (g *gkeState) indexK8sIngress(uri, clusterURI, ns, projID string, data *str
 	sort.Strings(im.paths)
 	sort.Strings(im.forwardingRuleNames)
 	g.ingresses[uri] = im
+}
+
+func (im *k8sIngressMeta) collectRules(spec *structpb.Struct) {
+	for _, ruleVal := range getListField(spec, "rules") {
+		rule := ruleVal.GetStructValue()
+		if rule == nil {
+			continue
+		}
+		host := strings.TrimSpace(getStringField(rule, "host"))
+		appendUnique(&im.hosts, host)
+		im.collectRulePaths(getStructField(rule, "http"), host)
+	}
+}
+
+func (im *k8sIngressMeta) collectRulePaths(httpBlock *structpb.Struct, host string) {
+	for _, pVal := range getListField(httpBlock, "paths") {
+		p := pVal.GetStructValue()
+		if p == nil {
+			continue
+		}
+		pathStr := strings.TrimSpace(getStringField(p, "path"))
+		appendUnique(&im.paths, pathStr)
+		if svcName := extractIngressBackendServiceName(getStructField(p, "backend")); svcName != "" {
+			im.backends = append(im.backends, k8sIngressBackend{
+				serviceName: svcName,
+				host:        host,
+				path:        pathStr,
+			})
+		}
+	}
 }
 
 func extractIngressBackendServiceName(backend *structpb.Struct) string {
@@ -353,7 +351,7 @@ func (g *gkeState) rekey(projIdx map[string]string) {
 		canonC := CanonicalizeAIP122(cURI, projIdx)
 		for _, u := range urls {
 			list := rekeyIG[canonC]
-			appendUnique(&list, CanonicalizeAIP122WithService(u, "compute.googleapis.com", projIdx))
+			appendUnique(&list, CanonicalizeAIP122WithService(u, svcCompute, projIdx))
 			rekeyIG[canonC] = list
 		}
 	}
@@ -530,8 +528,7 @@ func attachIngressAttrs(a *ingestedAsset, hosts, paths []string) {
 func (st *extractState) resolveGKEForwardingRules(
 	negTargetsByProj map[string][]gkeNEGTarget,
 	lbIPToSvcs map[string][]string,
-	ingressesBySvc map[string][]*k8sIngressMeta,
-	ingressesByFRName map[string][]*k8sIngressMeta,
+	ingressesBySvc, ingressesByFRName map[string][]*k8sIngressMeta,
 ) {
 	for _, a := range st.assets {
 		if a.assetType != "compute.googleapis.com/ForwardingRule" && a.assetType != "compute.googleapis.com/GlobalForwardingRule" {
@@ -545,8 +542,7 @@ func (st *extractState) resolveSingleForwardingRule(
 	a *ingestedAsset,
 	negTargetsByProj map[string][]gkeNEGTarget,
 	lbIPToSvcs map[string][]string,
-	ingressesBySvc map[string][]*k8sIngressMeta,
-	ingressesByFRName map[string][]*k8sIngressMeta,
+	ingressesBySvc, ingressesByFRName map[string][]*k8sIngressMeta,
 ) {
 	tr := st.traceForwardingRule(a)
 	if tr.tls {
@@ -577,29 +573,38 @@ func (st *extractState) linkForwardingRuleNEGs(a *ingestedAsset, backends []trac
 	linkedSvcs := make(map[string]bool)
 	for _, be := range backends {
 		for _, grpURI := range be.backendGroups {
-			negName := shortResourceName(grpURI)
-			negProj := extractProjectID(grpURI, nil, st.projIdx)
-			if negProj == "" {
-				negProj = a.projectID
-			}
-			matches := negTargetsByProj[negProj+"|"+negName]
-			if len(matches) == 0 {
-				continue
-			}
-			st.gkeResolvedNEGs[a.uri+"|"+grpURI] = true
-			sort.Slice(matches, func(i, j int) bool {
-				if matches[i].svcURI != matches[j].svcURI {
-					return matches[i].svcURI < matches[j].svcURI
-				}
-				return matches[i].port < matches[j].port
-			})
-			for _, m := range matches {
-				linkedSvcs[m.svcURI] = true
-				st.addEdge(a.uri, m.svcURI, EdgeK8sNEGBackend, formatNEGDetail(be.paths, m.port))
-			}
+			st.linkForwardingRuleNEGGroup(a, grpURI, be.paths, negTargetsByProj, linkedSvcs)
 		}
 	}
 	return linkedSvcs
+}
+
+func (st *extractState) linkForwardingRuleNEGGroup(
+	a *ingestedAsset,
+	grpURI string,
+	paths []string,
+	negTargetsByProj map[string][]gkeNEGTarget,
+	linkedSvcs map[string]bool,
+) {
+	negProj := extractProjectID(grpURI, nil, st.projIdx)
+	if negProj == "" {
+		negProj = a.projectID
+	}
+	matches := negTargetsByProj[negProj+"|"+shortResourceName(grpURI)]
+	if len(matches) == 0 {
+		return
+	}
+	st.gkeResolvedNEGs[a.uri+"|"+grpURI] = true
+	sort.Slice(matches, func(i, j int) bool {
+		if matches[i].svcURI != matches[j].svcURI {
+			return matches[i].svcURI < matches[j].svcURI
+		}
+		return matches[i].port < matches[j].port
+	})
+	for _, m := range matches {
+		linkedSvcs[m.svcURI] = true
+		st.addEdge(a.uri, m.svcURI, EdgeK8sNEGBackend, formatNEGDetail(paths, m.port))
+	}
 }
 
 func (st *extractState) linkForwardingRuleL4IP(a *ingestedAsset, lbIPToSvcs map[string][]string, linkedSvcs map[string]bool) {
@@ -617,8 +622,7 @@ func (st *extractState) linkForwardingRuleL4IP(a *ingestedAsset, lbIPToSvcs map[
 
 func collectForwardingRuleIngresses(
 	a *ingestedAsset,
-	ingressesByFRName map[string][]*k8sIngressMeta,
-	ingressesBySvc map[string][]*k8sIngressMeta,
+	ingressesByFRName, ingressesBySvc map[string][]*k8sIngressMeta,
 	linkedSvcs map[string]bool,
 	hosts, paths *[]string,
 ) {

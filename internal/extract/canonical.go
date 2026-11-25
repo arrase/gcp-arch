@@ -48,12 +48,7 @@ func CanonicalizeAIP122WithService(raw, defaultService string, projIdx map[strin
 	}
 
 	if strings.HasPrefix(s, "gs://") {
-		rest := strings.TrimPrefix(s, "gs://")
-		bucket, _, _ := strings.Cut(rest, "/")
-		if bucket == "" {
-			return ""
-		}
-		return "//storage.googleapis.com/" + bucket
+		return canonicalizeGSURI(s)
 	}
 
 	s = strings.TrimRight(s, "/")
@@ -61,42 +56,52 @@ func CanonicalizeAIP122WithService(raw, defaultService string, projIdx map[strin
 		return ""
 	}
 
-	if strings.HasPrefix(s, "https://") || strings.HasPrefix(s, "http://") {
+	if hasHTTPURLScheme(s) {
 		return canonicalizeHTTPURL(s, projIdx)
 	}
 
 	if strings.HasPrefix(s, "//") {
-		rest := strings.TrimPrefix(s, "//")
-		host, path, ok := strings.Cut(rest, "/")
-		if !ok {
-			return "//" + normalizeServiceHost(host)
-		}
-		svc := normalizeServiceHost(host)
-		path = stripLeadingAPIVersion(path, svc)
-		if svc == "storage.googleapis.com" {
-			if bucket, ok := extractProjectsBucket(path); ok {
-				return "//storage.googleapis.com/" + bucket
-			}
-		}
-		path = normalizeServicePath(svc, mapProjectSegments(path, projIdx))
-		return "//" + svc + "/" + path
+		return canonicalizeDoubleSlashURI(s, projIdx)
 	}
 
-	if first, rest, ok := strings.Cut(s, "/"); ok && strings.HasSuffix(strings.ToLower(first), ".googleapis.com") {
-		svc := normalizeServiceHost(first)
-		rest = stripLeadingAPIVersion(rest, svc)
-		if svc == "storage.googleapis.com" {
-			if bucket, ok := extractProjectsBucket(rest); ok {
-				return "//storage.googleapis.com/" + bucket
-			}
-		}
-		rest = normalizeServicePath(svc, mapProjectSegments(rest, projIdx))
-		return "//" + svc + "/" + rest
+	if first, rest, ok := strings.Cut(s, "/"); ok && strings.HasSuffix(strings.ToLower(first), googleapisSuffix) {
+		return canonicalizeHostAndPath(first, rest, projIdx)
 	}
 
+	return canonicalizeRelativeResource(s, defaultService, projIdx)
+}
+
+func canonicalizeGSURI(s string) string {
+	bucket, _, _ := strings.Cut(strings.TrimPrefix(s, "gs://"), "/")
+	if bucket == "" {
+		return ""
+	}
+	return prefixStorageURI + bucket
+}
+
+func canonicalizeDoubleSlashURI(s string, projIdx map[string]string) string {
+	host, path, ok := strings.Cut(strings.TrimPrefix(s, "//"), "/")
+	if !ok {
+		return "//" + normalizeServiceHost(host)
+	}
+	return canonicalizeHostAndPath(host, path, projIdx)
+}
+
+func canonicalizeHostAndPath(host, path string, projIdx map[string]string) string {
+	svc := normalizeServiceHost(host)
+	path = stripLeadingAPIVersion(path, svc)
+	if svc == svcStorage {
+		if bucket, ok := extractProjectsBucket(path); ok {
+			return prefixStorageURI + bucket
+		}
+	}
+	return "//" + svc + "/" + normalizeServicePath(svc, mapProjectSegments(path, projIdx))
+}
+
+func canonicalizeRelativeResource(s, defaultService string, projIdx map[string]string) string {
 	mapped := mapProjectSegments(strings.TrimLeft(s, "/"), projIdx)
-	if bucket, ok := extractProjectsBucket(mapped); ok && (defaultService == "" || normalizeServiceHost(defaultService) == "storage.googleapis.com") {
-		return "//storage.googleapis.com/" + bucket
+	if bucket, ok := extractProjectsBucket(mapped); ok && (defaultService == "" || normalizeServiceHost(defaultService) == svcStorage) {
+		return prefixStorageURI + bucket
 	}
 	svc := defaultService
 	if svc == "" {
@@ -118,33 +123,13 @@ func canonicalizeHTTPURL(raw string, projIdx map[string]string) string {
 	path := strings.Trim(u.Path, "/")
 
 	if host == "www.googleapis.com" {
-		segs := strings.Split(path, "/")
-		if len(segs) >= 4 && segs[0] == "storage" && apiVersionSegRe.MatchString(segs[1]) && segs[2] == "b" {
-			return "//storage.googleapis.com/" + segs[3]
-		}
-		if len(segs) >= 3 && apiVersionSegRe.MatchString(segs[1]) {
-			svc := shortAPIToHost(segs[0])
-			rem := normalizeServicePath(svc, mapProjectSegments(strings.Join(segs[2:], "/"), projIdx))
-			return "//" + svc + "/" + rem
+		if canon := canonicalizeWWWGoogleAPIsPath(path, projIdx); canon != "" {
+			return canon
 		}
 	}
 
-	if strings.HasSuffix(host, ".googleapis.com") {
-		svc := normalizeServiceHost(host)
-		if svc == "storage.googleapis.com" {
-			segs := strings.Split(path, "/")
-			if len(segs) >= 4 && segs[0] == "storage" && apiVersionSegRe.MatchString(segs[1]) && segs[2] == "b" {
-				return "//storage.googleapis.com/" + segs[3]
-			}
-			if bucket, ok := extractProjectsBucket(stripLeadingAPIVersion(path, svc)); ok {
-				return "//storage.googleapis.com/" + bucket
-			}
-			if len(segs) >= 1 && segs[0] != "" {
-				return "//storage.googleapis.com/" + segs[0]
-			}
-		}
-		trimmed := normalizeServicePath(svc, mapProjectSegments(stripLeadingAPIVersion(path, svc), projIdx))
-		return "//" + svc + "/" + trimmed
+	if strings.HasSuffix(host, googleapisSuffix) {
+		return canonicalizeGoogleAPIsHTTPPath(host, path, projIdx)
 	}
 
 	// Non-googleapis URL: strip userinfo/query/fragment cleanly.
@@ -154,13 +139,58 @@ func canonicalizeHTTPURL(raw string, projIdx map[string]string) string {
 	return strings.TrimRight(u.String(), "/")
 }
 
+func extractStorageAPIBucket(segs []string) (string, bool) {
+	if len(segs) >= 4 && segs[0] == "storage" && apiVersionSegRe.MatchString(segs[1]) && segs[2] == "b" {
+		return segs[3], true
+	}
+	return "", false
+}
+
+func canonicalizeWWWGoogleAPIsPath(path string, projIdx map[string]string) string {
+	segs := strings.Split(path, "/")
+	if bucket, ok := extractStorageAPIBucket(segs); ok {
+		return prefixStorageURI + bucket
+	}
+	if len(segs) >= 3 && apiVersionSegRe.MatchString(segs[1]) {
+		svc := shortAPIToHost(segs[0])
+		rem := normalizeServicePath(svc, mapProjectSegments(strings.Join(segs[2:], "/"), projIdx))
+		return "//" + svc + "/" + rem
+	}
+	return ""
+}
+
+func canonicalizeGoogleAPIsHTTPPath(host, path string, projIdx map[string]string) string {
+	svc := normalizeServiceHost(host)
+	if svc == svcStorage {
+		if canon := canonicalizeStorageHTTPPath(path, svc); canon != "" {
+			return canon
+		}
+	}
+	trimmed := normalizeServicePath(svc, mapProjectSegments(stripLeadingAPIVersion(path, svc), projIdx))
+	return "//" + svc + "/" + trimmed
+}
+
+func canonicalizeStorageHTTPPath(path, svc string) string {
+	segs := strings.Split(path, "/")
+	if bucket, ok := extractStorageAPIBucket(segs); ok {
+		return prefixStorageURI + bucket
+	}
+	if bucket, ok := extractProjectsBucket(stripLeadingAPIVersion(path, svc)); ok {
+		return prefixStorageURI + bucket
+	}
+	if len(segs) >= 1 && segs[0] != "" {
+		return prefixStorageURI + segs[0]
+	}
+	return ""
+}
+
 func normalizeServicePath(svc, path string) string {
 	segs := strings.Split(path, "/")
 	if len(segs) < 6 || segs[0] != "projects" {
 		return path
 	}
 	switch svc {
-	case "compute.googleapis.com":
+	case svcCompute:
 		if segs[2] == "locations" {
 			loc := segs[3]
 			if loc == "global" {
@@ -206,7 +236,7 @@ func shortAPIToHost(short string) string {
 	case "sql":
 		return "sqladmin.googleapis.com"
 	default:
-		return strings.ToLower(short) + ".googleapis.com"
+		return strings.ToLower(short) + googleapisSuffix
 	}
 }
 
@@ -215,7 +245,7 @@ func stripLeadingAPIVersion(path, serviceHost string) string {
 	if len(segs) == 0 {
 		return ""
 	}
-	shortSvc := strings.TrimSuffix(serviceHost, ".googleapis.com")
+	shortSvc := strings.TrimSuffix(serviceHost, googleapisSuffix)
 	if len(segs) >= 3 && apiVersionSegRe.MatchString(segs[1]) &&
 		(segs[0] == shortSvc || (segs[0] == "sql" && shortSvc == "sqladmin") || (segs[0] == "dns" && shortSvc == "dns")) {
 		return strings.Join(segs[2:], "/")
@@ -242,9 +272,9 @@ func mapProjectSegments(path string, projIdx map[string]string) string {
 }
 
 var relativeProjectCollectionService = map[string]string{
-	"topics":          "pubsub.googleapis.com",
-	"subscriptions":   "pubsub.googleapis.com",
-	"datasets":        "bigquery.googleapis.com",
+	"topics":          svcPubSub,
+	"subscriptions":   svcPubSub,
+	"datasets":        svcBigQuery,
 	"secrets":         "secretmanager.googleapis.com",
 	"serviceAccounts": "iam.googleapis.com",
 	"managedZones":    "dns.googleapis.com",
@@ -272,11 +302,11 @@ func inferScopedProjectService(segs []string) string {
 	switch segs[2] {
 	case "global":
 		if len(segs) >= 5 && isComputeScopeCollection(segs[3]) {
-			return "compute.googleapis.com"
+			return svcCompute
 		}
 	case "regions":
 		if len(segs) >= 6 && isComputeScopeCollection(segs[4]) {
-			return "compute.googleapis.com"
+			return svcCompute
 		}
 	case "zones":
 		return inferZonalService(segs)
@@ -296,7 +326,7 @@ func inferZonalService(segs []string) string {
 		return "container.googleapis.com"
 	}
 	if isComputeScopeCollection(segs[4]) {
-		return "compute.googleapis.com"
+		return svcCompute
 	}
 	return ""
 }
@@ -324,7 +354,7 @@ func inferLocationsSubpathService(segs []string) string {
 	// "instances" under /locations/ is shared by Redis, Memcache, Filestore, etc.;
 	// only unambiguous Compute Engine collections infer compute.googleapis.com here.
 	if segs[4] != "instances" && isComputeScopeCollection(segs[4]) {
-		return "compute.googleapis.com"
+		return svcCompute
 	}
 	return ""
 }
@@ -345,9 +375,9 @@ func isComputeScopeCollection(coll string) bool {
 func inferLocationService(rest []string) string {
 	switch rest[0] {
 	case "keyRings":
-		return "cloudkms.googleapis.com"
+		return svcCloudKMS
 	case "connectors":
-		return "vpcaccess.googleapis.com"
+		return svcVPCAccess
 	case "triggers":
 		return "eventarc.googleapis.com"
 	case "queues":
@@ -359,7 +389,7 @@ func inferLocationService(rest []string) string {
 	case "environments":
 		return "composer.googleapis.com"
 	case "streams", "connectionProfiles", "privateConnections":
-		return "datastream.googleapis.com"
+		return svcDatastream
 	case "hubs", "spokes":
 		return "networkconnectivity.googleapis.com"
 	case "storagePools", "volumes":
@@ -388,7 +418,7 @@ func inferLocationService(rest []string) string {
 	case "connections":
 		return "bigqueryconnection.googleapis.com"
 	case "revisions", "services":
-		return "run.googleapis.com"
+		return svcRun
 	case "clusters":
 		if len(rest) >= 4 && rest[2] == "instances" {
 			return "alloydb.googleapis.com"

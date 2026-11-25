@@ -175,30 +175,40 @@ func writePreflightTable(w io.Writer, report PreflightReport) {
 
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
 	_, _ = fmt.Fprintln(tw, "SCOPE\tAPI\tSTATUS\tREQUIRED ROLE\tDETAIL")
-	var remediations []string
-	seenRem := make(map[string]struct{})
 	for _, p := range report.Probes {
-		detail := p.Detail
-		if p.VPCSCUUID != "" {
-			if detail != "" {
-				detail += " "
-			}
-			detail += "[vpc_sc_uuid=" + p.VPCSCUUID + "]"
-		}
-		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", p.Scope, p.Source, p.Status, p.RequiredRole, detail)
-		if p.Status != extract.ProbeGranted && p.Remediation != "" {
-			if _, dup := seenRem[p.Remediation]; !dup {
-				seenRem[p.Remediation] = struct{}{}
-				remediations = append(remediations, p.Remediation)
-			}
-		}
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", p.Scope, p.Source, p.Status, p.RequiredRole, formatProbeDetail(p))
 	}
 	_ = tw.Flush()
 
-	if len(remediations) > 0 {
-		_, _ = fmt.Fprintln(w, "\nRemediation:")
-		for _, r := range remediations {
-			_, _ = fmt.Fprintf(w, "  %s\n", r)
-		}
+	remediations := collectProbeRemediations(report.Probes)
+	if len(remediations) == 0 {
+		return
 	}
+	_, _ = fmt.Fprintln(w, "\nRemediation:")
+	for _, r := range remediations {
+		_, _ = fmt.Fprintf(w, "  %s\n", r)
+	}
+}
+
+func formatProbeDetail(p extract.PreflightProbe) string {
+	if p.VPCSCUUID == "" {
+		return p.Detail
+	}
+	tag := "[vpc_sc_uuid=" + p.VPCSCUUID + "]"
+	if p.Detail == "" {
+		return tag
+	}
+	return p.Detail + " " + tag
+}
+
+func collectProbeRemediations(probes []extract.PreflightProbe) []string {
+	var remediations []string
+	seen := make(map[string]struct{})
+	for _, p := range probes {
+		if p.Status == extract.ProbeGranted || p.Remediation == "" {
+			continue
+		}
+		appendUnique(&remediations, seen, p.Remediation)
+	}
+	return remediations
 }

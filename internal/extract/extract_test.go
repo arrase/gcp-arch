@@ -170,6 +170,15 @@ func hasEdge(edges []FactEdge, from, to string, kind FactEdgeKind) bool {
 	return false
 }
 
+func hasEdgeDetail(edges []FactEdge, from, to string, kind FactEdgeKind, detail string) bool {
+	for _, e := range edges {
+		if e.FromURI == from && e.ToURI == to && e.Kind == kind && e.Detail == detail {
+			return true
+		}
+	}
+	return false
+}
+
 func findResource(resources []FactResource, uri string) *FactResource {
 	for i := range resources {
 		if resources[i].URI == uri {
@@ -192,7 +201,12 @@ func assertQuotaAndDegradedErrors(t *testing.T) {
 	if ce := ClassifyGCPError(nil, "", "", ""); ce.Kind != ErrorKindNone || ce.CoverageState() != "" {
 		t.Fatalf("expected ErrorKindNone for nil, got %+v", ce)
 	}
+	assertFatalQuotaErrors(t)
+	assertDegradedAndAuthErrors(t)
+}
 
+func assertFatalQuotaErrors(t *testing.T) {
+	t.Helper()
 	for _, reason := range []string{"SERVICE_DISABLED", "BILLING_DISABLED", "USER_PROJECT_DENIED"} {
 		err := grpcErrorWithInfo(codes.PermissionDenied, "quota fail", reason, "googleapis.com", map[string]string{"consumer": "projects/caller-qp"})
 		ce := ClassifyGCPError(err, "caller-qp", "target-p", "111")
@@ -203,56 +217,96 @@ func assertQuotaAndDegradedErrors(t *testing.T) {
 		if !strings.Contains(qErr.Error(), reason) || !errors.Is(qErr, err) {
 			t.Errorf("QuotaProjectError mismatch: %v", qErr)
 		}
-		if rem := quotaRemediation("caller-qp", reason); rem == "" {
+		if quotaRemediation("caller-qp", reason) == "" {
 			t.Errorf("empty quotaRemediation for %s", reason)
 		}
 	}
 	if rem := quotaRemediation("", "OTHER"); !strings.Contains(rem, "<QUOTA_PROJECT>") {
 		t.Errorf("unexpected default quotaRemediation: %q", rem)
 	}
+}
 
-	childDisabled := grpcErrorWithInfo(codes.PermissionDenied, "API disabled in target", "SERVICE_DISABLED", "googleapis.com", map[string]string{"consumer": "projects/child-a"})
-	if ce := ClassifyGCPError(childDisabled, "caller-qp", "child-a", "222"); !ce.IsDegraded() || ce.CoverageState() != CoverageServiceDisabled {
-		t.Fatalf("expected CoverageServiceDisabled for target child project, got %+v", ce)
-	}
+type classifiedErrorCase struct {
+	name         string
+	err          error
+	target       string
+	targetNum    string
+	wantDegraded bool
+	wantKind     ErrorKind
+	wantState    CoverageState
+	wantUUID     string
+}
 
-	vpcErr := grpcErrorWithInfo(codes.PermissionDenied, "prohibited", "SECURITY_POLICY_VIOLATED", "googleapis.com", map[string]string{"vpcServiceControlsUniqueIdentifier": "uuid-1"})
-	if ce := ClassifyGCPError(vpcErr, "caller-qp", "child-a", ""); !ce.IsDegraded() || ce.CoverageState() != CoverageVPCSCBlocked || ce.VPCSCUUID != "uuid-1" {
-		t.Fatalf("unexpected gRPC VPC-SC classification: %+v", ce)
-	}
-	restVPCSC := &googleapi.Error{
-		Code:    http.StatusForbidden,
-		Message: "blocked",
-		Details: []any{
-			map[string]any{
-				"@type":    "type.googleapis.com/google.rpc.ErrorInfo",
-				"reason":   "VPC_SERVICE_CONTROLS",
-				"domain":   "googleapis.com",
-				"metadata": map[string]any{"vpcServiceControlsUniqueIdentifier": "rest-uuid-9"},
-			},
+func assertDegradedAndAuthErrors(t *testing.T) {
+	t.Helper()
+	cases := []classifiedErrorCase{
+		{
+			name:         "target child service disabled",
+			err:          grpcErrorWithInfo(codes.PermissionDenied, "API disabled in target", "SERVICE_DISABLED", "googleapis.com", map[string]string{"consumer": "projects/child-a"}),
+			target:       "child-a",
+			targetNum:    "222",
+			wantDegraded: true,
+			wantState:    CoverageServiceDisabled,
 		},
+		{
+			name:         "gRPC VPC-SC",
+			err:          grpcErrorWithInfo(codes.PermissionDenied, "prohibited", "SECURITY_POLICY_VIOLATED", "googleapis.com", map[string]string{"vpcServiceControlsUniqueIdentifier": "uuid-1"}),
+			target:       "child-a",
+			wantDegraded: true,
+			wantState:    CoverageVPCSCBlocked,
+			wantUUID:     "uuid-1",
+		},
+		{
+			name: "REST VPC-SC",
+			err: &googleapi.Error{
+				Code:    http.StatusForbidden,
+				Message: "blocked",
+				Details: []any{
+					map[string]any{
+						"@type":    "type.googleapis.com/google.rpc.ErrorInfo",
+						"reason":   "VPC_SERVICE_CONTROLS",
+						"domain":   "googleapis.com",
+						"metadata": map[string]any{"vpcServiceControlsUniqueIdentifier": "rest-uuid-9"},
+					},
+				},
+			},
+			target:    "child-a",
+			wantState: CoverageVPCSCBlocked,
+			wantUUID:  "rest-uuid-9",
+		},
+		{
+			name: "REST body fallback",
+			err: &googleapi.Error{
+				Code: http.StatusForbidden,
+				Body: `{"error":{"details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"IAM_PERMISSION_DENIED","domain":"iam.googleapis.com","metadata":{"vpcServiceControlsUniqueIdentifier":""}}]}}`,
+			},
+			target:    "child-a",
+			wantState: CoverageIAMDenied,
+		},
+		{name: "REST 401", err: &googleapi.Error{Code: http.StatusUnauthorized}, wantKind: ErrorKindUnauthenticated},
+		{name: "gRPC Unauthenticated", err: status.Error(codes.Unauthenticated, "expired"), wantKind: ErrorKindUnauthenticated},
+		{name: "raw PermissionDenied", err: status.Error(codes.PermissionDenied, "403"), wantState: CoverageIAMDenied},
+		{name: "network timeout", err: errors.New("network timeout"), wantKind: ErrorKindOther},
 	}
-	if ce := ClassifyGCPError(restVPCSC, "caller-qp", "child-a", ""); ce.CoverageState() != CoverageVPCSCBlocked || ce.VPCSCUUID != "rest-uuid-9" {
-		t.Fatalf("unexpected REST VPC-SC classification: %+v", ce)
+	for _, tc := range cases {
+		assertClassifiedError(t, tc)
 	}
-	restBodyFallback := &googleapi.Error{
-		Code: http.StatusForbidden,
-		Body: `{"error":{"details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"IAM_PERMISSION_DENIED","domain":"iam.googleapis.com","metadata":{"vpcServiceControlsUniqueIdentifier":""}}]}}`,
+}
+
+func assertClassifiedError(t *testing.T, tc classifiedErrorCase) {
+	t.Helper()
+	ce := ClassifyGCPError(tc.err, "caller-qp", tc.target, tc.targetNum)
+	if tc.wantDegraded && !ce.IsDegraded() {
+		t.Fatalf("%s: expected degraded, got %+v", tc.name, ce)
 	}
-	if ce := ClassifyGCPError(restBodyFallback, "caller-qp", "child-a", ""); ce.CoverageState() != CoverageIAMDenied {
-		t.Fatalf("unexpected REST body fallback classification: %+v", ce)
+	if tc.wantState != "" && ce.CoverageState() != tc.wantState {
+		t.Fatalf("%s: CoverageState = %q, want %q (%+v)", tc.name, ce.CoverageState(), tc.wantState, ce)
 	}
-	if ce := ClassifyGCPError(&googleapi.Error{Code: http.StatusUnauthorized}, "caller-qp", "", ""); ce.Kind != ErrorKindUnauthenticated {
-		t.Fatalf("expected Unauthenticated on 401, got %+v", ce)
+	if tc.wantKind != "" && ce.Kind != tc.wantKind {
+		t.Fatalf("%s: Kind = %q, want %q (%+v)", tc.name, ce.Kind, tc.wantKind, ce)
 	}
-	if ce := ClassifyGCPError(status.Error(codes.Unauthenticated, "expired"), "caller-qp", "", ""); ce.Kind != ErrorKindUnauthenticated {
-		t.Fatalf("expected Unauthenticated on gRPC Unauthenticated, got %+v", ce)
-	}
-	if ce := ClassifyGCPError(status.Error(codes.PermissionDenied, "403"), "caller-qp", "", ""); ce.CoverageState() != CoverageIAMDenied {
-		t.Fatalf("expected IAM_DENIED on raw PermissionDenied, got %+v", ce)
-	}
-	if ce := ClassifyGCPError(errors.New("network timeout"), "caller-qp", "", ""); ce.Kind != ErrorKindOther {
-		t.Fatalf("expected ErrorKindOther, got %+v", ce)
+	if tc.wantUUID != "" && ce.VPCSCUUID != tc.wantUUID {
+		t.Fatalf("%s: VPCSCUUID = %q, want %q (%+v)", tc.name, ce.VPCSCUUID, tc.wantUUID, ce)
 	}
 }
 
@@ -584,23 +638,21 @@ func TestSanitizeURLAndExtractSanitizedRefs(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			envRefs, secRefs := ExtractSanitizedRefs(tc.raw, projIdx)
-			for _, w := range tc.wantEnv {
-				if !slices.Contains(envRefs, w) {
-					t.Errorf("missing envRef %q in %v", w, envRefs)
-				}
-			}
-			if len(envRefs) != len(tc.wantEnv) {
-				t.Errorf("envRefs = %v, want %v", envRefs, tc.wantEnv)
-			}
-			for _, w := range tc.wantSec {
-				if !slices.Contains(secRefs, w) {
-					t.Errorf("missing secRef %q in %v", w, secRefs)
-				}
-			}
-			if len(secRefs) != len(tc.wantSec) {
-				t.Errorf("secRefs = %v, want %v", secRefs, tc.wantSec)
-			}
+			assertContainsAllAndLen(t, "envRefs", envRefs, tc.wantEnv)
+			assertContainsAllAndLen(t, "secRefs", secRefs, tc.wantSec)
 		})
+	}
+}
+
+func assertContainsAllAndLen(t *testing.T, label string, got, want []string) {
+	t.Helper()
+	for _, w := range want {
+		if !slices.Contains(got, w) {
+			t.Errorf("missing %s %q in %v", label, w, got)
+		}
+	}
+	if len(got) != len(want) {
+		t.Errorf("%s = %v, want %v", label, got, want)
 	}
 }
 
@@ -719,29 +771,7 @@ func TestProjectAttributesAllowlistAndZeroSensitiveLeakage(t *testing.T) {
 	}
 
 	for _, tc := range sampleTypes {
-		merged := make(map[string]any, len(poisonPayload)+len(tc.extra))
-		for k, v := range poisonPayload {
-			merged[k] = v
-		}
-		for k, v := range tc.extra {
-			merged[k] = v
-		}
-		attrs := ProjectAttributes(tc.assetType, mustStruct(t, merged), "acme-cicd", projIdx)
-		if _, ok := attrs[tc.wantKey]; !ok {
-			t.Errorf("%s: missing expected allowlisted attr %q in %v", tc.assetType, tc.wantKey, attrs)
-		}
-		rawJSON, _ := json.Marshal(attrs)
-		s := strings.ToLower(string(rawJSON))
-		for _, forbidden := range []string{"hunter2", "secret-tok", "sk-123", "npm-123", "certdata", "ssn", "last-applied-configuration", "webhookconfig", "startup-script"} {
-			if strings.Contains(s, forbidden) {
-				t.Errorf("%s: sensitive value %q leaked into attributes: %s", tc.assetType, forbidden, rawJSON)
-			}
-		}
-		for k := range attrs {
-			if IsSensitiveKey(k) {
-				t.Errorf("%s: sensitive key %q appeared in allowlisted attrs", tc.assetType, k)
-			}
-		}
+		assertProjectedAttrsClean(t, tc.assetType, tc.wantKey, poisonPayload, tc.extra, projIdx)
 	}
 
 	// Unknown asset type returns nil (never forwards raw payload).
@@ -758,501 +788,38 @@ func TestProjectAttributesAllowlistAndZeroSensitiveLeakage(t *testing.T) {
 	}
 }
 
+func assertProjectedAttrsClean(t *testing.T, assetType, wantKey string, poison, extra map[string]any, projIdx map[string]string) {
+	t.Helper()
+	merged := make(map[string]any, len(poison)+len(extra))
+	for k, v := range poison {
+		merged[k] = v
+	}
+	for k, v := range extra {
+		merged[k] = v
+	}
+	attrs := ProjectAttributes(assetType, mustStruct(t, merged), "acme-cicd", projIdx)
+	if _, ok := attrs[wantKey]; !ok {
+		t.Errorf("%s: missing expected allowlisted attr %q in %v", assetType, wantKey, attrs)
+	}
+	rawJSON, _ := json.Marshal(attrs)
+	s := strings.ToLower(string(rawJSON))
+	for _, forbidden := range []string{"hunter2", "secret-tok", "sk-123", "npm-123", "certdata", "ssn", "last-applied-configuration", "webhookconfig", "startup-script"} {
+		if strings.Contains(s, forbidden) {
+			t.Errorf("%s: sensitive value %q leaked into attributes: %s", assetType, forbidden, rawJSON)
+		}
+	}
+	for k := range attrs {
+		if IsSensitiveKey(k) {
+			t.Errorf("%s: sensitive key %q appeared in allowlisted attrs", assetType, k)
+		}
+	}
+}
+
 // --- Full End-to-End GKE, Cloud Build Min-Heap, Structural, Private-IP, IAM & Enricher Tests ---
 
 func TestExtractGKECloudBuildPrivateIPAndPSA(t *testing.T) {
 	pinnedTime := time.Date(2026, 11, 23, 2, 0, 0, 0, time.UTC)
-	var recordedReqs []*assetpb.ListAssetsRequest
-	var reqMu sync.Mutex
-
-	assetHandler := func(_ context.Context, req *assetpb.ListAssetsRequest) (*assetpb.ListAssetsResponse, error) {
-		reqMu.Lock()
-		recordedReqs = append(recordedReqs, req)
-		reqMu.Unlock()
-
-		if req.ContentType == assetpb.ContentType_ACCESS_POLICY {
-			t.Error("ACCESS_POLICY must never be requested in Stage 1")
-		}
-
-		if req.ContentType == assetpb.ContentType_RESOURCE {
-			if req.PageToken == "" {
-				// Page 1: K8s workloads, ConfigMaps, KSAs, Services, Ingresses, Builds arrive BEFORE Project asset!
-				return &assetpb.ListAssetsResponse{
-					ReadTime:      timestamppb.New(pinnedTime),
-					NextPageToken: "p2",
-					Assets: []*assetpb.Asset{
-						// System namespace objects -> suppressed.
-						{
-							Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/kube-system/apps/deployments/kube-dns",
-							AssetType: "apps.k8s.io/Deployment",
-							Ancestors: []string{"projects/100200300401"},
-							Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"metadata": map[string]any{"name": "kube-dns", "namespace": "kube-system"}})},
-						},
-						{
-							Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/gmp-system/apps/deployments/collector",
-							AssetType: "apps.k8s.io/Deployment",
-							Ancestors: []string{"projects/100200300401"},
-							Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"metadata": map[string]any{"name": "collector", "namespace": "gmp-system"}})},
-						},
-						// K8s Namespace & NodePool -> folded counts & suppressed.
-						{
-							Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube",
-							AssetType: "k8s.io/Namespace",
-							Ancestors: []string{"projects/100200300401"},
-						},
-						{
-							Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/nodePools/default-pool",
-							AssetType: "container.googleapis.com/NodePool",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"instanceGroupUrls": []any{"https://www.googleapis.com/compute/v1/projects/100200300401/zones/europe-southwest1-b/instanceGroups/gke-cicd-default-pool-grp"},
-							})},
-						},
-						// K8s ServiceAccounts with Workload Identity annotation -> indexed & suppressed.
-						{
-							Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/serviceaccounts/sonarqube-ksa",
-							AssetType: "k8s.io/ServiceAccount",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"metadata": map[string]any{
-									"name":        "sonarqube-ksa",
-									"namespace":   "sonarqube",
-									"annotations": map[string]any{"iam.gke.io/gcp-service-account": "sonarqube@acme-cicd.iam.gserviceaccount.com"},
-								},
-							})},
-						},
-						{
-							Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/ops/serviceaccounts/nightly-ksa",
-							AssetType: "k8s.io/ServiceAccount",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"metadata": map[string]any{
-									"name":        "nightly-ksa",
-									"namespace":   "ops",
-									"annotations": map[string]any{"iam.gke.io/gcp-service-account": "sonarqube@acme-cicd.iam.gserviceaccount.com"},
-								},
-							})},
-						},
-						// K8s ConfigMap with JDBC private IP + secret -> scanned before suppressing!
-						{
-							Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/configmaps/sonar-cfg",
-							AssetType: "k8s.io/ConfigMap",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"metadata": map[string]any{"name": "sonar-cfg", "namespace": "sonarqube"},
-								"data": map[string]any{
-									"SONAR_JDBC_URL": "jdbc:postgresql://sonar:supersecret@10.100.0.5:5432/sonar",
-									"ARCHIVE_BUCKET": "gs://acme-tfstate/sonar",
-								},
-							})},
-						},
-						// SonarQube Deployment referencing ConfigMap & initContainer args.
-						{
-							Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/apps/deployments/sonarqube",
-							AssetType: "apps.k8s.io/Deployment",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"metadata": map[string]any{
-									"name":        "sonarqube",
-									"namespace":   "sonarqube",
-									"annotations": map[string]any{"kubectl.kubernetes.io/last-applied-configuration": `{"secret":"drop-me"}`},
-								},
-								"spec": map[string]any{
-									"replicas": 1,
-									"template": map[string]any{
-										"metadata": map[string]any{"labels": map[string]any{"app": "sonarqube"}},
-										"spec": map[string]any{
-											"serviceAccountName": "sonarqube-ksa",
-											"initContainers": []any{
-												map[string]any{"command": []any{"/bin/sh", "-c", "gsutil cp gs://acme-private-modules/init.sh /tmp/init.sh"}},
-											},
-											"containers": []any{
-												map[string]any{
-													"envFrom": []any{map[string]any{"configMapRef": map[string]any{"name": "sonar-cfg"}}},
-												},
-											},
-										},
-									},
-								},
-							})},
-						},
-						// CronJob with jobTemplate pod labels + Workload Identity.
-						{
-							Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/ops/batch/cronjobs/nightly-scan",
-							AssetType: "batch.k8s.io/CronJob",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"metadata": map[string]any{"name": "nightly-scan", "namespace": "ops"},
-								"spec": map[string]any{
-									"schedule": "0 2 * * *",
-									"jobTemplate": map[string]any{
-										"spec": map[string]any{
-											"template": map[string]any{
-												"metadata": map[string]any{"labels": map[string]any{"job": "nightly"}},
-												"spec":     map[string]any{"serviceAccountName": "nightly-ksa"},
-											},
-										},
-									},
-								},
-							})},
-						},
-						// Service with NEG status & selector for sonarqube.
-						{
-							Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/services/sonarqube",
-							AssetType: "k8s.io/Service",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"metadata": map[string]any{
-									"name":      "sonarqube",
-									"namespace": "sonarqube",
-									"annotations": map[string]any{
-										"cloud.google.com/neg-status": `{"network_endpoint_groups":{"9000":"k8s1-neg-sonarqube-9000"},"zones":["europe-southwest1-b"]}`,
-									},
-								},
-								"spec": map[string]any{
-									"type":     "ClusterIP",
-									"selector": map[string]any{"app": "sonarqube"},
-									"ports":    []any{map[string]any{"port": 9000}},
-								},
-							})},
-						},
-						// Headless Service with EMPTY selector -> must NOT match any workload!
-						{
-							Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/services/external-headless",
-							AssetType: "k8s.io/Service",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"metadata": map[string]any{"name": "external-headless", "namespace": "sonarqube"},
-								"spec":     map[string]any{"type": "ClusterIP", "selector": map[string]any{}},
-							})},
-						},
-						// L4 LoadBalancer Service in ops namespace selecting CronJob pod labels.
-						{
-							Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/ops/services/ops-lb",
-							AssetType: "k8s.io/Service",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"metadata": map[string]any{"name": "ops-lb", "namespace": "ops"},
-								"spec":     map[string]any{"type": "LoadBalancer", "selector": map[string]any{"job": "nightly"}},
-								"status":   map[string]any{"loadBalancer": map[string]any{"ingress": []any{map[string]any{"ip": "34.175.10.20"}}}},
-							})},
-						},
-						// Ingress for sonarqube.
-						{
-							Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/networking.k8s.io/ingresses/sonarqube",
-							AssetType: "networking.k8s.io/Ingress",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"metadata": map[string]any{
-									"name":        "sonarqube",
-									"namespace":   "sonarqube",
-									"annotations": map[string]any{"ingress.kubernetes.io/https-forwarding-rule": "k8s2-fs-sonarqube"},
-								},
-								"spec": map[string]any{
-									"rules": []any{map[string]any{
-										"host": "sonarqube.cicd.example.com",
-										"http": map[string]any{
-											"paths": []any{map[string]any{
-												"path":    "/*",
-												"backend": map[string]any{"service": map[string]any{"name": "sonarqube"}},
-											}},
-										},
-									}},
-								},
-							})},
-						},
-						// 5 Cloud Build Builds (4 SUCCESS, 1 FAILURE) -> top-2 min-heap keeps ONLY b3 & b4!
-						{
-							Name:      "//cloudbuild.googleapis.com/projects/100200300401/locations/europe-southwest1/builds/b1-old",
-							AssetType: "cloudbuild.googleapis.com/Build",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"status":         "SUCCESS",
-								"buildTriggerId": "trig-api",
-								"createTime":     "2026-11-01T00:00:00Z",
-								"steps":          []any{map[string]any{"script": "gsutil cp a gs://old-evicted-bucket/x"}},
-							})},
-						},
-						{
-							Name:      "//cloudbuild.googleapis.com/projects/100200300401/locations/europe-southwest1/builds/b2-old",
-							AssetType: "cloudbuild.googleapis.com/Build",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"status":         "SUCCESS",
-								"buildTriggerId": "trig-api",
-								"createTime":     "2026-11-02T00:00:00Z",
-								"steps":          []any{map[string]any{"script": "gsutil cp a gs://old-evicted-bucket/y"}},
-							})},
-						},
-						{
-							Name:      "//cloudbuild.googleapis.com/projects/100200300401/locations/europe-southwest1/builds/b3-new",
-							AssetType: "cloudbuild.googleapis.com/Build",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"status":         "SUCCESS",
-								"buildTriggerId": "trig-api",
-								"createTime":     "2026-11-20T00:00:00Z",
-								"images":         []any{"europe-southwest1-docker.pkg.dev/100200300401/acme-apps/api:v3"},
-								"steps": []any{
-									map[string]any{"name": "gcr.io/cloud-builders/docker", "args": []any{"build", "."}},
-									map[string]any{"name": "gcr.io/google.com/cloudsdktool/cloud-sdk", "entrypoint": "gcloud", "args": []any{"run", "deploy", "api-svc", "--project=acme-prod"}},
-								},
-							})},
-						},
-						{
-							Name:      "//cloudbuild.googleapis.com/projects/100200300401/locations/europe-southwest1/builds/b4-newest",
-							AssetType: "cloudbuild.googleapis.com/Build",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"status":         "SUCCESS",
-								"buildTriggerId": "trig-api",
-								"createTime":     "2026-11-22T00:00:00Z",
-								"artifacts":      map[string]any{"objects": map[string]any{"location": "gs://acme-tfstate/releases"}},
-								"steps":          []any{map[string]any{"script": "docker push gcr.io/distroless/static && docker push gcr.io/legacy-target/app:v1"}},
-							})},
-						},
-						{
-							Name:      "//cloudbuild.googleapis.com/projects/100200300401/locations/europe-southwest1/builds/b5-failed",
-							AssetType: "cloudbuild.googleapis.com/Build",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"status":         "FAILURE",
-								"buildTriggerId": "trig-api",
-								"createTime":     "2026-11-23T00:00:00Z",
-								"steps":          []any{map[string]any{"script": "gcloud run deploy broken --project=failed-proj"}},
-							})},
-						},
-						// Triggerless build -> attached to project URI.
-						{
-							Name:      "//cloudbuild.googleapis.com/projects/100200300401/locations/europe-southwest1/builds/b-manual",
-							AssetType: "cloudbuild.googleapis.com/Build",
-							Ancestors: []string{"projects/100200300401"},
-							Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-								"status":     "SUCCESS",
-								"createTime": "2026-11-21T00:00:00Z",
-								"steps":      []any{map[string]any{"script": "gsutil ls gs://acme-tfstate"}},
-							})},
-						},
-					},
-				}, nil
-			}
-			// Page 2: Project, VPC, Subnet, GKE Cluster, LB chain, Cloud SQL, Buckets, AR, BuildTrigger, GKE worker VM/MIG, Default sandbox assets.
-			return &assetpb.ListAssetsResponse{
-				ReadTime: timestamppb.New(pinnedTime),
-				Assets: []*assetpb.Asset{
-					{
-						Name:      "//cloudresourcemanager.googleapis.com/projects/100200300401",
-						AssetType: "cloudresourcemanager.googleapis.com/Project",
-						Ancestors: []string{"projects/100200300401", "organizations/999"},
-						Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-							"projectId":     "acme-cicd",
-							"projectNumber": "100200300401",
-							"name":          "Acme Platform CICD",
-						})},
-					},
-					{
-						Name:      "//compute.googleapis.com/projects/100200300401/locations/global/networks/cicd",
-						AssetType: "compute.googleapis.com/Network",
-						Ancestors: []string{"projects/100200300401"},
-						Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-							"name":                  "cicd",
-							"autoCreateSubnetworks": false,
-							"peerings": []any{
-								map[string]any{
-									"name":    "servicenetworking-googleapis-com",
-									"network": "https://www.googleapis.com/compute/v1/projects/p1234567890abcdef-tp/global/networks/servicenetworking",
-									"state":   "ACTIVE",
-								},
-							},
-						})},
-					},
-					{
-						Name:      "//compute.googleapis.com/projects/100200300401/regions/europe-southwest1/subnetworks/cicd-k8s",
-						AssetType: "compute.googleapis.com/Subnetwork",
-						Ancestors: []string{"projects/100200300401"},
-						Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-							"name":        "cicd-k8s",
-							"ipCidrRange": "10.10.0.0/20",
-							"network":     "projects/100200300401/locations/global/networks/cicd",
-						})},
-					},
-					// Unused default VPC + subnet + _Default LogBucket + unreferenced default SA -> all pruned!
-					{
-						Name:      "//compute.googleapis.com/projects/100200300401/global/networks/default",
-						AssetType: "compute.googleapis.com/Network",
-						Ancestors: []string{"projects/100200300401"},
-						Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"name": "default", "autoCreateSubnetworks": true})},
-					},
-					{
-						Name:      "//compute.googleapis.com/projects/100200300401/regions/europe-southwest1/subnetworks/default",
-						AssetType: "compute.googleapis.com/Subnetwork",
-						Ancestors: []string{"projects/100200300401"},
-						Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"name": "default", "network": "projects/100200300401/global/networks/default"})},
-					},
-					{
-						Name:      "//logging.googleapis.com/projects/100200300401/locations/global/buckets/_Default",
-						AssetType: "logging.googleapis.com/LogBucket",
-						Ancestors: []string{"projects/100200300401"},
-					},
-					{
-						Name:      "//iam.googleapis.com/projects/100200300401/serviceAccounts/100200300401-compute@developer.gserviceaccount.com",
-						AssetType: "iam.googleapis.com/ServiceAccount",
-						Ancestors: []string{"projects/100200300401"},
-						Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"email": "100200300401-compute@developer.gserviceaccount.com"})},
-					},
-					// GKE Cluster + GKE MIG & Worker VM (to be suppressed).
-					{
-						Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd",
-						AssetType: "container.googleapis.com/Cluster",
-						Ancestors: []string{"projects/100200300401"},
-						Resource: &assetpb.Resource{Location: "europe-southwest1-b", Data: mustStruct(t, map[string]any{
-							"name":          "cicd",
-							"networkConfig": map[string]any{"network": "projects/100200300401/global/networks/cicd", "subnetwork": "projects/100200300401/regions/europe-southwest1/subnetworks/cicd-k8s"},
-						})},
-					},
-					{
-						Name:      "//compute.googleapis.com/projects/100200300401/zones/europe-southwest1-b/instanceGroupManagers/gke-cicd-default-pool-grp",
-						AssetType: "compute.googleapis.com/InstanceGroupManager",
-						Ancestors: []string{"projects/100200300401"},
-					},
-					{
-						Name:      "//compute.googleapis.com/projects/100200300401/zones/europe-southwest1-b/instances/gke-cicd-default-pool-abc1",
-						AssetType: "compute.googleapis.com/Instance",
-						Ancestors: []string{"projects/100200300401"},
-						Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"name": "gke-cicd-default-pool-abc1"})},
-					},
-					// LB chain for SonarQube NEG + L4 ForwardingRule for ops-lb.
-					{
-						Name:      "//compute.googleapis.com/projects/100200300401/global/forwardingRules/k8s2-fs-sonarqube",
-						AssetType: "compute.googleapis.com/GlobalForwardingRule",
-						Ancestors: []string{"projects/100200300401"},
-						Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-							"loadBalancingScheme": "EXTERNAL",
-							"IPAddress":           "34.111.222.10",
-							"target":              "projects/100200300401/global/targetHttpsProxies/k8s2-ts-sonarqube",
-						})},
-					},
-					{
-						Name:      "//compute.googleapis.com/projects/100200300401/global/targetHttpsProxies/k8s2-ts-sonarqube",
-						AssetType: "compute.googleapis.com/TargetHttpsProxy",
-						Ancestors: []string{"projects/100200300401"},
-						Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"urlMap": "projects/100200300401/global/urlMaps/k8s2-um-sonarqube"})},
-					},
-					{
-						Name:      "//compute.googleapis.com/projects/100200300401/global/urlMaps/k8s2-um-sonarqube",
-						AssetType: "compute.googleapis.com/UrlMap",
-						Ancestors: []string{"projects/100200300401"},
-						Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-							"defaultService": "projects/100200300401/global/backendServices/k8s1-bs-sonarqube",
-						})},
-					},
-					{
-						Name:      "//compute.googleapis.com/projects/100200300401/global/backendServices/k8s1-bs-sonarqube",
-						AssetType: "compute.googleapis.com/BackendService",
-						Ancestors: []string{"projects/100200300401"},
-						Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-							"backends": []any{map[string]any{"group": "projects/100200300401/zones/europe-southwest1-b/networkEndpointGroups/k8s1-neg-sonarqube-9000"}},
-						})},
-					},
-					{
-						Name:      "//compute.googleapis.com/projects/100200300401/zones/europe-southwest1-b/networkEndpointGroups/k8s1-neg-sonarqube-9000",
-						AssetType: "compute.googleapis.com/NetworkEndpointGroup",
-						Ancestors: []string{"projects/100200300401"},
-					},
-					{
-						Name:      "//compute.googleapis.com/projects/100200300401/regions/europe-southwest1/forwardingRules/l4-ops-fr",
-						AssetType: "compute.googleapis.com/ForwardingRule",
-						Ancestors: []string{"projects/100200300401"},
-						Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
-							"loadBalancingScheme": "EXTERNAL",
-							"IPAddress":           "34.175.10.20",
-						})},
-					},
-					// Cloud SQL sonarqube on private IP 10.100.0.5 + BackupRun (suppressed).
-					{
-						Name:      "//sqladmin.googleapis.com/projects/100200300401/instances/sonarqube",
-						AssetType: "sqladmin.googleapis.com/Instance",
-						Ancestors: []string{"projects/100200300401"},
-						Resource: &assetpb.Resource{Location: "europe-southwest1", Data: mustStruct(t, map[string]any{
-							"databaseVersion": "POSTGRES_16",
-							"ipAddresses":     []any{map[string]any{"type": "PRIVATE", "ipAddress": "10.100.0.5"}},
-							"settings": map[string]any{
-								"tier":            "db-custom-2-7680",
-								"ipConfiguration": map[string]any{"privateNetwork": "projects/100200300401/global/networks/cicd"},
-							},
-						})},
-					},
-					{
-						Name:      "//sqladmin.googleapis.com/projects/100200300401/instances/sonarqube/backupRuns/1",
-						AssetType: "sqladmin.googleapis.com/BackupRun",
-						Ancestors: []string{"projects/100200300401"},
-					},
-					// Buckets, Artifact Registry + DockerImages, ServiceAccount, BuildTrigger.
-					{Name: "//storage.googleapis.com/acme-tfstate", AssetType: "storage.googleapis.com/Bucket", Ancestors: []string{"projects/100200300401"}},
-					{Name: "//storage.googleapis.com/acme-private-modules", AssetType: "storage.googleapis.com/Bucket", Ancestors: []string{"projects/100200300401"}},
-					{Name: "//storage.googleapis.com/old-evicted-bucket", AssetType: "storage.googleapis.com/Bucket", Ancestors: []string{"projects/100200300401"}},
-					{
-						Name:      "//artifactregistry.googleapis.com/projects/100200300401/locations/europe-southwest1/repositories/acme-apps",
-						AssetType: "artifactregistry.googleapis.com/Repository",
-						Ancestors: []string{"projects/100200300401"},
-						Resource:  &assetpb.Resource{Location: "europe-southwest1", Data: mustStruct(t, map[string]any{"format": "DOCKER"})},
-					},
-					{
-						Name:      "//artifactregistry.googleapis.com/projects/100200300401/locations/europe-southwest1/repositories/acme-apps/dockerImages/api@sha256:1",
-						AssetType: "artifactregistry.googleapis.com/DockerImage",
-						Ancestors: []string{"projects/100200300401"},
-					},
-					{
-						Name:      "//iam.googleapis.com/projects/100200300401/serviceAccounts/sonarqube@acme-cicd.iam.gserviceaccount.com",
-						AssetType: "iam.googleapis.com/ServiceAccount",
-						Ancestors: []string{"projects/100200300401"},
-						Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"email": "sonarqube@acme-cicd.iam.gserviceaccount.com", "uniqueId": "100001"})},
-					},
-					{
-						Name:      "//cloudbuild.googleapis.com/projects/100200300401/locations/europe-southwest1/triggers/build-api",
-						AssetType: "cloudbuild.googleapis.com/BuildTrigger",
-						Ancestors: []string{"projects/100200300401"},
-						Resource: &assetpb.Resource{Location: "europe-southwest1", Data: mustStruct(t, map[string]any{
-							"id":     "trig-api",
-							"name":   "build-api",
-							"github": map[string]any{"owner": "acme-corp", "name": "platform-services", "push": map[string]any{"branch": "^main$"}},
-						})},
-					},
-				},
-			}, nil
-		}
-
-		// IAM_POLICY: verify Organization & Folder are in AssetTypes; return broad + specific + resource bindings.
-		if req.ContentType == assetpb.ContentType_IAM_POLICY {
-			if !slices.Contains(req.AssetTypes, "cloudresourcemanager.googleapis.com/Organization") ||
-				!slices.Contains(req.AssetTypes, "cloudresourcemanager.googleapis.com/Folder") {
-				t.Errorf("IAM_POLICY AssetTypes missing Organization/Folder: %v", req.AssetTypes)
-			}
-			return &assetpb.ListAssetsResponse{
-				ReadTime: timestamppb.New(pinnedTime),
-				Assets: []*assetpb.Asset{
-					{
-						Name:      "//cloudresourcemanager.googleapis.com/projects/100200300401",
-						AssetType: "cloudresourcemanager.googleapis.com/Project",
-						Ancestors: []string{"projects/100200300401"},
-						IamPolicy: &iampb.Policy{Bindings: []*iampb.Binding{
-							{Role: "roles/viewer", Members: []string{"serviceAccount:sonarqube@acme-cicd.iam.gserviceaccount.com"}},
-							{Role: "roles/cloudsql.client", Members: []string{"serviceAccount:sonarqube@acme-cicd.iam.gserviceaccount.com"}},
-						}},
-					},
-					{
-						Name:      "//storage.googleapis.com/acme-tfstate",
-						AssetType: "storage.googleapis.com/Bucket",
-						Ancestors: []string{"projects/100200300401"},
-						IamPolicy: &iampb.Policy{Bindings: []*iampb.Binding{
-							{Role: "roles/storage.objectAdmin", Members: []string{"serviceAccount:sonarqube@acme-cicd.iam.gserviceaccount.com"}},
-						}},
-					},
-				},
-			}, nil
-		}
-		return &assetpb.ListAssetsResponse{}, nil
-	}
+	assetHandler, recordedReqs := newGKECloudBuildAssetHandler(t, pinnedTime)
 
 	clients, _ := newTestClients(t, assetHandler, nil, nil, nil)
 	facts, err := Extract(context.Background(), clients, ExtractOptions{
@@ -1264,15 +831,532 @@ func TestExtractGKECloudBuildPrivateIPAndPSA(t *testing.T) {
 	}
 
 	// Verify ReadTime pinning (page 1 unset, page 2 and IAM_POLICY pinned to pinnedTime).
-	if len(recordedReqs) != 3 {
-		t.Fatalf("expected 3 CAI requests (2 RESOURCE + 1 IAM_POLICY), got %d", len(recordedReqs))
+	reqs := *recordedReqs
+	if len(reqs) != 3 {
+		t.Fatalf("expected 3 CAI requests (2 RESOURCE + 1 IAM_POLICY), got %d", len(reqs))
 	}
-	if recordedReqs[0].ReadTime != nil || !recordedReqs[1].ReadTime.AsTime().Equal(pinnedTime) || !recordedReqs[2].ReadTime.AsTime().Equal(pinnedTime) {
+	if reqs[0].ReadTime != nil || !reqs[1].ReadTime.AsTime().Equal(pinnedTime) || !reqs[2].ReadTime.AsTime().Equal(pinnedTime) {
 		t.Fatalf("ReadTime pinning failed")
 	}
 
 	assertGKECloudBuildEdgesAndPSA(t, facts)
 	assertGKECloudBuildAttributesAndSanitization(t, facts)
+}
+
+func newGKECloudBuildAssetHandler(t *testing.T, pinnedTime time.Time) (
+	func(context.Context, *assetpb.ListAssetsRequest) (*assetpb.ListAssetsResponse, error),
+	*[]*assetpb.ListAssetsRequest,
+) {
+	t.Helper()
+	var recordedReqs []*assetpb.ListAssetsRequest
+	var reqMu sync.Mutex
+
+	handler := func(_ context.Context, req *assetpb.ListAssetsRequest) (*assetpb.ListAssetsResponse, error) {
+		reqMu.Lock()
+		recordedReqs = append(recordedReqs, req)
+		reqMu.Unlock()
+
+		switch req.ContentType {
+		case assetpb.ContentType_ACCESS_POLICY:
+			t.Error("ACCESS_POLICY must never be requested in Stage 1")
+		case assetpb.ContentType_RESOURCE:
+			return gkeCloudBuildResourcePage(t, pinnedTime, req.PageToken), nil
+		case assetpb.ContentType_IAM_POLICY:
+			return gkeCloudBuildIAMPage(t, pinnedTime, req.AssetTypes), nil
+		}
+		return &assetpb.ListAssetsResponse{}, nil
+	}
+	return handler, &recordedReqs
+}
+
+func gkeCloudBuildResourcePage(t *testing.T, pinnedTime time.Time, pageToken string) *assetpb.ListAssetsResponse {
+	t.Helper()
+	if pageToken == "" {
+		// Page 1: K8s workloads, ConfigMaps, KSAs, Services, Ingresses, Builds arrive BEFORE Project asset!
+		return &assetpb.ListAssetsResponse{
+			ReadTime:      timestamppb.New(pinnedTime),
+			NextPageToken: "p2",
+			Assets:        gkeCloudBuildPage1Assets(t),
+		}
+	}
+	// Page 2: Project, VPC, Subnet, GKE Cluster, LB chain, Cloud SQL, Buckets, AR, BuildTrigger, GKE worker VM/MIG, Default sandbox assets.
+	return &assetpb.ListAssetsResponse{
+		ReadTime: timestamppb.New(pinnedTime),
+		Assets:   gkeCloudBuildPage2Assets(t),
+	}
+}
+
+func gkeCloudBuildIAMPage(t *testing.T, pinnedTime time.Time, assetTypes []string) *assetpb.ListAssetsResponse {
+	t.Helper()
+	// IAM_POLICY: verify Organization & Folder are in AssetTypes; return broad + specific + resource bindings.
+	if !slices.Contains(assetTypes, "cloudresourcemanager.googleapis.com/Organization") ||
+		!slices.Contains(assetTypes, "cloudresourcemanager.googleapis.com/Folder") {
+		t.Errorf("IAM_POLICY AssetTypes missing Organization/Folder: %v", assetTypes)
+	}
+	return &assetpb.ListAssetsResponse{
+		ReadTime: timestamppb.New(pinnedTime),
+		Assets: []*assetpb.Asset{
+			{
+				Name:      "//cloudresourcemanager.googleapis.com/projects/100200300401",
+				AssetType: "cloudresourcemanager.googleapis.com/Project",
+				Ancestors: []string{"projects/100200300401"},
+				IamPolicy: &iampb.Policy{Bindings: []*iampb.Binding{
+					{Role: "roles/viewer", Members: []string{"serviceAccount:sonarqube@acme-cicd.iam.gserviceaccount.com"}},
+					{Role: "roles/cloudsql.client", Members: []string{"serviceAccount:sonarqube@acme-cicd.iam.gserviceaccount.com"}},
+				}},
+			},
+			{
+				Name:      "//storage.googleapis.com/acme-tfstate",
+				AssetType: "storage.googleapis.com/Bucket",
+				Ancestors: []string{"projects/100200300401"},
+				IamPolicy: &iampb.Policy{Bindings: []*iampb.Binding{
+					{Role: "roles/storage.objectAdmin", Members: []string{"serviceAccount:sonarqube@acme-cicd.iam.gserviceaccount.com"}},
+				}},
+			},
+		},
+	}
+}
+
+func gkeCloudBuildPage1Assets(t *testing.T) []*assetpb.Asset {
+	t.Helper()
+	return []*assetpb.Asset{
+		// System namespace objects -> suppressed.
+		{
+			Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/kube-system/apps/deployments/kube-dns",
+			AssetType: "apps.k8s.io/Deployment",
+			Ancestors: []string{"projects/100200300401"},
+			Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"metadata": map[string]any{"name": "kube-dns", "namespace": "kube-system"}})},
+		},
+		{
+			Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/gmp-system/apps/deployments/collector",
+			AssetType: "apps.k8s.io/Deployment",
+			Ancestors: []string{"projects/100200300401"},
+			Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"metadata": map[string]any{"name": "collector", "namespace": "gmp-system"}})},
+		},
+		// K8s Namespace & NodePool -> folded counts & suppressed.
+		{
+			Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube",
+			AssetType: "k8s.io/Namespace",
+			Ancestors: []string{"projects/100200300401"},
+		},
+		{
+			Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/nodePools/default-pool",
+			AssetType: "container.googleapis.com/NodePool",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"instanceGroupUrls": []any{"https://www.googleapis.com/compute/v1/projects/100200300401/zones/europe-southwest1-b/instanceGroups/gke-cicd-default-pool-grp"},
+			})},
+		},
+		// K8s ServiceAccounts with Workload Identity annotation -> indexed & suppressed.
+		{
+			Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/serviceaccounts/sonarqube-ksa",
+			AssetType: "k8s.io/ServiceAccount",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"metadata": map[string]any{
+					"name":        "sonarqube-ksa",
+					"namespace":   "sonarqube",
+					"annotations": map[string]any{"iam.gke.io/gcp-service-account": "sonarqube@acme-cicd.iam.gserviceaccount.com"},
+				},
+			})},
+		},
+		{
+			Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/ops/serviceaccounts/nightly-ksa",
+			AssetType: "k8s.io/ServiceAccount",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"metadata": map[string]any{
+					"name":        "nightly-ksa",
+					"namespace":   "ops",
+					"annotations": map[string]any{"iam.gke.io/gcp-service-account": "sonarqube@acme-cicd.iam.gserviceaccount.com"},
+				},
+			})},
+		},
+		// K8s ConfigMap with JDBC private IP + secret -> scanned before suppressing!
+		{
+			Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/configmaps/sonar-cfg",
+			AssetType: "k8s.io/ConfigMap",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"metadata": map[string]any{"name": "sonar-cfg", "namespace": "sonarqube"},
+				"data": map[string]any{
+					"SONAR_JDBC_URL": "jdbc:postgresql://sonar:supersecret@10.100.0.5:5432/sonar",
+					"ARCHIVE_BUCKET": "gs://acme-tfstate/sonar",
+				},
+			})},
+		},
+		// SonarQube Deployment referencing ConfigMap & initContainer args.
+		{
+			Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/apps/deployments/sonarqube",
+			AssetType: "apps.k8s.io/Deployment",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"metadata": map[string]any{
+					"name":        "sonarqube",
+					"namespace":   "sonarqube",
+					"annotations": map[string]any{"kubectl.kubernetes.io/last-applied-configuration": `{"secret":"drop-me"}`},
+				},
+				"spec": map[string]any{
+					"replicas": 1,
+					"template": map[string]any{
+						"metadata": map[string]any{"labels": map[string]any{"app": "sonarqube"}},
+						"spec": map[string]any{
+							"serviceAccountName": "sonarqube-ksa",
+							"initContainers": []any{
+								map[string]any{"command": []any{"/bin/sh", "-c", "gsutil cp gs://acme-private-modules/init.sh /tmp/init.sh"}},
+							},
+							"containers": []any{
+								map[string]any{
+									"envFrom": []any{map[string]any{"configMapRef": map[string]any{"name": "sonar-cfg"}}},
+								},
+							},
+						},
+					},
+				},
+			})},
+		},
+		// CronJob with jobTemplate pod labels + Workload Identity.
+		{
+			Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/ops/batch/cronjobs/nightly-scan",
+			AssetType: "batch.k8s.io/CronJob",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"metadata": map[string]any{"name": "nightly-scan", "namespace": "ops"},
+				"spec": map[string]any{
+					"schedule": "0 2 * * *",
+					"jobTemplate": map[string]any{
+						"spec": map[string]any{
+							"template": map[string]any{
+								"metadata": map[string]any{"labels": map[string]any{"job": "nightly"}},
+								"spec":     map[string]any{"serviceAccountName": "nightly-ksa"},
+							},
+						},
+					},
+				},
+			})},
+		},
+		// Service with NEG status & selector for sonarqube.
+		{
+			Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/services/sonarqube",
+			AssetType: "k8s.io/Service",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"metadata": map[string]any{
+					"name":      "sonarqube",
+					"namespace": "sonarqube",
+					"annotations": map[string]any{
+						"cloud.google.com/neg-status": `{"network_endpoint_groups":{"9000":"k8s1-neg-sonarqube-9000"},"zones":["europe-southwest1-b"]}`,
+					},
+				},
+				"spec": map[string]any{
+					"type":     "ClusterIP",
+					"selector": map[string]any{"app": "sonarqube"},
+					"ports":    []any{map[string]any{"port": 9000}},
+				},
+			})},
+		},
+		// Headless Service with EMPTY selector -> must NOT match any workload!
+		{
+			Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/services/external-headless",
+			AssetType: "k8s.io/Service",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"metadata": map[string]any{"name": "external-headless", "namespace": "sonarqube"},
+				"spec":     map[string]any{"type": "ClusterIP", "selector": map[string]any{}},
+			})},
+		},
+		// L4 LoadBalancer Service in ops namespace selecting CronJob pod labels.
+		{
+			Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/ops/services/ops-lb",
+			AssetType: "k8s.io/Service",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"metadata": map[string]any{"name": "ops-lb", "namespace": "ops"},
+				"spec":     map[string]any{"type": "LoadBalancer", "selector": map[string]any{"job": "nightly"}},
+				"status":   map[string]any{"loadBalancer": map[string]any{"ingress": []any{map[string]any{"ip": "34.175.10.20"}}}},
+			})},
+		},
+		// Ingress for sonarqube.
+		{
+			Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd/k8s/namespaces/sonarqube/networking.k8s.io/ingresses/sonarqube",
+			AssetType: "networking.k8s.io/Ingress",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"metadata": map[string]any{
+					"name":        "sonarqube",
+					"namespace":   "sonarqube",
+					"annotations": map[string]any{"ingress.kubernetes.io/https-forwarding-rule": "k8s2-fs-sonarqube"},
+				},
+				"spec": map[string]any{
+					"rules": []any{map[string]any{
+						"host": "sonarqube.cicd.example.com",
+						"http": map[string]any{
+							"paths": []any{map[string]any{
+								"path":    "/*",
+								"backend": map[string]any{"service": map[string]any{"name": "sonarqube"}},
+							}},
+						},
+					}},
+				},
+			})},
+		},
+		// 5 Cloud Build Builds (4 SUCCESS, 1 FAILURE) -> top-2 min-heap keeps ONLY b3 & b4!
+		{
+			Name:      "//cloudbuild.googleapis.com/projects/100200300401/locations/europe-southwest1/builds/b1-old",
+			AssetType: "cloudbuild.googleapis.com/Build",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"status":         "SUCCESS",
+				"buildTriggerId": "trig-api",
+				"createTime":     "2026-11-01T00:00:00Z",
+				"steps":          []any{map[string]any{"script": "gsutil cp a gs://old-evicted-bucket/x"}},
+			})},
+		},
+		{
+			Name:      "//cloudbuild.googleapis.com/projects/100200300401/locations/europe-southwest1/builds/b2-old",
+			AssetType: "cloudbuild.googleapis.com/Build",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"status":         "SUCCESS",
+				"buildTriggerId": "trig-api",
+				"createTime":     "2026-11-02T00:00:00Z",
+				"steps":          []any{map[string]any{"script": "gsutil cp a gs://old-evicted-bucket/y"}},
+			})},
+		},
+		{
+			Name:      "//cloudbuild.googleapis.com/projects/100200300401/locations/europe-southwest1/builds/b3-new",
+			AssetType: "cloudbuild.googleapis.com/Build",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"status":         "SUCCESS",
+				"buildTriggerId": "trig-api",
+				"createTime":     "2026-11-20T00:00:00Z",
+				"images":         []any{"europe-southwest1-docker.pkg.dev/100200300401/acme-apps/api:v3"},
+				"steps": []any{
+					map[string]any{"name": "gcr.io/cloud-builders/docker", "args": []any{"build", "."}},
+					map[string]any{"name": "gcr.io/google.com/cloudsdktool/cloud-sdk", "entrypoint": "gcloud", "args": []any{"run", "deploy", "api-svc", "--project=acme-prod"}},
+				},
+			})},
+		},
+		{
+			Name:      "//cloudbuild.googleapis.com/projects/100200300401/locations/europe-southwest1/builds/b4-newest",
+			AssetType: "cloudbuild.googleapis.com/Build",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"status":         "SUCCESS",
+				"buildTriggerId": "trig-api",
+				"createTime":     "2026-11-22T00:00:00Z",
+				"artifacts":      map[string]any{"objects": map[string]any{"location": "gs://acme-tfstate/releases"}},
+				"steps":          []any{map[string]any{"script": "docker push gcr.io/distroless/static && docker push gcr.io/legacy-target/app:v1"}},
+			})},
+		},
+		{
+			Name:      "//cloudbuild.googleapis.com/projects/100200300401/locations/europe-southwest1/builds/b5-failed",
+			AssetType: "cloudbuild.googleapis.com/Build",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"status":         "FAILURE",
+				"buildTriggerId": "trig-api",
+				"createTime":     "2026-11-23T00:00:00Z",
+				"steps":          []any{map[string]any{"script": "gcloud run deploy broken --project=failed-proj"}},
+			})},
+		},
+		// Triggerless build -> attached to project URI.
+		{
+			Name:      "//cloudbuild.googleapis.com/projects/100200300401/locations/europe-southwest1/builds/b-manual",
+			AssetType: "cloudbuild.googleapis.com/Build",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"status":     "SUCCESS",
+				"createTime": "2026-11-21T00:00:00Z",
+				"steps":      []any{map[string]any{"script": "gsutil ls gs://acme-tfstate"}},
+			})},
+		},
+	}
+}
+
+func gkeCloudBuildPage2Assets(t *testing.T) []*assetpb.Asset {
+	t.Helper()
+	return []*assetpb.Asset{
+		{
+			Name:      "//cloudresourcemanager.googleapis.com/projects/100200300401",
+			AssetType: "cloudresourcemanager.googleapis.com/Project",
+			Ancestors: []string{"projects/100200300401", "organizations/999"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"projectId":     "acme-cicd",
+				"projectNumber": "100200300401",
+				"name":          "Acme Platform CICD",
+			})},
+		},
+		{
+			Name:      "//compute.googleapis.com/projects/100200300401/locations/global/networks/cicd",
+			AssetType: "compute.googleapis.com/Network",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"name":                  "cicd",
+				"autoCreateSubnetworks": false,
+				"peerings": []any{
+					map[string]any{
+						"name":    "servicenetworking-googleapis-com",
+						"network": "https://www.googleapis.com/compute/v1/projects/p1234567890abcdef-tp/global/networks/servicenetworking",
+						"state":   "ACTIVE",
+					},
+				},
+			})},
+		},
+		{
+			Name:      "//compute.googleapis.com/projects/100200300401/regions/europe-southwest1/subnetworks/cicd-k8s",
+			AssetType: "compute.googleapis.com/Subnetwork",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"name":        "cicd-k8s",
+				"ipCidrRange": "10.10.0.0/20",
+				"network":     "projects/100200300401/locations/global/networks/cicd",
+			})},
+		},
+		// Unused default VPC + subnet + _Default LogBucket + unreferenced default SA -> all pruned!
+		{
+			Name:      "//compute.googleapis.com/projects/100200300401/global/networks/default",
+			AssetType: "compute.googleapis.com/Network",
+			Ancestors: []string{"projects/100200300401"},
+			Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"name": "default", "autoCreateSubnetworks": true})},
+		},
+		{
+			Name:      "//compute.googleapis.com/projects/100200300401/regions/europe-southwest1/subnetworks/default",
+			AssetType: "compute.googleapis.com/Subnetwork",
+			Ancestors: []string{"projects/100200300401"},
+			Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"name": "default", "network": "projects/100200300401/global/networks/default"})},
+		},
+		{
+			Name:      "//logging.googleapis.com/projects/100200300401/locations/global/buckets/_Default",
+			AssetType: "logging.googleapis.com/LogBucket",
+			Ancestors: []string{"projects/100200300401"},
+		},
+		{
+			Name:      "//iam.googleapis.com/projects/100200300401/serviceAccounts/100200300401-compute@developer.gserviceaccount.com",
+			AssetType: "iam.googleapis.com/ServiceAccount",
+			Ancestors: []string{"projects/100200300401"},
+			Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"email": "100200300401-compute@developer.gserviceaccount.com"})},
+		},
+		// GKE Cluster + GKE MIG & Worker VM (to be suppressed).
+		{
+			Name:      "//container.googleapis.com/projects/100200300401/zones/europe-southwest1-b/clusters/cicd",
+			AssetType: "container.googleapis.com/Cluster",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Location: "europe-southwest1-b", Data: mustStruct(t, map[string]any{
+				"name":          "cicd",
+				"networkConfig": map[string]any{"network": "projects/100200300401/global/networks/cicd", "subnetwork": "projects/100200300401/regions/europe-southwest1/subnetworks/cicd-k8s"},
+			})},
+		},
+		{
+			Name:      "//compute.googleapis.com/projects/100200300401/zones/europe-southwest1-b/instanceGroupManagers/gke-cicd-default-pool-grp",
+			AssetType: "compute.googleapis.com/InstanceGroupManager",
+			Ancestors: []string{"projects/100200300401"},
+		},
+		{
+			Name:      "//compute.googleapis.com/projects/100200300401/zones/europe-southwest1-b/instances/gke-cicd-default-pool-abc1",
+			AssetType: "compute.googleapis.com/Instance",
+			Ancestors: []string{"projects/100200300401"},
+			Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"name": "gke-cicd-default-pool-abc1"})},
+		},
+		// LB chain for SonarQube NEG + L4 ForwardingRule for ops-lb.
+		{
+			Name:      "//compute.googleapis.com/projects/100200300401/global/forwardingRules/k8s2-fs-sonarqube",
+			AssetType: "compute.googleapis.com/GlobalForwardingRule",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"loadBalancingScheme": "EXTERNAL",
+				"IPAddress":           "34.111.222.10",
+				"target":              "projects/100200300401/global/targetHttpsProxies/k8s2-ts-sonarqube",
+			})},
+		},
+		{
+			Name:      "//compute.googleapis.com/projects/100200300401/global/targetHttpsProxies/k8s2-ts-sonarqube",
+			AssetType: "compute.googleapis.com/TargetHttpsProxy",
+			Ancestors: []string{"projects/100200300401"},
+			Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"urlMap": "projects/100200300401/global/urlMaps/k8s2-um-sonarqube"})},
+		},
+		{
+			Name:      "//compute.googleapis.com/projects/100200300401/global/urlMaps/k8s2-um-sonarqube",
+			AssetType: "compute.googleapis.com/UrlMap",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"defaultService": "projects/100200300401/global/backendServices/k8s1-bs-sonarqube",
+			})},
+		},
+		{
+			Name:      "//compute.googleapis.com/projects/100200300401/global/backendServices/k8s1-bs-sonarqube",
+			AssetType: "compute.googleapis.com/BackendService",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"backends": []any{map[string]any{"group": "projects/100200300401/zones/europe-southwest1-b/networkEndpointGroups/k8s1-neg-sonarqube-9000"}},
+			})},
+		},
+		{
+			Name:      "//compute.googleapis.com/projects/100200300401/zones/europe-southwest1-b/networkEndpointGroups/k8s1-neg-sonarqube-9000",
+			AssetType: "compute.googleapis.com/NetworkEndpointGroup",
+			Ancestors: []string{"projects/100200300401"},
+		},
+		{
+			Name:      "//compute.googleapis.com/projects/100200300401/regions/europe-southwest1/forwardingRules/l4-ops-fr",
+			AssetType: "compute.googleapis.com/ForwardingRule",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+				"loadBalancingScheme": "EXTERNAL",
+				"IPAddress":           "34.175.10.20",
+			})},
+		},
+		// Cloud SQL sonarqube on private IP 10.100.0.5 + BackupRun (suppressed).
+		{
+			Name:      "//sqladmin.googleapis.com/projects/100200300401/instances/sonarqube",
+			AssetType: "sqladmin.googleapis.com/Instance",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Location: "europe-southwest1", Data: mustStruct(t, map[string]any{
+				"databaseVersion": "POSTGRES_16",
+				"ipAddresses":     []any{map[string]any{"type": "PRIVATE", "ipAddress": "10.100.0.5"}},
+				"settings": map[string]any{
+					"tier":            "db-custom-2-7680",
+					"ipConfiguration": map[string]any{"privateNetwork": "projects/100200300401/global/networks/cicd"},
+				},
+			})},
+		},
+		{
+			Name:      "//sqladmin.googleapis.com/projects/100200300401/instances/sonarqube/backupRuns/1",
+			AssetType: "sqladmin.googleapis.com/BackupRun",
+			Ancestors: []string{"projects/100200300401"},
+		},
+		// Buckets, Artifact Registry + DockerImages, ServiceAccount, BuildTrigger.
+		{Name: "//storage.googleapis.com/acme-tfstate", AssetType: "storage.googleapis.com/Bucket", Ancestors: []string{"projects/100200300401"}},
+		{Name: "//storage.googleapis.com/acme-private-modules", AssetType: "storage.googleapis.com/Bucket", Ancestors: []string{"projects/100200300401"}},
+		{Name: "//storage.googleapis.com/old-evicted-bucket", AssetType: "storage.googleapis.com/Bucket", Ancestors: []string{"projects/100200300401"}},
+		{
+			Name:      "//artifactregistry.googleapis.com/projects/100200300401/locations/europe-southwest1/repositories/acme-apps",
+			AssetType: "artifactregistry.googleapis.com/Repository",
+			Ancestors: []string{"projects/100200300401"},
+			Resource:  &assetpb.Resource{Location: "europe-southwest1", Data: mustStruct(t, map[string]any{"format": "DOCKER"})},
+		},
+		{
+			Name:      "//artifactregistry.googleapis.com/projects/100200300401/locations/europe-southwest1/repositories/acme-apps/dockerImages/api@sha256:1",
+			AssetType: "artifactregistry.googleapis.com/DockerImage",
+			Ancestors: []string{"projects/100200300401"},
+		},
+		{
+			Name:      "//iam.googleapis.com/projects/100200300401/serviceAccounts/sonarqube@acme-cicd.iam.gserviceaccount.com",
+			AssetType: "iam.googleapis.com/ServiceAccount",
+			Ancestors: []string{"projects/100200300401"},
+			Resource:  &assetpb.Resource{Data: mustStruct(t, map[string]any{"email": "sonarqube@acme-cicd.iam.gserviceaccount.com", "uniqueId": "100001"})},
+		},
+		{
+			Name:      "//cloudbuild.googleapis.com/projects/100200300401/locations/europe-southwest1/triggers/build-api",
+			AssetType: "cloudbuild.googleapis.com/BuildTrigger",
+			Ancestors: []string{"projects/100200300401"},
+			Resource: &assetpb.Resource{Location: "europe-southwest1", Data: mustStruct(t, map[string]any{
+				"id":     "trig-api",
+				"name":   "build-api",
+				"github": map[string]any{"owner": "acme-corp", "name": "platform-services", "push": map[string]any{"branch": "^main$"}},
+			})},
+		},
+	}
 }
 
 func assertGKECloudBuildEdgesAndPSA(t *testing.T, facts *FactsFile) {
@@ -1375,6 +1459,13 @@ func assertGKECloudBuildAttributesAndSanitization(t *testing.T, facts *FactsFile
 	if arRes == nil || arRes.Attributes["image_count"] != 1 {
 		t.Fatalf("expected image_count=1 on Artifact Registry, got %+v", arRes)
 	}
+
+	assertGKECloudBuildSuppressedCounts(t, facts)
+	assertFactsFilePermissionsAndNoSecrets(t, facts, []string{"supersecret", "drop-me", "last-applied-configuration"})
+}
+
+func assertGKECloudBuildSuppressedCounts(t *testing.T, facts *FactsFile) {
+	t.Helper()
 	if facts.SuppressedPlumbingCounts["cloudbuild.googleapis.com/Build"] != 6 {
 		t.Fatalf("expected 6 suppressed Builds, got %d", facts.SuppressedPlumbingCounts["cloudbuild.googleapis.com/Build"])
 	}
@@ -1387,7 +1478,10 @@ func assertGKECloudBuildAttributesAndSanitization(t *testing.T, facts *FactsFile
 		findResource(facts.Resources, "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/100200300401-compute@developer.gserviceaccount.com") != nil {
 		t.Fatal("default sandbox assets were not pruned")
 	}
+}
 
+func assertFactsFilePermissionsAndNoSecrets(t *testing.T, facts *FactsFile, forbidden []string) {
+	t.Helper()
 	outPath := filepath.Join(t.TempDir(), "facts.json")
 	if err := WriteFacts(outPath, facts); err != nil {
 		t.Fatalf("WriteFacts: %v", err)
@@ -1398,7 +1492,7 @@ func assertGKECloudBuildAttributesAndSanitization(t *testing.T, facts *FactsFile
 	}
 	rawBytes, _ := os.ReadFile(outPath)
 	rawStr := string(rawBytes)
-	for _, secret := range []string{"supersecret", "drop-me", "last-applied-configuration"} {
+	for _, secret := range forbidden {
 		if strings.Contains(rawStr, secret) {
 			t.Fatalf("secret %q leaked into facts.json", secret)
 		}
@@ -1942,21 +2036,7 @@ func assertAcmeCICDBuildTriggers(t *testing.T, facts *FactsFile) {
 	if gh == nil || !gh.IsExternal || gh.AssetType != "external.github.com/Repository" {
 		t.Fatalf("missing or invalid synthetic GitHub resource: %+v", gh)
 	}
-
-	var triggers []FactResource
-	for _, r := range facts.Resources {
-		if r.AssetType == "cloudbuild.googleapis.com/BuildTrigger" {
-			triggers = append(triggers, r)
-		}
-	}
-	if len(triggers) != 20 {
-		t.Fatalf("BuildTrigger count = %d, want 20", len(triggers))
-	}
-	for _, tr := range triggers {
-		if !hasEdge(facts.Edges, githubURI, tr.URI, EdgeCloudBuildRepo) {
-			t.Errorf("trigger %s missing CLOUDBUILD_TRIGGER_REPO from platform-services", tr.URI)
-		}
-	}
+	assertBuildTriggerRepoEdges(t, facts, githubURI, 20)
 
 	arURI := "//artifactregistry.googleapis.com/projects/acme-cicd/locations/europe-southwest1/repositories/acme-apps"
 	ar := findResource(facts.Resources, arURI)
@@ -1964,30 +2044,48 @@ func assertAcmeCICDBuildTriggers(t *testing.T, facts *FactsFile) {
 		t.Fatalf("Artifact Registry acme-apps missing or image_count != 643: %+v", ar)
 	}
 
-	var sawARStep, sawTFStateStep, sawModulesStep, sawDevStubStep, sawProdStubStep bool
-	for _, e := range facts.Edges {
-		if e.Kind != EdgeCloudBuildStepRef {
-			continue
-		}
-		switch e.ToURI {
-		case arURI:
-			sawARStep = true
-		case "//storage.googleapis.com/acme-tfstate":
-			sawTFStateStep = true
-		case "//storage.googleapis.com/acme-private-modules":
-			sawModulesStep = true
-		case "//cloudresourcemanager.googleapis.com/projects/acme-dev":
-			sawDevStubStep = true
-		case "//cloudresourcemanager.googleapis.com/projects/acme-prod":
-			sawProdStubStep = true
-		}
-	}
-	if !sawARStep || !sawTFStateStep || !sawModulesStep || !sawDevStubStep || !sawProdStubStep {
-		t.Fatalf("missing expected CLOUDBUILD_STEP_REF targets: ar=%v tfstate=%v modules=%v dev=%v prod=%v",
-			sawARStep, sawTFStateStep, sawModulesStep, sawDevStubStep, sawProdStubStep)
-	}
+	assertCloudBuildStepRefTargets(t, facts.Edges, []string{
+		arURI,
+		"//storage.googleapis.com/acme-tfstate",
+		"//storage.googleapis.com/acme-private-modules",
+		"//cloudresourcemanager.googleapis.com/projects/acme-dev",
+		"//cloudresourcemanager.googleapis.com/projects/acme-prod",
+	})
 	if len(facts.OutOfScopeTargets) < 2 {
 		t.Fatalf("expected >= 2 out_of_scope_targets, got %+v", facts.OutOfScopeTargets)
+	}
+}
+
+func assertBuildTriggerRepoEdges(t *testing.T, facts *FactsFile, repoURI string, wantCount int) {
+	t.Helper()
+	var triggers []FactResource
+	for _, r := range facts.Resources {
+		if r.AssetType == "cloudbuild.googleapis.com/BuildTrigger" {
+			triggers = append(triggers, r)
+		}
+	}
+	if len(triggers) != wantCount {
+		t.Fatalf("BuildTrigger count = %d, want %d", len(triggers), wantCount)
+	}
+	for _, tr := range triggers {
+		if !hasEdge(facts.Edges, repoURI, tr.URI, EdgeCloudBuildRepo) {
+			t.Errorf("trigger %s missing CLOUDBUILD_TRIGGER_REPO from %s", tr.URI, repoURI)
+		}
+	}
+}
+
+func assertCloudBuildStepRefTargets(t *testing.T, edges []FactEdge, wantTargets []string) {
+	t.Helper()
+	seen := make(map[string]bool)
+	for _, e := range edges {
+		if e.Kind == EdgeCloudBuildStepRef {
+			seen[e.ToURI] = true
+		}
+	}
+	for _, target := range wantTargets {
+		if !seen[target] {
+			t.Errorf("missing expected CLOUDBUILD_STEP_REF target %s", target)
+		}
 	}
 }
 
@@ -2052,23 +2150,7 @@ func assertAcmeCICDGKEAndSQL(t *testing.T, facts *FactsFile) {
 
 func assertAcmeCICDFixtureIntegrity(t *testing.T, fixturePath string, facts *FactsFile) {
 	t.Helper()
-	resURIs := make(map[string]bool, len(facts.Resources))
-	for _, r := range facts.Resources {
-		resURIs[r.URI] = true
-		for k := range r.Attributes {
-			if IsSensitiveKey(k) {
-				t.Errorf("fixture resource %s contains sensitive key %q", r.URI, k)
-			}
-		}
-	}
-	for _, e := range facts.Edges {
-		if wantID := EdgeID(e.Kind, e.FromURI, e.ToURI, e.Detail); e.ID != wantID {
-			t.Errorf("edge %s -> %s has ID %q, want %q", e.FromURI, e.ToURI, e.ID, wantID)
-		}
-		if !resURIs[e.FromURI] || !resURIs[e.ToURI] {
-			t.Errorf("dangling edge in fixture: %s -> %s", e.FromURI, e.ToURI)
-		}
-	}
+	assertFixtureGraphIntegrity(t, facts)
 
 	if facts.SuppressedPlumbingCounts["cloudbuild.googleapis.com/Build"] < 800 ||
 		facts.SuppressedPlumbingCounts["sqladmin.googleapis.com/BackupRun"] == 0 ||
@@ -2078,7 +2160,38 @@ func assertAcmeCICDFixtureIntegrity(t *testing.T, fixturePath string, facts *Fac
 	if len(facts.CoverageLedger) == 0 {
 		t.Fatal("fixture missing coverage_ledger")
 	}
+	assertFixtureRoundTripAndNoForbiddenKeys(t, fixturePath, facts)
+}
 
+func assertFixtureGraphIntegrity(t *testing.T, facts *FactsFile) {
+	t.Helper()
+	resURIs := collectResourceURIsAndCheckSensitiveKeys(t, facts.Resources)
+	for _, e := range facts.Edges {
+		if wantID := EdgeID(e.Kind, e.FromURI, e.ToURI, e.Detail); e.ID != wantID {
+			t.Errorf("edge %s -> %s has ID %q, want %q", e.FromURI, e.ToURI, e.ID, wantID)
+		}
+		if !resURIs[e.FromURI] || !resURIs[e.ToURI] {
+			t.Errorf("dangling edge in fixture: %s -> %s", e.FromURI, e.ToURI)
+		}
+	}
+}
+
+func collectResourceURIsAndCheckSensitiveKeys(t *testing.T, resources []FactResource) map[string]bool {
+	t.Helper()
+	resURIs := make(map[string]bool, len(resources))
+	for _, r := range resources {
+		resURIs[r.URI] = true
+		for k := range r.Attributes {
+			if IsSensitiveKey(k) {
+				t.Errorf("fixture resource %s contains sensitive key %q", r.URI, k)
+			}
+		}
+	}
+	return resURIs
+}
+
+func assertFixtureRoundTripAndNoForbiddenKeys(t *testing.T, fixturePath string, facts *FactsFile) {
+	t.Helper()
 	origRaw, err := os.ReadFile(fixturePath)
 	if err != nil {
 		t.Fatal(err)
@@ -2400,6 +2513,13 @@ func TestExtractMultiServiceStructuralHierarchyAndTriggers(t *testing.T) {
 
 func TestEnricherErrorHandlingAndPagination(t *testing.T) {
 	// Test BQ Load/Copy, pagination, Dataflow/BQ SERVICE_DISABLED degradation, Vertex HTTP error parsing, and Monitoring NotFound.
+	clients, httpSrv := setupEnricherErrorTestClients(t)
+	assertEnricherPaginationAndDegradedExtract(t, clients)
+	assertDegradedVertexPreflightProbes(t, clients, httpSrv)
+}
+
+func setupEnricherErrorTestClients(t *testing.T) (*Clients, *httptest.Server) {
+	t.Helper()
 	assetHandler := func(_ context.Context, req *assetpb.ListAssetsRequest) (*assetpb.ListAssetsResponse, error) {
 		if req.ContentType == assetpb.ContentType_RESOURCE {
 			return &assetpb.ListAssetsResponse{
@@ -2477,7 +2597,11 @@ func TestEnricherErrorHandlingAndPagination(t *testing.T) {
 		_, _ = w.Write([]byte(`{"error":{"message":"denied"}}`))
 	})
 
-	clients, httpSrv := newTestClients(t, assetHandler, monHandler, mux, nil)
+	return newTestClients(t, assetHandler, monHandler, mux, nil)
+}
+
+func assertEnricherPaginationAndDegradedExtract(t *testing.T, clients *Clients) {
+	t.Helper()
 	facts, err := Extract(context.Background(), clients, ExtractOptions{Scopes: []string{"projects/p-err"}})
 	if err != nil {
 		t.Fatalf("Extract error: %v", err)
@@ -2497,7 +2621,10 @@ func TestEnricherErrorHandlingAndPagination(t *testing.T) {
 	if !sawDFDisabled {
 		t.Fatalf("expected dataflow_jobs SERVICE_DISABLED in coverage ledger, got %+v", facts.CoverageLedger)
 	}
+}
 
+func assertDegradedVertexPreflightProbes(t *testing.T, clients *Clients, httpSrv *httptest.Server) {
+	t.Helper()
 	// Exercise parseHTTPError via RunPreflight against failing Vertex CRM & model endpoints.
 	rep, err := RunPreflight(context.Background(), clients, []string{"projects/p-err"}, VertexPreflightOptions{
 		Project:        "ai-err",
@@ -3187,6 +3314,22 @@ func TestExtractCrossProjectConnectorMultiProjectGKEAndRecanonicalizedSpoke(t *t
 	}
 
 	// 1. Cross-project Connector preserves subnet_project -> canonical host-p subnet -> Shared VPC detection.
+	assertCrossProjectConnectorSharedVPC(t, facts, connURI, hostSub)
+
+	// 2-4. Re-canonicalized NCC Spoke, deterministic AlloyDB IP, and multi-project GKE FR isolation.
+	assertRecanonicalizedSpokeAndMultiProjectGKE(t, facts, spokeAndMultiGKEExpectations{
+		hubURI:     hubURI,
+		vpnGwURI:   vpnGwURI,
+		icURI:      icURI,
+		adbCluster: adbCluster,
+		frA:        frA,
+		frB:        frB,
+		svcHostNEG: svcHostNEG,
+	})
+}
+
+func assertCrossProjectConnectorSharedVPC(t *testing.T, facts *FactsFile, connURI, hostSub string) {
+	t.Helper()
 	conn := findResource(facts.Resources, connURI)
 	if conn == nil {
 		t.Fatalf("expected connector %s", connURI)
@@ -3206,24 +3349,34 @@ func TestExtractCrossProjectConnectorMultiProjectGKEAndRecanonicalizedSpoke(t *t
 	if svcProjNode.SharedVPCHostProject != "host-p" {
 		t.Errorf("expected svc-p SharedVPCHostProject=host-p via cross-project connector subnet, got %q", svcProjNode.SharedVPCHostProject)
 	}
+}
 
-	// 2. Re-canonicalized NCC Spoke linkedVpnTunnels and linkedInterconnectAttachments emit Hub edges.
-	if !hasEdge(facts.Edges, hubURI, vpnGwURI, EdgeConfigRef) {
+type spokeAndMultiGKEExpectations struct {
+	hubURI     string
+	vpnGwURI   string
+	icURI      string
+	adbCluster string
+	frA        string
+	frB        string
+	svcHostNEG string
+}
+
+func assertRecanonicalizedSpokeAndMultiProjectGKE(t *testing.T, facts *FactsFile, exp spokeAndMultiGKEExpectations) {
+	t.Helper()
+	if !hasEdge(facts.Edges, exp.hubURI, exp.vpnGwURI, EdgeConfigRef) {
 		t.Errorf("expected NCC Hub -> VpnGateway edge via re-canonicalized linkedVpnTunnels")
 	}
-	if !hasEdge(facts.Edges, hubURI, icURI, EdgeConfigRef) {
+	if !hasEdge(facts.Edges, exp.hubURI, exp.icURI, EdgeConfigRef) {
 		t.Errorf("expected NCC Hub -> InterconnectAttachment edge via re-canonicalized linkedInterconnectAttachments")
 	}
 
-	// 3. Deterministic AlloyDB private IP (inst-a < inst-b -> 10.9.0.1).
-	adb := findResource(facts.Resources, adbCluster)
+	adb := findResource(facts.Resources, exp.adbCluster)
 	if adb == nil || adb.Attributes["private_ip"] != "10.9.0.1" {
 		t.Errorf("expected deterministic AlloyDB private_ip=10.9.0.1, got %+v", adb)
 	}
 
-	// 4. Multi-project GKE ingressesByFRName isolation + cross-project NEG lookup.
-	resFRA := findResource(facts.Resources, frA)
-	resFRB := findResource(facts.Resources, frB)
+	resFRA := findResource(facts.Resources, exp.frA)
+	resFRB := findResource(facts.Resources, exp.frB)
 	if resFRA == nil || resFRB == nil {
 		t.Fatalf("expected both ForwardingRules")
 	}
@@ -3235,7 +3388,241 @@ func TestExtractCrossProjectConnectorMultiProjectGKEAndRecanonicalizedSpoke(t *t
 	if !slices.Equal(hostsB, []string{"b.example.com"}) {
 		t.Errorf("frB ingress_hosts = %v, want [b.example.com]", hostsB)
 	}
-	if !hasEdge(facts.Edges, frB, svcHostNEG, EdgeK8sNEGBackend) {
-		t.Errorf("expected cross-project K8S_NEG_BACKEND edge %s -> %s", frB, svcHostNEG)
+	if !hasEdge(facts.Edges, exp.frB, exp.svcHostNEG, EdgeK8sNEGBackend) {
+		t.Errorf("expected cross-project K8S_NEG_BACKEND edge %s -> %s", exp.frB, exp.svcHostNEG)
+	}
+}
+
+func TestRedisClusterPSCAndPSAManagedServices(t *testing.T) {
+	vpcIn := "//compute.googleapis.com/projects/app-p/global/networks/vpc-in"
+	rcIn := "//redis.googleapis.com/projects/app-p/locations/us-central1/clusters/rc-in"
+	rcExt := "//redis.googleapis.com/projects/app-p/locations/us-central1/clusters/rc-ext"
+	riURI := "//redis.googleapis.com/projects/app-p/locations/us-central1/instances/ri-1"
+	sqlURI := "//sqladmin.googleapis.com/projects/app-p/instances/sql-1"
+	extHostStub := "//cloudresourcemanager.googleapis.com/projects/ext-host"
+
+	assetHandler := func(_ context.Context, req *assetpb.ListAssetsRequest) (*assetpb.ListAssetsResponse, error) {
+		if req.ContentType != assetpb.ContentType_RESOURCE {
+			return &assetpb.ListAssetsResponse{ReadTime: timestamppb.Now()}, nil
+		}
+		return &assetpb.ListAssetsResponse{
+			ReadTime: timestamppb.Now(),
+			Assets: []*assetpb.Asset{
+				{Name: "//cloudresourcemanager.googleapis.com/projects/app-p", AssetType: "cloudresourcemanager.googleapis.com/Project", Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{"projectId": "app-p", "projectNumber": "4001"})}},
+				{
+					Name:      vpcIn,
+					AssetType: "compute.googleapis.com/Network",
+					Ancestors: []string{"projects/app-p"},
+					Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+						"peerings": []any{map[string]any{
+							"name":    "servicenetworking-googleapis-com",
+							"network": "projects/p12345-tp/global/networks/sn-net",
+							"state":   "ACTIVE",
+						}},
+					})},
+				},
+				{
+					Name:      rcIn,
+					AssetType: "redis.googleapis.com/Cluster",
+					Ancestors: []string{"projects/app-p"},
+					Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+						"pscConfigs": []any{map[string]any{"network": "projects/app-p/global/networks/vpc-in"}},
+					})},
+				},
+				{
+					Name:      rcExt,
+					AssetType: "redis.googleapis.com/Cluster",
+					Ancestors: []string{"projects/app-p"},
+					Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+						"pscConfigs": []any{map[string]any{"network": "projects/ext-host/global/networks/shared-vpc"}},
+					})},
+				},
+				{
+					Name:      riURI,
+					AssetType: "redis.googleapis.com/Instance",
+					Ancestors: []string{"projects/app-p"},
+					Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+						"authorizedNetwork": "projects/app-p/global/networks/vpc-in",
+					})},
+				},
+				{
+					Name:      sqlURI,
+					AssetType: "sqladmin.googleapis.com/Instance",
+					Ancestors: []string{"projects/app-p"},
+					Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+						"settings": map[string]any{"ipConfiguration": map[string]any{"privateNetwork": "projects/app-p/global/networks/vpc-in"}},
+					})},
+				},
+			},
+		}, nil
+	}
+
+	clients, _ := newTestClients(t, assetHandler, nil, nil, nil)
+	facts, err := Extract(context.Background(), clients, ExtractOptions{Scopes: []string{"projects/app-p"}})
+	if err != nil {
+		t.Fatalf("Extract error: %v", err)
+	}
+
+	wantEdges := []struct {
+		from, to string
+		kind     FactEdgeKind
+		detail   string
+	}{
+		{vpcIn, rcIn, EdgeConfigRef, "psc_network"},
+		{rcExt, extHostStub, EdgeConfigRef, "shared_vpc"},
+		{vpcIn, riURI, EdgePSAPeering, "servicenetworking-googleapis-com (p12345-tp)"},
+		{vpcIn, sqlURI, EdgePSAPeering, "servicenetworking-googleapis-com (p12345-tp)"},
+	}
+	for _, want := range wantEdges {
+		if !hasEdgeDetail(facts.Edges, want.from, want.to, want.kind, want.detail) {
+			t.Errorf("missing edge %s -[%s:%s]-> %s (got %+v)", want.from, want.kind, want.detail, want.to, facts.Edges)
+		}
+	}
+	if hasEdge(facts.Edges, vpcIn, rcIn, EdgePSAPeering) {
+		t.Errorf("redis.googleapis.com/Cluster must not emit PSA_PEERING edge")
+	}
+	if rcRes := findResource(facts.Resources, rcIn); rcRes == nil {
+		t.Fatalf("missing resource %s", rcIn)
+	} else if _, hasTenant := rcRes.Attributes["psa_tenant_project"]; hasTenant {
+		t.Errorf("redis.googleapis.com/Cluster must not record psa_tenant_project attribute")
+	}
+	assertProjectSharedVPCHost(t, facts, "app-p", "ext-host")
+}
+
+func assertProjectSharedVPCHost(t *testing.T, facts *FactsFile, projectID, wantHost string) {
+	t.Helper()
+	for _, p := range facts.Hierarchy.Projects {
+		if p.ProjectID == projectID {
+			if p.SharedVPCHostProject != wantHost {
+				t.Errorf("%s SharedVPCHostProject = %q, want %q", projectID, p.SharedVPCHostProject, wantHost)
+			}
+			return
+		}
+	}
+	t.Errorf("project %s not found in hierarchy", projectID)
+}
+
+func TestCloudTasksQueueStructuralRefs(t *testing.T) {
+	runURI := "//run.googleapis.com/projects/tasks-p/locations/us-central1/services/worker-api"
+	fnURI := "//cloudfunctions.googleapis.com/projects/tasks-p/locations/us-central1/functions/fn-hook"
+	aeWorkerURI := "//appengine.googleapis.com/apps/tasks-p/services/worker"
+	aeLegacyURI := "//appengine.googleapis.com/apps/tasks-p/services/legacy"
+	qHTTPRun := "//cloudtasks.googleapis.com/projects/tasks-p/locations/us-central1/queues/q-http-run"
+	qHTTPFn := "//cloudtasks.googleapis.com/projects/tasks-p/locations/us-central1/queues/q-http-fn"
+	qHTTPNoHost := "//cloudtasks.googleapis.com/projects/tasks-p/locations/us-central1/queues/q-http-nohost"
+	qAEV2 := "//cloudtasks.googleapis.com/projects/tasks-p/locations/us-central1/queues/q-ae-v2"
+	qAEV2Beta3 := "//cloudtasks.googleapis.com/projects/tasks-p/locations/us-central1/queues/q-ae-v2beta3"
+
+	assetHandler := func(_ context.Context, req *assetpb.ListAssetsRequest) (*assetpb.ListAssetsResponse, error) {
+		if req.ContentType != assetpb.ContentType_RESOURCE {
+			return &assetpb.ListAssetsResponse{ReadTime: timestamppb.Now()}, nil
+		}
+		return &assetpb.ListAssetsResponse{
+			ReadTime: timestamppb.Now(),
+			Assets: []*assetpb.Asset{
+				{Name: "//cloudresourcemanager.googleapis.com/projects/3003", AssetType: "cloudresourcemanager.googleapis.com/Project", Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{"projectId": "tasks-p", "projectNumber": "3003"})}},
+				{
+					Name:      "//run.googleapis.com/projects/3003/locations/us-central1/services/worker-api",
+					AssetType: "run.googleapis.com/Service",
+					Resource:  &assetpb.Resource{Location: "us-central1", Data: mustStruct(t, map[string]any{"uri": "https://worker-api-abcdef-uc.a.run.app"})},
+				},
+				{
+					Name:      "//cloudfunctions.googleapis.com/projects/3003/locations/us-central1/functions/fn-hook",
+					AssetType: "cloudfunctions.googleapis.com/CloudFunction",
+					Resource:  &assetpb.Resource{Location: "us-central1", Data: mustStruct(t, map[string]any{"httpsTrigger": map[string]any{"url": "https://us-central1-tasks-p.cloudfunctions.net/fn-hook"}})},
+				},
+				{Name: "//appengine.googleapis.com/apps/3003/services/worker", AssetType: "appengine.googleapis.com/Service"},
+				{Name: "//appengine.googleapis.com/apps/3003/services/legacy", AssetType: "appengine.googleapis.com/Service"},
+				{
+					Name:      "//cloudtasks.googleapis.com/projects/3003/locations/us-central1/queues/q-http-run",
+					AssetType: "cloudtasks.googleapis.com/Queue",
+					Resource: &assetpb.Resource{Location: "us-central1", Data: mustStruct(t, map[string]any{
+						"state": "RUNNING",
+						"httpTarget": map[string]any{
+							"uriOverride": map[string]any{
+								"scheme":       "HTTPS",
+								"host":         "worker-api-abcdef-uc.a.run.app",
+								"pathOverride": map[string]any{"path": "dispatch?token=secret#frag"},
+							},
+							"oidcToken": map[string]any{"serviceAccountEmail": "tasks@tasks-p.iam.gserviceaccount.com"},
+						},
+					})},
+				},
+				{
+					Name:      "//cloudtasks.googleapis.com/projects/3003/locations/us-central1/queues/q-http-fn",
+					AssetType: "cloudtasks.googleapis.com/Queue",
+					Resource: &assetpb.Resource{Location: "us-central1", Data: mustStruct(t, map[string]any{
+						"state": "RUNNING",
+						"httpTarget": map[string]any{
+							"uriOverride": map[string]any{
+								"scheme":       "SCHEME_UNSPECIFIED",
+								"host":         "us-central1-tasks-p.cloudfunctions.net",
+								"pathOverride": map[string]any{"path": "/fn-hook"},
+							},
+							"oauthToken": map[string]any{"serviceAccountEmail": "oauth@tasks-p.iam.gserviceaccount.com"},
+						},
+					})},
+				},
+				{
+					Name:      "//cloudtasks.googleapis.com/projects/3003/locations/us-central1/queues/q-http-nohost",
+					AssetType: "cloudtasks.googleapis.com/Queue",
+					Resource: &assetpb.Resource{Location: "us-central1", Data: mustStruct(t, map[string]any{
+						"state":      "RUNNING",
+						"httpTarget": map[string]any{"uriOverride": map[string]any{"scheme": "HTTP"}},
+					})},
+				},
+				{
+					Name:      "//cloudtasks.googleapis.com/projects/3003/locations/us-central1/queues/q-ae-v2",
+					AssetType: "cloudtasks.googleapis.com/Queue",
+					Resource: &assetpb.Resource{Location: "us-central1", Data: mustStruct(t, map[string]any{
+						"state":                    "RUNNING",
+						"appEngineRoutingOverride": map[string]any{"service": "worker"},
+					})},
+				},
+				{
+					Name:      "//cloudtasks.googleapis.com/projects/3003/locations/us-central1/queues/q-ae-v2beta3",
+					AssetType: "cloudtasks.googleapis.com/Queue",
+					Resource: &assetpb.Resource{Location: "us-central1", Data: mustStruct(t, map[string]any{
+						"state": "RUNNING",
+						"appEngineHttpQueue": map[string]any{
+							"appEngineRoutingOverride": map[string]any{"service": "legacy"},
+						},
+					})},
+				},
+			},
+		}, nil
+	}
+
+	clients, _ := newTestClients(t, assetHandler, nil, nil, nil)
+	facts, err := Extract(context.Background(), clients, ExtractOptions{Scopes: []string{"projects/tasks-p"}})
+	if err != nil {
+		t.Fatalf("Extract error: %v", err)
+	}
+
+	wantEdges := []struct {
+		from, to string
+		kind     FactEdgeKind
+		detail   string
+	}{
+		{qHTTPRun, runURI, EdgeConfigRef, "cloudtasks.http"},
+		{qHTTPFn, fnURI, EdgeConfigRef, "cloudtasks.http"},
+		{qAEV2, aeWorkerURI, EdgeConfigRef, "cloudtasks.appengine"},
+		{qAEV2Beta3, aeLegacyURI, EdgeConfigRef, "cloudtasks.appengine"},
+	}
+	for _, want := range wantEdges {
+		if !hasEdgeDetail(facts.Edges, want.from, want.to, want.kind, want.detail) {
+			t.Errorf("missing edge %s -[%s:%s]-> %s (got %+v)", want.from, want.kind, want.detail, want.to, facts.Edges)
+		}
+	}
+	for _, e := range facts.Edges {
+		if e.FromURI == qHTTPNoHost {
+			t.Errorf("queue without httpTarget.uriOverride.host must not emit outbound edge: %+v", e)
+		}
+	}
+	if qRes := findResource(facts.Resources, qHTTPRun); qRes == nil || qRes.Attributes["service_account"] != "tasks@tasks-p.iam.gserviceaccount.com" {
+		t.Errorf("expected q-http-run oidcToken service_account attribute, got %+v", qRes)
+	}
+	if qRes := findResource(facts.Resources, qHTTPFn); qRes == nil || qRes.Attributes["service_account"] != "oauth@tasks-p.iam.gserviceaccount.com" {
+		t.Errorf("expected q-http-fn oauthToken service_account attribute, got %+v", qRes)
 	}
 }
