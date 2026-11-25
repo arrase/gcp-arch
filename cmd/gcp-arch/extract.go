@@ -12,15 +12,17 @@ import (
 	"github.com/arrase/gcp-arch/internal/extract"
 )
 
+type extractCmdOpts struct {
+	scopes         scopeFlags
+	projectAliases []string
+	quotaProject   string
+	cloudBuildRuns int
+	quiet          bool
+	outPath        string
+}
+
 func newExtractCmd(stdout, stderr io.Writer, deps appDeps, cfg *appConfig) *cobra.Command {
-	var (
-		scopes         scopeFlags
-		projectAliases []string
-		quotaProject   string
-		cloudBuildRuns int
-		quiet          bool
-		outPath        string
-	)
+	var opts extractCmdOpts
 
 	cmd := &cobra.Command{
 		Use:   "extract",
@@ -34,83 +36,97 @@ At least one target scope (--org, --folder, or --projects) is required.`,
   gcp-arch extract --projects app-prod,data-prod --project-alias 999000111222=shared-vpc-host -o prod.facts.json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			if !scopes.anyChanged(cmd) {
-				scopes.applyConfig(cfg)
-			}
-			if !cmd.Flags().Changed("quota-project") && cfg.QuotaProject != "" {
-				quotaProject = cfg.QuotaProject
-			}
-			if !cmd.Flags().Changed("cloudbuild-runs") && cfg.CloudBuildRuns != nil {
-				cloudBuildRuns = *cfg.CloudBuildRuns
-			}
-
-			parsed, err := scopes.parse()
-			if err != nil {
-				return err
-			}
-			if parsed.empty() {
-				return usageErr(fmt.Errorf("at least one of --org, --folder, or --projects is required"))
-			}
-			if cloudBuildRuns < 1 {
-				return usageErr(fmt.Errorf("--cloudbuild-runs must be >= 1"))
-			}
-			if strings.TrimSpace(outPath) == "" {
-				return usageErr(fmt.Errorf("-o/--out path cannot be empty"))
-			}
-
-			aliases, err := mergeProjectAliases(cfg.ProjectAliases, projectAliases)
-			if err != nil {
-				return err
-			}
-
-			progressW := stderr
-			if quiet {
-				progressW = io.Discard
-			}
-
-			ctx := cmd.Context()
-			clients, err := deps.newExtractClients(ctx, extract.ClientOptions{
-				QuotaProject:   quotaProject,
-				ProjectAliases: aliases,
-				ProgressWriter: progressW,
-			})
-			if err != nil {
-				return runtimeErr(err)
-			}
-			if clients != nil {
-				defer func() { _ = clients.Close() }()
-			}
-
-			facts, err := deps.extractFacts(ctx, clients, extract.ExtractOptions{
-				Scopes:         parsed.canonical,
-				CloudBuildRuns: cloudBuildRuns,
-			})
-			if err != nil {
-				return runtimeErr(err)
-			}
-
-			if err := extract.WriteFacts(outPath, facts); err != nil {
-				return runtimeErr(err)
-			}
-
-			writeOutOfScopeHints(stderr, facts.OutOfScopeTargets)
-			writeDegradedCoverage(stderr, facts.CoverageLedger)
-
-			if !quiet {
-				_, _ = fmt.Fprintf(stdout, "Wrote %s (%d resources, %d edges)\n", outPath, len(facts.Resources), len(facts.Edges))
-			}
-			return nil
+			opts.applyConfigDefaults(cmd, cfg)
+			return executeExtract(cmd, stdout, stderr, deps, cfg, opts)
 		},
 	}
 
 	cmd.Flags().SortFlags = false
-	scopes.register(cmd)
-	cmd.Flags().StringArrayVar(&projectAliases, "project-alias", nil, "Map project number to ID (`NUM=ID`, repeatable)")
-	cmd.Flags().StringVar(&quotaProject, "quota-project", "", "Explicit GCP quota project `ID` (defaults to ADC quota_project_id)")
-	cmd.Flags().IntVar(&cloudBuildRuns, "cloudbuild-runs", extract.DefaultCloudBuildRuns, "Latest succeeded Cloud Build runs folded per trigger")
-	cmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Suppress progress output")
-	cmd.Flags().StringVarP(&outPath, "out", "o", "facts.json", "Output v3 facts JSON `FILE`")
+	opts.scopes.register(cmd)
+	cmd.Flags().StringArrayVar(&opts.projectAliases, "project-alias", nil, "Map project number to ID (`NUM=ID`, repeatable)")
+	cmd.Flags().StringVar(&opts.quotaProject, "quota-project", "", "Explicit GCP quota project `ID` (defaults to ADC quota_project_id)")
+	cmd.Flags().IntVar(&opts.cloudBuildRuns, "cloudbuild-runs", extract.DefaultCloudBuildRuns, "Latest succeeded Cloud Build runs folded per trigger")
+	cmd.Flags().BoolVarP(&opts.quiet, "quiet", "q", false, "Suppress progress output")
+	cmd.Flags().StringVarP(&opts.outPath, "out", "o", "facts.json", "Output v3 facts JSON `FILE`")
 	return cmd
+}
+
+func (o *extractCmdOpts) applyConfigDefaults(cmd *cobra.Command, cfg *appConfig) {
+	if !o.scopes.anyChanged(cmd) {
+		o.scopes.applyConfig(cfg)
+	}
+	if !cmd.Flags().Changed("quota-project") && cfg.QuotaProject != "" {
+		o.quotaProject = cfg.QuotaProject
+	}
+	if !cmd.Flags().Changed("cloudbuild-runs") && cfg.CloudBuildRuns != nil {
+		o.cloudBuildRuns = *cfg.CloudBuildRuns
+	}
+}
+
+func executeExtract(cmd *cobra.Command, stdout, stderr io.Writer, deps appDeps, cfg *appConfig, opts extractCmdOpts) error {
+	parsed, aliases, err := validateExtractOpts(cfg, opts)
+	if err != nil {
+		return err
+	}
+
+	progressW := stderr
+	if opts.quiet {
+		progressW = io.Discard
+	}
+
+	ctx := cmd.Context()
+	clients, err := deps.newExtractClients(ctx, extract.ClientOptions{
+		QuotaProject:   opts.quotaProject,
+		ProjectAliases: aliases,
+		ProgressWriter: progressW,
+	})
+	if err != nil {
+		return runtimeErr(err)
+	}
+	if clients != nil {
+		defer func() { _ = clients.Close() }()
+	}
+
+	facts, err := deps.extractFacts(ctx, clients, extract.ExtractOptions{
+		Scopes:         parsed.canonical,
+		CloudBuildRuns: opts.cloudBuildRuns,
+	})
+	if err != nil {
+		return runtimeErr(err)
+	}
+
+	if err := extract.WriteFacts(opts.outPath, facts); err != nil {
+		return runtimeErr(err)
+	}
+
+	writeOutOfScopeHints(stderr, facts.OutOfScopeTargets)
+	writeDegradedCoverage(stderr, facts.CoverageLedger)
+
+	if !opts.quiet {
+		_, _ = fmt.Fprintf(stdout, "Wrote %s (%d resources, %d edges)\n", opts.outPath, len(facts.Resources), len(facts.Edges))
+	}
+	return nil
+}
+
+func validateExtractOpts(cfg *appConfig, opts extractCmdOpts) (parsedScopes, map[string]string, error) {
+	parsed, err := opts.scopes.parse()
+	if err != nil {
+		return parsedScopes{}, nil, err
+	}
+	if parsed.empty() {
+		return parsedScopes{}, nil, usageErr(fmt.Errorf("at least one of --org, --folder, or --projects is required"))
+	}
+	if opts.cloudBuildRuns < 1 {
+		return parsedScopes{}, nil, usageErr(fmt.Errorf("--cloudbuild-runs must be >= 1"))
+	}
+	if strings.TrimSpace(opts.outPath) == "" {
+		return parsedScopes{}, nil, usageErr(fmt.Errorf("-o/--out path cannot be empty"))
+	}
+	aliases, err := mergeProjectAliases(cfg.ProjectAliases, opts.projectAliases)
+	if err != nil {
+		return parsedScopes{}, nil, err
+	}
+	return parsed, aliases, nil
 }
 
 func writeOutOfScopeHints(w io.Writer, hints []extract.OutOfScopeHint) {

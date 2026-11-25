@@ -36,7 +36,17 @@ func BuildSystemIndexView(m *manifest.Manifest) *manifest.View {
 
 	extCallers, extTargets, viewPlaced := collectView0Externals(detailViews, compByID)
 	placements, placedInIndex, colOf := buildView0Placements(detailViews, extCallers, extTargets)
-	edges := buildView0Edges(detailViews, extCallers, extTargets, viewPlaced, compByID, placedInIndex, colOf, rejected)
+	idx := &view0Index{
+		detailViews:   detailViews,
+		extCallers:    extCallers,
+		extTargets:    extTargets,
+		viewPlaced:    viewPlaced,
+		compByID:      compByID,
+		placedInIndex: placedInIndex,
+		colOf:         colOf,
+		rejected:      rejected,
+	}
+	edges := idx.buildEdges()
 
 	return &manifest.View{
 		ID:         manifest.SystemIndexViewID,
@@ -137,39 +147,44 @@ func buildView0Placements(detailViews []manifest.View, extCallers, extTargets []
 	return placements, placedInIndex, colOf
 }
 
-func buildView0Edges(
-	detailViews []manifest.View,
-	extCallers, extTargets []string,
-	viewPlaced map[string]map[string]bool,
-	compByID map[string]manifest.Component,
-	placedInIndex map[string]bool,
-	colOf map[string]int,
-	rejected map[[2]string]bool,
-) []manifest.Edge {
-	edgeMap := make(map[viewEdgeKey]manifest.Edge)
-	addEdge := func(from, to, verb string, fk manifest.FlowKind) {
-		if from == to || !placedInIndex[from] || !placedInIndex[to] || rejected[[2]string{from, to}] {
-			return
-		}
-		k := viewEdgeKey{from: from, to: to}
-		if _, exists := edgeMap[k]; exists {
-			return
-		}
-		edgeMap[k] = manifest.Edge{
-			From:       from,
-			To:         to,
-			Verb:       truncateVerb(verb),
-			FlowKind:   fk,
-			Provenance: manifest.ProvenanceVerified,
-		}
+type view0Index struct {
+	detailViews   []manifest.View
+	extCallers    []string
+	extTargets    []string
+	viewPlaced    map[string]map[string]bool
+	compByID      map[string]manifest.Component
+	placedInIndex map[string]bool
+	colOf         map[string]int
+	rejected      map[[2]string]bool
+	edgeMap       map[viewEdgeKey]manifest.Edge
+}
+
+func (idx *view0Index) addEdge(from, to, verb string, fk manifest.FlowKind) {
+	if from == to || !idx.placedInIndex[from] || !idx.placedInIndex[to] || idx.rejected[[2]string{from, to}] {
+		return
 	}
+	k := viewEdgeKey{from: from, to: to}
+	if _, exists := idx.edgeMap[k]; exists {
+		return
+	}
+	idx.edgeMap[k] = manifest.Edge{
+		From:       from,
+		To:         to,
+		Verb:       truncateVerb(verb),
+		FlowKind:   fk,
+		Provenance: manifest.ProvenanceVerified,
+	}
+}
 
-	addView0ExternalEdges(detailViews, extCallers, extTargets, addEdge)
-	addView0OffPageEdges(detailViews, placedInIndex, addEdge)
-	addView0SharedComponentEdges(detailViews, viewPlaced, compByID, colOf, edgeMap, addEdge)
+func (idx *view0Index) buildEdges() []manifest.Edge {
+	idx.edgeMap = make(map[viewEdgeKey]manifest.Edge)
 
-	edges := make([]manifest.Edge, 0, len(edgeMap))
-	for _, e := range edgeMap {
+	idx.addExternalEdges()
+	idx.addOffPageEdges()
+	idx.addSharedComponentEdges()
+
+	edges := make([]manifest.Edge, 0, len(idx.edgeMap))
+	for _, e := range idx.edgeMap {
 		edges = append(edges, e)
 	}
 	slices.SortFunc(edges, func(a, b manifest.Edge) int {
@@ -183,61 +198,57 @@ func buildView0Edges(
 	return edges
 }
 
-func addView0ExternalEdges(detailViews []manifest.View, extCallers, extTargets []string, addEdge func(from, to, verb string, fk manifest.FlowKind)) {
-	for _, dv := range detailViews {
-		for _, cid := range extCallers {
+func (idx *view0Index) addExternalEdges() {
+	for _, dv := range idx.detailViews {
+		for _, cid := range idx.extCallers {
 			if fk, ok := callerFlowInView(dv, cid); ok {
-				addEdge(cid, dv.ID, callerVerb(fk), fk)
+				idx.addEdge(cid, dv.ID, callerVerb(fk), fk)
 			}
 		}
-		for _, tid := range extTargets {
+		for _, tid := range idx.extTargets {
 			if fk, ok := targetFlowInView(dv, tid); ok {
-				addEdge(dv.ID, tid, targetVerb(fk), fk)
+				idx.addEdge(dv.ID, tid, targetVerb(fk), fk)
 			}
 		}
 	}
 }
 
-func addView0OffPageEdges(detailViews []manifest.View, placedInIndex map[string]bool, addEdge func(from, to, verb string, fk manifest.FlowKind)) {
-	for _, dv := range detailViews {
+func (idx *view0Index) addOffPageEdges() {
+	for _, dv := range idx.detailViews {
 		for _, p := range dv.Placements {
 			for _, ref := range p.OffPageRefs {
-				if ref.Direction == "OUT" && placedInIndex[ref.TargetViewID] && ref.TargetViewID != dv.ID {
-					addEdge(dv.ID, ref.TargetViewID, ref.Label, flowFromAccent(dv.AccentMode))
+				if ref.Direction == "OUT" && idx.placedInIndex[ref.TargetViewID] && ref.TargetViewID != dv.ID {
+					idx.addEdge(dv.ID, ref.TargetViewID, ref.Label, flowFromAccent(dv.AccentMode))
 				}
 			}
 		}
 	}
 }
 
-func addView0SharedComponentEdges(
-	detailViews []manifest.View,
-	viewPlaced map[string]map[string]bool,
-	compByID map[string]manifest.Component,
-	colOf map[string]int,
-	edgeMap map[viewEdgeKey]manifest.Edge,
-	addEdge func(from, to, verb string, fk manifest.FlowKind),
-) {
-	for i := 0; i < len(detailViews); i++ {
-		for j := i + 1; j < len(detailViews); j++ {
-			a, b := detailViews[i], detailViews[j]
-			if edgeExistsEitherWay(edgeMap, a.ID, b.ID) {
-				continue
-			}
-			if !sharesNonExternalComponent(viewPlaced[a.ID], viewPlaced[b.ID], compByID) {
-				continue
-			}
-			from, to := a, b
-			if colOf[b.ID] < colOf[a.ID] {
-				from, to = b, a
-			}
-			fk := manifest.FlowRuntime
-			if from.AccentMode == manifest.AccentCICD && to.AccentMode == manifest.AccentCICD {
-				fk = manifest.FlowCICD
-			}
-			addEdge(from.ID, to.ID, "shared resources", fk)
+func (idx *view0Index) addSharedComponentEdges() {
+	for i := 0; i < len(idx.detailViews); i++ {
+		for j := i + 1; j < len(idx.detailViews); j++ {
+			idx.addSharedEdgeForPair(idx.detailViews[i], idx.detailViews[j])
 		}
 	}
+}
+
+func (idx *view0Index) addSharedEdgeForPair(a, b manifest.View) {
+	if edgeExistsEitherWay(idx.edgeMap, a.ID, b.ID) {
+		return
+	}
+	if !sharesNonExternalComponent(idx.viewPlaced[a.ID], idx.viewPlaced[b.ID], idx.compByID) {
+		return
+	}
+	from, to := a, b
+	if idx.colOf[b.ID] < idx.colOf[a.ID] {
+		from, to = b, a
+	}
+	fk := manifest.FlowRuntime
+	if from.AccentMode == manifest.AccentCICD && to.AccentMode == manifest.AccentCICD {
+		fk = manifest.FlowCICD
+	}
+	idx.addEdge(from.ID, to.ID, "shared resources", fk)
 }
 
 func detailViewIndexColumn(dv manifest.View) int {

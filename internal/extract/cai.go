@@ -32,15 +32,15 @@ type ExtractOptions struct {
 var iamPolicyAssetTypes = []string{
 	"cloudresourcemanager.googleapis.com/Organization",
 	"cloudresourcemanager.googleapis.com/Folder",
-	"cloudresourcemanager.googleapis.com/Project",
-	"iam.googleapis.com/ServiceAccount",
-	"compute.googleapis.com/Subnetwork",
+	assetTypeProject,
+	assetTypeServiceAccount,
+	assetTypeSubnetwork,
 	"storage.googleapis.com/Bucket",
 	"bigquery.googleapis.com/Dataset",
 	"pubsub.googleapis.com/Topic",
 	"pubsub.googleapis.com/Subscription",
 	"secretmanager.googleapis.com/Secret",
-	"run.googleapis.com/Service",
+	assetTypeRunService,
 	"cloudfunctions.googleapis.com/CloudFunction",
 	"aiplatform.googleapis.com/Endpoint",
 	"aiplatform.googleapis.com/ReasoningEngine",
@@ -441,10 +441,10 @@ func (st *extractState) collectCAIResourceScope(ctx context.Context, clients *Cl
 
 func (st *extractState) ensureExplicitProjectScopes() {
 	for _, scope := range st.scopes {
-		if !strings.HasPrefix(scope, "projects/") {
+		if !strings.HasPrefix(scope, prefixProjects) {
 			continue
 		}
-		p := mapProject(strings.TrimPrefix(scope, "projects/"), st.projIdx)
+		p := mapProject(strings.TrimPrefix(scope, prefixProjects), st.projIdx)
 		if _, ok := st.projects[p]; !ok {
 			st.projects[p] = ProjectNode{ProjectID: p, DisplayName: p}
 		}
@@ -533,7 +533,7 @@ func (st *extractState) ingestIAMPolicyAsset(a *assetpb.Asset) {
 	}
 	resURI := CanonicalizeAIP122(a.GetName(), st.projIdx)
 	projID := extractProjectID(resURI, a.GetAncestors(), st.projIdx)
-	isSubnetwork := a.GetAssetType() == "compute.googleapis.com/Subnetwork"
+	isSubnetwork := a.GetAssetType() == assetTypeSubnetwork
 	for _, b := range pol.GetBindings() {
 		if isSubnetwork && !isSubnetAttachmentRole(b.GetRole()) {
 			continue
@@ -624,7 +624,7 @@ func (st *extractState) ingestHierarchyAsset(assetType, rawName string, res *ass
 		st.ingestOrganization(rawName, data)
 	case "cloudresourcemanager.googleapis.com/Folder":
 		st.ingestFolder(rawName, res, data, ancestors)
-	case "cloudresourcemanager.googleapis.com/Project":
+	case assetTypeProject:
 		st.ingestProject(rawName, data, ancestors)
 	case "serviceusage.googleapis.com/Service":
 		st.ingestEnabledService(rawName, data, ancestors)
@@ -670,7 +670,7 @@ func (st *extractState) ingestFoldedOrPlumbingAsset(canonURI, assetType, projID,
 		return true
 	case "bigtableadmin.googleapis.com/Cluster":
 		st.suppressed[assetType]++
-		st.addFoldCount(parentBeforeSegment(canonURI, "/clusters/"), "cluster_count")
+		st.addFoldCount(parentBeforeSegment(canonURI, segClusters), "cluster_count")
 		return true
 	case "bigtableadmin.googleapis.com/Table":
 		st.suppressed[assetType]++
@@ -741,7 +741,7 @@ func (st *extractState) foldNodePool(canonURI, resParent string, data *structpb.
 	}
 	for _, ig := range getStringListField(data, "instanceGroupUrls") {
 		list := st.gke.clusterIGURLs[clusterURI]
-		appendUnique(&list, CanonicalizeAIP122WithService(ig, "compute.googleapis.com", st.projIdx))
+		appendUnique(&list, CanonicalizeAIP122WithService(ig, svcCompute, st.projIdx))
 		st.gke.clusterIGURLs[clusterURI] = list
 	}
 }
@@ -756,7 +756,7 @@ func (st *extractState) expandBareSubnetAttr(rec *ingestedAsset) {
 		subProj = rec.projectID
 	}
 	if reg := regionFromLocation(rec.location); reg != "" && subProj != "" {
-		rec.attrs["subnet"] = "//compute.googleapis.com/projects/" + mapProject(subProj, st.projIdx) + "/regions/" + reg + "/subnetworks/" + sub
+		rec.attrs["subnet"] = prefixComputeProjects + mapProject(subProj, st.projIdx) + "/regions/" + reg + "/subnetworks/" + sub
 	}
 }
 
@@ -886,29 +886,9 @@ func (st *extractState) ingestProject(rawName string, data *structpb.Struct, anc
 		ProjectID:     strings.TrimSpace(getStringField(data, "projectId")),
 		ProjectNumber: strings.TrimSpace(getStringField(data, "projectNumber")),
 		DisplayName:   strings.TrimSpace(getStringField(data, "name")),
+		Parent:        resolveProjectParent(data, ancestors),
 	}
-	if p.ProjectNumber == "" {
-		if last := shortResourceName(rawName); isNumeric(last) {
-			p.ProjectNumber = last
-		} else if p.ProjectID == "" {
-			p.ProjectID = last
-		}
-	}
-	if p.ProjectID == "" {
-		p.ProjectID = mapProject(p.ProjectNumber, st.projIdx)
-	}
-	if p.DisplayName == "" {
-		p.DisplayName = p.ProjectID
-	}
-	if len(ancestors) >= 2 {
-		p.Parent = ancestors[1]
-	} else if parent := getStructField(data, "parent"); parent != nil {
-		pt := strings.TrimSpace(getStringField(parent, "type"))
-		pid := strings.TrimSpace(getStringField(parent, "id"))
-		if pt != "" && pid != "" {
-			p.Parent = pt + "s/" + pid
-		}
-	}
+	populateProjectIdentity(&p, rawName, st.projIdx)
 	if p.ProjectID == "" {
 		return
 	}
@@ -917,17 +897,45 @@ func (st *extractState) ingestProject(rawName string, data *structpb.Struct, anc
 		st.psaProjectSet[p.ProjectID] = true
 	}
 	existing := st.projects[p.ProjectID]
-	if p.SharedVPCHostProject == "" {
-		p.SharedVPCHostProject = existing.SharedVPCHostProject
-	}
-	if existing.IsPSATenant {
-		p.IsPSATenant = true
-	}
+	p.SharedVPCHostProject = existing.SharedVPCHostProject
+	p.IsPSATenant = p.IsPSATenant || existing.IsPSATenant
 	st.projects[p.ProjectID] = p
 	st.inScopeProjects[p.ProjectID] = true
 	if p.ProjectNumber != "" {
 		st.projIdx[p.ProjectNumber] = p.ProjectID
 	}
+}
+
+func populateProjectIdentity(p *ProjectNode, rawName string, projIdx map[string]string) {
+	if p.ProjectNumber == "" {
+		if last := shortResourceName(rawName); isNumeric(last) {
+			p.ProjectNumber = last
+		} else if p.ProjectID == "" {
+			p.ProjectID = last
+		}
+	}
+	if p.ProjectID == "" {
+		p.ProjectID = mapProject(p.ProjectNumber, projIdx)
+	}
+	if p.DisplayName == "" {
+		p.DisplayName = p.ProjectID
+	}
+}
+
+func resolveProjectParent(data *structpb.Struct, ancestors []string) string {
+	if len(ancestors) >= 2 {
+		return ancestors[1]
+	}
+	parent := getStructField(data, "parent")
+	if parent == nil {
+		return ""
+	}
+	pt := strings.TrimSpace(getStringField(parent, "type"))
+	pid := strings.TrimSpace(getStringField(parent, "id"))
+	if pt != "" && pid != "" {
+		return pt + "s/" + pid
+	}
+	return ""
 }
 
 func (st *extractState) ingestEnabledService(rawName string, data *structpb.Struct, ancestors []string) {
@@ -965,6 +973,15 @@ func (st *extractState) addFoldCount(parentURI, attrKey string) {
 	m[attrKey]++
 }
 
+func (st *extractState) addFoldedExternalURI(dsURI, u string) {
+	if u == "" {
+		return
+	}
+	list := st.foldedExternalURIs[dsURI]
+	appendUnique(&list, u)
+	st.foldedExternalURIs[dsURI] = list
+}
+
 func (st *extractState) foldBigQueryChild(canonURI, countKey string, data *structpb.Struct) {
 	dsURI := parentBigQueryDatasetURI(canonURI)
 	if dsURI == "" {
@@ -974,42 +991,37 @@ func (st *extractState) foldBigQueryChild(canonURI, countKey string, data *struc
 	if data == nil {
 		return
 	}
-	addExt := func(u string) {
-		if u == "" {
-			return
-		}
-		list := st.foldedExternalURIs[dsURI]
-		appendUnique(&list, u)
-		st.foldedExternalURIs[dsURI] = list
-	}
 	switch countKey {
 	case "table_count":
-		if ext := getStructField(data, "externalDataConfiguration"); ext != nil {
-			for _, u := range getStringListField(ext, "sourceUris") {
-				addExt(CanonicalizeAIP122(SanitizeURL(u), st.projIdx))
-			}
-			if conn := getStringField(ext, "connectionId"); conn != "" {
-				addExt(normalizeBigQueryConnectionURI(conn, st.projIdx))
-			}
-		}
+		st.foldBigQueryExternalTable(dsURI, getStructField(data, "externalDataConfiguration"))
 	case "routine_count":
-		if rf := getStructField(data, "remoteFunctionOptions"); rf != nil {
-			if conn := getStringField(rf, "connection"); conn != "" {
-				addExt(normalizeBigQueryConnectionURI(conn, st.projIdx))
-			}
-			if ep := getStringField(rf, "endpoint"); ep != "" {
-				addExt(CanonicalizeAIP122(SanitizeURL(ep), st.projIdx))
-			}
-		}
+		st.foldBigQueryRemoteConnEndpoint(dsURI, getStructField(data, "remoteFunctionOptions"))
 	case "model_count":
-		if rm := getStructField(data, "remoteModelInfo"); rm != nil {
-			if conn := getStringField(rm, "connection"); conn != "" {
-				addExt(normalizeBigQueryConnectionURI(conn, st.projIdx))
-			}
-			if ep := getStringField(rm, "endpoint"); ep != "" {
-				addExt(CanonicalizeAIP122(SanitizeURL(ep), st.projIdx))
-			}
-		}
+		st.foldBigQueryRemoteConnEndpoint(dsURI, getStructField(data, "remoteModelInfo"))
+	}
+}
+
+func (st *extractState) foldBigQueryExternalTable(dsURI string, ext *structpb.Struct) {
+	if ext == nil {
+		return
+	}
+	for _, u := range getStringListField(ext, "sourceUris") {
+		st.addFoldedExternalURI(dsURI, CanonicalizeAIP122(SanitizeURL(u), st.projIdx))
+	}
+	if conn := getStringField(ext, "connectionId"); conn != "" {
+		st.addFoldedExternalURI(dsURI, normalizeBigQueryConnectionURI(conn, st.projIdx))
+	}
+}
+
+func (st *extractState) foldBigQueryRemoteConnEndpoint(dsURI string, remote *structpb.Struct) {
+	if remote == nil {
+		return
+	}
+	if conn := getStringField(remote, "connection"); conn != "" {
+		st.addFoldedExternalURI(dsURI, normalizeBigQueryConnectionURI(conn, st.projIdx))
+	}
+	if ep := getStringField(remote, "endpoint"); ep != "" {
+		st.addFoldedExternalURI(dsURI, CanonicalizeAIP122(SanitizeURL(ep), st.projIdx))
 	}
 }
 
@@ -1021,7 +1033,7 @@ func normalizeBigQueryConnectionURI(conn string, projIdx map[string]string) stri
 	if !strings.Contains(s, "/") {
 		parts := strings.SplitN(s, ".", 3)
 		if len(parts) == 3 && parts[0] != "" && parts[1] != "" && parts[2] != "" {
-			return "//bigqueryconnection.googleapis.com/projects/" + mapProject(parts[0], projIdx) + "/locations/" + parts[1] + "/connections/" + parts[2]
+			return "//bigqueryconnection.googleapis.com/projects/" + mapProject(parts[0], projIdx) + segLocations + parts[1] + "/connections/" + parts[2]
 		}
 	}
 	return CanonicalizeAIP122WithService(s, "bigqueryconnection.googleapis.com", projIdx)
@@ -1045,30 +1057,42 @@ func (st *extractState) foldCloudRunRevision(canonURI, projID string, data *stru
 	st.revisions[canonURI] = rev
 }
 
-func (st *extractState) extractCloudRunRevisionMeta(rev *revisionSummary, canonURI, projID string, data, meta *structpb.Struct) {
-	if meta != nil {
-		if svcName := getStringField(getStructField(meta, "labels"), "serving.knative.dev/service"); svcName != "" {
-			if loc := extractLocationFromURI(canonURI); loc != "" && projID != "" {
-				rev.parentURI = "//run.googleapis.com/projects/" + projID + "/locations/" + loc + "/services/" + svcName
-			}
-		}
-		if ann := getStructField(meta, "annotations"); ann != nil {
-			if conn := getStringField(ann, "run.googleapis.com/vpc-access-connector"); conn != "" {
-				rev.vpcConnector = CanonicalizeAIP122WithService(conn, "vpcaccess.googleapis.com", st.projIdx)
-			}
-			for _, inst := range strings.Split(getStringField(ann, "run.googleapis.com/cloudsql-instances"), ",") {
-				if uri := cloudSQLConnNameToURI(inst, st.projIdx); uri != "" {
-					appendUnique(&rev.cloudSQLInstances, uri)
-				}
-			}
-		}
+func buildCloudRunServiceURI(projID, location, svcName string) string {
+	if projID == "" || location == "" || svcName == "" {
+		return ""
 	}
-	if svc := getStringField(data, "service"); svc != "" && rev.parentURI == "" {
-		if strings.Contains(svc, "/") {
-			rev.parentURI = CanonicalizeAIP122WithService(svc, "run.googleapis.com", st.projIdx)
-		} else if loc := extractLocationFromURI(canonURI); loc != "" && projID != "" {
-			rev.parentURI = "//run.googleapis.com/projects/" + projID + "/locations/" + loc + "/services/" + svc
-		}
+	return prefixRunProjects + projID + segLocations + location + segServices + svcName
+}
+
+func (st *extractState) extractCloudRunRevisionMeta(rev *revisionSummary, canonURI, projID string, data, meta *structpb.Struct) {
+	loc := extractLocationFromURI(canonURI)
+	if svcName := getStringField(getStructField(meta, "labels"), "serving.knative.dev/service"); svcName != "" {
+		rev.parentURI = buildCloudRunServiceURI(projID, loc, svcName)
+	}
+	st.extractCloudRunRevisionAnnotations(rev, getStructField(meta, "annotations"))
+	if rev.parentURI != "" {
+		return
+	}
+	svc := getStringField(data, "service")
+	if svc == "" {
+		return
+	}
+	if strings.Contains(svc, "/") {
+		rev.parentURI = CanonicalizeAIP122WithService(svc, svcRun, st.projIdx)
+		return
+	}
+	rev.parentURI = buildCloudRunServiceURI(projID, loc, svc)
+}
+
+func (st *extractState) extractCloudRunRevisionAnnotations(rev *revisionSummary, ann *structpb.Struct) {
+	if ann == nil {
+		return
+	}
+	if conn := getStringField(ann, "run.googleapis.com/vpc-access-connector"); conn != "" {
+		rev.vpcConnector = CanonicalizeAIP122WithService(conn, svcVPCAccess, st.projIdx)
+	}
+	for _, inst := range strings.Split(getStringField(ann, "run.googleapis.com/cloudsql-instances"), ",") {
+		appendUnique(&rev.cloudSQLInstances, cloudSQLConnNameToURI(inst, st.projIdx))
 	}
 }
 
@@ -1077,7 +1101,7 @@ func (st *extractState) extractCloudRunRevisionVPC(rev *revisionSummary, vpc *st
 		return
 	}
 	if conn := getStringField(vpc, "connector"); conn != "" {
-		rev.vpcConnector = CanonicalizeAIP122WithService(conn, "vpcaccess.googleapis.com", st.projIdx)
+		rev.vpcConnector = CanonicalizeAIP122WithService(conn, svcVPCAccess, st.projIdx)
 	}
 	for _, nicVal := range getListField(vpc, "networkInterfaces") {
 		nic := nicVal.GetStructValue()
@@ -1085,10 +1109,10 @@ func (st *extractState) extractCloudRunRevisionVPC(rev *revisionSummary, vpc *st
 			continue
 		}
 		if n := getStringField(nic, "network"); n != "" {
-			rev.networkURI = CanonicalizeAIP122WithService(n, "compute.googleapis.com", st.projIdx)
+			rev.networkURI = CanonicalizeAIP122WithService(n, svcCompute, st.projIdx)
 		}
 		if s := getStringField(nic, "subnetwork"); s != "" {
-			rev.subnetURI = CanonicalizeAIP122WithService(s, "compute.googleapis.com", st.projIdx)
+			rev.subnetURI = CanonicalizeAIP122WithService(s, svcCompute, st.projIdx)
 		}
 		break
 	}
@@ -1100,7 +1124,7 @@ func (st *extractState) foldAppEngineVersion(canonURI string, data *structpb.Str
 	if data != nil {
 		rev.serviceAccount = getStringField(data, "serviceAccount")
 		if name := getStringField(getStructField(data, "vpcAccessConnector"), "name"); name != "" {
-			rev.vpcConnector = CanonicalizeAIP122WithService(name, "vpcaccess.googleapis.com", st.projIdx)
+			rev.vpcConnector = CanonicalizeAIP122WithService(name, svcVPCAccess, st.projIdx)
 		}
 		extractEnvMapRefs(getStructField(data, "envVariables"), st.projIdx, &rev.envRefs, &rev.secretRefs)
 	}
@@ -1116,21 +1140,21 @@ func (st *extractState) ingestLBIntermediate(canonURI, assetType, projID, locati
 	}
 	switch assetType {
 	case "compute.googleapis.com/TargetHttpProxy", "compute.googleapis.com/TargetGrpcProxy":
-		lb.urlMap = CanonicalizeAIP122WithService(getStringField(data, "urlMap"), "compute.googleapis.com", st.projIdx)
+		lb.urlMap = CanonicalizeAIP122WithService(getStringField(data, "urlMap"), svcCompute, st.projIdx)
 	case "compute.googleapis.com/TargetHttpsProxy":
 		lb.isTLS = true
-		lb.urlMap = CanonicalizeAIP122WithService(getStringField(data, "urlMap"), "compute.googleapis.com", st.projIdx)
+		lb.urlMap = CanonicalizeAIP122WithService(getStringField(data, "urlMap"), svcCompute, st.projIdx)
 	case "compute.googleapis.com/TargetTcpProxy":
-		lb.service = CanonicalizeAIP122WithService(getStringField(data, "service"), "compute.googleapis.com", st.projIdx)
+		lb.service = CanonicalizeAIP122WithService(getStringField(data, "service"), svcCompute, st.projIdx)
 	case "compute.googleapis.com/TargetSslProxy":
 		lb.isTLS = true
-		lb.service = CanonicalizeAIP122WithService(getStringField(data, "service"), "compute.googleapis.com", st.projIdx)
+		lb.service = CanonicalizeAIP122WithService(getStringField(data, "service"), svcCompute, st.projIdx)
 	case "compute.googleapis.com/UrlMap":
 		st.ingestURLMap(lb, data)
 	case "compute.googleapis.com/BackendService":
 		for _, beVal := range getListField(data, "backends") {
 			if grp := getStringField(beVal.GetStructValue(), "group"); grp != "" {
-				appendUnique(&lb.backendGroups, CanonicalizeAIP122WithService(grp, "compute.googleapis.com", st.projIdx))
+				appendUnique(&lb.backendGroups, CanonicalizeAIP122WithService(grp, svcCompute, st.projIdx))
 			}
 		}
 	case "compute.googleapis.com/BackendBucket":
@@ -1140,14 +1164,14 @@ func (st *extractState) ingestLBIntermediate(canonURI, assetType, projID, locati
 		lb.negCloudFn = getStringField(getStructField(data, "cloudFunction"), "function")
 		lb.negAppEngineSvc = getStringField(getStructField(data, "appEngine"), "service")
 		if psc := getStringField(data, "pscTargetService"); psc != "" {
-			lb.negPSCTarget = CanonicalizeAIP122WithService(psc, "compute.googleapis.com", st.projIdx)
+			lb.negPSCTarget = CanonicalizeAIP122WithService(psc, svcCompute, st.projIdx)
 		}
 	}
 	st.lbAssets[canonURI] = lb
 }
 
 func (st *extractState) ingestURLMap(lb *lbIntermediate, data *structpb.Struct) {
-	lb.defaultService = CanonicalizeAIP122WithService(getStringField(data, "defaultService"), "compute.googleapis.com", st.projIdx)
+	lb.defaultService = CanonicalizeAIP122WithService(getStringField(data, "defaultService"), svcCompute, st.projIdx)
 	for _, hrVal := range getListField(data, "hostRules") {
 		for _, h := range getStringListField(hrVal.GetStructValue(), "hosts") {
 			if h != "*" {
@@ -1165,14 +1189,14 @@ func (st *extractState) ingestURLMap(lb *lbIntermediate, data *structpb.Struct) 
 func (st *extractState) ingestURLMapPathMatcher(lb *lbIntermediate, pm *structpb.Struct) {
 	if ds := getStringField(pm, "defaultService"); ds != "" {
 		lb.urlMapBackends = append(lb.urlMapBackends, urlMapBackendEntry{
-			backendURI: CanonicalizeAIP122WithService(ds, "compute.googleapis.com", st.projIdx),
+			backendURI: CanonicalizeAIP122WithService(ds, svcCompute, st.projIdx),
 		})
 	}
 	for _, prVal := range getListField(pm, "pathRules") {
 		pr := prVal.GetStructValue()
 		if svc := getStringField(pr, "service"); svc != "" {
 			lb.urlMapBackends = append(lb.urlMapBackends, urlMapBackendEntry{
-				backendURI: CanonicalizeAIP122WithService(svc, "compute.googleapis.com", st.projIdx),
+				backendURI: CanonicalizeAIP122WithService(svc, svcCompute, st.projIdx),
 				paths:      getStringListField(pr, "paths"),
 			})
 		}
@@ -1196,14 +1220,14 @@ func (st *extractState) ingestURLMapRouteRule(lb *lbIntermediate, rr *structpb.S
 	}
 	if svc := getStringField(rr, "service"); svc != "" {
 		lb.urlMapBackends = append(lb.urlMapBackends, urlMapBackendEntry{
-			backendURI: CanonicalizeAIP122WithService(svc, "compute.googleapis.com", st.projIdx),
+			backendURI: CanonicalizeAIP122WithService(svc, svcCompute, st.projIdx),
 			paths:      paths,
 		})
 	}
 	for _, wbVal := range getListField(getStructField(rr, "routeAction"), "weightedBackendServices") {
 		if bs := getStringField(wbVal.GetStructValue(), "backendService"); bs != "" {
 			lb.urlMapBackends = append(lb.urlMapBackends, urlMapBackendEntry{
-				backendURI: CanonicalizeAIP122WithService(bs, "compute.googleapis.com", st.projIdx),
+				backendURI: CanonicalizeAIP122WithService(bs, svcCompute, st.projIdx),
 				paths:      paths,
 			})
 		}
@@ -1219,22 +1243,22 @@ func (st *extractState) ingestAbsorbedRecord(canonURI, assetType, projID, locati
 	}
 	switch assetType {
 	case "compute.googleapis.com/VpnTunnel":
-		rec.router = CanonicalizeAIP122WithService(getStringField(data, "router"), "compute.googleapis.com", st.projIdx)
+		rec.router = CanonicalizeAIP122WithService(getStringField(data, "router"), svcCompute, st.projIdx)
 		gw := getStringField(data, "vpnGateway")
 		if gw == "" {
 			gw = getStringField(data, "targetVpnGateway")
 		}
-		rec.vpnGateway = CanonicalizeAIP122WithService(gw, "compute.googleapis.com", st.projIdx)
+		rec.vpnGateway = CanonicalizeAIP122WithService(gw, svcCompute, st.projIdx)
 	case "networkconnectivity.googleapis.com/Spoke":
 		st.populateNCCSpokeRecord(rec, data)
 	case "datastream.googleapis.com/ConnectionProfile":
 		st.populateDatastreamProfileRecord(rec, data)
 	case "datastream.googleapis.com/PrivateConnection":
 		if vpc := getStringField(getStructField(data, "vpcPeeringConfig"), "vpc"); vpc != "" {
-			rec.vpc = CanonicalizeAIP122WithService(vpc, "compute.googleapis.com", st.projIdx)
+			rec.vpc = CanonicalizeAIP122WithService(vpc, svcCompute, st.projIdx)
 		}
 	case "alloydb.googleapis.com/Instance":
-		rec.parentURI = parentBeforeSegment(canonURI, "/instances/")
+		rec.parentURI = parentBeforeSegment(canonURI, segInstances)
 		rec.privateIP = parsePrivateIPv4(getStringField(data, "ipAddress"))
 	case "aiplatform.googleapis.com/FeatureView":
 		rec.parentURI = parentBeforeSegment(canonURI, "/featureViews/")
@@ -1255,20 +1279,20 @@ func (st *extractState) populateNCCSpokeRecord(rec *absorbedRecord, data *struct
 		st.addFoldCount(rec.hub, "spoke_count")
 	}
 	if vpc := getStringField(getStructField(data, "linkedVpcNetwork"), "uri"); vpc != "" {
-		rec.linkedVPC = CanonicalizeAIP122WithService(vpc, "compute.googleapis.com", st.projIdx)
+		rec.linkedVPC = CanonicalizeAIP122WithService(vpc, svcCompute, st.projIdx)
 	}
 	for _, u := range getStringListField(getStructField(data, "linkedVpnTunnels"), "uris") {
-		rec.linkedVPNs = append(rec.linkedVPNs, CanonicalizeAIP122WithService(u, "compute.googleapis.com", st.projIdx))
+		rec.linkedVPNs = append(rec.linkedVPNs, CanonicalizeAIP122WithService(u, svcCompute, st.projIdx))
 	}
 	for _, u := range getStringListField(getStructField(data, "linkedInterconnectAttachments"), "uris") {
-		rec.linkedInterconnects = append(rec.linkedInterconnects, CanonicalizeAIP122WithService(u, "compute.googleapis.com", st.projIdx))
+		rec.linkedInterconnects = append(rec.linkedInterconnects, CanonicalizeAIP122WithService(u, svcCompute, st.projIdx))
 	}
 }
 
 func (st *extractState) populateDatastreamProfileRecord(rec *absorbedRecord, data *structpb.Struct) {
 	rec.gcsBucket = getStringField(getStructField(data, "gcsProfile"), "bucket")
 	if pc := getStringField(getStructField(data, "privateConnectivity"), "privateConnection"); pc != "" {
-		rec.privateConnection = CanonicalizeAIP122WithService(pc, "datastream.googleapis.com", st.projIdx)
+		rec.privateConnection = CanonicalizeAIP122WithService(pc, svcDatastream, st.projIdx)
 	}
 	for _, prof := range []string{"mysqlProfile", "postgresqlProfile", "oracleProfile", "sqlServerProfile"} {
 		if h := strings.TrimSpace(getStringField(getStructField(data, prof), "hostname")); h != "" {
@@ -1303,7 +1327,7 @@ type metadataExtractor func(*extractState, *ingestedAsset, *structpb.Struct)
 
 var retainedMetadataExtractors = map[string]metadataExtractor{
 	"compute.googleapis.com/Network":                     extractNetworkMetadata,
-	"compute.googleapis.com/Subnetwork":                  extractVPCParentMetadata,
+	assetTypeSubnetwork:                                  extractVPCParentMetadata,
 	"compute.googleapis.com/Instance":                    extractComputeInstanceMetadata,
 	"compute.googleapis.com/ForwardingRule":              extractForwardingRuleMetadata,
 	"compute.googleapis.com/GlobalForwardingRule":        extractForwardingRuleMetadata,
@@ -1318,7 +1342,7 @@ var retainedMetadataExtractors = map[string]metadataExtractor{
 	"memcache.googleapis.com/Instance":                   extractMemcacheMetadata,
 	"file.googleapis.com/Instance":                       extractFilestoreMetadata,
 	"cloudbuild.googleapis.com/BuildTrigger":             extractBuildTriggerMetadata,
-	"run.googleapis.com/Service":                         extractCloudRunServiceMetadata,
+	assetTypeRunService:                                  extractCloudRunServiceMetadata,
 	"run.googleapis.com/Job":                             extractCloudRunJobMetadata,
 	"cloudfunctions.googleapis.com/CloudFunction":        extractCloudFunctionMetadata,
 	"appengine.googleapis.com/Service":                   extractAppEngineServiceMetadata,
@@ -1337,7 +1361,7 @@ var retainedMetadataExtractors = map[string]metadataExtractor{
 	"discoveryengine.googleapis.com/DataStore":           extractDiscoveryDataStoreMetadata,
 	"dialogflow.googleapis.com/Agent":                    extractDialogflowMetadata,
 	"aiplatform.googleapis.com/ReasoningEngine":          extractReasoningEngineMetadata,
-	"iam.googleapis.com/ServiceAccount":                  extractServiceAccountMetadata,
+	assetTypeServiceAccount:                              extractServiceAccountMetadata,
 	"cloudkms.googleapis.com/CryptoKey":                  extractCryptoKeyMetadata,
 }
 
@@ -1346,7 +1370,7 @@ func (st *extractState) extractRetainedMetadata(rec *ingestedAsset, data *struct
 		return
 	}
 	if kms := getAttrString(rec.attrs, "kms_key_uri"); kms != "" {
-		rec.addOutRef(kms, "cloudkms.googleapis.com", "cmek", "")
+		rec.addOutRef(kms, svcCloudKMS, "cmek", "")
 	}
 	if fn, ok := retainedMetadataExtractors[rec.assetType]; ok {
 		fn(st, rec, data)
@@ -1397,10 +1421,10 @@ func extractComputeInstanceMetadata(_ *extractState, rec *ingestedAsset, data *s
 
 func extractForwardingRuleMetadata(st *extractState, rec *ingestedAsset, data *structpb.Struct) {
 	if tgt := getStringField(data, "target"); tgt != "" {
-		rec.frTarget = CanonicalizeAIP122WithService(tgt, "compute.googleapis.com", st.projIdx)
+		rec.frTarget = CanonicalizeAIP122WithService(tgt, svcCompute, st.projIdx)
 	}
 	if bs := getStringField(data, "backendService"); bs != "" {
-		rec.frBackendSvc = CanonicalizeAIP122WithService(bs, "compute.googleapis.com", st.projIdx)
+		rec.frBackendSvc = CanonicalizeAIP122WithService(bs, svcCompute, st.projIdx)
 	}
 	if ip := parsePrivateIPv4(getStringField(data, "IPAddress")); ip != "" {
 		scheme := strings.ToUpper(getStringField(data, "loadBalancingScheme"))
@@ -1413,8 +1437,8 @@ func extractForwardingRuleMetadata(st *extractState, rec *ingestedAsset, data *s
 func extractRouterMetadata(_ *extractState, rec *ingestedAsset, data *structpb.Struct) {
 	for _, ifVal := range getListField(data, "interfaces") {
 		iface := ifVal.GetStructValue()
-		rec.addOutRef(getStringField(iface, "linkedVpnTunnel"), "compute.googleapis.com", "router.vpn", "")
-		rec.addOutRef(getStringField(iface, "linkedInterconnectAttachment"), "compute.googleapis.com", "router.interconnect", "")
+		rec.addOutRef(getStringField(iface, "linkedVpnTunnel"), svcCompute, "router.vpn", "")
+		rec.addOutRef(getStringField(iface, "linkedInterconnectAttachment"), svcCompute, "router.interconnect", "")
 	}
 	if vpc := getAttrString(rec.attrs, "vpc"); vpc != "" {
 		rec.parentURI = vpc
@@ -1422,11 +1446,11 @@ func extractRouterMetadata(_ *extractState, rec *ingestedAsset, data *structpb.S
 }
 
 func extractInterconnectMetadata(_ *extractState, rec *ingestedAsset, data *structpb.Struct) {
-	rec.addInRef(getStringField(data, "router"), "compute.googleapis.com", "interconnect.router", "")
+	rec.addInRef(getStringField(data, "router"), svcCompute, "interconnect.router", "")
 }
 
 func extractServiceAttachmentMetadata(_ *extractState, rec *ingestedAsset, data *structpb.Struct) {
-	rec.addOutRef(getStringField(data, "targetService"), "compute.googleapis.com", "psc.target", "")
+	rec.addOutRef(getStringField(data, "targetService"), svcCompute, "psc.target", "")
 }
 
 func extractGKEClusterMetadata(st *extractState, rec *ingestedAsset, data *structpb.Struct) {
@@ -1438,7 +1462,7 @@ func extractGKEClusterMetadata(st *extractState, rec *ingestedAsset, data *struc
 	addIGURLs := func(src *structpb.Struct) {
 		for _, ig := range getStringListField(src, "instanceGroupUrls") {
 			list := st.gke.clusterIGURLs[rec.uri]
-			appendUnique(&list, CanonicalizeAIP122WithService(ig, "compute.googleapis.com", st.projIdx))
+			appendUnique(&list, CanonicalizeAIP122WithService(ig, svcCompute, st.projIdx))
 			st.gke.clusterIGURLs[rec.uri] = list
 		}
 	}
@@ -1580,13 +1604,13 @@ func extractCloudRunServiceRefs(rec *ingestedAsset, data *structpb.Struct, projI
 					appendUnique(&csql, uri)
 				}
 			}
-			rec.addOutRef(getStringField(ann, "run.googleapis.com/vpc-access-connector"), "vpcaccess.googleapis.com", "vpc_connector", "")
+			rec.addOutRef(getStringField(ann, "run.googleapis.com/vpc-access-connector"), svcVPCAccess, "vpc_connector", "")
 		}
 	}
 	for _, u := range csql {
 		appendUnique(&rec.envRefs, u)
 	}
-	rec.addOutRef(getAttrString(rec.attrs, "vpc_connector"), "vpcaccess.googleapis.com", "vpc_connector", "")
+	rec.addOutRef(getAttrString(rec.attrs, "vpc_connector"), svcVPCAccess, "vpc_connector", "")
 }
 
 func extractCloudRunJobMetadata(st *extractState, rec *ingestedAsset, data *structpb.Struct) {
@@ -1595,7 +1619,7 @@ func extractCloudRunJobMetadata(st *extractState, rec *ingestedAsset, data *stru
 	for _, u := range csql {
 		appendUnique(&rec.envRefs, u)
 	}
-	rec.addOutRef(getAttrString(rec.attrs, "vpc_connector"), "vpcaccess.googleapis.com", "vpc_connector", "")
+	rec.addOutRef(getAttrString(rec.attrs, "vpc_connector"), svcVPCAccess, "vpc_connector", "")
 }
 
 func extractCloudFunctionMetadata(st *extractState, rec *ingestedAsset, data *structpb.Struct) {
@@ -1605,7 +1629,7 @@ func extractCloudFunctionMetadata(st *extractState, rec *ingestedAsset, data *st
 	if u := SanitizeURL(getStringField(getStructField(data, "httpsTrigger"), "url")); u != "" {
 		appendUnique(&rec.runURLs, u)
 	}
-	rec.addInRef(getStringField(getStructField(data, "eventTrigger"), "pubsubTopic"), "pubsub.googleapis.com", "event_trigger", "")
+	rec.addInRef(getStringField(getStructField(data, "eventTrigger"), "pubsubTopic"), svcPubSub, "event_trigger", "")
 	if sc := getStructField(data, "serviceConfig"); sc != nil {
 		extractEnvMapRefs(getStructField(sc, "environmentVariables"), st.projIdx, &rec.envRefs, &rec.secretRefs)
 		for _, field := range []string{"secretEnvironmentVariables", "secretVolumes"} {
@@ -1615,7 +1639,7 @@ func extractCloudFunctionMetadata(st *extractState, rec *ingestedAsset, data *st
 				}
 			}
 		}
-		rec.addOutRef(getStringField(sc, "vpcConnector"), "vpcaccess.googleapis.com", "vpc_connector", "")
+		rec.addOutRef(getStringField(sc, "vpcConnector"), svcVPCAccess, "vpc_connector", "")
 	}
 	extractEnvMapRefs(getStructField(data, "environmentVariables"), st.projIdx, &rec.envRefs, &rec.secretRefs)
 }
@@ -1635,19 +1659,19 @@ func extractAppEngineServiceMetadata(_ *extractState, rec *ingestedAsset, data *
 
 func extractPubSubSubMetadata(_ *extractState, rec *ingestedAsset, data *structpb.Struct) {
 	if topic := getStringField(data, "topic"); topic != "" && topic != "_deleted-topic_" {
-		rec.addInRef(topic, "pubsub.googleapis.com", "subscription", "")
+		rec.addInRef(topic, svcPubSub, "subscription", "")
 	}
 	rec.addOutRef(SanitizeURL(getStringField(getStructField(data, "pushConfig"), "pushEndpoint")), "", "pubsub.push", "http")
-	rec.addOutRef(getStringField(getStructField(data, "bigqueryConfig"), "table"), "bigquery.googleapis.com", "pubsub.bigquery_sink", "bq_dataset")
-	rec.addOutRef(getStringField(getStructField(data, "cloudStorageConfig"), "bucket"), "storage.googleapis.com", "pubsub.gcs_sink", "bucket")
-	rec.addOutRef(getStringField(getStructField(data, "deadLetterPolicy"), "deadLetterTopic"), "pubsub.googleapis.com", "dead_letter", "")
+	rec.addOutRef(getStringField(getStructField(data, "bigqueryConfig"), "table"), svcBigQuery, "pubsub.bigquery_sink", "bq_dataset")
+	rec.addOutRef(getStringField(getStructField(data, "cloudStorageConfig"), "bucket"), svcStorage, "pubsub.gcs_sink", "bucket")
+	rec.addOutRef(getStringField(getStructField(data, "deadLetterPolicy"), "deadLetterTopic"), svcPubSub, "dead_letter", "")
 }
 
 func extractEventarcTriggerMetadata(_ *extractState, rec *ingestedAsset, data *structpb.Struct) {
-	rec.addInRef(getStringField(getStructField(getStructField(data, "transport"), "pubsub"), "topic"), "pubsub.googleapis.com", "eventarc.transport", "")
+	rec.addInRef(getStringField(getStructField(getStructField(data, "transport"), "pubsub"), "topic"), svcPubSub, "eventarc.transport", "")
 	for _, efVal := range getListField(data, "eventFilters") {
 		if ef := efVal.GetStructValue(); ef != nil && getStringField(ef, "attribute") == "bucket" {
-			rec.addInRef(getStringField(ef, "value"), "storage.googleapis.com", "eventarc.bucket", "bucket")
+			rec.addInRef(getStringField(ef, "value"), svcStorage, "eventarc.bucket", "bucket")
 		}
 	}
 	dst := getStructField(data, "destination")
@@ -1661,31 +1685,31 @@ func extractEventarcTriggerMetadata(_ *extractState, rec *ingestedAsset, data *s
 				reg = rec.location
 			}
 			if !strings.Contains(svc, "/") && rec.projectID != "" && reg != "" {
-				svc = "//run.googleapis.com/projects/" + rec.projectID + "/locations/" + reg + "/services/" + svc
+				svc = prefixRunProjects + rec.projectID + segLocations + reg + segServices + svc
 			}
-			rec.addOutRef(svc, "run.googleapis.com", "eventarc.destination", "")
+			rec.addOutRef(svc, svcRun, detailEventarcDest, "")
 		}
 	}
-	rec.addOutRef(getStringField(dst, "cloudFunction"), "cloudfunctions.googleapis.com", "eventarc.destination", "")
-	rec.addOutRef(getStringField(dst, "workflow"), "workflows.googleapis.com", "eventarc.destination", "")
-	rec.addOutRef(getStringField(getStructField(dst, "gke"), "cluster"), "container.googleapis.com", "eventarc.destination", "")
+	rec.addOutRef(getStringField(dst, "cloudFunction"), "cloudfunctions.googleapis.com", detailEventarcDest, "")
+	rec.addOutRef(getStringField(dst, "workflow"), "workflows.googleapis.com", detailEventarcDest, "")
+	rec.addOutRef(getStringField(getStructField(dst, "gke"), "cluster"), "container.googleapis.com", detailEventarcDest, "")
 }
 
 func extractSchedulerJobMetadata(_ *extractState, rec *ingestedAsset, data *structpb.Struct) {
-	rec.addOutRef(getStringField(getStructField(data, "pubsubTarget"), "topicName"), "pubsub.googleapis.com", "scheduler.pubsub", "")
+	rec.addOutRef(getStringField(getStructField(data, "pubsubTarget"), "topicName"), svcPubSub, "scheduler.pubsub", "")
 	rec.addOutRef(SanitizeURL(getStringField(getStructField(data, "httpTarget"), "uri")), "", "scheduler.http", "http")
 }
 
 func extractStorageTransferMetadata(_ *extractState, rec *ingestedAsset, data *structpb.Struct) {
 	ts := getStructField(data, "transferSpec")
-	rec.addInRef(getStringField(getStructField(ts, "gcsDataSource"), "bucketName"), "storage.googleapis.com", "transfer.source", "bucket")
-	rec.addOutRef(getStringField(getStructField(ts, "gcsDataSink"), "bucketName"), "storage.googleapis.com", "transfer.sink", "bucket")
-	rec.addOutRef(getStringField(getStructField(data, "notificationConfig"), "pubsubTopic"), "pubsub.googleapis.com", "transfer.notification", "")
+	rec.addInRef(getStringField(getStructField(ts, "gcsDataSource"), "bucketName"), svcStorage, "transfer.source", "bucket")
+	rec.addOutRef(getStringField(getStructField(ts, "gcsDataSink"), "bucketName"), svcStorage, "transfer.sink", "bucket")
+	rec.addOutRef(getStringField(getStructField(data, "notificationConfig"), "pubsubTopic"), svcPubSub, "transfer.notification", "")
 }
 
 func extractBQDTMetadata(_ *extractState, rec *ingestedAsset, data *structpb.Struct) {
-	rec.addOutRef(getStringField(data, "destinationDatasetId"), "bigquery.googleapis.com", "bqdt.destination", "bq_dataset")
-	rec.addOutRef(getStringField(data, "notificationPubsubTopic"), "pubsub.googleapis.com", "bqdt.notification", "")
+	rec.addOutRef(getStringField(data, "destinationDatasetId"), svcBigQuery, "bqdt.destination", "bq_dataset")
+	rec.addOutRef(getStringField(data, "notificationPubsubTopic"), svcPubSub, "bqdt.notification", "")
 }
 
 func extractBQConnectionMetadata(st *extractState, rec *ingestedAsset, data *structpb.Struct) {
@@ -1700,16 +1724,16 @@ func extractBQConnectionMetadata(st *extractState, rec *ingestedAsset, data *str
 }
 
 func extractDatastreamStreamMetadata(_ *extractState, rec *ingestedAsset, data *structpb.Struct) {
-	rec.addInRef(getStringField(getStructField(data, "sourceConfig"), "sourceConnectionProfile"), "datastream.googleapis.com", "datastream.source", "")
-	rec.addOutRef(getStringField(getStructField(data, "destinationConfig"), "destinationConnectionProfile"), "datastream.googleapis.com", "datastream.dest", "")
+	rec.addInRef(getStringField(getStructField(data, "sourceConfig"), "sourceConnectionProfile"), svcDatastream, "datastream.source", "")
+	rec.addOutRef(getStringField(getStructField(data, "destinationConfig"), "destinationConnectionProfile"), svcDatastream, "datastream.dest", "")
 	bqDS := getStringField(getStructField(getStructField(getStructField(data, "destinationConfig"), "bigqueryDestinationConfig"), "singleTargetDataset"), "datasetId")
-	rec.addOutRef(bqDS, "bigquery.googleapis.com", "datastream.bigquery", "bq_dataset")
+	rec.addOutRef(bqDS, svcBigQuery, "datastream.bigquery", "bq_dataset")
 }
 
 func extractDataprocClusterMetadata(_ *extractState, rec *ingestedAsset, data *structpb.Struct) {
 	cfg := getStructField(data, "config")
-	rec.addOutRef(getStringField(cfg, "configBucket"), "storage.googleapis.com", "dataproc.config_bucket", "bucket")
-	rec.addOutRef(getStringField(cfg, "tempBucket"), "storage.googleapis.com", "dataproc.temp_bucket", "bucket")
+	rec.addOutRef(getStringField(cfg, "configBucket"), svcStorage, "dataproc.config_bucket", "bucket")
+	rec.addOutRef(getStringField(cfg, "tempBucket"), svcStorage, "dataproc.temp_bucket", "bucket")
 	rec.addOutRef(getStringField(getStructField(cfg, "metastoreConfig"), "dataprocMetastoreService"), "metastore.googleapis.com", "dataproc.metastore", "")
 }
 
@@ -1719,13 +1743,13 @@ func extractDataprocBatchMetadata(_ *extractState, rec *ingestedAsset, data *str
 }
 
 func extractMetastoreMetadata(_ *extractState, rec *ingestedAsset, data *structpb.Struct) {
-	rec.addOutRef(getStringField(data, "artifactGcsUri"), "storage.googleapis.com", "metastore.artifacts", "bucket")
+	rec.addOutRef(getStringField(data, "artifactGcsUri"), svcStorage, "metastore.artifacts", "bucket")
 }
 
 func extractComposerMetadata(st *extractState, rec *ingestedAsset, data *structpb.Struct) {
 	cfg := getStructField(data, "config")
 	rec.addOutRef(getStringField(cfg, "gkeCluster"), "container.googleapis.com", "composer.gke", "")
-	rec.addOutRef(getStringField(cfg, "dagGcsPrefix"), "storage.googleapis.com", "composer.dags", "bucket")
+	rec.addOutRef(getStringField(cfg, "dagGcsPrefix"), svcStorage, "composer.dags", "bucket")
 	extractEnvMapRefs(getStructField(getStructField(cfg, "softwareConfig"), "envVariables"), st.projIdx, &rec.envRefs, &rec.secretRefs)
 }
 
@@ -1737,14 +1761,14 @@ func extractDiscoveryEngineMetadata(_ *extractState, rec *ingestedAsset, data *s
 
 func extractDiscoveryDataStoreMetadata(_ *extractState, rec *ingestedAsset, data *structpb.Struct) {
 	for _, u := range getStringListField(getStructField(data, "gcsSource"), "inputUris") {
-		rec.addInRef(u, "storage.googleapis.com", "discovery.source", "bucket")
+		rec.addInRef(u, svcStorage, "discovery.source", "bucket")
 	}
 	if bq := getStructField(data, "bigquerySource"); bq != nil {
 		if ds := getStringField(bq, "datasetId"); ds != "" {
 			if p := getStringField(bq, "projectId"); p != "" {
 				ds = p + "." + ds
 			}
-			rec.addInRef(ds, "bigquery.googleapis.com", "discovery.source", "bq_dataset")
+			rec.addInRef(ds, svcBigQuery, "discovery.source", "bq_dataset")
 		}
 	}
 }
@@ -1791,7 +1815,7 @@ func extractCloudBuildTriggerStruct(rec *ingestedAsset, data *structpb.Struct, p
 	switch {
 	case getStructField(data, "github") != nil:
 		gh := getStructField(data, "github")
-		rec.cbRepoHost = "github.com"
+		rec.cbRepoHost = hostGitHub
 		rec.cbRepoOwner = strings.TrimSpace(getStringField(gh, "owner"))
 		rec.cbRepoName = strings.TrimSpace(getStringField(gh, "name"))
 	case getStructField(data, "sourceToBuild") != nil:
@@ -1803,7 +1827,7 @@ func extractCloudBuildTriggerStruct(rec *ingestedAsset, data *structpb.Struct, p
 		if strings.HasPrefix(repoName, "github_") {
 			parts := strings.SplitN(strings.TrimPrefix(repoName, "github_"), "_", 2)
 			if len(parts) == 2 && parts[0] != "" && parts[1] != "" {
-				rec.cbRepoHost, rec.cbRepoOwner, rec.cbRepoName = "github.com", parts[0], parts[1]
+				rec.cbRepoHost, rec.cbRepoOwner, rec.cbRepoName = hostGitHub, parts[0], parts[1]
 			}
 		}
 	case getStructField(data, "repositoryEventConfig") != nil:
@@ -1812,7 +1836,7 @@ func extractCloudBuildTriggerStruct(rec *ingestedAsset, data *structpb.Struct, p
 			if host, owner, repo := parseGitRepoURL(getStringField(r, "remoteUri")); owner != "" {
 				rec.cbRepoHost, rec.cbRepoOwner, rec.cbRepoName = host, owner, repo
 			} else if seg := shortResourceName(repoPath); seg != "" {
-				rec.cbRepoHost, rec.cbRepoOwner, rec.cbRepoName = "github.com", "repo", seg
+				rec.cbRepoHost, rec.cbRepoOwner, rec.cbRepoName = hostGitHub, "repo", seg
 			}
 		}
 	}
@@ -1823,15 +1847,15 @@ func extractCloudBuildTriggerStruct(rec *ingestedAsset, data *structpb.Struct, p
 
 func parseGitRepoURL(raw string) (host, owner, repo string) {
 	s := SanitizeURL(raw)
-	s = strings.TrimPrefix(s, "https://")
-	s = strings.TrimPrefix(s, "http://")
+	s = strings.TrimPrefix(s, prefixHTTPS)
+	s = strings.TrimPrefix(s, prefixHTTP)
 	s = strings.TrimSuffix(s, ".git")
 	parts := strings.Split(strings.Trim(s, "/"), "/")
 	if len(parts) < 3 {
 		return "", "", ""
 	}
 	h := strings.ToLower(parts[0])
-	if h != "github.com" && h != "gitlab.com" {
+	if h != hostGitHub && h != "gitlab.com" {
 		return "", "", ""
 	}
 	return h, parts[1], parts[2]
@@ -1879,7 +1903,7 @@ func (st *extractState) reconcilePostCAI() {
 	st.indexServiceAccountsAndFoldedCounts()
 	for _, a := range st.assets {
 		switch a.assetType {
-		case "run.googleapis.com/Service":
+		case assetTypeRunService:
 			st.reconcileCloudRunService(a)
 		case "appengine.googleapis.com/Service":
 			st.reconcileAppEngineService(a)
@@ -1975,16 +1999,16 @@ func (st *extractState) rekeyIntermediates() {
 	for _, lb := range st.lbAssets {
 		lb.uri = CanonicalizeAIP122(lb.uri, st.projIdx)
 		lb.projectID = mapProject(lb.projectID, st.projIdx)
-		lb.urlMap = CanonicalizeAIP122WithService(lb.urlMap, "compute.googleapis.com", st.projIdx)
-		lb.service = CanonicalizeAIP122WithService(lb.service, "compute.googleapis.com", st.projIdx)
-		lb.defaultService = CanonicalizeAIP122WithService(lb.defaultService, "compute.googleapis.com", st.projIdx)
+		lb.urlMap = CanonicalizeAIP122WithService(lb.urlMap, svcCompute, st.projIdx)
+		lb.service = CanonicalizeAIP122WithService(lb.service, svcCompute, st.projIdx)
+		lb.defaultService = CanonicalizeAIP122WithService(lb.defaultService, svcCompute, st.projIdx)
 		for i := range lb.urlMapBackends {
-			lb.urlMapBackends[i].backendURI = CanonicalizeAIP122WithService(lb.urlMapBackends[i].backendURI, "compute.googleapis.com", st.projIdx)
+			lb.urlMapBackends[i].backendURI = CanonicalizeAIP122WithService(lb.urlMapBackends[i].backendURI, svcCompute, st.projIdx)
 		}
 		for i := range lb.backendGroups {
-			lb.backendGroups[i] = CanonicalizeAIP122WithService(lb.backendGroups[i], "compute.googleapis.com", st.projIdx)
+			lb.backendGroups[i] = CanonicalizeAIP122WithService(lb.backendGroups[i], svcCompute, st.projIdx)
 		}
-		lb.negPSCTarget = CanonicalizeAIP122WithService(lb.negPSCTarget, "compute.googleapis.com", st.projIdx)
+		lb.negPSCTarget = CanonicalizeAIP122WithService(lb.negPSCTarget, svcCompute, st.projIdx)
 		rekeyedLB[lb.uri] = lb
 	}
 	st.lbAssets = rekeyedLB
@@ -1993,18 +2017,18 @@ func (st *extractState) rekeyIntermediates() {
 	for _, ab := range st.absorbed {
 		ab.uri = CanonicalizeAIP122(ab.uri, st.projIdx)
 		ab.projectID = mapProject(ab.projectID, st.projIdx)
-		ab.router = CanonicalizeAIP122WithService(ab.router, "compute.googleapis.com", st.projIdx)
-		ab.vpnGateway = CanonicalizeAIP122WithService(ab.vpnGateway, "compute.googleapis.com", st.projIdx)
+		ab.router = CanonicalizeAIP122WithService(ab.router, svcCompute, st.projIdx)
+		ab.vpnGateway = CanonicalizeAIP122WithService(ab.vpnGateway, svcCompute, st.projIdx)
 		ab.hub = CanonicalizeAIP122WithService(ab.hub, "networkconnectivity.googleapis.com", st.projIdx)
-		ab.linkedVPC = CanonicalizeAIP122WithService(ab.linkedVPC, "compute.googleapis.com", st.projIdx)
+		ab.linkedVPC = CanonicalizeAIP122WithService(ab.linkedVPC, svcCompute, st.projIdx)
 		for i := range ab.linkedVPNs {
-			ab.linkedVPNs[i] = CanonicalizeAIP122WithService(ab.linkedVPNs[i], "compute.googleapis.com", st.projIdx)
+			ab.linkedVPNs[i] = CanonicalizeAIP122WithService(ab.linkedVPNs[i], svcCompute, st.projIdx)
 		}
 		for i := range ab.linkedInterconnects {
-			ab.linkedInterconnects[i] = CanonicalizeAIP122WithService(ab.linkedInterconnects[i], "compute.googleapis.com", st.projIdx)
+			ab.linkedInterconnects[i] = CanonicalizeAIP122WithService(ab.linkedInterconnects[i], svcCompute, st.projIdx)
 		}
-		ab.privateConnection = CanonicalizeAIP122WithService(ab.privateConnection, "datastream.googleapis.com", st.projIdx)
-		ab.vpc = CanonicalizeAIP122WithService(ab.vpc, "compute.googleapis.com", st.projIdx)
+		ab.privateConnection = CanonicalizeAIP122WithService(ab.privateConnection, svcDatastream, st.projIdx)
+		ab.vpc = CanonicalizeAIP122WithService(ab.vpc, svcCompute, st.projIdx)
 		ab.parentURI = CanonicalizeAIP122(ab.parentURI, st.projIdx)
 		rekeyedAbs[ab.uri] = ab
 	}
@@ -2014,9 +2038,9 @@ func (st *extractState) rekeyIntermediates() {
 	for _, rev := range st.revisions {
 		rev.uri = CanonicalizeAIP122(rev.uri, st.projIdx)
 		rev.parentURI = CanonicalizeAIP122(rev.parentURI, st.projIdx)
-		rev.vpcConnector = CanonicalizeAIP122WithService(rev.vpcConnector, "vpcaccess.googleapis.com", st.projIdx)
-		rev.networkURI = CanonicalizeAIP122WithService(rev.networkURI, "compute.googleapis.com", st.projIdx)
-		rev.subnetURI = CanonicalizeAIP122WithService(rev.subnetURI, "compute.googleapis.com", st.projIdx)
+		rev.vpcConnector = CanonicalizeAIP122WithService(rev.vpcConnector, svcVPCAccess, st.projIdx)
+		rev.networkURI = CanonicalizeAIP122WithService(rev.networkURI, svcCompute, st.projIdx)
+		rev.subnetURI = CanonicalizeAIP122WithService(rev.subnetURI, svcCompute, st.projIdx)
 		rev.envRefs = canonicalizeSlice(rev.envRefs, st.projIdx)
 		rev.secretRefs = canonicalizeSlice(rev.secretRefs, st.projIdx)
 		rev.cloudSQLInstances = canonicalizeSlice(rev.cloudSQLInstances, st.projIdx)
@@ -2065,8 +2089,8 @@ func (st *extractState) rekeyAndDedupAssets() {
 		a.uri = CanonicalizeAIP122(a.uri, st.projIdx)
 		a.projectID = mapProject(a.projectID, st.projIdx)
 		a.parentURI = CanonicalizeAIP122(a.parentURI, st.projIdx)
-		a.frTarget = CanonicalizeAIP122WithService(a.frTarget, "compute.googleapis.com", st.projIdx)
-		a.frBackendSvc = CanonicalizeAIP122WithService(a.frBackendSvc, "compute.googleapis.com", st.projIdx)
+		a.frTarget = CanonicalizeAIP122WithService(a.frTarget, svcCompute, st.projIdx)
+		a.frBackendSvc = CanonicalizeAIP122WithService(a.frBackendSvc, svcCompute, st.projIdx)
 		a.envRefs = canonicalizeSlice(a.envRefs, st.projIdx)
 		a.secretRefs = canonicalizeSlice(a.secretRefs, st.projIdx)
 		a.cbInlineRefs = canonicalizeSlice(a.cbInlineRefs, st.projIdx)
@@ -2090,25 +2114,28 @@ func (st *extractState) rekeyAndDedupAssets() {
 
 func (st *extractState) indexServiceAccountsAndFoldedCounts() {
 	for _, a := range st.assets {
-		if a.assetType == "iam.googleapis.com/ServiceAccount" && a.saEmail != "" {
+		if a.assetType == assetTypeServiceAccount && a.saEmail != "" {
 			st.saByEmail[a.saEmail] = a
 			if a.saUniqueID != "" {
 				st.saByUniqueID[a.saUniqueID] = a.saEmail
 			}
 		}
-		fc := st.foldedCounts[a.uri]
-		if len(fc) == 0 {
+		applyFoldedCounts(a, st.foldedCounts[a.uri])
+	}
+}
+
+func applyFoldedCounts(a *ingestedAsset, fc map[string]int) {
+	if len(fc) == 0 {
+		return
+	}
+	if a.attrs == nil {
+		a.attrs = make(map[string]any)
+	}
+	for _, ck := range sortedMapKeys(fc) {
+		if prev, ok := a.attrs[ck].(int); ok && prev >= fc[ck] {
 			continue
 		}
-		if a.attrs == nil {
-			a.attrs = make(map[string]any)
-		}
-		for _, ck := range sortedMapKeys(fc) {
-			if prev, ok := a.attrs[ck].(int); ok && prev >= fc[ck] {
-				continue
-			}
-			a.attrs[ck] = fc[ck]
-		}
+		a.attrs[ck] = fc[ck]
 	}
 }
 
@@ -2136,37 +2163,42 @@ func (st *extractState) cloudRunRevisionURI(svc *ingestedAsset, rName string) st
 		return ""
 	}
 	if strings.Contains(rName, "/") {
-		return CanonicalizeAIP122WithService(rName, "run.googleapis.com", st.projIdx)
+		return CanonicalizeAIP122WithService(rName, svcRun, st.projIdx)
 	}
-	return "//run.googleapis.com/projects/" + svc.projectID + "/locations/" + svc.location + "/revisions/" + rName
+	return prefixRunProjects + svc.projectID + segLocations + svc.location + "/revisions/" + rName
 }
 
-func mergeCloudRunRevision(svc *ingestedAsset, rev *revisionSummary) {
+func mergeServiceRevisionBase(svc *ingestedAsset, rev *revisionSummary) {
 	for _, r := range rev.envRefs {
 		appendUnique(&svc.envRefs, r)
 	}
 	for _, s := range rev.secretRefs {
 		appendUnique(&svc.secretRefs, s)
 	}
-	for _, db := range rev.cloudSQLInstances {
-		appendUnique(&svc.envRefs, db)
-	}
 	if svc.attrs == nil {
 		svc.attrs = make(map[string]any)
 	}
-	if rev.serviceAccount != "" && getAttrString(svc.attrs, "service_account") == "" {
-		svc.attrs["service_account"] = rev.serviceAccount
+	setAttrIfEmpty(svc.attrs, "service_account", rev.serviceAccount)
+	if setAttrIfEmpty(svc.attrs, "vpc_connector", rev.vpcConnector) {
+		svc.addOutRef(rev.vpcConnector, svcVPCAccess, "vpc_connector", "")
 	}
-	if rev.vpcConnector != "" && getAttrString(svc.attrs, "vpc_connector") == "" {
-		svc.attrs["vpc_connector"] = rev.vpcConnector
-		svc.addOutRef(rev.vpcConnector, "vpcaccess.googleapis.com", "vpc_connector", "")
+}
+
+func setAttrIfEmpty(attrs map[string]any, key, val string) bool {
+	if val == "" || getAttrString(attrs, key) != "" {
+		return false
 	}
-	if rev.networkURI != "" && getAttrString(svc.attrs, "vpc") == "" {
-		svc.attrs["vpc"] = rev.networkURI
+	attrs[key] = val
+	return true
+}
+
+func mergeCloudRunRevision(svc *ingestedAsset, rev *revisionSummary) {
+	mergeServiceRevisionBase(svc, rev)
+	for _, db := range rev.cloudSQLInstances {
+		appendUnique(&svc.envRefs, db)
 	}
-	if rev.subnetURI != "" && getAttrString(svc.attrs, "subnet") == "" {
-		svc.attrs["subnet"] = rev.subnetURI
-	}
+	setAttrIfEmpty(svc.attrs, "vpc", rev.networkURI)
+	setAttrIfEmpty(svc.attrs, "subnet", rev.subnetURI)
 }
 
 func (st *extractState) reconcileAppEngineService(svc *ingestedAsset) {
@@ -2175,22 +2207,7 @@ func (st *extractState) reconcileAppEngineService(svc *ingestedAsset) {
 	}
 	for _, verID := range sortedMapKeys(svc.aeSplit) {
 		if rev, ok := st.revisions[svc.uri+"/versions/"+verID]; ok {
-			for _, r := range rev.envRefs {
-				appendUnique(&svc.envRefs, r)
-			}
-			for _, s := range rev.secretRefs {
-				appendUnique(&svc.secretRefs, s)
-			}
-			if svc.attrs == nil {
-				svc.attrs = make(map[string]any)
-			}
-			if rev.serviceAccount != "" && getAttrString(svc.attrs, "service_account") == "" {
-				svc.attrs["service_account"] = rev.serviceAccount
-			}
-			if rev.vpcConnector != "" && getAttrString(svc.attrs, "vpc_connector") == "" {
-				svc.attrs["vpc_connector"] = rev.vpcConnector
-				svc.addOutRef(rev.vpcConnector, "vpcaccess.googleapis.com", "vpc_connector", "")
-			}
+			mergeServiceRevisionBase(svc, rev)
 		}
 	}
 }
@@ -2343,6 +2360,29 @@ func (st *extractState) buildFactsFile() *FactsFile {
 		rt = time.Now().UTC()
 	}
 
+	resources, validURIs := st.collectFactResources()
+	edges := st.filterFactEdges(&resources, validURIs)
+
+	var hints []OutOfScopeHint
+	for _, h := range st.outOfScope {
+		hints = append(hints, *h)
+	}
+
+	out := normalizedFactsCopy(&FactsFile{
+		SchemaVersion:            FactsSchemaVersion,
+		ReadTime:                 rt.Format(time.RFC3339),
+		Scopes:                   st.scopes,
+		Hierarchy:                st.collectFactHierarchy(),
+		Resources:                resources,
+		Edges:                    edges,
+		SuppressedPlumbingCounts: st.suppressed,
+		OutOfScopeTargets:        hints,
+		CoverageLedger:           st.ledger,
+	})
+	return &out
+}
+
+func (st *extractState) collectFactHierarchy() Hierarchy {
 	orgs := make([]OrgNode, 0, len(st.orgs))
 	for _, o := range st.orgs {
 		orgs = append(orgs, o)
@@ -2355,7 +2395,14 @@ func (st *extractState) buildFactsFile() *FactsFile {
 	for _, p := range st.projects {
 		projects = append(projects, p)
 	}
+	return Hierarchy{
+		Organizations: orgs,
+		Folders:       folders,
+		Projects:      projects,
+	}
+}
 
+func (st *extractState) collectFactResources() ([]FactResource, map[string]bool) {
 	resources := make([]FactResource, 0, len(st.assets)+len(st.externalResources))
 	validURIs := make(map[string]bool, len(st.assets)+len(st.externalResources))
 	for _, a := range st.assets {
@@ -2381,50 +2428,38 @@ func (st *extractState) buildFactsFile() *FactsFile {
 		resources = append(resources, ext)
 		validURIs[ext.URI] = true
 	}
+	return resources, validURIs
+}
 
+func (st *extractState) filterFactEdges(resources *[]FactResource, validURIs map[string]bool) []FactEdge {
 	// Include project URIs for triggerless Cloud Build builds only if referenced by edges.
 	edges := make([]FactEdge, 0, len(st.edges))
 	for _, e := range st.edges {
 		if !validURIs[e.FromURI] {
-			if strings.HasPrefix(e.FromURI, "//cloudresourcemanager.googleapis.com/projects/") {
-				proj := shortResourceName(e.FromURI)
-				if st.inScopeProjects[proj] {
-					resources = append(resources, FactResource{
-						URI:         e.FromURI,
-						AssetType:   "cloudresourcemanager.googleapis.com/Project",
-						ProjectID:   proj,
-						DisplayName: proj,
-					})
-					validURIs[e.FromURI] = true
-				}
-			}
+			st.maybeAddInScopeProjectResource(e.FromURI, resources, validURIs)
 		}
 		if validURIs[e.FromURI] && validURIs[e.ToURI] {
 			edges = append(edges, e)
 		}
 	}
+	return edges
+}
 
-	var hints []OutOfScopeHint
-	for _, h := range st.outOfScope {
-		hints = append(hints, *h)
+func (st *extractState) maybeAddInScopeProjectResource(uri string, resources *[]FactResource, validURIs map[string]bool) {
+	if !strings.HasPrefix(uri, "//cloudresourcemanager.googleapis.com/projects/") {
+		return
 	}
-
-	out := normalizedFactsCopy(&FactsFile{
-		SchemaVersion: FactsSchemaVersion,
-		ReadTime:      rt.Format(time.RFC3339),
-		Scopes:        st.scopes,
-		Hierarchy: Hierarchy{
-			Organizations: orgs,
-			Folders:       folders,
-			Projects:      projects,
-		},
-		Resources:                resources,
-		Edges:                    edges,
-		SuppressedPlumbingCounts: st.suppressed,
-		OutOfScopeTargets:        hints,
-		CoverageLedger:           st.ledger,
+	proj := shortResourceName(uri)
+	if !st.inScopeProjects[proj] {
+		return
+	}
+	*resources = append(*resources, FactResource{
+		URI:         uri,
+		AssetType:   assetTypeProject,
+		ProjectID:   proj,
+		DisplayName: proj,
 	})
-	return &out
+	validURIs[uri] = true
 }
 
 func recanonicalizeAttrURIs(attrs map[string]any, projIdx map[string]string) {
@@ -2449,12 +2484,12 @@ func canonicalizeSlice(items []string, projIdx map[string]string) []string {
 	for _, it := range items {
 		v := it
 		switch {
-		case strings.HasPrefix(it, "//") || strings.HasPrefix(it, "projects/") || strings.HasPrefix(it, "apps/"):
+		case strings.HasPrefix(it, "//") || strings.HasPrefix(it, prefixProjects) || strings.HasPrefix(it, "apps/"):
 			v = CanonicalizeAIP122(it, projIdx)
-		case strings.HasPrefix(it, "--project="):
-			v = "--project=" + mapProject(strings.TrimPrefix(it, "--project="), projIdx)
-		case strings.HasPrefix(it, "gcr.io/"):
-			v = "gcr.io/" + mapProject(strings.TrimPrefix(it, "gcr.io/"), projIdx)
+		case strings.HasPrefix(it, flagProjectPrefix):
+			v = flagProjectPrefix + mapProject(strings.TrimPrefix(it, flagProjectPrefix), projIdx)
+		case strings.HasPrefix(it, prefixGCR):
+			v = prefixGCR + mapProject(strings.TrimPrefix(it, prefixGCR), projIdx)
 		}
 		appendUnique(&out, v)
 	}

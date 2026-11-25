@@ -70,19 +70,48 @@ type parsedSprite struct {
 	urlRefs   []string
 }
 
+type spriteParser struct {
+	res      parsedSprite
+	urlRefRe *regexp.Regexp
+	depth    int
+	inDefs   bool
+	inSymbol bool
+}
+
+func (p *spriteParser) handleStart(tk xml.StartElement) {
+	local := strings.ToLower(tk.Name.Local)
+	p.depth++
+	if p.depth == 2 && local == "defs" {
+		p.inDefs = true
+	}
+	if local == "symbol" {
+		p.inSymbol = true
+	}
+	recordSpriteStartAttrs(&p.res, local, tk.Attr, p.inDefs && !p.inSymbol, p.urlRefRe)
+}
+
+func (p *spriteParser) handleEnd(tk xml.EndElement) {
+	local := strings.ToLower(tk.Name.Local)
+	if local == "symbol" {
+		p.inSymbol = false
+	}
+	if p.depth == 2 && local == "defs" {
+		p.inDefs = false
+	}
+	p.depth--
+}
+
 func parseSpriteForTest(t *testing.T, sprite string) parsedSprite {
 	t.Helper()
-	urlRefRe := regexp.MustCompile(`(?i)url\(\s*['"]?#([^)'"\s]+)['"]?\s*\)`)
-	dec := xml.NewDecoder(strings.NewReader(sprite))
-	res := parsedSprite{
-		ids:       make(map[string]int),
-		defsIDs:   make(map[string]bool),
-		symbolIDs: make(map[string]string),
+	p := spriteParser{
+		res: parsedSprite{
+			ids:       make(map[string]int),
+			defsIDs:   make(map[string]bool),
+			symbolIDs: make(map[string]string),
+		},
+		urlRefRe: regexp.MustCompile(`(?i)url\(\s*['"]?#([^)'"\s]+)['"]?\s*\)`),
 	}
-	depth := 0
-	inDefs := false
-	inSymbol := false
-
+	dec := xml.NewDecoder(strings.NewReader(sprite))
 	for {
 		tok, err := dec.Token()
 		if errors.Is(err, io.EOF) {
@@ -93,27 +122,12 @@ func parseSpriteForTest(t *testing.T, sprite string) parsedSprite {
 		}
 		switch tk := tok.(type) {
 		case xml.StartElement:
-			local := strings.ToLower(tk.Name.Local)
-			depth++
-			if depth == 2 && local == "defs" {
-				inDefs = true
-			}
-			if local == "symbol" {
-				inSymbol = true
-			}
-			recordSpriteStartAttrs(&res, local, tk.Attr, inDefs && !inSymbol, urlRefRe)
+			p.handleStart(tk)
 		case xml.EndElement:
-			local := strings.ToLower(tk.Name.Local)
-			if local == "symbol" {
-				inSymbol = false
-			}
-			if depth == 2 && local == "defs" {
-				inDefs = false
-			}
-			depth--
+			p.handleEnd(tk)
 		}
 	}
-	return res
+	return p.res
 }
 
 func recordSpriteStartAttrs(res *parsedSprite, local string, attrs []xml.Attr, inRootDefs bool, urlRefRe *regexp.Regexp) {
@@ -193,12 +207,24 @@ func TestLoadRegistryKeysAndFullSprite(t *testing.T) {
 
 func assertSpriteValid(t *testing.T, parsed parsedSprite, allKeys []string) {
 	t.Helper()
-	if len(parsed.symbolIDs) != len(allKeys) {
-		t.Fatalf("compiled symbol count = %d, want %d", len(parsed.symbolIDs), len(allKeys))
+	assertSpriteSymbols(t, parsed.symbolIDs, allKeys)
+	assertSpriteIDsAndRefs(t, parsed)
+	// Verify pubsub <filter id="A"> and <mask id="B"> were hoisted into <defs> with icon-pubsub- prefix.
+	for _, hoisted := range []string{"icon-pubsub-A", "icon-pubsub-B"} {
+		if !parsed.defsIDs[hoisted] {
+			t.Errorf("expected %q to be hoisted into root <defs>", hoisted)
+		}
+	}
+}
+
+func assertSpriteSymbols(t *testing.T, symbolIDs map[string]string, allKeys []string) {
+	t.Helper()
+	if len(symbolIDs) != len(allKeys) {
+		t.Fatalf("compiled symbol count = %d, want %d", len(symbolIDs), len(allKeys))
 	}
 	for _, k := range allKeys {
 		symID := "gcp-icon-" + k
-		vb, ok := parsed.symbolIDs[symID]
+		vb, ok := symbolIDs[symID]
 		if !ok {
 			t.Errorf("missing symbol %q in sprite", symID)
 		}
@@ -206,6 +232,10 @@ func assertSpriteValid(t *testing.T, parsed parsedSprite, allKeys []string) {
 			t.Errorf("symbol %q has empty viewBox", symID)
 		}
 	}
+}
+
+func assertSpriteIDsAndRefs(t *testing.T, parsed parsedSprite) {
+	t.Helper()
 	for id, count := range parsed.ids {
 		if count > 1 {
 			t.Errorf("duplicate ID %q appeared %d times in sprite", id, count)
@@ -219,12 +249,6 @@ func assertSpriteValid(t *testing.T, parsed parsedSprite, allKeys []string) {
 	for _, ref := range parsed.urlRefs {
 		if parsed.ids[ref] == 0 {
 			t.Errorf("dangling url(#%s) in sprite", ref)
-		}
-	}
-	// Verify pubsub <filter id="A"> and <mask id="B"> were hoisted into <defs> with icon-pubsub- prefix.
-	for _, hoisted := range []string{"icon-pubsub-A", "icon-pubsub-B"} {
-		if !parsed.defsIDs[hoisted] {
-			t.Errorf("expected %q to be hoisted into root <defs>", hoisted)
 		}
 	}
 }

@@ -75,7 +75,7 @@ var (
 		"servicemanagement.googleapis.com":    true,
 		"servicecontrol.googleapis.com":       true,
 		"cloudresourcemanager.googleapis.com": true,
-		"compute.googleapis.com":              true,
+		svcCompute:                            true,
 		"container.googleapis.com":            true,
 		"cloudasset.googleapis.com":           true,
 		"orgpolicy.googleapis.com":            true,
@@ -208,7 +208,7 @@ func IsPlumbingAssetType(assetType string) bool {
 	}
 	host, _, _ := strings.Cut(assetType, "/")
 	if suppressedPlumbingServices[host] &&
-		host != "compute.googleapis.com" &&
+		host != svcCompute &&
 		host != "container.googleapis.com" &&
 		host != "iam.googleapis.com" {
 		return true
@@ -310,10 +310,10 @@ func scanSecretAndSQLRefs(s string, projIdx map[string]string, c *refCollector) 
 		c.addSec(CanonicalizeAIP122(m, projIdx))
 	}
 	for _, m := range cloudSQLPathRe.FindAllStringSubmatch(s, -1) {
-		c.addEnv("//sqladmin.googleapis.com/projects/" + mapProject(m[1], projIdx) + "/instances/" + m[3])
+		c.addEnv(prefixSQLProjects + mapProject(m[1], projIdx) + segInstances + m[3])
 	}
 	for _, m := range bareCloudSQLRe.FindAllStringSubmatch(s, -1) {
-		c.addEnv("//sqladmin.googleapis.com/projects/" + mapProject(m[1], projIdx) + "/instances/" + m[3])
+		c.addEnv(prefixSQLProjects + mapProject(m[1], projIdx) + segInstances + m[3])
 	}
 }
 
@@ -321,19 +321,19 @@ func scanRegistryAndCLIFlagRefs(s string, projIdx map[string]string, c *refColle
 	for _, m := range artifactRegistryRe.FindAllStringSubmatch(s, -1) {
 		loc := strings.ToLower(m[1])
 		proj := mapProject(m[2], projIdx)
-		c.addEnv("//artifactregistry.googleapis.com/projects/" + proj + "/locations/" + loc + "/repositories/" + m[3])
+		c.addEnv("//artifactregistry.googleapis.com/projects/" + proj + segLocations + loc + "/repositories/" + m[3])
 	}
 	for _, m := range gcrImageRe.FindAllStringSubmatch(s, -1) {
-		c.addEnv("gcr.io/" + mapProject(m[2], projIdx))
+		c.addEnv(prefixGCR + mapProject(m[2], projIdx))
 	}
 	for _, m := range flagProjectRe.FindAllStringSubmatch(s, -1) {
-		c.addEnv("--project=" + mapProject(m[1], projIdx))
+		c.addEnv(flagProjectPrefix + mapProject(m[1], projIdx))
 	}
 	for _, m := range flagClusterRe.FindAllStringSubmatch(s, -1) {
-		c.addEnv("--cluster=" + m[1])
+		c.addEnv(flagClusterPrefix + m[1])
 	}
 	for _, m := range gcloudRunDeployRe.FindAllStringSubmatch(s, -1) {
-		c.addEnv("run-deploy:" + m[1])
+		c.addEnv(prefixRunDeploy + m[1])
 	}
 }
 
@@ -351,10 +351,10 @@ func scanURIAndEndpointRefs(s string, projIdx map[string]string, c *refCollector
 		c.addEnv("gs://" + m[1])
 	}
 	for _, m := range runAppURLRe.FindAllStringSubmatch(s, -1) {
-		c.addEnv("https://" + strings.ToLower(m[1]))
+		c.addEnv(prefixHTTPS + strings.ToLower(m[1]))
 	}
 	for _, m := range cloudFuncURLRe.FindAllStringSubmatch(s, -1) {
-		ref := "https://" + strings.ToLower(m[1])
+		ref := prefixHTTPS + strings.ToLower(m[1])
 		if m[2] != "" {
 			ref += "/" + m[2]
 		}
@@ -414,14 +414,14 @@ func (p *attrProjector) setURI(k, raw, defaultSvc string) {
 	if raw = strings.TrimSpace(raw); raw == "" {
 		return
 	}
-	if defaultSvc == "compute.googleapis.com" && !strings.Contains(raw, "/") && p.projID != "" {
+	if defaultSvc == svcCompute && !strings.Contains(raw, "/") && p.projID != "" {
 		switch k {
 		case "vpc":
-			p.attrs[k] = "//compute.googleapis.com/projects/" + mapProject(p.projID, p.projIdx) + "/global/networks/" + raw
+			p.attrs[k] = prefixComputeProjects + mapProject(p.projID, p.projIdx) + "/global/networks/" + raw
 			return
 		case "subnet":
 			if p.region != "" {
-				p.attrs[k] = "//compute.googleapis.com/projects/" + mapProject(p.projID, p.projIdx) + "/regions/" + p.region + "/subnetworks/" + raw
+				p.attrs[k] = prefixComputeProjects + mapProject(p.projID, p.projIdx) + "/regions/" + p.region + "/subnetworks/" + raw
 				return
 			}
 			p.attrs[k] = raw
@@ -436,8 +436,8 @@ func (p *attrProjector) setURI(k, raw, defaultSvc string) {
 func (p *attrProjector) setFirstNICNetwork(parent *structpb.Struct) {
 	for _, nicVal := range getListField(parent, "networkInterfaces") {
 		if nic := nicVal.GetStructValue(); nic != nil {
-			p.setURI("vpc", getStringField(nic, "network"), "compute.googleapis.com")
-			p.setURI("subnet", getStringField(nic, "subnetwork"), "compute.googleapis.com")
+			p.setURI("vpc", getStringField(nic, "network"), svcCompute)
+			p.setURI("subnet", getStringField(nic, "subnetwork"), svcCompute)
 			return
 		}
 	}
@@ -567,7 +567,7 @@ func projectComputeSubnetworkAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("cidr", getStringField(data, "ipCidrRange"))
 	p.setStr("purpose", getStringField(data, "purpose"))
 	p.setBool("private_ip_google_access", getBoolValue(data, "privateIpGoogleAccess"))
-	p.setURI("vpc", getStringField(data, "network"), "compute.googleapis.com")
+	p.setURI("vpc", getStringField(data, "network"), svcCompute)
 }
 
 func projectComputeInstanceAttrs(p *attrProjector, data *structpb.Struct) {
@@ -576,8 +576,8 @@ func projectComputeInstanceAttrs(p *attrProjector, data *structpb.Struct) {
 	for _, nicVal := range getListField(data, "networkInterfaces") {
 		if nic := nicVal.GetStructValue(); nic != nil {
 			p.setStr("private_ip", getStringField(nic, "networkIP"))
-			p.setURI("vpc", getStringField(nic, "network"), "compute.googleapis.com")
-			p.setURI("subnet", getStringField(nic, "subnetwork"), "compute.googleapis.com")
+			p.setURI("vpc", getStringField(nic, "network"), svcCompute)
+			p.setURI("subnet", getStringField(nic, "subnetwork"), svcCompute)
 			break
 		}
 	}
@@ -592,7 +592,7 @@ func projectComputeInstanceAttrs(p *attrProjector, data *structpb.Struct) {
 	for _, dVal := range getListField(data, "disks") {
 		if d := dVal.GetStructValue(); d != nil {
 			if kms := getStringField(getStructField(d, "diskEncryptionKey"), "kmsKeyName"); kms != "" {
-				p.setURI("kms_key_uri", kms, "cloudkms.googleapis.com")
+				p.setURI("kms_key_uri", kms, svcCloudKMS)
 				break
 			}
 		}
@@ -613,12 +613,12 @@ func projectForwardingRuleAttrs(p *attrProjector, data *structpb.Struct) {
 		sort.Strings(ports)
 		p.attrs["ports"] = ports
 	}
-	p.setURI("vpc", getStringField(data, "network"), "compute.googleapis.com")
-	p.setURI("subnet", getStringField(data, "subnetwork"), "compute.googleapis.com")
+	p.setURI("vpc", getStringField(data, "network"), svcCompute)
+	p.setURI("subnet", getStringField(data, "subnetwork"), svcCompute)
 }
 
 func projectComputeRouterAttrs(p *attrProjector, data *structpb.Struct) {
-	p.setURI("vpc", getStringField(data, "network"), "compute.googleapis.com")
+	p.setURI("vpc", getStringField(data, "network"), svcCompute)
 	p.setInt("nat_count", len(getListField(data, "nats")))
 	if bgp := getStructField(data, "bgp"); bgp != nil {
 		p.setInt("bgp_asn", getIntField(bgp, "asn"))
@@ -626,7 +626,7 @@ func projectComputeRouterAttrs(p *attrProjector, data *structpb.Struct) {
 }
 
 func projectComputeVPCOnlyAttr(p *attrProjector, data *structpb.Struct) {
-	p.setURI("vpc", getStringField(data, "network"), "compute.googleapis.com")
+	p.setURI("vpc", getStringField(data, "network"), svcCompute)
 }
 
 func projectInterconnectAttrs(p *attrProjector, data *structpb.Struct) {
@@ -657,9 +657,9 @@ func projectGKEClusterAttrs(p *attrProjector, data *structpb.Struct) {
 	if subRaw == "" {
 		subRaw = getStringField(data, "subnetwork")
 	}
-	p.setURI("vpc", netRaw, "compute.googleapis.com")
-	p.setURI("subnet", subRaw, "compute.googleapis.com")
-	p.setURI("kms_key_uri", getStringField(getStructField(data, "databaseEncryption"), "keyName"), "cloudkms.googleapis.com")
+	p.setURI("vpc", netRaw, svcCompute)
+	p.setURI("subnet", subRaw, svcCompute)
+	p.setURI("kms_key_uri", getStringField(getStructField(data, "databaseEncryption"), "keyName"), svcCloudKMS)
 	p.setStr("workload_pool", getStringField(getStructField(data, "workloadIdentityConfig"), "workloadPool"))
 	p.setInt("node_pool_count", len(getListField(data, "nodePools")))
 }
@@ -728,7 +728,7 @@ func projectCloudSQLAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("tier", getStringField(settings, "tier"))
 	p.setStr("availability_type", getStringField(settings, "availabilityType"))
 	ipCfg := getStructField(settings, "ipConfiguration")
-	p.setURI("vpc", getStringField(ipCfg, "privateNetwork"), "compute.googleapis.com")
+	p.setURI("vpc", getStringField(ipCfg, "privateNetwork"), svcCompute)
 	if v, ok := getBoolField(ipCfg, "ipv4Enabled"); ok && v {
 		p.attrs["public_ip_enabled"] = true
 	}
@@ -745,7 +745,7 @@ func projectCloudSQLAttrs(p *attrProjector, data *structpb.Struct) {
 			}
 		}
 	}
-	p.setURI("kms_key_uri", getStringField(getStructField(data, "diskEncryptionConfiguration"), "kmsKeyName"), "cloudkms.googleapis.com")
+	p.setURI("kms_key_uri", getStringField(getStructField(data, "diskEncryptionConfiguration"), "kmsKeyName"), svcCloudKMS)
 }
 
 func projectAlloyDBAttrs(p *attrProjector, data *structpb.Struct) {
@@ -754,8 +754,8 @@ func projectAlloyDBAttrs(p *attrProjector, data *structpb.Struct) {
 	if netRaw == "" {
 		netRaw = getStringField(data, "network")
 	}
-	p.setURI("vpc", netRaw, "compute.googleapis.com")
-	p.setURI("kms_key_uri", getStringField(getStructField(data, "encryptionConfig"), "kmsKeyName"), "cloudkms.googleapis.com")
+	p.setURI("vpc", netRaw, svcCompute)
+	p.setURI("kms_key_uri", getStringField(getStructField(data, "encryptionConfig"), "kmsKeyName"), svcCloudKMS)
 }
 
 func projectSpannerAttrs(p *attrProjector, data *structpb.Struct) {
@@ -767,7 +767,7 @@ func projectSpannerAttrs(p *attrProjector, data *structpb.Struct) {
 func projectFirestoreAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("database_type", getStringField(data, "type"))
 	p.setStr("concurrency_mode", getStringField(data, "concurrencyMode"))
-	p.setURI("kms_key_uri", getStringField(getStructField(data, "cmekConfig"), "kmsKeyName"), "cloudkms.googleapis.com")
+	p.setURI("kms_key_uri", getStringField(getStructField(data, "cmekConfig"), "kmsKeyName"), svcCloudKMS)
 }
 
 func projectBigtableAttrs(p *attrProjector, data *structpb.Struct) {
@@ -780,8 +780,8 @@ func projectRedisInstanceAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("redis_version", getStringField(data, "redisVersion"))
 	p.setStr("private_ip", parsePrivateIPv4(getStringField(data, "host")))
 	p.setInt("port", getIntField(data, "port"))
-	p.setURI("vpc", getStringField(data, "authorizedNetwork"), "compute.googleapis.com")
-	p.setURI("kms_key_uri", getStringField(data, "customerManagedKey"), "cloudkms.googleapis.com")
+	p.setURI("vpc", getStringField(data, "authorizedNetwork"), svcCompute)
+	p.setURI("kms_key_uri", getStringField(data, "customerManagedKey"), svcCloudKMS)
 }
 
 func projectRedisClusterAttrs(p *attrProjector, data *structpb.Struct) {
@@ -789,7 +789,7 @@ func projectRedisClusterAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("node_type", getStringField(data, "nodeType"))
 	for _, pcVal := range getListField(data, "pscConfigs") {
 		if pc := pcVal.GetStructValue(); pc != nil {
-			p.setURI("vpc", getStringField(pc, "network"), "compute.googleapis.com")
+			p.setURI("vpc", getStringField(pc, "network"), svcCompute)
 			return
 		}
 	}
@@ -800,7 +800,7 @@ func projectMemcacheAttrs(p *attrProjector, data *structpb.Struct) {
 	if nc := getStructField(data, "nodeConfig"); nc != nil {
 		p.setInt("memory_size_mb", getIntField(nc, "memorySizeMb"))
 	}
-	p.setURI("vpc", getStringField(data, "authorizedNetwork"), "compute.googleapis.com")
+	p.setURI("vpc", getStringField(data, "authorizedNetwork"), svcCompute)
 }
 
 func projectGCSBucketAttrs(p *attrProjector, data *structpb.Struct) {
@@ -809,33 +809,33 @@ func projectGCSBucketAttrs(p *attrProjector, data *structpb.Struct) {
 	if iamCfg := getStructField(data, "iamConfiguration"); iamCfg != nil {
 		p.setBool("uniform_bucket_level_access", getBoolValue(getStructField(iamCfg, "uniformBucketLevelAccess"), "enabled"))
 	}
-	p.setURI("kms_key_uri", getStringField(getStructField(data, "encryption"), "defaultKmsKeyName"), "cloudkms.googleapis.com")
+	p.setURI("kms_key_uri", getStringField(getStructField(data, "encryption"), "defaultKmsKeyName"), svcCloudKMS)
 }
 
 func projectFilestoreAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("tier", getStringField(data, "tier"))
 	for _, nVal := range getListField(data, "networks") {
 		if n := nVal.GetStructValue(); n != nil {
-			p.setURI("vpc", getStringField(n, "network"), "compute.googleapis.com")
+			p.setURI("vpc", getStringField(n, "network"), svcCompute)
 			if ips := getStringListField(n, "ipAddresses"); len(ips) > 0 {
 				p.setStr("private_ip", parsePrivateIPv4(ips[0]))
 			}
 			break
 		}
 	}
-	p.setURI("kms_key_uri", getStringField(data, "kmsKeyName"), "cloudkms.googleapis.com")
+	p.setURI("kms_key_uri", getStringField(data, "kmsKeyName"), svcCloudKMS)
 }
 
 func projectNetAppAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("service_level", getStringField(data, "serviceLevel"))
 	p.setInt("capacity_gib", getIntField(data, "capacityGib"))
-	p.setURI("vpc", getStringField(data, "network"), "compute.googleapis.com")
-	p.setURI("kms_key_uri", getStringField(data, "kmsConfig"), "cloudkms.googleapis.com")
+	p.setURI("vpc", getStringField(data, "network"), svcCompute)
+	p.setURI("kms_key_uri", getStringField(data, "kmsConfig"), svcCloudKMS)
 }
 
 func projectBQDatasetAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("location", getStringField(data, "location"))
-	p.setURI("kms_key_uri", getStringField(getStructField(data, "defaultEncryptionConfiguration"), "kmsKeyName"), "cloudkms.googleapis.com")
+	p.setURI("kms_key_uri", getStringField(getStructField(data, "defaultEncryptionConfiguration"), "kmsKeyName"), svcCloudKMS)
 }
 
 func projectBQConnectionAttrs(p *attrProjector, data *structpb.Struct) {
@@ -857,7 +857,7 @@ func projectBQTransferAttrs(p *attrProjector, data *structpb.Struct) {
 func projectArtifactRegistryAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("format", getStringField(data, "format"))
 	p.setStr("mode", getStringField(data, "mode"))
-	p.setURI("kms_key_uri", getStringField(data, "kmsKeyName"), "cloudkms.googleapis.com")
+	p.setURI("kms_key_uri", getStringField(data, "kmsKeyName"), svcCloudKMS)
 }
 
 func projectCloudBuildTriggerAttrs(p *attrProjector, data *structpb.Struct) {
@@ -886,9 +886,9 @@ func projectCloudRunServiceAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("url", SanitizeURL(u))
 	tpl := getStructField(data, "template")
 	p.setStr("service_account", getStringField(tpl, "serviceAccount"))
-	p.setURI("kms_key_uri", getStringField(tpl, "encryptionKey"), "cloudkms.googleapis.com")
+	p.setURI("kms_key_uri", getStringField(tpl, "encryptionKey"), svcCloudKMS)
 	if vpc := getStructField(tpl, "vpcAccess"); vpc != nil {
-		p.setURI("vpc_connector", getStringField(vpc, "connector"), "vpcaccess.googleapis.com")
+		p.setURI("vpc_connector", getStringField(vpc, "connector"), svcVPCAccess)
 		p.setFirstNICNetwork(vpc)
 	}
 }
@@ -897,7 +897,7 @@ func projectCloudRunJobAttrs(p *attrProjector, data *structpb.Struct) {
 	inner := getStructField(getStructField(data, "template"), "template")
 	p.setStr("service_account", getStringField(inner, "serviceAccount"))
 	if vpc := getStructField(inner, "vpcAccess"); vpc != nil {
-		p.setURI("vpc_connector", getStringField(vpc, "connector"), "vpcaccess.googleapis.com")
+		p.setURI("vpc_connector", getStringField(vpc, "connector"), svcVPCAccess)
 		p.setFirstNICNetwork(vpc)
 	}
 }
@@ -926,8 +926,8 @@ func projectCloudFunctionAttrs(p *attrProjector, data *structpb.Struct) {
 		sa = getStringField(data, "serviceAccountEmail")
 	}
 	p.setStr("service_account", sa)
-	p.setURI("vpc_connector", getStringField(sc, "vpcConnector"), "vpcaccess.googleapis.com")
-	p.setURI("kms_key_uri", getStringField(data, "kmsKeyName"), "cloudkms.googleapis.com")
+	p.setURI("vpc_connector", getStringField(sc, "vpcConnector"), svcVPCAccess)
+	p.setURI("kms_key_uri", getStringField(data, "kmsKeyName"), svcCloudKMS)
 }
 
 func projectAppEngineAttrs(p *attrProjector, data *structpb.Struct) {
@@ -943,7 +943,7 @@ func projectBatchJobAttrs(p *attrProjector, data *structpb.Struct) {
 }
 
 func projectPubSubTopicAttrs(p *attrProjector, data *structpb.Struct) {
-	p.setURI("kms_key_uri", getStringField(data, "kmsKeyName"), "cloudkms.googleapis.com")
+	p.setURI("kms_key_uri", getStringField(data, "kmsKeyName"), svcCloudKMS)
 }
 
 func projectPubSubSubAttrs(p *attrProjector, data *structpb.Struct) {
@@ -955,7 +955,7 @@ func projectManagedKafkaAttrs(p *attrProjector, data *structpb.Struct) {
 	if capCfg := getStructField(data, "capacityConfig"); capCfg != nil {
 		p.setInt("vcpu_count", getIntField(capCfg, "vcpuCount"))
 	}
-	p.setURI("kms_key_uri", getStringField(getStructField(data, "gcpConfig"), "kmsKey"), "cloudkms.googleapis.com")
+	p.setURI("kms_key_uri", getStringField(getStructField(data, "gcpConfig"), "kmsKey"), svcCloudKMS)
 }
 
 func projectEventarcTriggerAttrs(p *attrProjector, data *structpb.Struct) {
@@ -998,32 +998,32 @@ func projectDataflowJobAttrs(p *attrProjector, data *structpb.Struct) {
 func projectDataprocClusterAttrs(p *attrProjector, data *structpb.Struct) {
 	cfg := getStructField(data, "config")
 	gce := getStructField(cfg, "gceClusterConfig")
-	p.setURI("vpc", getStringField(gce, "networkUri"), "compute.googleapis.com")
-	p.setURI("subnet", getStringField(gce, "subnetworkUri"), "compute.googleapis.com")
+	p.setURI("vpc", getStringField(gce, "networkUri"), svcCompute)
+	p.setURI("subnet", getStringField(gce, "subnetworkUri"), svcCompute)
 	p.setStr("service_account", getStringField(gce, "serviceAccount"))
-	p.setURI("kms_key_uri", getStringField(getStructField(cfg, "encryptionConfig"), "gcePdKmsKeyName"), "cloudkms.googleapis.com")
+	p.setURI("kms_key_uri", getStringField(getStructField(cfg, "encryptionConfig"), "gcePdKmsKeyName"), svcCloudKMS)
 }
 
 func projectDataprocBatchAttrs(p *attrProjector, data *structpb.Struct) {
 	ec := getStructField(getStructField(data, "environmentConfig"), "executionConfig")
-	p.setURI("vpc", getStringField(ec, "networkUri"), "compute.googleapis.com")
-	p.setURI("subnet", getStringField(ec, "subnetworkUri"), "compute.googleapis.com")
+	p.setURI("vpc", getStringField(ec, "networkUri"), svcCompute)
+	p.setURI("subnet", getStringField(ec, "subnetworkUri"), svcCompute)
 	p.setStr("service_account", getStringField(ec, "serviceAccount"))
 }
 
 func projectMetastoreAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("tier", getStringField(data, "tier"))
-	p.setURI("vpc", getStringField(data, "network"), "compute.googleapis.com")
+	p.setURI("vpc", getStringField(data, "network"), svcCompute)
 }
 
 func projectComposerAttrs(p *attrProjector, data *structpb.Struct) {
 	cfg := getStructField(data, "config")
 	p.setStr("image_version", getStringField(getStructField(cfg, "softwareConfig"), "imageVersion"))
 	nc := getStructField(cfg, "nodeConfig")
-	p.setURI("vpc", getStringField(nc, "network"), "compute.googleapis.com")
-	p.setURI("subnet", getStringField(nc, "subnetwork"), "compute.googleapis.com")
+	p.setURI("vpc", getStringField(nc, "network"), svcCompute)
+	p.setURI("subnet", getStringField(nc, "subnetwork"), svcCompute)
 	p.setStr("service_account", getStringField(nc, "serviceAccount"))
-	p.setURI("kms_key_uri", getStringField(getStructField(cfg, "encryptionConfig"), "kmsKeyName"), "cloudkms.googleapis.com")
+	p.setURI("kms_key_uri", getStringField(getStructField(cfg, "encryptionConfig"), "kmsKeyName"), svcCloudKMS)
 }
 
 func projectDataformAttrs(p *attrProjector, data *structpb.Struct) {
@@ -1035,12 +1035,12 @@ func projectDataformAttrs(p *attrProjector, data *structpb.Struct) {
 func projectDataFusionAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("type", getStringField(data, "type"))
 	p.setStr("version", getStringField(data, "version"))
-	p.setURI("vpc", getStringField(getStructField(data, "networkConfig"), "network"), "compute.googleapis.com")
+	p.setURI("vpc", getStringField(getStructField(data, "networkConfig"), "network"), svcCompute)
 }
 
 func projectLookerAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("platform_edition", getStringField(data, "platformEdition"))
-	p.setURI("vpc", getStringField(data, "consumerNetwork"), "compute.googleapis.com")
+	p.setURI("vpc", getStringField(data, "consumerNetwork"), svcCompute)
 }
 
 func projectDNSZoneAttrs(p *attrProjector, data *structpb.Struct) {
@@ -1051,7 +1051,7 @@ func projectDNSZoneAttrs(p *attrProjector, data *structpb.Struct) {
 func projectVPCConnectorAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("cidr", getStringField(data, "ipCidrRange"))
 	p.setStr("machine_type", getStringField(data, "machineType"))
-	p.setURI("vpc", getStringField(data, "network"), "compute.googleapis.com")
+	p.setURI("vpc", getStringField(data, "network"), svcCompute)
 	sub := getStructField(data, "subnet")
 	if sub == nil {
 		return
@@ -1065,7 +1065,7 @@ func projectVPCConnectorAttrs(p *attrProjector, data *structpb.Struct) {
 		return
 	}
 	if subProj != "" && !strings.Contains(subName, "/") && p.region != "" {
-		p.attrs["subnet"] = "//compute.googleapis.com/projects/" + mapProject(subProj, p.projIdx) + "/regions/" + p.region + "/subnetworks/" + subName
+		p.attrs["subnet"] = prefixComputeProjects + mapProject(subProj, p.projIdx) + "/regions/" + p.region + "/subnetworks/" + subName
 		return
 	}
 	p.setStr("subnet", subName)
@@ -1078,18 +1078,18 @@ func projectAPIGatewayAttrs(p *attrProjector, data *structpb.Struct) {
 
 func projectApigeeAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("runtime_type", getStringField(data, "runtimeType"))
-	p.setURI("vpc", getStringField(data, "authorizedNetwork"), "compute.googleapis.com")
+	p.setURI("vpc", getStringField(data, "authorizedNetwork"), svcCompute)
 }
 
 func projectVertexEndpointAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setInt("deployed_model_count", len(getListField(data, "deployedModels")))
-	p.setURI("vpc", getStringField(data, "network"), "compute.googleapis.com")
-	p.setURI("kms_key_uri", getStringField(getStructField(data, "encryptionSpec"), "kmsKeyName"), "cloudkms.googleapis.com")
+	p.setURI("vpc", getStringField(data, "network"), svcCompute)
+	p.setURI("kms_key_uri", getStringField(getStructField(data, "encryptionSpec"), "kmsKeyName"), svcCloudKMS)
 }
 
 func projectVertexIndexEndpointAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setInt("deployed_index_count", len(getListField(data, "deployedIndexes")))
-	p.setURI("vpc", getStringField(data, "network"), "compute.googleapis.com")
+	p.setURI("vpc", getStringField(data, "network"), svcCompute)
 }
 
 func projectVertexReasoningEngineAttrs(p *attrProjector, data *structpb.Struct) {
@@ -1130,7 +1130,7 @@ func projectSecretAttrs(p *attrProjector, data *structpb.Struct) {
 		p.attrs["replication"] = "user_managed"
 	}
 	if kms := getStringField(getStructField(getStructField(rep, "automatic"), "customerManagedEncryption"), "kmsKeyName"); kms != "" {
-		p.setURI("kms_key_uri", kms, "cloudkms.googleapis.com")
+		p.setURI("kms_key_uri", kms, svcCloudKMS)
 	}
 }
 
@@ -1259,72 +1259,86 @@ func extractContainerEnvEntry(e *structpb.Struct, projID string, projIdx map[str
 
 func extractPodVolumeRefs(parent *structpb.Struct, projID string, projIdx map[string]string, secretRefs, cloudSQL, configMaps *[]string) {
 	for _, vVal := range getListField(parent, "volumes") {
-		v := vVal.GetStructValue()
-		if v == nil {
-			continue
-		}
-		if cm := getStructField(v, "configMap"); cm != nil && configMaps != nil {
-			appendUnique(configMaps, getStringField(cm, "name"))
-		}
-		if sec := getStructField(v, "secret"); sec != nil {
-			name := getStringField(sec, "secret")
-			if name == "" {
-				name = getStringField(sec, "secretName")
-			}
-			if name != "" && (strings.Contains(name, "/") || configMaps == nil) {
-				appendUnique(secretRefs, normalizeSecretRef(name, projID, projIdx))
-			}
-		}
-		if csi := getStructField(v, "cloudSqlInstance"); csi != nil {
-			for _, inst := range getStringListField(csi, "instances") {
-				if uri := cloudSQLConnNameToURI(inst, projIdx); uri != "" {
-					appendUnique(cloudSQL, uri)
-				}
-			}
+		if v := vVal.GetStructValue(); v != nil {
+			extractSingleVolumeRefs(v, projID, projIdx, secretRefs, cloudSQL, configMaps)
 		}
 	}
 }
 
+func extractSingleVolumeRefs(v *structpb.Struct, projID string, projIdx map[string]string, secretRefs, cloudSQL, configMaps *[]string) {
+	if cm := getStructField(v, "configMap"); cm != nil && configMaps != nil {
+		appendUnique(configMaps, getStringField(cm, "name"))
+	}
+	if secRef := extractVolumeSecretRef(getStructField(v, "secret"), projID, projIdx, configMaps == nil); secRef != "" {
+		appendUnique(secretRefs, secRef)
+	}
+	for _, inst := range getStringListField(getStructField(v, "cloudSqlInstance"), "instances") {
+		appendUnique(cloudSQL, cloudSQLConnNameToURI(inst, projIdx))
+	}
+}
+
+func extractVolumeSecretRef(sec *structpb.Struct, projID string, projIdx map[string]string, allowBareSecret bool) string {
+	if sec == nil {
+		return ""
+	}
+	name := getStringField(sec, "secret")
+	if name == "" {
+		name = getStringField(sec, "secretName")
+	}
+	if name == "" || (!allowBareSecret && !strings.Contains(name, "/")) {
+		return ""
+	}
+	return normalizeSecretRef(name, projID, projIdx)
+}
+
 // extractCloudBuildPayloadRefs scans Cloud Build steps[] (name, entrypoint, args, script),
 // images[], and artifacts.objects.location via ExtractSanitizedRefs before raw payloads are discarded.
-func extractCloudBuildPayloadRefs(build *structpb.Struct, projIdx map[string]string) (refs []string, secretRefs []string) {
+func extractCloudBuildPayloadRefs(build *structpb.Struct, projIdx map[string]string) (refs, secretRefs []string) {
 	if build == nil {
 		return nil, nil
 	}
 	for _, sVal := range getListField(build, "steps") {
-		step := sVal.GetStructValue()
-		if step == nil {
-			continue
-		}
-		addExtractedRefs(getStringField(step, "name"), projIdx, &refs, &secretRefs)
-		addExtractedRefs(getStringField(step, "entrypoint"), projIdx, &refs, &secretRefs)
-		addExtractedRefs(getStringField(step, "script"), projIdx, &refs, &secretRefs)
-		args := getStringListField(step, "args")
-		for _, a := range args {
-			addExtractedRefs(a, projIdx, &refs, &secretRefs)
-		}
-		// Join args so multi-token invocations like ["run", "deploy", "my-svc", "--project", "target-p"] match.
-		if len(args) > 1 {
-			joined := strings.Join(args, " ")
-			if ep := getStringField(step, "entrypoint"); ep != "" {
-				joined = ep + " " + joined
-			} else if name := getStringField(step, "name"); strings.Contains(name, "gcloud") || strings.Contains(name, "cloud-sdk") {
-				joined = "gcloud " + joined
-			}
-			addExtractedRefs(joined, projIdx, &refs, &secretRefs)
+		if step := sVal.GetStructValue(); step != nil {
+			extractCloudBuildStepRefs(step, projIdx, &refs, &secretRefs)
 		}
 	}
 	for _, img := range getStringListField(build, "images") {
 		addExtractedRefs(img, projIdx, &refs, &secretRefs)
 	}
-	if arts := getStructField(build, "artifacts"); arts != nil {
-		if objs := getStructField(arts, "objects"); objs != nil {
-			addExtractedRefs(getStringField(objs, "location"), projIdx, &refs, &secretRefs)
-		}
+	if objs := getStructField(getStructField(build, "artifacts"), "objects"); objs != nil {
+		addExtractedRefs(getStringField(objs, "location"), projIdx, &refs, &secretRefs)
 	}
 	sort.Strings(refs)
 	sort.Strings(secretRefs)
 	return refs, secretRefs
+}
+
+func extractCloudBuildStepRefs(step *structpb.Struct, projIdx map[string]string, refs, secretRefs *[]string) {
+	addExtractedRefs(getStringField(step, "name"), projIdx, refs, secretRefs)
+	addExtractedRefs(getStringField(step, "entrypoint"), projIdx, refs, secretRefs)
+	addExtractedRefs(getStringField(step, "script"), projIdx, refs, secretRefs)
+	args := getStringListField(step, "args")
+	for _, a := range args {
+		addExtractedRefs(a, projIdx, refs, secretRefs)
+	}
+	// Join args so multi-token invocations like ["run", "deploy", "my-svc", "--project", "target-p"] match.
+	if len(args) > 1 {
+		joined := strings.Join(args, " ")
+		if prefix := cloudBuildStepCommandPrefix(step); prefix != "" {
+			joined = prefix + " " + joined
+		}
+		addExtractedRefs(joined, projIdx, refs, secretRefs)
+	}
+}
+
+func cloudBuildStepCommandPrefix(step *structpb.Struct) string {
+	if ep := getStringField(step, "entrypoint"); ep != "" {
+		return ep
+	}
+	if name := getStringField(step, "name"); strings.Contains(name, "gcloud") || strings.Contains(name, "cloud-sdk") {
+		return "gcloud"
+	}
+	return ""
 }
 
 func addExtractedRefs(raw string, projIdx map[string]string, envRefs, secretRefs *[]string) {
@@ -1393,9 +1407,9 @@ func isDefaultServiceAccount(email string) bool {
 		strings.HasSuffix(e, "@cloudbuild.gserviceaccount.com") {
 		return true
 	}
-	if strings.HasPrefix(e, "service-") && strings.HasSuffix(e, ".iam.gserviceaccount.com") {
+	if strings.HasPrefix(e, prefixServiceDash) && strings.HasSuffix(e, ".iam.gserviceaccount.com") {
 		local, _, ok := strings.Cut(e, "@")
-		return ok && isNumeric(strings.TrimPrefix(local, "service-"))
+		return ok && isNumeric(strings.TrimPrefix(local, prefixServiceDash))
 	}
 	return false
 }
@@ -1551,7 +1565,7 @@ func cloudSQLConnNameToURI(conn string, projIdx map[string]string) string {
 	if len(parts) != 3 || parts[0] == "" || parts[2] == "" {
 		return ""
 	}
-	return "//sqladmin.googleapis.com/projects/" + mapProject(parts[0], projIdx) + "/instances/" + parts[2]
+	return prefixSQLProjects + mapProject(parts[0], projIdx) + segInstances + parts[2]
 }
 
 func parentBigQueryDatasetURI(canonURI string) string {
@@ -1575,11 +1589,11 @@ func parentArtifactRepoURI(canonURI string) string {
 func extractGKEClusterURI(rawName, parentURI string, projIdx map[string]string) string {
 	for _, candidate := range []string{rawName, parentURI} {
 		canon := CanonicalizeAIP122(candidate, projIdx)
-		if idx := strings.Index(canon, "/clusters/"); idx > 0 {
-			rest := canon[idx+len("/clusters/"):]
+		if idx := strings.Index(canon, segClusters); idx > 0 {
+			rest := canon[idx+len(segClusters):]
 			clusterName, _, _ := strings.Cut(rest, "/")
 			if clusterName != "" {
-				return canon[:idx+len("/clusters/")] + clusterName
+				return canon[:idx+len(segClusters)] + clusterName
 			}
 		}
 	}
@@ -1594,8 +1608,8 @@ func extractProjectID(canonURI string, ancestors []string, projIdx map[string]st
 		return mapProject(p, projIdx)
 	}
 	for _, anc := range ancestors {
-		if strings.HasPrefix(anc, "projects/") {
-			return mapProject(strings.TrimPrefix(anc, "projects/"), projIdx)
+		if strings.HasPrefix(anc, prefixProjects) {
+			return mapProject(strings.TrimPrefix(anc, prefixProjects), projIdx)
 		}
 	}
 	return ""

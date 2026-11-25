@@ -867,6 +867,48 @@ func TestValidateWithFactsProvenanceAndAccounting(t *testing.T) {
 	_ = assertHasValidationCode(t, ValidateWithFacts(mBlankEv, fBlankEv, reg), ErrMissingEvidenceEdgeIDs)
 }
 
+func placementComponentIDs(placements []Placement) []string {
+	ids := make([]string, len(placements))
+	for i, p := range placements {
+		ids[i] = p.ComponentID
+	}
+	return ids
+}
+
+func findEdgeEvidence(edges []Edge, from, to string) []string {
+	for _, e := range edges {
+		if e.From == from && e.To == to {
+			return e.EvidenceEdgeIDs
+		}
+	}
+	return nil
+}
+
+func assertLoadedRoundTripOrder(t *testing.T, loaded *Manifest, origPlacementOrder, origEvidenceOrder []string) {
+	t.Helper()
+	if !reflect.DeepEqual(loaded.Metadata.Scopes, []string{"projects/a", "projects/z"}) {
+		t.Fatalf("Scopes not sorted: %v", loaded.Metadata.Scopes)
+	}
+	if loaded.Views[0].ID != SystemIndexViewID || loaded.Views[1].ID != "a_network" || loaded.Views[2].ID != "gke_platform" {
+		t.Fatalf("Views order wrong: %q, %q, %q", loaded.Views[0].ID, loaded.Views[1].ID, loaded.Views[2].ID)
+	}
+
+	// Verify Placements order preserved on gke_platform.
+	gotPlacementOrder := placementComponentIDs(loaded.Views[2].Placements)
+	if !reflect.DeepEqual(gotPlacementOrder, origPlacementOrder) {
+		t.Fatalf("Placements order altered: got %v, want %v", gotPlacementOrder, origPlacementOrder)
+	}
+	if !reflect.DeepEqual(loaded.Views[2].Placements[0].OffPageRefs[0].TargetViewID, "a_view") {
+		t.Fatalf("OffPageRefs not sorted: %+v", loaded.Views[2].Placements[0].OffPageRefs)
+	}
+
+	// Verify EvidenceEdgeIDs order preserved on https_lb -> atlantis edge.
+	gotEv := findEdgeEvidence(loaded.Views[2].Edges, "https_lb", "atlantis")
+	if !reflect.DeepEqual(gotEv, origEvidenceOrder) {
+		t.Fatalf("EvidenceEdgeIDs order altered: got %v, want %v", gotEv, origEvidenceOrder)
+	}
+}
+
 func TestMarshalWriteLoadRoundTripAndOrderPreservation(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "architecture.yaml")
@@ -885,10 +927,7 @@ func TestMarshalWriteLoadRoundTripAndOrderPreservation(t *testing.T) {
 		{TargetViewID: "a_view", Label: "A", Direction: "IN"},
 	}
 
-	origPlacementOrder := make([]string, len(m.Views[0].Placements))
-	for i, p := range m.Views[0].Placements {
-		origPlacementOrder[i] = p.ComponentID
-	}
+	origPlacementOrder := placementComponentIDs(m.Views[0].Placements)
 	origEvidenceOrder := append([]string(nil), m.Views[0].Edges[0].EvidenceEdgeIDs...)
 
 	v2 := View{ID: "a_network", Title: "Network", Archetype: ArchetypeHubSpoke, AccentMode: AccentMixed, Placements: []Placement{{ComponentID: "atlantis", Column: 1}}}
@@ -916,35 +955,7 @@ func TestMarshalWriteLoadRoundTripAndOrderPreservation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load error: %v", err)
 	}
-	if !reflect.DeepEqual(loaded.Metadata.Scopes, []string{"projects/a", "projects/z"}) {
-		t.Fatalf("Scopes not sorted: %v", loaded.Metadata.Scopes)
-	}
-	if loaded.Views[0].ID != SystemIndexViewID || loaded.Views[1].ID != "a_network" || loaded.Views[2].ID != "gke_platform" {
-		t.Fatalf("Views order wrong: %q, %q, %q", loaded.Views[0].ID, loaded.Views[1].ID, loaded.Views[2].ID)
-	}
-
-	// Verify Placements order preserved on gke_platform.
-	gotPlacementOrder := make([]string, len(loaded.Views[2].Placements))
-	for i, p := range loaded.Views[2].Placements {
-		gotPlacementOrder[i] = p.ComponentID
-	}
-	if !reflect.DeepEqual(gotPlacementOrder, origPlacementOrder) {
-		t.Fatalf("Placements order altered: got %v, want %v", gotPlacementOrder, origPlacementOrder)
-	}
-	if !reflect.DeepEqual(loaded.Views[2].Placements[0].OffPageRefs[0].TargetViewID, "a_view") {
-		t.Fatalf("OffPageRefs not sorted: %+v", loaded.Views[2].Placements[0].OffPageRefs)
-	}
-
-	// Verify EvidenceEdgeIDs order preserved on https_lb -> atlantis edge.
-	var gotEv []string
-	for _, e := range loaded.Views[2].Edges {
-		if e.From == "https_lb" && e.To == "atlantis" {
-			gotEv = e.EvidenceEdgeIDs
-		}
-	}
-	if !reflect.DeepEqual(gotEv, origEvidenceOrder) {
-		t.Fatalf("EvidenceEdgeIDs order altered: got %v, want %v", gotEv, origEvidenceOrder)
-	}
+	assertLoadedRoundTripOrder(t, loaded, origPlacementOrder, origEvidenceOrder)
 
 	// Re-marshaling must be byte-identical.
 	b1, err := os.ReadFile(path)
@@ -958,7 +969,9 @@ func TestMarshalWriteLoadRoundTripAndOrderPreservation(t *testing.T) {
 	if !bytes.Equal(b1, b2) {
 		t.Fatalf("Marshal not byte-deterministic:\n%s\nvs\n%s", b1, b2)
 	}
+}
 
+func TestMarshalNilAndEdgeSortTieBreakers(t *testing.T) {
 	if _, err := Marshal(nil); err == nil {
 		t.Fatal("expected error marshaling nil manifest")
 	}

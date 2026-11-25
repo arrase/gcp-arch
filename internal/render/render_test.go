@@ -215,21 +215,7 @@ func TestPrepareDocumentBarycenterWaypointsBusesAndSpans(t *testing.T) {
 	}
 
 	// Check auto bus grouping for b1 -> c1, c2 and lateral detours for a1->a2 & c1->c2.
-	var foundBus, foundLeftLat, foundRightLat bool
-	for _, e := range v.Edges {
-		if e.From == "b1" && (e.To == "c1" || e.To == "c2") && e.BusGroup != "" && e.BusKind == "out" {
-			foundBus = true
-		}
-		if e.From == "c1" && e.To == "c2" && e.LateralSide == "left" {
-			foundLeftLat = true
-		}
-		if e.From == "a1" && e.To == "a2" && e.LateralSide == "right" {
-			foundRightLat = true
-		}
-	}
-	if !foundBus || !foundLeftLat || !foundRightLat {
-		t.Fatalf("missing expected routing attributes: bus=%v leftLat=%v rightLat=%v", foundBus, foundLeftLat, foundRightLat)
-	}
+	assertBarycenterRoutingEdges(t, v.Edges)
 	if len(v.Footnotes) != 3 {
 		t.Fatalf("expected 3 INFERRED footnotes, got %d", len(v.Footnotes))
 	}
@@ -247,6 +233,33 @@ func TestPrepareDocumentBarycenterWaypointsBusesAndSpans(t *testing.T) {
 	scDoc := PrepareDocument(singleCol, reg)
 	if !scDoc.Views[0].HasRightEdgeCol {
 		t.Fatalf("expected HasRightEdgeCol on single-column lateral edge")
+	}
+}
+
+func isOutBusEdge(e RoutingEdge, from string) bool {
+	return e.From == from && (e.To == "c1" || e.To == "c2") && e.BusGroup != "" && e.BusKind == "out"
+}
+
+func isLateralEdge(e RoutingEdge, from, to, side string) bool {
+	return e.From == from && e.To == to && e.LateralSide == side
+}
+
+func assertBarycenterRoutingEdges(t *testing.T, edges []RoutingEdge) {
+	t.Helper()
+	var foundBus, foundLeftLat, foundRightLat bool
+	for _, e := range edges {
+		if isOutBusEdge(e, "b1") {
+			foundBus = true
+		}
+		if isLateralEdge(e, "c1", "c2", "left") {
+			foundLeftLat = true
+		}
+		if isLateralEdge(e, "a1", "a2", "right") {
+			foundRightLat = true
+		}
+	}
+	if !foundBus || !foundLeftLat || !foundRightLat {
+		t.Fatalf("missing expected routing attributes: bus=%v leftLat=%v rightLat=%v", foundBus, foundLeftLat, foundRightLat)
 	}
 }
 
@@ -412,38 +425,56 @@ func countPDFPages(pdf []byte) int {
 	return len(re.FindAll(pdf, -1))
 }
 
+func nextPDFStream(pdf []byte, idx int) ([]byte, int, bool) {
+	pos := bytes.Index(pdf[idx:], []byte("stream"))
+	if pos < 0 {
+		return nil, 0, false
+	}
+	start := idx + pos + len("stream")
+	if start < len(pdf) && pdf[start] == '\r' {
+		start++
+	}
+	if start < len(pdf) && pdf[start] == '\n' {
+		start++
+	}
+	end := bytes.Index(pdf[start:], []byte("endstream"))
+	if end < 0 {
+		return nil, 0, false
+	}
+	return pdf[start : start+end], start + end + len("endstream"), true
+}
+
+func hasPDFTextOps(data []byte, requireET bool) bool {
+	if !bytes.Contains(data, []byte("BT")) {
+		return false
+	}
+	if requireET && !bytes.Contains(data, []byte("ET")) {
+		return false
+	}
+	return bytes.Contains(data, []byte("Tj")) || bytes.Contains(data, []byte("TJ"))
+}
+
+func streamHasTextOperators(streamBody []byte) bool {
+	if zr, err := zlib.NewReader(bytes.NewReader(streamBody)); err == nil {
+		decompressed, _ := io.ReadAll(zr)
+		_ = zr.Close()
+		return hasPDFTextOps(decompressed, false)
+	}
+	return hasPDFTextOps(streamBody, true)
+}
+
 func pdfHasNonEmptyTextStream(pdf []byte) bool {
 	// Headless Chrome compresses page content streams with FlateDecode (zlib).
-	idx := 0
-	for {
-		pos := bytes.Index(pdf[idx:], []byte("stream"))
-		if pos < 0 {
-			break
+	for idx := 0; ; {
+		streamBody, nextIdx, ok := nextPDFStream(pdf, idx)
+		if !ok {
+			return false
 		}
-		start := idx + pos + len("stream")
-		if start < len(pdf) && pdf[start] == '\r' {
-			start++
-		}
-		if start < len(pdf) && pdf[start] == '\n' {
-			start++
-		}
-		end := bytes.Index(pdf[start:], []byte("endstream"))
-		if end < 0 {
-			break
-		}
-		streamBody := pdf[start : start+end]
-		if zr, err := zlib.NewReader(bytes.NewReader(streamBody)); err == nil {
-			decompressed, _ := io.ReadAll(zr)
-			_ = zr.Close()
-			if bytes.Contains(decompressed, []byte("BT")) && (bytes.Contains(decompressed, []byte("Tj")) || bytes.Contains(decompressed, []byte("TJ"))) {
-				return true
-			}
-		} else if bytes.Contains(streamBody, []byte("BT")) && bytes.Contains(streamBody, []byte("ET")) && (bytes.Contains(streamBody, []byte("Tj")) || bytes.Contains(streamBody, []byte("TJ"))) {
+		if streamHasTextOperators(streamBody) {
 			return true
 		}
-		idx = start + end + len("endstream")
+		idx = nextIdx
 	}
-	return false
 }
 
 func TestHeadlessChromeAcmeCICDGoldenSuite(t *testing.T) {

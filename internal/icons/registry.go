@@ -291,48 +291,65 @@ func compileIconSymbol(key, rawSVG string) compiledSymbol {
 	}
 }
 
-func writeRewrittenStartTag(dst *bytes.Buffer, elem xml.StartElement, idPrefix string) {
-	const (
-		xmlNS   = "http://www.w3.org/XML/1998/namespace"
-		xlinkNS = "http://www.w3.org/1999/xlink"
-	)
+const (
+	xmlNS   = "http://www.w3.org/XML/1998/namespace"
+	xlinkNS = "http://www.w3.org/1999/xlink"
+)
 
+func writeRewrittenStartTag(dst *bytes.Buffer, elem xml.StartElement, idPrefix string) {
 	dst.WriteByte('<')
 	dst.WriteString(elem.Name.Local)
 	seen := make(map[string]bool, len(elem.Attr))
 	for _, attr := range elem.Attr {
-		localLower := strings.ToLower(attr.Name.Local)
-		if localLower == "xmlns" || strings.EqualFold(attr.Name.Space, "xmlns") {
-			continue
-		}
-		name := attr.Name.Local
-		val := attr.Value
-		if localLower == "href" && (attr.Name.Space == "" || attr.Name.Space == xlinkNS || strings.EqualFold(attr.Name.Space, "xlink")) {
-			trimmed := strings.TrimSpace(val)
-			if !strings.HasPrefix(trimmed, "#") || len(trimmed) <= 1 {
-				continue
-			}
-			name = "href"
-			val = "#" + idPrefix + trimmed[1:]
-		} else {
-			if attr.Name.Space == xmlNS {
-				name = "xml:" + attr.Name.Local
-			} else if attr.Name.Space != "" {
-				continue
-			}
-			if localLower == "id" && strings.TrimSpace(val) != "" {
-				val = idPrefix + strings.TrimSpace(val)
-			} else {
-				val = rewriteURLRefs(val, idPrefix)
-			}
-		}
-		if seen[name] {
+		name, val, ok := rewriteStartAttr(attr, idPrefix)
+		if !ok || seen[name] {
 			continue
 		}
 		seen[name] = true
 		fmt.Fprintf(dst, ` %s="%s"`, name, escapeXML(val))
 	}
 	dst.WriteByte('>')
+}
+
+func rewriteStartAttr(attr xml.Attr, idPrefix string) (string, string, bool) {
+	localLower := strings.ToLower(attr.Name.Local)
+	if localLower == "xmlns" || strings.EqualFold(attr.Name.Space, "xmlns") {
+		return "", "", false
+	}
+	if localLower == "href" && isHrefNamespace(attr.Name.Space) {
+		return rewriteHrefAttr(attr.Value, idPrefix)
+	}
+	name, ok := qualifyAttrName(attr.Name)
+	if !ok {
+		return "", "", false
+	}
+	if localLower == "id" && strings.TrimSpace(attr.Value) != "" {
+		return name, idPrefix + strings.TrimSpace(attr.Value), true
+	}
+	return name, rewriteURLRefs(attr.Value, idPrefix), true
+}
+
+func isHrefNamespace(space string) bool {
+	return space == "" || space == xlinkNS || strings.EqualFold(space, "xlink")
+}
+
+func rewriteHrefAttr(val, idPrefix string) (string, string, bool) {
+	trimmed := strings.TrimSpace(val)
+	if !strings.HasPrefix(trimmed, "#") || len(trimmed) <= 1 {
+		return "", "", false
+	}
+	return "href", "#" + idPrefix + trimmed[1:], true
+}
+
+func qualifyAttrName(name xml.Name) (string, bool) {
+	switch name.Space {
+	case "":
+		return name.Local, true
+	case xmlNS:
+		return "xml:" + name.Local, true
+	default:
+		return "", false
+	}
 }
 
 func rewriteURLRefs(val, idPrefix string) string {

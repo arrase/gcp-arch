@@ -114,21 +114,11 @@ func validateConfig(cfg *appConfig) error {
 		return err
 	}
 
-	if len(cfg.ProjectAliases) > 0 {
-		cleaned := make(map[string]string, len(cfg.ProjectAliases))
-		for rawNum, rawID := range cfg.ProjectAliases {
-			num := strings.TrimSpace(rawNum)
-			id := strings.TrimSpace(rawID)
-			if !isAllDigits(num) || !isValidProjectID(id) {
-				return fmt.Errorf("invalid project_aliases entry %q=%q (expected <NUMBER>: <ID>)", rawNum, rawID)
-			}
-			if prev, exists := cleaned[num]; exists && prev != id {
-				return fmt.Errorf("conflicting project_aliases for project number %s (%q vs %q)", num, prev, id)
-			}
-			cleaned[num] = id
-		}
-		cfg.ProjectAliases = cleaned
+	cleanedAliases, err := cleanConfigProjectAliases(cfg.ProjectAliases)
+	if err != nil {
+		return err
 	}
+	cfg.ProjectAliases = cleanedAliases
 
 	cfg.QuotaProject = strings.TrimSpace(cfg.QuotaProject)
 	cfg.VertexProject = strings.TrimSpace(cfg.VertexProject)
@@ -146,10 +136,28 @@ func validateConfig(cfg *appConfig) error {
 	if cfg.CloudBuildRuns != nil && *cfg.CloudBuildRuns < 1 {
 		return fmt.Errorf("cloudbuild_runs must be >= 1")
 	}
-	if cfg.Format != nil {
-		if _, _, _, _, err := parseRenderFormats(strings.Join(cfg.Format, ",")); err != nil {
-			return err
-		}
+	if cfg.Format == nil {
+		return nil
 	}
-	return nil
+	_, err = parseRenderFormats(strings.Join(cfg.Format, ","))
+	return err
+}
+
+func cleanConfigProjectAliases(raw map[string]string) (map[string]string, error) {
+	if len(raw) == 0 {
+		return raw, nil
+	}
+	cleaned := make(map[string]string, len(raw))
+	for rawNum, rawID := range raw {
+		num := strings.TrimSpace(rawNum)
+		id := strings.TrimSpace(rawID)
+		if !isAllDigits(num) || !isValidProjectID(id) {
+			return nil, fmt.Errorf("invalid project_aliases entry %q=%q (expected <NUMBER>: <ID>)", rawNum, rawID)
+		}
+		if prev, exists := cleaned[num]; exists && prev != id {
+			return nil, fmt.Errorf("conflicting project_aliases for project number %s (%q vs %q)", num, prev, id)
+		}
+		cleaned[num] = id
+	}
+	return cleaned, nil
 }

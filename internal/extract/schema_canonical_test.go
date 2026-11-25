@@ -111,6 +111,18 @@ func TestWriteAndLoadFactsDeterministicAndPermissions(t *testing.T) {
 	}
 
 	// Verify 0600 file permissions and 0700 parent dir permissions.
+	assertFactsPermissions(t, dir, path)
+
+	loaded, err := LoadFacts(path)
+	if err != nil {
+		t.Fatalf("LoadFacts error: %v", err)
+	}
+	assertLoadedFactsCanonical(t, loaded)
+	assertFactsByteDeterministic(t, dir, path, loaded)
+}
+
+func assertFactsPermissions(t *testing.T, dir, path string) {
+	t.Helper()
 	fi, err := os.Stat(path)
 	if err != nil {
 		t.Fatalf("stat facts.json: %v", err)
@@ -125,11 +137,10 @@ func TestWriteAndLoadFactsDeterministicAndPermissions(t *testing.T) {
 	if di.Mode().Perm() != 0o700 {
 		t.Fatalf("parent dir perm = %o, want 0700", di.Mode().Perm())
 	}
+}
 
-	loaded, err := LoadFacts(path)
-	if err != nil {
-		t.Fatalf("LoadFacts error: %v", err)
-	}
+func assertLoadedFactsCanonical(t *testing.T, loaded *FactsFile) {
+	t.Helper()
 	if loaded.SchemaVersion != FactsSchemaVersion {
 		t.Fatalf("SchemaVersion = %q, want %q", loaded.SchemaVersion, FactsSchemaVersion)
 	}
@@ -158,7 +169,10 @@ func TestWriteAndLoadFactsDeterministicAndPermissions(t *testing.T) {
 	if loaded.CoverageLedger[0].Scope != "projects/a-proj" {
 		t.Fatalf("CoverageLedger not sorted: %+v", loaded.CoverageLedger)
 	}
+}
 
+func assertFactsByteDeterministic(t *testing.T, dir, path string, loaded *FactsFile) {
+	t.Helper()
 	// Re-writing loaded facts must yield byte-identical JSON.
 	raw1, err := os.ReadFile(path)
 	if err != nil {

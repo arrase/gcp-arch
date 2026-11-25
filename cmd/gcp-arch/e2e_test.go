@@ -46,34 +46,53 @@ func pdfHasNonEmptyTextStream(pdf []byte) bool {
 	// Headless Chrome compresses page content streams with FlateDecode (zlib).
 	idx := 0
 	for {
-		pos := bytes.Index(pdf[idx:], []byte("stream"))
-		if pos < 0 {
-			break
+		streamBody, nextIdx, ok := nextPDFStream(pdf, idx)
+		if !ok {
+			return false
 		}
-		start := idx + pos + len("stream")
-		if start < len(pdf) && pdf[start] == '\r' {
-			start++
-		}
-		if start < len(pdf) && pdf[start] == '\n' {
-			start++
-		}
-		end := bytes.Index(pdf[start:], []byte("endstream"))
-		if end < 0 {
-			break
-		}
-		streamBody := pdf[start : start+end]
-		if zr, err := zlib.NewReader(bytes.NewReader(streamBody)); err == nil {
-			decompressed, _ := io.ReadAll(zr)
-			_ = zr.Close()
-			if bytes.Contains(decompressed, []byte("BT")) && (bytes.Contains(decompressed, []byte("Tj")) || bytes.Contains(decompressed, []byte("TJ"))) {
-				return true
-			}
-		} else if bytes.Contains(streamBody, []byte("BT")) && bytes.Contains(streamBody, []byte("ET")) && (bytes.Contains(streamBody, []byte("Tj")) || bytes.Contains(streamBody, []byte("TJ"))) {
+		if pdfStreamHasText(streamBody) {
 			return true
 		}
-		idx = start + end + len("endstream")
+		idx = nextIdx
 	}
-	return false
+}
+
+func nextPDFStream(pdf []byte, from int) (body []byte, nextIdx int, ok bool) {
+	streamMarker := []byte("stream")
+	endStreamMarker := []byte("endstream")
+	pos := bytes.Index(pdf[from:], streamMarker)
+	if pos < 0 {
+		return nil, 0, false
+	}
+	start := from + pos + len(streamMarker)
+	if start < len(pdf) && pdf[start] == '\r' {
+		start++
+	}
+	if start < len(pdf) && pdf[start] == '\n' {
+		start++
+	}
+	end := bytes.Index(pdf[start:], endStreamMarker)
+	if end < 0 {
+		return nil, 0, false
+	}
+	return pdf[start : start+end], start + end + len(endStreamMarker), true
+}
+
+func pdfStreamHasText(streamBody []byte) bool {
+	body := streamBody
+	requireET := true
+	if zr, err := zlib.NewReader(bytes.NewReader(streamBody)); err == nil {
+		body, _ = io.ReadAll(zr)
+		_ = zr.Close()
+		requireET = false
+	}
+	if !bytes.Contains(body, []byte("BT")) {
+		return false
+	}
+	if requireET && !bytes.Contains(body, []byte("ET")) {
+		return false
+	}
+	return bytes.Contains(body, []byte("Tj")) || bytes.Contains(body, []byte("TJ"))
 }
 
 // buildAcmeMockModelClient translates acme_cicd_expected.architecture.yaml into valid Pass 1 and
@@ -86,7 +105,7 @@ func buildAcmeMockModelClient(t *testing.T, facts *extract.FactsFile, expected *
 	pass2ByView := buildAcmePass2Views(t, table, expected, &pass1)
 
 	return &stubModelClient{
-		handler: func(_ int, _ string, userPrompt string, _ *genai.Schema) ([]byte, error) {
+		handler: func(_ int, _, userPrompt string, _ *genai.Schema) ([]byte, error) {
 			var probe struct {
 				View struct {
 					ID string `json:"id"`
@@ -380,6 +399,12 @@ func assertE2ECoverageAndProvenance(t *testing.T, synthesized *manifest.Manifest
 	if err := manifest.ValidateWithFacts(synthesized, fixtureFacts, reg); err != nil {
 		t.Fatalf("ValidateWithFacts failed: %v", err)
 	}
+	assertE2ERequiredVerifiedEdges(t, synthesized)
+	assertE2ENoForbiddenComponents(t, synthesized)
+}
+
+func assertE2ERequiredVerifiedEdges(t *testing.T, synthesized *manifest.Manifest) {
+	t.Helper()
 	requiredVerified := map[string]bool{
 		"cicd_delivery_pipeline|github_acme->cloudbuild_triggers":            false,
 		"cicd_delivery_pipeline|cloudbuild_triggers->acme_artifact_registry": false,
@@ -389,25 +414,35 @@ func assertE2ECoverageAndProvenance(t *testing.T, synthesized *manifest.Manifest
 		"gke_developer_platform|sonarqube->sonarqube_db":                     false,
 	}
 	for _, v := range synthesized.Views {
-		for _, e := range v.Edges {
-			key := v.ID + "|" + e.From + "->" + e.To
-			if _, want := requiredVerified[key]; want {
-				if e.Provenance != manifest.ProvenanceVerified || len(e.EvidenceEdgeIDs) == 0 {
-					t.Errorf("required edge %s must be VERIFIED with evidence_edge_ids, got provenance=%s ids=%v", key, e.Provenance, e.EvidenceEdgeIDs)
-				}
-				requiredVerified[key] = true
-			}
-		}
+		checkViewRequiredEdges(t, v, requiredVerified)
 	}
 	for k, found := range requiredVerified {
 		if !found {
 			t.Errorf("missing required VERIFIED edge %s", k)
 		}
 	}
+}
 
+func checkViewRequiredEdges(t *testing.T, v manifest.View, required map[string]bool) {
+	t.Helper()
+	for _, e := range v.Edges {
+		key := v.ID + "|" + e.From + "->" + e.To
+		if _, want := required[key]; !want {
+			continue
+		}
+		if e.Provenance != manifest.ProvenanceVerified || len(e.EvidenceEdgeIDs) == 0 {
+			t.Errorf("required edge %s must be VERIFIED with evidence_edge_ids, got provenance=%s ids=%v", key, e.Provenance, e.EvidenceEdgeIDs)
+		}
+		required[key] = true
+	}
+}
+
+func assertE2ENoForbiddenComponents(t *testing.T, synthesized *manifest.Manifest) {
+	t.Helper()
+	forbiddenTerms := []string{"unclassified", "backuprun", "firestore", "redis", "memcache", "osconfig"}
 	for _, c := range synthesized.Components {
 		low := strings.ToLower(c.ID + " " + c.Title)
-		for _, forbidden := range []string{"unclassified", "backuprun", "firestore", "redis", "memcache", "osconfig"} {
+		for _, forbidden := range forbiddenTerms {
 			if strings.Contains(low, forbidden) {
 				t.Errorf("synthesized component %q (%q) contains forbidden term %q", c.ID, c.Title, forbidden)
 			}
@@ -600,19 +635,7 @@ func assertE2EDay2DeltaNotesPreservation(t *testing.T, fixtureFacts *extract.Fac
 	const curatedTitle = "Atlantis PR Automation (Curated)"
 	const curatedNote = "Client-approved PR automation boundary; preserve across Day-2 updates"
 
-	curated, err := manifest.Load(archPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for i := range curated.Components {
-		if curated.Components[i].ID == "atlantis" {
-			curated.Components[i].Title = curatedTitle
-			curated.Components[i].Notes = curatedNote
-		}
-	}
-	if err := manifest.Write(archPath, curated); err != nil {
-		t.Fatal(err)
-	}
+	curateAtlantisComponent(t, archPath, curatedTitle, curatedNote)
 
 	day2FactsPath, webhookRID, webhookEID := writeE2EDay2DeltaFacts(t, fixtureFacts, tmp)
 	var deltaCalls atomic.Int32
@@ -626,30 +649,49 @@ func assertE2EDay2DeltaNotesPreservation(t *testing.T, fixtureFacts *extract.Fac
 		t.Fatalf("expected 1 LLM call for Day-2 delta patch, got %d", deltaCalls.Load())
 	}
 
-	reconciled, err := manifest.Load(archPath)
-	if err != nil {
-		t.Fatalf("reload reconciled architecture.yaml: %v", err)
-	}
-	var sawCuratedAtlantis, sawWebhook bool
-	for _, c := range reconciled.Components {
-		if c.ID == "atlantis" {
-			if c.Title != curatedTitle || c.Notes != curatedNote {
-				t.Fatalf("Day-2 reconcile clobbered curated fields on atlantis: title=%q notes=%q", c.Title, c.Notes)
-			}
-			sawCuratedAtlantis = true
-		}
-		if c.ID == "release_webhook" {
-			sawWebhook = true
-		}
-	}
-	if !sawCuratedAtlantis || !sawWebhook {
-		t.Fatalf("expected curated atlantis (%v) and new release_webhook (%v)", sawCuratedAtlantis, sawWebhook)
-	}
+	assertE2EReconciledComponents(t, archPath, curatedTitle, curatedNote)
 
 	stdout.Reset()
 	stderr.Reset()
 	if code := run([]string{"validate", archPath, "--facts", day2FactsPath}, &stdout, &stderr, appDeps{}); code != exitOK {
 		t.Fatalf("validate after Day-2 reconcile exit=%d, want 0 (stderr=%s)", code, stderr.String())
+	}
+}
+
+func curateAtlantisComponent(t *testing.T, archPath, title, note string) {
+	t.Helper()
+	curated, err := manifest.Load(archPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range curated.Components {
+		if curated.Components[i].ID == "atlantis" {
+			curated.Components[i].Title = title
+			curated.Components[i].Notes = note
+		}
+	}
+	if err := manifest.Write(archPath, curated); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func assertE2EReconciledComponents(t *testing.T, archPath, curatedTitle, curatedNote string) {
+	t.Helper()
+	reconciled, err := manifest.Load(archPath)
+	if err != nil {
+		t.Fatalf("reload reconciled architecture.yaml: %v", err)
+	}
+	byID := make(map[string]manifest.Component, len(reconciled.Components))
+	for _, c := range reconciled.Components {
+		byID[c.ID] = c
+	}
+	atlantis, sawCuratedAtlantis := byID["atlantis"]
+	if sawCuratedAtlantis && (atlantis.Title != curatedTitle || atlantis.Notes != curatedNote) {
+		t.Fatalf("Day-2 reconcile clobbered curated fields on atlantis: title=%q notes=%q", atlantis.Title, atlantis.Notes)
+	}
+	_, sawWebhook := byID["release_webhook"]
+	if !sawCuratedAtlantis || !sawWebhook {
+		t.Fatalf("expected curated atlantis (%v) and new release_webhook (%v)", sawCuratedAtlantis, sawWebhook)
 	}
 }
 

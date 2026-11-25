@@ -166,30 +166,31 @@ func testPreflightFlagValidation(t *testing.T) {
 	}
 }
 
-func testPreflightJSONAndTableOutput(t *testing.T) {
-	var (
-		gotQuota      string
-		gotAliases    map[string]string
-		gotScopes     []string
-		gotVertexOpts extract.VertexPreflightOptions
-		probeCalled   bool
-	)
-	deps := appDeps{
+type preflightTestSpy struct {
+	quota       string
+	aliases     map[string]string
+	scopes      []string
+	vertexOpts  extract.VertexPreflightOptions
+	probeCalled bool
+}
+
+func newPreflightTestDeps(spy *preflightTestSpy) appDeps {
+	return appDeps{
 		newExtractClients: func(_ context.Context, opts extract.ClientOptions) (*extract.Clients, error) {
-			gotQuota = opts.QuotaProject
-			gotAliases = opts.ProjectAliases
+			spy.quota = opts.QuotaProject
+			spy.aliases = opts.ProjectAliases
 			return &extract.Clients{QuotaProject: opts.QuotaProject}, nil
 		},
 		probeVertexModel: func(_ context.Context, project, location, model string) error {
-			probeCalled = true
+			spy.probeCalled = true
 			if project != "ai-sandbox" || location != "us-central1" || model != "gemini-4-carbon" {
 				return fmt.Errorf("unexpected vertex probe params: %s %s %s", project, location, model)
 			}
 			return nil
 		},
 		runPreflight: func(ctx context.Context, _ *extract.Clients, scopes []string, vertexOpts extract.VertexPreflightOptions) (*extract.PreflightReport, error) {
-			gotScopes = scopes
-			gotVertexOpts = vertexOpts
+			spy.scopes = scopes
+			spy.vertexOpts = vertexOpts
 			if vertexOpts.ModelProbe != nil {
 				if err := vertexOpts.ModelProbe(ctx, vertexOpts.Project, vertexOpts.Location, vertexOpts.Model); err != nil {
 					return nil, err
@@ -206,7 +207,17 @@ func testPreflightJSONAndTableOutput(t *testing.T) {
 			}, nil
 		},
 	}
+}
 
+func testPreflightJSONAndTableOutput(t *testing.T) {
+	var spy preflightTestSpy
+	deps := newPreflightTestDeps(&spy)
+	assertPreflightJSONRun(t, &spy, deps)
+	assertPreflightTableRun(t, &spy, deps)
+}
+
+func assertPreflightJSONRun(t *testing.T, spy *preflightTestSpy, deps appDeps) {
+	t.Helper()
 	var stdout, stderr bytes.Buffer
 	code := run([]string{
 		"preflight",
@@ -218,26 +229,28 @@ func testPreflightJSONAndTableOutput(t *testing.T) {
 	if code != exitOK {
 		t.Fatalf("preflight --json exit=%d, want 0 (stderr=%s)", code, stderr.String())
 	}
-	if gotQuota != "billing-qp" || gotAliases["999000"] != "shared-host" || len(gotScopes) != 3 {
-		t.Fatalf("preflight wiring mismatch: quota=%q aliases=%+v scopes=%v", gotQuota, gotAliases, gotScopes)
+	if spy.quota != "billing-qp" || spy.aliases["999000"] != "shared-host" || len(spy.scopes) != 3 {
+		t.Fatalf("preflight wiring mismatch: quota=%q aliases=%+v scopes=%v", spy.quota, spy.aliases, spy.scopes)
 	}
-	if !probeCalled || gotVertexOpts.Project != "ai-sandbox" || gotVertexOpts.Location != "us-central1" || gotVertexOpts.Model != "gemini-4-carbon" {
-		t.Fatalf("vertex preflight wiring failed: called=%v opts=%+v", probeCalled, gotVertexOpts)
+	if !spy.probeCalled || spy.vertexOpts.Project != "ai-sandbox" || spy.vertexOpts.Location != "us-central1" || spy.vertexOpts.Model != "gemini-4-carbon" {
+		t.Fatalf("vertex preflight wiring failed: called=%v opts=%+v", spy.probeCalled, spy.vertexOpts)
 	}
 
 	var rep PreflightReport
 	if err := json.Unmarshal(stdout.Bytes(), &rep); err != nil || rep.GrantedCount != 2 || rep.MissingCount != 1 {
 		t.Fatalf("unexpected PreflightReport: err=%v rep=%+v", err, rep)
 	}
+}
 
-	probeCalled = false
-	stdout.Reset()
-	stderr.Reset()
-	if code = run([]string{"preflight", "--project", "app-prod,data-prod"}, &stdout, &stderr, deps); code != exitOK {
+func assertPreflightTableRun(t *testing.T, spy *preflightTestSpy, deps appDeps) {
+	t.Helper()
+	spy.probeCalled = false
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"preflight", "--project", "app-prod,data-prod"}, &stdout, &stderr, deps); code != exitOK {
 		t.Fatalf("preflight table exit=%d, want 0 (stderr=%s)", code, stderr.String())
 	}
-	if probeCalled || gotVertexOpts.Project != "" || gotVertexOpts.ModelProbe != nil {
-		t.Fatalf("expected no vertex probe when --vertex-project omitted, got called=%v opts=%+v", probeCalled, gotVertexOpts)
+	if spy.probeCalled || spy.vertexOpts.Project != "" || spy.vertexOpts.ModelProbe != nil {
+		t.Fatalf("expected no vertex probe when --vertex-project omitted, got called=%v opts=%+v", spy.probeCalled, spy.vertexOpts)
 	}
 	outStr := stdout.String()
 	for _, want := range []string{"Quota Project: billing-qp", "GRANTED", "VPC_SC_BLOCKED", "[vpc_sc_uuid=uuid-1234]", "Remediation:"} {
@@ -447,7 +460,7 @@ func minimalModelStub(facts *extract.FactsFile) *stubModelClient {
 	e1ID, _ := table.EdgeID(facts.Edges[0].ID)
 
 	return &stubModelClient{
-		handler: func(call int, _ string, _ string, _ *genai.Schema) ([]byte, error) {
+		handler: func(call int, _, _ string, _ *genai.Schema) ([]byte, error) {
 			if call == 0 {
 				return json.Marshal(synth.Pass1Plan{
 					Components: []synth.Pass1Component{
@@ -807,24 +820,7 @@ func assertValidateUnknownFieldAndStructural(t *testing.T, tmp, manifestPath str
 
 func assertValidateProvenanceViolation(t *testing.T, tmp, factsPath, manifestPath string) {
 	t.Helper()
-	m2, err := manifest.Load(manifestPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for i := range m2.Views {
-		if m2.Views[i].ID == "gke_developer_platform" {
-			m2.Views[i].Edges[0].EvidenceEdgeIDs = []string{"190f6dfb3f1fa702"}
-		}
-	}
-	for i := range m2.Components {
-		if m2.Components[i].ID == "atlantis" && len(m2.Components[i].BackedBy) > 1 {
-			m2.Components[i].BackedBy = m2.Components[i].BackedBy[:1]
-		}
-	}
-	badProvPath := filepath.Join(tmp, "bad_prov.yaml")
-	if err := manifest.Write(badProvPath, m2); err != nil {
-		t.Fatal(err)
-	}
+	badProvPath := writeBrokenProvenanceManifest(t, tmp, manifestPath)
 	var stdout, stderr bytes.Buffer
 	if code := run([]string{"validate", badProvPath, "--facts", factsPath, "--json"}, &stdout, &stderr, appDeps{}); code != exitUsage {
 		t.Fatalf("provenance violation exit=%d, want 2", code)
@@ -833,18 +829,36 @@ func assertValidateProvenanceViolation(t *testing.T, tmp, factsPath, manifestPat
 	if err := json.Unmarshal(stdout.Bytes(), &provRep); err != nil || provRep.Valid {
 		t.Fatalf("unexpected provenance report: err=%v rep=%+v", err, provRep)
 	}
-	var sawUnaccounted, sawBadProv bool
+	codes := make(map[string]bool, len(provRep.Errors))
 	for _, iss := range provRep.Errors {
-		if iss.Code == manifest.ErrUnaccountedFactResource {
-			sawUnaccounted = true
-		}
-		if iss.Code == manifest.ErrInvalidEdgeProvenance {
-			sawBadProv = true
-		}
+		codes[iss.Code] = true
 	}
-	if !sawUnaccounted || !sawBadProv {
+	if !codes[manifest.ErrUnaccountedFactResource] || !codes[manifest.ErrInvalidEdgeProvenance] {
 		t.Fatalf("expected UNACCOUNTED_FACT_RESOURCE and INVALID_EDGE_PROVENANCE, got %+v", provRep.Errors)
 	}
+}
+
+func writeBrokenProvenanceManifest(t *testing.T, tmp, manifestPath string) string {
+	t.Helper()
+	m, err := manifest.Load(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range m.Views {
+		if m.Views[i].ID == "gke_developer_platform" {
+			m.Views[i].Edges[0].EvidenceEdgeIDs = []string{"190f6dfb3f1fa702"}
+		}
+	}
+	for i := range m.Components {
+		if m.Components[i].ID == "atlantis" && len(m.Components[i].BackedBy) > 1 {
+			m.Components[i].BackedBy = m.Components[i].BackedBy[:1]
+		}
+	}
+	badProvPath := filepath.Join(tmp, "bad_prov.yaml")
+	if err := manifest.Write(badProvPath, m); err != nil {
+		t.Fatal(err)
+	}
+	return badProvPath
 }
 
 func TestRenderSubcommand(t *testing.T) {

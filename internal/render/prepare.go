@@ -434,21 +434,7 @@ func buildPreparedContainers(
 	sortedContIDs := slices.Clone(containerIDs)
 	sort.Strings(sortedContIDs)
 
-	hasInnerTop := make(map[string]bool)
-	hasInnerTopAtRow := make(map[int]bool)
-	for _, cid := range sortedContIDs {
-		sp := spans[cid]
-		if sp == nil || !sp.hasMember {
-			continue
-		}
-		ct := contByID[cid]
-		if ct.ParentContainerID != "" && viewContSet[ct.ParentContainerID] {
-			if psp := spans[ct.ParentContainerID]; psp != nil && psp.minRow == sp.minRow {
-				hasInnerTop[ct.ParentContainerID] = true
-				hasInnerTopAtRow[psp.minRow] = true
-			}
-		}
-	}
+	hasInnerTop, hasInnerTopAtRow := findContainersWithInnerTop(sortedContIDs, spans, viewContSet, contByID)
 
 	badgeAtRowCol := make(map[[2]int]bool)
 	var prepared []PreparedContainer
@@ -459,7 +445,7 @@ func buildPreparedContainers(
 		}
 		ct := contByID[cid]
 		depth := 1
-		if ct.ParentContainerID != "" && viewContSet[ct.ParentContainerID] {
+		if isChildContainerInView(ct, viewContSet) {
 			depth = 2
 		}
 		badgeAtRowCol[[2]int{sp.minRow, sp.minCol}] = true
@@ -480,6 +466,35 @@ func buildPreparedContainers(
 		return cmp.Or(cmp.Compare(a.Depth, b.Depth), cmp.Compare(a.ID, b.ID))
 	})
 	return prepared, hasInnerTopAtRow, badgeAtRowCol
+}
+
+func isChildContainerInView(ct manifest.Container, viewContSet map[string]bool) bool {
+	return ct.ParentContainerID != "" && viewContSet[ct.ParentContainerID]
+}
+
+func findContainersWithInnerTop(
+	sortedContIDs []string,
+	spans map[string]*containerSpan,
+	viewContSet map[string]bool,
+	contByID map[string]manifest.Container,
+) (map[string]bool, map[int]bool) {
+	hasInnerTop := make(map[string]bool)
+	hasInnerTopAtRow := make(map[int]bool)
+	for _, cid := range sortedContIDs {
+		sp := spans[cid]
+		if sp == nil || !sp.hasMember {
+			continue
+		}
+		ct := contByID[cid]
+		if !isChildContainerInView(ct, viewContSet) {
+			continue
+		}
+		if psp := spans[ct.ParentContainerID]; psp != nil && psp.minRow == sp.minRow {
+			hasInnerTop[ct.ParentContainerID] = true
+			hasInnerTopAtRow[psp.minRow] = true
+		}
+	}
+	return hasInnerTop, hasInnerTopAtRow
 }
 
 func computeContainerSpans(cols [][]*cardSlot, viewContSet map[string]bool, contByID map[string]manifest.Container) map[string]*containerSpan {

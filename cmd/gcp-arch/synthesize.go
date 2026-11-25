@@ -133,12 +133,31 @@ func executeSynthesize(cmd *cobra.Command, factsPath string, stdout io.Writer, d
 		return runtimeErr(err)
 	}
 
-	client := buildLazyModelClient(vp, opts, deps)
-	synthOpts := synth.Options{Concurrency: opts.concurrency}
-	if !isReconcile {
-		return executeDay1Synthesize(cmd.Context(), stdout, facts, client, reg, synthOpts, targetPath, opts.quiet)
+	sr := synthesizeRun{
+		stdout:        stdout,
+		facts:         facts,
+		client:        buildLazyModelClient(vp, opts, deps),
+		reg:           reg,
+		synthOpts:     synth.Options{Concurrency: opts.concurrency},
+		reconcilePath: opts.reconcilePath,
+		targetPath:    targetPath,
+		quiet:         opts.quiet,
 	}
-	return executeDay2Reconcile(cmd.Context(), stdout, facts, client, reg, synthOpts, opts.reconcilePath, targetPath, opts.quiet)
+	if !isReconcile {
+		return sr.executeDay1(cmd.Context())
+	}
+	return sr.executeDay2(cmd.Context())
+}
+
+type synthesizeRun struct {
+	stdout        io.Writer
+	facts         *extract.FactsFile
+	client        synth.ModelClient
+	reg           *icons.Registry
+	synthOpts     synth.Options
+	reconcilePath string
+	targetPath    string
+	quiet         bool
 }
 
 func buildLazyModelClient(vertexProject string, opts synthesizeCmdOpts, deps appDeps) synth.ModelClient {
@@ -157,73 +176,47 @@ func buildLazyModelClient(vertexProject string, opts synthesizeCmdOpts, deps app
 	}
 }
 
-func executeDay1Synthesize(
-	ctx context.Context,
-	stdout io.Writer,
-	facts *extract.FactsFile,
-	client synth.ModelClient,
-	reg *icons.Registry,
-	synthOpts synth.Options,
-	targetPath string,
-	quiet bool,
-) error {
-	result, err := synth.Synthesize(ctx, facts, client, reg, synthOpts)
+func (r synthesizeRun) executeDay1(ctx context.Context) error {
+	result, err := synth.Synthesize(ctx, r.facts, r.client, r.reg, r.synthOpts)
 	if err != nil {
-		return classifySynthError(err)
+		return classifySynthError(err, false)
 	}
-	if err := manifest.Write(targetPath, result); err != nil {
+	if err := manifest.Write(r.targetPath, result); err != nil {
 		return runtimeErr(err)
 	}
-	if !quiet {
-		_, _ = fmt.Fprintf(stdout, "Wrote %s (%d views, %d components)\n", targetPath, len(result.Views), len(result.Components))
+	if !r.quiet {
+		_, _ = fmt.Fprintf(r.stdout, "Wrote %s (%d views, %d components)\n", r.targetPath, len(result.Views), len(result.Components))
 	}
 	return nil
 }
 
-func executeDay2Reconcile(
-	ctx context.Context,
-	stdout io.Writer,
-	facts *extract.FactsFile,
-	client synth.ModelClient,
-	reg *icons.Registry,
-	synthOpts synth.Options,
-	reconcilePath, targetPath string,
-	quiet bool,
-) error {
-	existing, err := loadManifest(reconcilePath)
+func (r synthesizeRun) executeDay2(ctx context.Context) error {
+	existing, err := loadManifest(r.reconcilePath)
 	if err != nil {
 		return err
 	}
 
-	reconciled, err := synth.Reconcile(ctx, facts, existing, client, reg, synthOpts)
+	reconciled, err := synth.Reconcile(ctx, r.facts, existing, r.client, r.reg, r.synthOpts)
 	if err != nil {
-		var sle *synth.ScaleLimitError
-		var ve *manifest.ValidationError
-		if errors.As(err, &sle) || errors.As(err, &ve) {
-			return err
-		}
-		if client == nil {
-			return usageErr(fmt.Errorf("%w (pass --vertex-project)", err))
-		}
-		return runtimeErr(err)
+		return classifySynthError(err, r.client == nil)
 	}
 
-	unchanged, err := manifestsEqualInPlace(existing, reconciled, reconcilePath, targetPath)
+	unchanged, err := manifestsEqualInPlace(existing, reconciled, r.reconcilePath, r.targetPath)
 	if err != nil {
 		return runtimeErr(err)
 	}
 	if unchanged {
-		if !quiet {
-			_, _ = fmt.Fprintf(stdout, "Unchanged %s (0 deltas)\n", reconcilePath)
+		if !r.quiet {
+			_, _ = fmt.Fprintf(r.stdout, "Unchanged %s (0 deltas)\n", r.reconcilePath)
 		}
 		return nil
 	}
 
-	if err := manifest.Write(targetPath, reconciled); err != nil {
+	if err := manifest.Write(r.targetPath, reconciled); err != nil {
 		return runtimeErr(err)
 	}
-	if !quiet {
-		_, _ = fmt.Fprintf(stdout, "Reconciled %s (%d views, %d components)\n", targetPath, len(reconciled.Views), len(reconciled.Components))
+	if !r.quiet {
+		_, _ = fmt.Fprintf(r.stdout, "Reconciled %s (%d views, %d components)\n", r.targetPath, len(reconciled.Views), len(reconciled.Components))
 	}
 	return nil
 }
@@ -243,14 +236,14 @@ func manifestsEqualInPlace(existing, reconciled *manifest.Manifest, reconcilePat
 	return bytes.Equal(beforeBytes, afterBytes), nil
 }
 
-func classifySynthError(err error) error {
+func classifySynthError(err error, missingClient bool) error {
 	var sle *synth.ScaleLimitError
-	if errors.As(err, &sle) {
+	var ve *manifest.ValidationError
+	if errors.As(err, &sle) || errors.As(err, &ve) {
 		return err
 	}
-	var ve *manifest.ValidationError
-	if errors.As(err, &ve) {
-		return err
+	if missingClient {
+		return usageErr(fmt.Errorf("%w (pass --vertex-project)", err))
 	}
 	return runtimeErr(err)
 }
