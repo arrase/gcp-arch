@@ -5,7 +5,7 @@ go 1.26.11
 require (
 	cloud.google.com/go/asset v1.30.1
 	cloud.google.com/go/auth v0.24.4
-	cloud.google.com/go/iam v1.14.0
+	cloud.google.com/go/iam v1.15.1
 	cloud.google.com/go/monitoring v1.32.1
 	github.com/chromedp/cdproto v0.160.4
 	github.com/chromedp/chromedp v0.24.0
