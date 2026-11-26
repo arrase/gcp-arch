@@ -1,6 +1,6 @@
 # Examples & Visual Gallery
 
-`gcp-arch` ships two complete, end-to-end reference bundles under `examples/`, each containing a hand-verifiable `architecture.yaml` (`schema_version: v1`) manifest alongside its offline-rendered vector `.pdf`, self-contained `.html` dossier, and `3x` high-DPI (`3120px` wide) per-view `.png` diagrams.
+`gcp-arch` ships two complete, end-to-end reference bundles under [`examples/`](https://github.com/arrase/gcp-arch/tree/main/examples), each containing a hand-verifiable `architecture.yaml` (`schema_version: v1`) manifest alongside its offline-rendered vector `.pdf`, self-contained `.html` dossier, and `3x` high-DPI (`3120px` wide) per-view `.png` diagrams.
 
 !!! info "Synthetic Reference Data Notice"
     All GCP project IDs (`acme-*`, `nova-*`), domain names (`example.com`, `example.net` per **RFC 2606**), public IPv4 addresses (`203.0.113.0/24` per **RFC 5737**), and Private Services Access tenant identifiers (`p1234567890abcdef-tp`, `p9876543210fedcba-tp`) in these bundles are 100% synthetic.
@@ -16,18 +16,18 @@
 | Metric | Value |
 | :--- | :--- |
 | **Scanned Scope** | `projects/acme-cicd` → out-of-scope deployment targets `acme-dev`, `acme-prod` |
-| **Components** | **14** logical components (covering 44 underlying `FactResource` records in `testdata/acme_cicd_v3.facts.json`) |
+| **Components** | **14** logical components covering **43** underlying `FactResource` records (plus the 44th, `container.googleapis.com/Cluster` `cicd`, owned by resource-backed container `gke_cicd` — totaling 44 across components + containers in [`testdata/acme_cicd_v3.facts.json`](https://github.com/arrase/gcp-arch/blob/main/testdata/acme_cicd_v3.facts.json)) |
 | **Containers** | **5** containers (`proj_acme_cicd`, nested `gke_cicd`, `psa_tenant`, `ext_source`, `ext_deploy_targets`) |
 | **Views** | **4** views (`1` deterministic `View 0` + `3` detail views covering all three archetypes) |
-| **Manifest Source** | [`examples/platform-cicd/architecture.yaml`](https://github.com/arrase/gcp-arch/blob/main/examples/platform-cicd/architecture.yaml) *(identical to `testdata/acme_cicd_expected.architecture.yaml`)* |
+| **Manifest Source** | [`examples/platform-cicd/architecture.yaml`](https://github.com/arrase/gcp-arch/blob/main/examples/platform-cicd/architecture.yaml) *(identical to [`testdata/acme_cicd_expected.architecture.yaml`](https://github.com/arrase/gcp-arch/blob/main/testdata/acme_cicd_expected.architecture.yaml))* |
 | **Delivered Artifacts** | [`architecture.pdf`](https://github.com/arrase/gcp-arch/blob/main/examples/platform-cicd/architecture.pdf) · [`architecture.html`](https://github.com/arrase/gcp-arch/blob/main/examples/platform-cicd/architecture.html) · [`views/`](https://github.com/arrase/gcp-arch/tree/main/examples/platform-cicd/views) |
 
 ### Key Architectural Highlights
 
 - **All Three Layout Archetypes:** Combines `landscape_matrix` (`View 0` and GKE platform), `stage_pipeline` (CI/CD delivery with automatic stage banners), and `hub_spoke` (VPC-to-PSA peering).
 - **Depth-2 Container Nesting:** Places `GKE Cluster: cicd` (`gke_cicd`, `depth=2`) inside `Project: acme-cicd` (`proj_acme_cicd`, `depth=1`) with stacked top badges and `52px` reserved row corridors.
-- **20-Trigger Cloud Build Folding & 6-Branch Fan-Out Bus:** Folds 20 `cloudbuild.googleapis.com/BuildTrigger` resources plus the `cloudbuild-runner` Service Account into a single `cloudbuild_triggers` component (`inline_meta`: 10 Image Builds, 6 App Deploys, 4 Terraform) connected to 6 downstream artifacts and target projects via an explicit `via_bus_id: cb_outputs` bus spine.
-- **Mixed `CICD` & `RUNTIME` Flows:** Distinguishes amber `CICD` edges (`#B45309` — GitHub webhooks, builds, Terraform state/module locking) from blue `RUNTIME` edges (`#1D4ED8` — Global HTTPS Load Balancers to GKE NEGs, private IP SQL over PSA).
+- **20-Trigger Cloud Build Folding & 5-Branch Fan-Out Bus:** Folds 20 `cloudbuild.googleapis.com/BuildTrigger` resources plus the `cloudbuild-runner` Service Account into a single `cloudbuild_triggers` component (`inline_meta`: 10 Image Builds, 6 App Deploys, 4 Terraform) connected to **5** `CICD` branches via an explicit `via_bus_id: cb_outputs` bus spine (**3** datastores: `acme_artifact_registry`, `acme_private_modules`, `acme_tfstate` + **2** out-of-scope target projects: `acme_dev`, `acme_prod`), alongside a standalone `ADMIN` edge (`verb: write access`, no `via_bus_id`) to the 4th datastore (`cloudbuild_staging_bucket`).
+- **Mixed `CICD`, `RUNTIME` & `ADMIN` Flows:** Distinguishes amber `CICD` edges (`#B45309` — GitHub webhooks, builds, Terraform state/module locking), blue `RUNTIME` edges (`#1D4ED8` — Global HTTPS Load Balancers to GKE NEGs, private IP SQL over PSA), and slate `ADMIN` edges (`#475569` — `cloudbuild_triggers -> cloudbuild_staging_bucket` `write access`).
 - **Google-Managed PSA Peering:** Isolates `Cloud SQL (sonarqube)` (`POSTGRES_16 / 10.100.0.5`) inside a dashed `PSA_ZONE` (`p1234567890abcdef-tp`).
 
 ### View Summary
@@ -35,7 +35,7 @@
 | # | View ID | Archetype | Accent | Blocks | Edges | Highlights |
 | :---: | :--- | :--- | :---: | :---: | :---: | :--- |
 | `00` | `view_0_system_index` | `landscape_matrix` | `MIXED` | 6 | 5 | Deterministic Go-projected system map spanning 5 columns (`0..4`) from `github_acme` through all 3 detail views to `acme_dev` / `acme_prod`. |
-| `01` | `cicd_delivery_pipeline` | `stage_pipeline` | `CICD` | 8 | 7 | 4-stage CI/CD flow with auto stage banners, `cb_outputs` 6-branch fan-out bus, and `→ Terraform state` off-page pills. |
+| `01` | `cicd_delivery_pipeline` | `stage_pipeline` | `CICD` | 8 | 7 | 4-stage CI/CD flow with auto stage banners, `cb_outputs` 5-branch `CICD` fan-out bus + standalone `ADMIN` staging-bucket edge, and `→ Terraform state` off-page pills. |
 | `02` | `gke_developer_platform` | `landscape_matrix` | `RUNTIME` | 7 | 5 | Depth-2 `gke_cicd` inside `proj_acme_cicd`, mixed `CICD` (`atlantis_gcs` bus) + `RUNTIME` ingress/SQL flows, and dashed `psa_tenant`. |
 | `03` | `shared_network_psa` | `hub_spoke` | `RUNTIME` | 4 | 2 | Locked 3-column `hub_spoke` topology centering `VPC Network: cicd` (`10.10.0.0/20`) between GKE workloads and PSA Cloud SQL. |
 
@@ -45,13 +45,13 @@
 
 ![Platform CI/CD — View 0 System Index Map](assets/img/platform-cicd/00-view_0_system_index.png)
 
-*Deterministic `View 0` index projected in Go (`internal/synth/view0.go`): places external source `github_acme` in column `0`, maps `cicd_delivery_pipeline` (`stage_pipeline` → col `1`), `gke_developer_platform` (`landscape_matrix` → col `2`), and `shared_network_psa` (`hub_spoke` → col `3`), and terminates at out-of-scope deployment projects `acme_dev` and `acme_prod` in column `4` (`data-cols="5"` compact mode).*
+*Deterministic `View 0` index projected in Go ([`internal/synth/view0.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/view0.go)): places external source `github_acme` in column `0`, maps `cicd_delivery_pipeline` (`stage_pipeline` → col `1`), `gke_developer_platform` (`landscape_matrix` → col `2`), and `shared_network_psa` (`hub_spoke` → col `3`), and terminates at out-of-scope deployment projects `acme_dev` and `acme_prod` in column `4` (`data-cols="5"` compact mode).*
 
 #### `01` — CI/CD Delivery Pipeline (`cicd_delivery_pipeline`)
 
 ![Platform CI/CD — CI/CD Delivery Pipeline](assets/img/platform-cicd/01-cicd_delivery_pipeline.png)
 
-*Four-column `stage_pipeline` view with automatic column stage banners (`Stage 1 · Source` through `Stage 4 · Deploy Targets`), `64px` default corridors, 20 folded Cloud Build triggers fanning out over the explicit `cb_outputs` bus to 4 datastores and 2 out-of-scope target projects, plus `→ Terraform state` off-page references linking into the GKE view.*
+*Four-column `stage_pipeline` view with automatic column stage banners (`Stage 1 · Source` through `Stage 4 · Deploy Targets`), `64px` default corridors, 20 folded Cloud Build triggers fanning out over the explicit `cb_outputs` `CICD` bus (5 branches: 3 datastores `acme_artifact_registry`, `acme_private_modules`, `acme_tfstate` + 2 out-of-scope target projects `acme_dev`, `acme_prod`) alongside a standalone slate `ADMIN` edge (`write access`, `#475569`) to `cloudbuild_staging_bucket`, plus `→ Terraform state` off-page references linking into the GKE view.*
 
 #### `02` — GKE Developer Platform & Ingress (`gke_developer_platform`)
 
@@ -130,7 +130,7 @@
 
 ## Validate & Regenerate Both Bundles Offline
 
-Both bundles can be validated and regenerated completely offline from a clean repository checkout (zero GCP credentials and zero external network calls). Local Chrome or Chromium is required for `pdf` and `png` export; `--format html` works even without Chrome.
+Both bundles can be validated ([`cmd/gcp-arch/validate.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go)) and regenerated ([`cmd/gcp-arch/render.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/render.go), [`internal/render/`](https://github.com/arrase/gcp-arch/tree/main/internal/render)) completely offline from a clean repository checkout (zero GCP credentials and zero external network calls). Local Chrome or Chromium is required for `pdf` and `png` export; `--format html` alone works even without Chrome when `--chrome-path` is unset.
 
 ```bash
 # 1. Build the static gcp-arch binary
@@ -152,4 +152,4 @@ CGO_ENABLED=0 go build -o ./bin/gcp-arch ./cmd/gcp-arch
 ```
 
 !!! tip "Inspecting JSON Validation Output"
-    Append `--json` to either `validate` command to emit a machine-readable `ValidationReport` (`{"valid": true}`) suitable for Git pull-request checks. See [Manifest Schema & Validation](manifest_schema.md) and [Stage 3 — Offline Rendering & Routing](rendering.md) for full details.
+    Append `--json` to either `validate` command ([`cmd/gcp-arch/validate.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L71-L76)) to emit a machine-readable `ValidationReport` suitable for Git pull-request checks: Bundle 1 (`platform-cicd`, `0` exclusions) emits `{"valid": true}`, while Bundle 2 (`retail-cloud-native`, `2` `excluded_resources`) emits `{"valid": true, "excluded_count": 2}`. See [Manifest Schema & Validation](manifest_schema.md) and [Stage 3 — Offline Rendering & Routing](rendering.md) for full details.

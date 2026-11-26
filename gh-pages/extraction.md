@@ -2,13 +2,16 @@
 
 Stage 1 (`gcp-arch extract`) transforms raw, noisy, multi-project Google Cloud Platform inventories into a compact, deterministic, credential-scrubbed architectural fact graph (`facts.json`, schema `v3`).
 
-Implemented in `internal/extract/`, Stage 1 runs strictly with `cloud-platform.read-only` credentials, collapses thousands of ephemeral plumbing resources (historical Cloud Build runs, Docker images, Kubernetes Pods/ReplicaSets, Load Balancer intermediates) into clean parent metrics and direct architectural edges, enriches structural topology with 7-day runtime telemetry at zero SQL slot cost, and writes atomically with `0600` permissions.
+Implemented in [`internal/extract/`](https://github.com/arrase/gcp-arch/tree/main/internal/extract) (with shared service hosts, asset types, and URI/flag constants in [`internal/extract/constants.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/constants.go) and CLI wiring in [`cmd/gcp-arch/extract.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/extract.go)), Stage 1 runs strictly with `cloud-platform.read-only` credentials, collapses thousands of ephemeral plumbing resources (historical Cloud Build runs, Docker images, Kubernetes Pods/ReplicaSets, Load Balancer intermediates) into clean parent metrics and direct architectural edges, enriches structural topology with 7-day runtime telemetry at zero SQL slot cost, and writes atomically with `0600` permissions.
+
+!!! note "CLI Scope Alias & Unconditional `stderr` Diagnostics"
+    The `--project` flag is normalized as an alias for `--projects` ([`cmd/gcp-arch/main.go:176-181`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/main.go#L176-L181)). After writing `facts.json`, [`executeExtract`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/extract.go#L66-L109) always invokes [`writeOutOfScopeHints`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/extract.go#L102) ([`lines 132-147`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/extract.go#L132-L147)) and [`writeDegradedCoverage`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/extract.go#L149-L170) on `stderr`—even when `-q`/`--quiet` suppresses progress and `stdout` summaries.
 
 ---
 
 ## 8-Phase Execution Pipeline
 
-`extract.Extract` (`internal/extract/cai.go:314-354`) executes eight deterministic phases in strict order so that every downstream resolver operates over canonical project IDs, complete network indices, and deduplicated assets:
+[`extract.Extract`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L314-L354) executes eight deterministic phases in strict order so that every downstream resolver operates over canonical project IDs, complete network indices, and deduplicated assets:
 
 ```mermaid
 flowchart TD
@@ -37,7 +40,7 @@ To eliminate mid-scan drift across paginated multi-project inventories:
 
 ### 20-Type Scoped `IAM_POLICY` Listing
 
-Instead of scanning IAM policies on every disk, route, or historical build, `collectCAIIAMPolicies` restricts `AssetTypes` to **20** architecturally significant resource types (`iamPolicyAssetTypes` in `internal/extract/cai.go:32-53`):
+Instead of scanning IAM policies on every disk, route, or historical build, `collectCAIIAMPolicies` restricts `AssetTypes` to **20** architecturally significant resource types (`iamPolicyAssetTypes` in [`internal/extract/cai.go:32-53`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L32-L53)):
 
 | Category | Scoped `IAM_POLICY` Asset Types (20 Total) |
 | :--- | :--- |
@@ -50,9 +53,9 @@ Instead of scanning IAM policies on every disk, route, or historical build, `col
 !!! note "Subnetwork `networkUser` In-Stream Filtering"
     For `compute.googleapis.com/Subnetwork` IAM policies, `ingestIAMPolicyAsset` retains only subnet-attachment bindings (`roles/compute.networkUser`, roles containing `networkUser`, or `compute.subnetworks.use`) to surface Shared VPC host-subnet grants without cluttering `facts.json` with administrative bindings.
 
-### Rate Limiters & Exponential Backoff
+### Rate Limiters, Quota Project Resolution & Error Classification
 
-All discovery clients share token-bucket rate limiters (`golang.org/x/time/rate`) and exponential retry logic (`internal/extract/client.go:35-50, 299-346`):
+All discovery clients share token-bucket rate limiters (`golang.org/x/time/rate`) and exponential retry logic ([`internal/extract/client.go:35-50`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L35-L50), [`lines 299-346`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L299-L346)):
 
 | Client / Enricher | Default Rate Limit | Burst | Retry Trigger | Retry Backoff |
 | :--- | :--- | :---: | :--- | :--- |
@@ -61,24 +64,27 @@ All discovery clients share token-bucket rate limiters (`golang.org/x/time/rate`
 | **BigQuery (`BQLimiter`)** | `10` QPS (`DefaultEnricherQPS`) | `10` | Same | Same (`100ms -> 200ms -> 400ms`) |
 | **Dataflow (`DataflowLimiter`)** | `10` QPS (`DefaultEnricherQPS`) | `10` | Same | Same (`100ms -> 200ms -> 400ms`) |
 
+* **Quota Project Resolution ([`ResolveQuotaProject`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L426-L436)):** Uses explicit `--quota-project` (or `config.yaml` `quota_project`) when set; otherwise preserves `quota_project_id` embedded in the ADC JSON. It never falls back to a target workload project.
+* **Fatal vs. Degraded Error Classification ([`ClassifyGCPError`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L60-L297)):** Inspects REST `*googleapi.Error` and gRPC `*errdetails.ErrorInfo` details to separate fatal caller failures—`ErrorKindQuotaFatal` (`QUOTA_FATAL`, e.g. `USER_PROJECT_DENIED` or `SERVICE_DISABLED`/`BILLING_DISABLED` on the caller's quota project) and `ErrorKindUnauthenticated` (`UNAUTHENTICATED`, gRPC `Unauthenticated` / HTTP `401`)—from non-fatal target-scope degradations (`ErrorKindIAMDenied`, `ErrorKindVPCSCBlocked`, `ErrorKindTargetServiceDisabled`) that record a warning in `coverage_ledger` and allow extraction to continue.
+
 ---
 
 ## Hierarchy Discovery & Enabled-API Gating
 
-Four control-plane asset types are intercepted during CAI streaming by `ingestHierarchyAsset` (`internal/extract/cai.go:621-635`) and never emitted as active workload resources:
+Four control-plane asset types are intercepted during CAI streaming by [`ingestHierarchyAsset`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L622-L636) and never emitted as active workload resources:
 
 * **`Organization`, `Folder`, `Project`:** Populate `FactsFile.Hierarchy` (`OrgNode`, `FolderNode`, `ProjectNode`) and register discovered `ProjectNumber -> ProjectID` mappings in `projIdx` (overlaid with `--project-alias` / `config.yaml` `project_aliases`).
 * **`serviceusage.googleapis.com/Service`:** Records every enabled API (`state == "ENABLED"` or empty) per project in `enabledServices`. Phase 7 enrichers consult `isServiceMaybeEnabled` to skip BigQuery, Dataflow, Cloud Monitoring, and Vertex AI `PublisherModel` calls on projects where those APIs are confirmed disabled.
-* **PSA Tenant Project Detection (`IsPSATenantProject`):** Projects matching `^p[a-z0-9]+-tp$` (Google's Private Services Access managed tenant naming convention) or discovered via `servicenetworking` VPC peerings are flagged `ProjectNode.IsPSATenant = true`, excluded from out-of-scope target warnings, and skipped by enrichers.
+* **PSA Tenant Project Detection ([`IsPSATenantProject`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L222-L224)):** Projects matching `^p[0-9a-f]{10,}-tp$` ([`psaTenantRe`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L31), strictly hexadecimal with length `>= 10` after `strings.ToLower(strings.TrimSpace(projectID))`) or discovered via `servicenetworking` VPC peerings are flagged `ProjectNode.IsPSATenant = true`, excluded from out-of-scope target warnings, and skipped by enrichers.
 * **Shared VPC Host Tracking (`recordSharedVPCHost`):** Whenever an active resource in project `A` references a VPC belonging to a different non-PSA project `B`, `ProjectNode.SharedVPCHostProject` is populated with `B`. If `B` lies outside the scanned scopes, an external project stub is registered and linked via `CONFIG_REF` (`detail: "shared_vpc"`).
 
 ---
 
-## Deterministic Plumbing Suppression & Child Folding
+## Deterministic Plumbing Suppression, Sanitization & Child Folding
 
 Real-world GCP projects routinely hold thousands of ephemeral or low-level resources that destroy diagram clarity and bloat synthesis prompts. Stage 1 deterministically filters them into `suppressed_plumbing_counts` while preserving their architectural signals via in-memory folding and bridge tables.
 
-### Suppression Lists (`internal/extract/sanitize.go`)
+### Suppression Lists & Sanitization ([`internal/extract/sanitize.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go))
 
 1. **`92` explicit `plumbingAssetTypes`:**
    * **Compute / VPC / LB intermediates (23):** `Route`, `Firewall`, `Policy`, `compute/Project`, `InstanceTemplate`, `Autoscaler`, `HealthCheck`, `Disk`, `Address`, `GlobalAddress`, `TargetHttpProxy`, `TargetHttpsProxy`, `TargetGrpcProxy`, `TargetTcpProxy`, `TargetSslProxy`, `SslCertificate`, `UrlMap`, `BackendService`, `BackendBucket`, `SecurityPolicy`, `NetworkEndpointGroup`, `ExternalVpnGateway`, `VpnTunnel`.
@@ -94,10 +100,15 @@ Real-world GCP projects routinely hold thousands of ephemeral or low-level resou
    * `servicedirectory.googleapis.com/`
 3. **`16` `suppressedPlumbingServices`:** Control-plane APIs suppressed from active assets (except retained types under `compute.googleapis.com`, `container.googleapis.com`, and `iam.googleapis.com`) and excluded from Cloud Monitoring attribution:
    `sts`, `iamcredentials`, `iam`, `oauth2`, `oslogin`, `serviceusage`, `servicemanagement`, `servicecontrol`, `cloudresourcemanager`, `compute`, `container`, `cloudasset`, `orgpolicy`, `cloudbilling`, `recommender`, and `cloudapis` (all `.googleapis.com`).
+4. **Credential Scrubbing & Allowlist Projection:**
+   * **`22` `sensitiveDroppedKeys` ([`sanitize.go:42-65`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L42-L65)):** Keys unconditionally excluded from emitted metadata (`startup-script`, `startup-script-url`, `shutdown-script`, `user-data`, `env`, `envvariables`, `secretenv`, `environmentvariables`, `buildenvironmentvariables`, `args`, `command`, `script`, `data`, `binarydata`, `stringdata`, `substitutions`, `query`, `rawquery`, `schema`, `webhookconfig`, `kubectl.kubernetes.io/last-applied-configuration`, `last-applied-configuration`).
+   * **`SanitizeURL` ([`sanitize.go:232-251`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L232-L251)):** Strips leading `jdbc:` prefixes (case-insensitive) alongside URL userinfo credentials, query strings, fragments, and trailing slashes.
+   * **`ExtractSanitizedRefs` ([`sanitize.go:13-39, 293-387`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L293-L387)):** Scans raw env/arg/command/script/ConfigMap strings through targeted regex extractors, retaining only Secret Manager refs, Cloud SQL `/cloudsql/` and bare connection names, Artifact Registry repos, GCR projects, `--project`/`--cluster`/`gcloud run deploy` flags, AIP-122 URIs, `googleapis.com` URLs, `gs://` buckets, `*.run.app` and `*.cloudfunctions.net` endpoints, relative `projects/...` resource paths, private IPv4s (from connection URLs or bare text), and `<project>.<dataset>` / `<project>:<dataset>` pairs filtered against **`23` `excludedDatasetSuffixes`** ([`sanitize.go:33-39`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L33-L39)).
+   * **`75` `assetAttrProjectors` ([`sanitize.go:449-556`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L449-L556)):** `ProjectAttributes` builds `FactResource.Attributes` strictly from per-`asset_type` allowlist projectors; raw CAI `resource.data` maps are never forwarded.
 
 ### Child-to-Parent Folding
 
-Before a suppressed child asset is discarded, its count and structural links are folded onto its parent resource (`internal/extract/cai.go:637-748`):
+Before a suppressed child asset is discarded, its count and structural links are folded onto its parent resource ([`internal/extract/cai.go:638-748`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L638-L748), with retained `CryptoKey` counting in [`extractCryptoKeyMetadata`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L1840-L1842) and active Cloud Run / App Engine revision reconciliation in [`cai.go:2172-2243`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L2172-L2243)):
 
 | Child Asset Type | Parent Resource | Folded Attribute Key & Additional Folding |
 | :--- | :--- | :--- |
@@ -129,9 +140,9 @@ Before a suppressed child asset is discarded, its count and structural links are
 
 ## In-Stream Cloud Build Resolution
 
-Cloud Build projects can accumulate thousands of historical `cloudbuild.googleapis.com/Build` assets. Stage 1 extracts CI/CD deployment graphs in streaming memory with bounded heap size (`internal/extract/cai.go:792-839, 2244-2326`):
+Cloud Build projects can accumulate thousands of historical `cloudbuild.googleapis.com/Build` assets. Stage 1 extracts CI/CD deployment graphs in streaming memory with bounded heap size ([`internal/extract/cai.go:793-840`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L793-L840), [`lines 2245-2327`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L2245-L2327)):
 
-1. **External Git Repository Synthesis (`BuildTrigger`):** Parses `github`, `sourceToBuild`, `triggerTemplate` (including the `github_<owner>_<repo>` Cloud Source mirror convention), and `repositoryEventConfig` to synthesize external `external.github.com/Repository` or `external.gitlab.com/Repository` resources (`project_id: "external"`, `is_external: true`) connected to the trigger via `CLOUDBUILD_TRIGGER_REPO` with `detail` capturing the trigger filter (`push:<branch>`, `tag:<tag>`, or `pr:<branch>`). Inline `build` definitions on triggers are scanned immediately.
+1. **External Git Repository Synthesis (`BuildTrigger`):** Parses `github`, `sourceToBuild`, `triggerTemplate` (including the `github_<owner>_<repo>` Cloud Source mirror convention), and `repositoryEventConfig` ([`cai.go:1844-1877`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L1844-L1877); falling back to `//github.com/repo/<shortName>` when `repositoryEventConfig.remoteUri` is empty) to synthesize external `external.github.com/Repository` or `external.gitlab.com/Repository` resources (`project_id: "external"`, `is_external: true`) connected to the trigger via `CLOUDBUILD_TRIGGER_REPO` with `detail` capturing the trigger filter (`push:<branch>`, `tag:<tag>`, or `pr:<branch>`). Inline `build` definitions on triggers are scanned immediately, and trigger/build `serviceAccount` attributes emit `CONFIG_REF` (`detail: "service_account"`) edges ([`cai.go:2272-2274, 2319-2325`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L2272-L2325)).
 2. **Bounded Min-Heap Folding (`cbBuildMinHeap`):** As historical `cloudbuild.googleapis.com/Build` records stream past:
    * Only `status == "SUCCESS"` builds are considered; every `Build` asset increments `suppressed_plumbing_counts["cloudbuild.googleapis.com/Build"]`.
    * Builds are keyed by `{projectID, triggerID}` into a min-heap ordered by `(createTime, uri)`.
@@ -139,12 +150,13 @@ Cloud Build projects can accumulate thousands of historical `cloudbuild.googleap
    * Triggerless manual/ad-hoc builds (`buildTriggerId == ""`) are capped at `maxTriggerlessCloudBuildRuns = 5` per project and attributed to the project URI (`//cloudresourcemanager.googleapis.com/projects/<proj>`).
 3. **Step & Artifact Scanning (`extractCloudBuildPayloadRefs`):** Scans `steps[].name`, `entrypoint`, `script`, `args` (including space-joined `args` prefixed with `entrypoint` or `gcloud` when the step image contains `gcloud` or `cloud-sdk`), `images[]`, and `artifacts.objects.location` via `ExtractSanitizedRefs`:
    * Extracts Artifact Registry repos, GCR projects, GCS buckets, Secret Manager refs, `--project=<id>`, `--cluster=<name>`, and `gcloud run deploy <svc>`.
+   * **Step-Scoped Cluster Attribution ([`scopeStepClusterRefs`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L1353-L1364)):** Rewrites `--cluster=<name>` to `--cluster=<p1,p2>/<name>` whenever the same build step names `--project` targets, so bare cluster names resolve strictly within those target projects.
    * Resolves `--cluster` and `run-deploy:` against unique matching in-scope GKE Clusters or Cloud Run Services (scoped to explicit `--project` targets when present).
 4. **Out-of-Scope Deployment Target Hints:** References to projects outside the scanned scopes (via `--project`, `gcr.io/<proj>`, or cross-project URIs) synthesize external `cloudresourcemanager.googleapis.com/Project` stubs, emit `CLOUDBUILD_STEP_REF` edges, and populate `out_of_scope_targets` (`source_kind: "cloudbuild_deploy_flag"`). Built-in public builder mirrors (13 namespaces such as `cloud-builders`, `google-containers`, `distroless`, `gke-release`) and PSA tenant projects are automatically excluded.
 
 ---
 
-## GKE Resolution (`internal/extract/gke.go`)
+## GKE Resolution ([`internal/extract/gke.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/gke.go))
 
 Stage 1 retains **7** Kubernetes asset types (non-system namespaces only) and sets `parent_uri` to their owning GKE cluster URI:
 
@@ -173,14 +185,14 @@ flowchart LR
 
 ---
 
-## Network, PSA/PSC, Absorbed Bridges & IAM Resolution
+## Network, PSA/PSC, Retained Metadata, Absorbed Bridges & IAM Resolution
 
-Implemented in `internal/extract/edges.go`, Phase 3 and Phase 6 resolve networking topology, absorbed resource bridges, sanitized references, and IAM relationships:
+Implemented in [`internal/extract/edges.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/edges.go) (with per-asset metadata extraction in [`internal/extract/cai.go:1329-1842`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L1329-L1842)), Phase 3 and Phase 6 resolve networking topology, retained structural metadata, absorbed resource bridges, sanitized references, and IAM relationships:
 
 ### VPC Peerings vs. PSA / PSC Connectivity
 
 * **Active VPC Peerings (`indexVPCPeerings`):** Inspects `ACTIVE` peerings on `compute.googleapis.com/Network`.
-  * **PSA Peerings (`PSA_PEERING`):** Peerings whose target project matches `^p[a-z0-9]+-tp$` or whose peering name contains `servicenetworking` record `psaTenants[vpcURI] = tenantProj`. PSA-managed services (`sqladmin/Instance`, `alloydb/Cluster`, `redis/Instance`, `memcache/Instance`, `file/Instance`) receive `PSA_PEERING` edges from their consumer VPC (`detail: "servicenetworking-googleapis-com (<tenant>)"`) and attribute `psa_tenant_project`.
+  * **PSA Peerings (`PSA_PEERING`):** Peerings whose target project matches `^p[0-9a-f]{10,}-tp$` ([`IsPSATenantProject`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L222-L224)) or whose peering name contains `servicenetworking` record `psaTenants[vpcURI] = tenantProj`. PSA-managed services (`sqladmin/Instance`, `alloydb/Cluster`, `redis/Instance`, `memcache/Instance`, `file/Instance`) receive `PSA_PEERING` edges from their consumer VPC (`detail: "servicenetworking-googleapis-com (<tenant>)"`) and attribute `psa_tenant_project`.
   * **Standard VPC Peerings (`VPC_PEERING`):** In-scope VPC pairs emit a single canonically ordered edge (`src < dst`, `detail: <peeringName>`); out-of-scope peer projects emit an edge to an external project stub.
   * **PSC Redis Clusters:** `redis.googleapis.com/Cluster` emits `CONFIG_REF` (`detail: "psc_network"`) from its consumer VPC.
 
@@ -190,9 +202,18 @@ Implemented in `internal/extract/edges.go`, Phase 3 and Phase 6 resolve networki
 * **Cloud Run / Cloud Functions HTTP Matching (`indexCloudRunHosts`, `resolveHTTPTarget`):** Indexes sanitized URLs, hostnames, and short service names for retained `run.googleapis.com/Service` and `cloudfunctions.googleapis.com/CloudFunction` assets. Matches exact URLs, `*.run.app` hosts (including `<service>-<hash>-<region>.a.run.app` fallback when unique), `*.cloudfunctions.net/<fnName>`, and `.googleapis.com/` URLs across Pub/Sub push endpoints, Cloud Tasks, Cloud Scheduler, Dialogflow webhooks, BigQuery remote functions, and env vars.
 * **Non-GKE Load Balancer Backends:** Resolves `BackendBucket` -> GCS Bucket, Serverless NEGs (Cloud Run, Cloud Functions, App Engine), PSC NEGs (`pscTargetService`), and MIG / InstanceGroup backends into `CONFIG_REF` edges.
 
+### Retained Structural Metadata Extractors (`38` Asset Types)
+
+During CAI ingestion, `extractRetainedMetadata` and its **`38` `retainedMetadataExtractors`** ([`internal/extract/cai.go:1329-1842`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L1329-L1842)) populate `parent_uri` chains, private IPs, and inbound/outbound structural `CONFIG_REF` edges:
+
+* **CMEK & Database Replication:** Any retained asset carrying `kms_key_uri` emits `CONFIG_REF` (`cmek`); Cloud SQL instances with `masterInstanceName` emit `replica_of`.
+* **Eventing, Queues & Schedules:** Pub/Sub Subscriptions (`subscription` inbound from Topic, plus `pubsub.push`, `pubsub.bigquery_sink`, `pubsub.gcs_sink`, `dead_letter`), Eventarc Triggers (`eventarc.transport`, `eventarc.bucket`, `eventarc.destination` to Cloud Run/Functions/Workflows/GKE), Cloud Tasks (`cloudtasks.http`, `cloudtasks.appengine`), Cloud Scheduler (`scheduler.pubsub`, `scheduler.http`), and Cloud Functions (`event_trigger`, `vpc_connector`).
+* **Data Pipelines, Analytics & AI:** Storage Transfer (`transfer.source`/`sink`/`notification`), BigQuery Data Transfer (`bqdt.destination`/`notification`), BigQuery Connections (`bqconnection.cloudsql`/`spanner`), Datastream (`datastream.source`/`dest`/`bigquery`), Dataproc Cluster/Batch & Metastore (`dataproc.*`, `metastore.artifacts`), Cloud Composer (`composer.gke`, `composer.dags`, env/secret refs), Discovery Engine & DataStore (`discovery.datastore`, `discovery.source`), Dialogflow (`dialogflow.webhook`), and Vertex AI ReasoningEngine (sanitized `env` and `secretEnv` refs).
+* **Networking & Identity:** VPC peerings, Subnetwork/Instance/Cluster/Router/Interconnect/ServiceAttachment parents and `router.vpn`/`router.interconnect`/`interconnect.router`/`psc.target` links, plus ServiceAccount `email`/`uniqueId` indexing and KMS `CryptoKey` `key_count` folding.
+
 ### Absorbed Bridge Resolution
 
-Suppressed intermediate resources are stored in `absorbed` and transparently bridged into direct `CONFIG_REF` edges (`internal/extract/edges.go:773-896`):
+Suppressed intermediate resources are stored in `absorbed` and transparently bridged into direct `CONFIG_REF` edges ([`internal/extract/edges.go:783-906`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/edges.go#L783-L906)):
 
 | Absorbed Resource / Folded Source | Emitted Direct Edge (`CONFIG_REF`) | `detail` |
 | :--- | :--- | :--- |
@@ -207,17 +228,17 @@ Suppressed intermediate resources are stored in `absorbed` and transparently bri
 
 ### IAM Binding Resolution (`resolveIAMBindings`)
 
-Stage 1 processes `serviceAccount:<email>` bindings (excluding GKE Workload Identity Federation pool principals containing `[`) with strict anti-noise heuristics (`internal/extract/edges.go:1086-1240`):
+Stage 1 processes `serviceAccount:<email>` bindings (excluding GKE Workload Identity Federation pool principals containing `[`) with strict anti-noise heuristics ([`internal/extract/edges.go:1116-1270`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/edges.go#L1116-L1270)):
 
 1. **Broad Ancestor Roles -> `ProjectCapabilities`:** `roles/owner`, `roles/editor`, `roles/viewer`, and `roles/browser` bound on an Organization, Folder, or Project are **never** expanded into noisy edges—they are folded into `FactResource.ProjectCapabilities` on the Service Account.
 2. **`roles/iam.workloadIdentityUser`:** Skipped (already captured cleanly via `WORKLOAD_IDENTITY`).
-3. **Direct Resource-Level Bindings:** Policies attached directly to a retained resource (Bucket, Dataset, Topic, Secret, Cloud Run Service, etc.) emit `IAM_RESOURCE_BINDING` (`SA -> resource`, `detail: <role>`).
-4. **CEL Condition-Pinned Project Bindings:** Project-level bindings with IAM CEL conditions matching `resource.name == "..."`, `resource.name.startsWith("...")`, or sanitized AIP-122 URIs emit `IAM_RESOURCE_BINDING` to those exact pinned resources.
-5. **Single-Target 22-Service Heuristic (`serviceRoleTargetTypes`):** For non-default Service Accounts granted a service-specific project-level role across **22** role prefixes (`roles/cloudsql.`, `roles/alloydb.`, `roles/spanner.`, `roles/datastore.`, `roles/firestore.`, `roles/bigtable.`, `roles/redis.`, `roles/memcache.`, `roles/file.`, `roles/storage.`, `roles/bigquery.`, `roles/pubsub.`, `roles/cloudtasks.`, `roles/workflows.`, `roles/secretmanager.`, `roles/artifactregistry.`, `roles/cloudkms.`, `roles/run.`, `roles/cloudfunctions.`, `roles/discoveryengine.`, `roles/dialogflow.`, `roles/documentai.`), an `IAM_RESOURCE_BINDING` edge is emitted **if and only if exactly 1** active resource of that target type exists in the project.
+3. **Direct Resource-Level Bindings:** Policies attached directly to a retained resource (Bucket, Dataset, Topic, Secret, Cloud Run Service, etc.) emit `IAM_RESOURCE_BINDING` (`SA -> resource`, `detail: <role>`, `heuristic: false`).
+4. **CEL Condition-Pinned Project Bindings:** Project-level bindings with IAM CEL conditions matching `resource.name == "..."`, `resource.name.startsWith("...")`, or sanitized AIP-122 URIs emit `IAM_RESOURCE_BINDING` (`heuristic: false`) to those exact pinned resources.
+5. **Single-Target 22-Service Heuristic (`serviceRoleTargetTypes`):** For non-default Service Accounts granted a service-specific project-level role across **22** role prefixes (`roles/cloudsql.`, `roles/alloydb.`, `roles/spanner.`, `roles/datastore.`, `roles/firestore.`, `roles/bigtable.`, `roles/redis.`, `roles/memcache.`, `roles/file.`, `roles/storage.`, `roles/bigquery.`, `roles/pubsub.`, `roles/cloudtasks.`, `roles/workflows.`, `roles/secretmanager.`, `roles/artifactregistry.`, `roles/cloudkms.`, `roles/run.`, `roles/cloudfunctions.`, `roles/discoveryengine.`, `roles/dialogflow.`, `roles/documentai.`), an `IAM_RESOURCE_BINDING` edge is emitted **if and only if exactly 1** active resource of that target type exists in the project, marked with **`heuristic: true`** ([`edges.go:1176, 1216, 1226`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/edges.go#L1176-L1226)).
 
 ---
 
-## Phase 7: Concurrent 7-Day Enrichers (`internal/extract/enrichers.go`)
+## Phase 7: Concurrent 7-Day Enrichers ([`internal/extract/enrichers.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go))
 
 All three enrichers fetch data in parallel via `errgroup.WithContext` over a `7`-day lookback window anchored to `ReadTime` (`enrichmentLookback = 7 * 24h`). Each per-project fan-out bounds concurrency to `maxEnrichWorkers = 8`, sorts its collected records deterministically, and **applies mutations sequentially on the main goroutine** (`Dataflow -> BigQuery -> Cloud Monitoring`) for reproducible output and zero data races.
 
@@ -227,14 +248,21 @@ Runs across non-empty, non-PSA projects where `monitoring.googleapis.com` is ena
 
 * **`consumed_api` Traffic (`serviceruntime.googleapis.com/api/request_count`):**
   * Grouped by `resource.labels.project_id`, `resource.labels.service`, `resource.labels.credential_id`, and `resource.labels.method`.
-  * **Read-Only Discovery Filtering (`IsReadOnlyDiscoveryMethod`):** Excludes read-only control/refresh methods (`get*`, `list*`, `aggregatedlist*`, `batchget*`, `*testiampermissions`, `watch*`, `poll*`, `listen`) so Terraform refreshes and monitoring scrapers do not create false runtime dependencies.
+  * **Read-Only Discovery Filtering & `22` Data-Plane Read Allowlist ([`IsReadOnlyDiscoveryMethod`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L176-L201), [`dataPlaneReadMethods`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L88-L106)):** Excludes control-plane discovery/refresh methods (`get*`, `list*`, `aggregatedlist*`, `batchget*`, `*testiampermissions`, `watch*`, `poll*`) so Terraform refreshes and monitoring scrapers do not create false runtime dependencies, while **explicitly retaining `22` data-plane read methods** via `isDataPlaneReadMethod` so real runtime reads are never filtered out:
+    * **Cloud Storage (5):** `objects.get`, `objects.list`, `getobject`, `readobject`, `listobjects`
+    * **Firestore (6):** `listen`, `batchgetdocuments`, `getdocument`, `listdocuments`, `runquery`, `runaggregationquery`
+    * **Datastore (1):** `lookup`
+    * **Bigtable & BigQuery Storage (1):** `readrows`
+    * **Spanner (4):** `read`, `streamingread`, `executesql`, `executestreamingsql`
+    * **BigQuery (3):** `getqueryresults`, `tabledata.list`, `tabledataservice.list`
+    * **Pub/Sub (2):** `pull`, `streamingpull`
   * **6 Companion API Aliases (`companionAPIHostMap`):** Maps `storage-component` / `storage-api` -> `storage.googleapis.com`, `bigquerystorage` / `bigquerymigration` -> `bigquery.googleapis.com`, `containerfilesystem` -> `container.googleapis.com`, and `bigtable` -> `bigtableadmin.googleapis.com`.
   * **Exclusion Lists:** Drops all **16** `suppressedPlumbingServices` and **10** `transversalControlAPIs` (`modelarmor`, `cloudtrace`, `logging`, `monitoring`, `secretmanager`, `cloudkms`, `dlp`, `artifactregistry`, `cloudbuild`, `clouddeploy` `.googleapis.com`).
-  * **Unambiguous Attribution:** Resolves `serviceaccount:<uniqueId>` callers to their unique workload (if exactly 1 workload runs with that SA) or the SA itself (if 0 workloads; skipped if `> 1` workloads share the SA). Emits `MONITORING_TRAFFIC` (`detail: "<host> (<N> reqs/7d)"`) when exactly 1 active target resource exists in the project for any of the **17** `consumedAPITargetTypes`.
+  * **Caller Attribution & Heuristic Flag ([`resolveMonitoringSource`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L1215-L1222) -> [`resolvePrincipalSource`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L535-L547)):** Resolves `serviceaccount:<uniqueId>` callers to their unique workload when `len(wls) == 1`, and falls back to the unsuppressed Service Account URI for **both `0` and `> 1` workloads** (never skipped when multiple workloads share the SA). Emits `MONITORING_TRAFFIC` (`detail: "<host> (<N> reqs/7d)"`, **`heuristic: true`**, [`enrichers.go:1252`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L1252)) when exactly 1 active target resource exists in the project for any of the **17** `consumedAPITargetTypes`.
 * **Vertex AI `PublisherModel` Metrics** *(gated on `aiplatform.googleapis.com` enabled)*:
   * Queries `aiplatform.googleapis.com/publisher/online_serving/model_invocation_count` and (when invocations `> 0`) `aiplatform.googleapis.com/publisher/online_serving/consumed_token_throughput`, grouped by `project_id`, `location`, `publisher`, `model_user_id`, and `metric.labels.request_type`.
   * Synthesizes `aiplatform.googleapis.com/PublisherModel` resources (`//aiplatform.googleapis.com/projects/<proj>/locations/<loc>/publishers/<pub>/models/<model>`) with `publisher`, `model_id`, `invocations`, and optional `dedicated_throughput: true`.
-  * Attributes `generateContent` / `embedContent` `consumed_api` SA calls to the project's `PublisherModel` via `MONITORING_TRAFFIC` when a single `PublisherModel` exists in that project and no non-SA GenAI calls occurred.
+  * Attributes `generateContent` / `embedContent` `consumed_api` SA calls (using `resolveMonitoringSource`) to the project's `PublisherModel` via `MONITORING_TRAFFIC` (**`heuristic: true`**, [`enrichers.go:1280`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L1280)) when a single `PublisherModel` exists in that project and no non-SA GenAI calls occurred.
 
 ### 2. BigQuery Job Lineage Enricher (`bq_jobs`)
 
@@ -245,43 +273,53 @@ Runs across all discovered non-PSA projects where `bigquery.googleapis.com` is e
 * Extracts `statistics.query.referencedTables`, `configuration.query.destinationTable`, `configuration.load.destinationTable`, and `configuration.copy` source/destination tables.
 * Filters out hidden/temporary artifacts: datasets prefixed with `_`, tables prefixed with `_script`, and anonymous temp tables matching `^anon(?:_|[0-9a-f]{8,})`.
 * Emits two `BQ_LINEAGE` edge patterns:
-  * **Dataset-to-Dataset ELT (`detail: "sql_elt"`):** `referencedDataset -> destinationDataset` whenever they differ.
-  * **Principal-to-Dataset (`detail: "bq_job"`):** Resolves `principal_subject` (`serviceAccount:<email>`) or `user_email` to a unique workload or Service Account -> touched Dataset.
+  * **Dataset-to-Dataset ELT (`detail: "sql_elt"`):** `referencedDataset -> destinationDataset` whenever they differ (`heuristic: false`).
+  * **Principal-to-Dataset (`detail: "bq_job"`):** Resolves `principal_subject` (`serviceAccount:<email>`) or `user_email` via [`resolvePrincipalSource`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L495-L503) to the unique workload (`len(wls) == 1`, `heuristic: false`) or the unsuppressed Service Account (`0` workloads -> `heuristic: false`; `> 1` shared workloads -> **`heuristic: true`**, [`enrichers.go:544`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L544)) -> touched Dataset.
 
 ### 3. Active Dataflow Enricher (`dataflow_jobs`)
 
 Runs across all discovered non-PSA projects where `dataflow.googleapis.com` is enabled:
 
-* Lists active streaming/batch pipelines across all locations (`Projects.Locations.Jobs.List(proj, "-").Filter("ACTIVE")`) and retrieves each job with `Jobs.Get(proj, loc, id).View("JOB_VIEW_DESCRIPTION")`.
+* Lists active streaming/batch pipelines across all locations (`Projects.Locations.Jobs.List(proj, "-").Filter("ACTIVE")`) and retrieves each job with `Jobs.Get(proj, loc, id).View("JOB_VIEW_DESCRIPTION")`, defaulting an empty `summary.Location` to `"us-central1"` ([`enrichers.go:638-641`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L638-L641)).
 * Ensures a `dataflow.googleapis.com/Job` resource exists with `job_type`, `state`, `service_account`, `vpc`, and `subnet` (setting `parent_uri` to subnet or VPC).
-* Scans `environment.tempStoragePrefix`, `environment.dataset`, `pipelineDescription.displayData`, and `originalPipelineTransform[].displayData` (`strValue` and `url`) via `ExtractSanitizedRefs` to emit `CONFIG_REF` edges (and `service_account` links).
+* Scans `environment.tempStoragePrefix`, `environment.dataset`, `pipelineDescription.displayData`, and `originalPipelineTransform[].displayData` (`strValue` and `url`) via `ExtractSanitizedRefs` (`appendSanitizedRefs`, [`enrichers.go:684-692`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L684-L692), retaining `envRefs` and discarding `secretRefs`) to emit `CONFIG_REF` edges (and `service_account` links).
 
 ---
 
-## Complete `FactEdgeKind` Reference (12 Values)
+## Complete `FactEdgeKind` Reference (12 Values) & `heuristic` Flag
 
-Every edge in `facts.json` is classified by one of **12** `FactEdgeKind` constants (`internal/extract/schema.go:22-35`):
+Every edge in `facts.json` is classified by one of **12** `FactEdgeKind` constants ([`internal/extract/schema.go:22-35`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/schema.go#L22-L35)) and carries an optional `heuristic` boolean ([`FactEdge.Heuristic`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/schema.go#L107-L116), `json:"heuristic,omitempty"`):
 
-| `FactEdgeKind` | Direction (`from_uri -> to_uri`) | Typical `detail` Format | Producer Phase |
-| :--- | :--- | :--- | :--- |
-| `CONFIG_REF` | Source resource -> referenced resource *(or inverted for inbound triggers like `Topic -> Subscription`)* | `cmek`, `vpc_connector`, `subscription`, `secret_ref`, `service_account`, `vpn_tunnel`, `ncc_spoke`, `biglake`, `bq_remote_fn`, `datastream.cdc:<ip>`, private IP, `gs://<bucket>`, etc. | Phase 6 & Phase 7 (Dataflow) |
-| `K8S_INGRESS_BACKEND` | `Ingress` or `ForwardingRule` (L4) -> `k8s.io/Service` | `<host><path>` (or `/*`) or `L4:<ip>` | Phase 4 (GKE) |
-| `K8S_NEG_BACKEND` | `ForwardingRule` -> `k8s.io/Service` (via Proxy -> UrlMap -> BackendService -> NEG) | `<paths> port:<port>` or `neg` | Phase 4 (GKE) |
-| `K8S_SERVICE_SELECTOR` | `k8s.io/Service` -> K8s Workload | Sorted selector `k1=v1,k2=v2` | Phase 4 (GKE) |
-| `WORKLOAD_IDENTITY` | K8s Workload -> GCP `ServiceAccount` *(or out-of-scope project stub)* | `ksa:<namespace>/<ksa>` *(or `ksa:<ns>/<ksa>-><email>`)* | Phase 4 (GKE) |
-| `CLOUDBUILD_TRIGGER_REPO` | External GitHub/GitLab `Repository` -> `BuildTrigger` | `push:<branch>`, `tag:<tag>`, `pr:<branch>` | Phase 5 (Cloud Build) |
-| `CLOUDBUILD_STEP_REF` | `BuildTrigger` *(or Project for triggerless builds)* -> target repo / bucket / secret / cluster / Cloud Run / out-of-scope project | `--project=<id>`, `--cluster=<name>`, `run-deploy:<svc>`, `secret_ref`, `gcr.io/<proj>`, Artifact Registry path | Phase 5 (Cloud Build) |
-| `IAM_RESOURCE_BINDING` | `ServiceAccount` *(or out-of-scope project stub)* -> target resource | IAM role (e.g., `roles/storage.objectAdmin`, `roles/cloudsql.client`) | Phase 6 (IAM) |
-| `PSA_PEERING` | Consumer `VPC Network` -> PSA-managed service (`Cloud SQL`, `AlloyDB`, `Redis`, `Memcache`, `Filestore`) | `servicenetworking-googleapis-com (<tenant_project>)` | Phase 3 (VPC/PSA) |
-| `VPC_PEERING` | Lexicographically smaller `VPC Network` -> peer `VPC Network` *(or out-of-scope stub)* | Peering name | Phase 3 (VPC/PSA) |
-| `BQ_LINEAGE` | Source `Dataset` -> dest `Dataset`, or Workload/SA -> `Dataset` | `sql_elt` or `bq_job` | Phase 7 (BigQuery) |
-| `MONITORING_TRAFFIC` | Workload or `ServiceAccount` -> single-target service resource or `PublisherModel` | `<service_host> (<N> reqs/7d)` | Phase 7 (Monitoring) |
+| `FactEdgeKind` | Direction (`from_uri -> to_uri`) | Typical `detail` Format | `heuristic: true`? | Producer Phase |
+| :--- | :--- | :--- | :--- | :--- |
+| `CONFIG_REF` | Source resource -> referenced resource *(or inverted for inbound triggers like `Topic -> Subscription`)* | `cmek`, `vpc_connector`, `subscription`, `secret_ref`, `service_account`, `vpn_tunnel`, `ncc_spoke`, `biglake`, `bq_remote_fn`, `datastream.cdc:<ip>`, private IP, `gs://<bucket>`, etc. | Never | Phase 6 & Phase 7 (Dataflow) |
+| `K8S_INGRESS_BACKEND` | `Ingress` or `ForwardingRule` (L4) -> `k8s.io/Service` | `<host><path>` (or `/*`) or `L4:<ip>` | Never | Phase 4 (GKE) |
+| `K8S_NEG_BACKEND` | `ForwardingRule` -> `k8s.io/Service` (via Proxy -> UrlMap -> BackendService -> NEG) | `<paths> port:<port>` or `neg` | Never | Phase 4 (GKE) |
+| `K8S_SERVICE_SELECTOR` | `k8s.io/Service` -> K8s Workload | Sorted selector `k1=v1,k2=v2` | Never | Phase 4 (GKE) |
+| `WORKLOAD_IDENTITY` | K8s Workload -> GCP `ServiceAccount` *(or out-of-scope project stub)* | `ksa:<namespace>/<ksa>` *(or `ksa:<ns>/<ksa>-><email>`)* | Never | Phase 4 (GKE) |
+| `CLOUDBUILD_TRIGGER_REPO` | External GitHub/GitLab `Repository` -> `BuildTrigger` | `push:<branch>`, `tag:<tag>`, `pr:<branch>` | Never | Phase 5 (Cloud Build) |
+| `CLOUDBUILD_STEP_REF` | `BuildTrigger` *(or Project for triggerless builds)* -> target repo / bucket / secret / cluster / Cloud Run / out-of-scope project | `--project=<id>`, `--cluster=<name>`, `run-deploy:<svc>`, `secret_ref`, `gcr.io/<proj>`, Artifact Registry path | Never | Phase 5 (Cloud Build) |
+| `IAM_RESOURCE_BINDING` | `ServiceAccount` *(or out-of-scope project stub)* -> target resource | IAM role (e.g., `roles/storage.objectAdmin`, `roles/cloudsql.client`) | Single-target 22-service project bindings only ([`edges.go:1176, 1216, 1226`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/edges.go#L1176-L1226)) | Phase 6 (IAM) |
+| `PSA_PEERING` | Consumer `VPC Network` -> PSA-managed service (`Cloud SQL`, `AlloyDB`, `Redis`, `Memcache`, `Filestore`) | `servicenetworking-googleapis-com (<tenant_project>)` | Never | Phase 3 (VPC/PSA) |
+| `VPC_PEERING` | Lexicographically smaller `VPC Network` -> peer `VPC Network` *(or out-of-scope stub)* | Peering name | Never | Phase 3 (VPC/PSA) |
+| `BQ_LINEAGE` | Source `Dataset` -> dest `Dataset`, or Workload/SA -> `Dataset` | `sql_elt` or `bq_job` | Shared-SA (`> 1` workloads) `bq_job` edges only ([`enrichers.go:495, 501, 544`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L495-L547)) | Phase 7 (BigQuery) |
+| `MONITORING_TRAFFIC` | Workload or `ServiceAccount` -> single-target service resource or `PublisherModel` | `<service_host> (<N> reqs/7d)` | **Always** ([`enrichers.go:1252, 1280`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L1252-L1280)) | Phase 7 (Monitoring) |
+
+### Structural-Wins Deduplication Merge (`putEdge`)
+
+`FactEdge.Heuristic` marks correlation-derived edges (single-instance project target joins, shared-SA attribution, and Cloud Monitoring traffic) that may back `INFERRED` diagram edges in Stage 2 but **never** `VERIFIED` ones (see [Stage 2 — Directed-Walk Provenance](synthesis.md#closed-world-guarantees-directed-walk-provenance)). When the same `EdgeID` is emitted multiple times during extraction, [`putEdge`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L366-L381) merges duplicates with:
+
+```go
+st.edges[i].Heuristic = st.edges[i].Heuristic && e.Heuristic
+```
+
+so a direct structural edge (`Heuristic: false`) always overrides a heuristic duplicate (`Heuristic: true`).
 
 ---
 
-## Complete `CoverageState` Reference (5 Values)
+## Complete `CoverageState` Reference (6 Values)
 
-Every API scope queried during extraction is logged in `coverage_ledger` with one of **5** `CoverageState` constants (`internal/extract/schema.go:41-47`):
+Every API scope queried during extraction—plus Phase 8 edge closure—is logged in `coverage_ledger` with one of **6** `CoverageState` constants ([`internal/extract/schema.go:41-48`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/schema.go#L41-L48)):
 
 | `CoverageState` | Meaning | Trigger Condition | `extract` CLI Behavior |
 | :--- | :--- | :--- | :--- |
@@ -290,6 +328,14 @@ Every API scope queried during extraction is logged in `coverage_ledger` with on
 | `VPC_SC_BLOCKED` | Blocked by a VPC Service Controls perimeter. | `VPC_SERVICE_CONTROLS`, `SECURITY_POLICY_VIOLATED`, or `vpcServiceControlsUniqueIdentifier`. | Printed under `Coverage warnings` on `stderr`; exit `0`. |
 | `SERVICE_DISABLED` | API disabled on a distinct target child project. | `SERVICE_DISABLED` / `BILLING_DISABLED` whose `consumer` matches the target child project (and differs from caller quota project). | Printed under `Coverage warnings` on `stderr`; exit `0`. |
 | `TRUNCATING_CAP` | Safety pagination cap reached before exhausting records. | BigQuery `jobs.list` hit `maxBQJobPages = 20` (`20,000` jobs) within the 7-day window. | Printed under `Coverage warnings` on `stderr`; exit `0`. |
+| `DANGLING_EDGES_DROPPED` | Residual edges referencing resources absent from `resources[]` were dropped during edge closure. | [`filterFactEdges`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L2467-L2505) dropped `> 0` dangling edges after on-demand in-scope project materialization; logged under `Scope: "facts"`, `Source: "edge_closure"`. | Printed under `Coverage warnings` on `stderr` by [`writeDegradedCoverage`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/extract.go#L149-L170) (even with `-q`); exit `0`. |
+
+### On-Demand Project Materialization & Edge Closure (`filterFactEdges`)
+
+Before writing `facts.json`, [`filterFactEdges`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L2467-L2505) enforces strict edge closure so every emitted edge endpoint exists in `resources[]`:
+
+1. For each edge's `FromURI` and `ToURI`, [`maybeAddInScopeProjectResource`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L2490-L2505) checks whether a missing `//cloudresourcemanager.googleapis.com/projects/<proj>` endpoint belongs to `inScopeProjects` (for example, triggerless Cloud Build runs or project-level references) and materializes a `cloudresourcemanager.googleapis.com/Project` node on demand.
+2. Any edge whose endpoint still does not exist in `resources[]` is dropped, and a single `DANGLING_EDGES_DROPPED` (`CoverageDanglingEdges`) entry is appended to `coverage_ledger` (`Scope: "facts"`, `Source: "edge_closure"`).
 
 ---
 
@@ -297,7 +343,7 @@ Every API scope queried during extraction is logged in `coverage_ledger` with on
 
 ### AIP-122 Normalization (`CanonicalizeAIP122`)
 
-Because GCP APIs emit inconsistent resource identifiers (full REST `selfLink` URLs, `www.googleapis.com/<svc>/v1/...`, regional `us-central1-aiplatform.googleapis.com`, `gs://bucket`, numeric project IDs, and bare relative `projects/...` paths), every resource URI and edge endpoint passes through `CanonicalizeAIP122` / `CanonicalizeAIP122WithService` (`internal/extract/canonical.go`):
+Because GCP APIs emit inconsistent resource identifiers (full REST `selfLink` URLs, `www.googleapis.com/<svc>/v1/...`, regional `us-central1-aiplatform.googleapis.com`, `gs://bucket`, numeric project IDs, and bare relative `projects/...` paths), every resource URI and edge endpoint passes through `CanonicalizeAIP122` / `CanonicalizeAIP122WithService` ([`internal/extract/canonical.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/canonical.go)):
 
 | Input Format | Canonical AIP-122 Output |
 | :--- | :--- |
@@ -315,7 +361,7 @@ Key normalization rules:
 
 ### Deterministic `EdgeID` Hashing & Canonical Sorting
 
-Every `FactEdge.ID` is computed deterministically by `extract.EdgeID` (`internal/extract/schema.go:131-134`):
+Every `FactEdge.ID` is computed deterministically by [`extract.EdgeID`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/schema.go#L135-L138):
 
 ```text
 EdgeID = hex(sha256(kind + ":" + fromURI + ":" + toURI + ":" + detail))[:16]
@@ -331,11 +377,11 @@ Before writing to disk, `WriteFacts` runs `normalizedFactsCopy` to canonically s
 | `read_time` | `string` | RFC3339 UTC timestamp pinned from the first CAI `ListAssets` response. |
 | `scopes` | `[]string` | Sorted canonical target scopes scanned. |
 | `hierarchy` | `Hierarchy` | Discovered `organizations[]`, `folders[]`, and `projects[]` (including `project_number`, `parent`, `is_psa_tenant`, `shared_vpc_host_project`). |
-| `resources` | `[]FactResource` | Active retained & external resources (`uri`, `asset_type`, `project_id`, `location`, `display_name`, `parent_uri`, `is_external`, allowlisted `attributes`, and `project_capabilities`). |
-| `edges` | `[]FactEdge` | Deduplicated directed edges (`id`, `from_uri`, `to_uri`, `kind`, `detail`), filtered so both endpoints exist in `resources`. |
+| `resources` | `[]FactResource` | Active retained, on-demand in-scope project, and external resources (`uri`, `asset_type`, `project_id`, `location`, `display_name`, `parent_uri`, `is_external`, allowlisted `attributes`, and `project_capabilities`). |
+| `edges` | `[]FactEdge` | Deduplicated directed edges (`id`, `from_uri`, `to_uri`, `kind`, `detail`, optional `heuristic`), closed over `resources` via `filterFactEdges` (structural edges override heuristic duplicates). |
 | `suppressed_plumbing_counts` | `map[string]int` | Exact count of suppressed plumbing, folded child, system-namespace, GKE-worker, and pruned default assets grouped by `asset_type`. |
 | `out_of_scope_targets` | `[]OutOfScopeHint` | *(omitempty)* Cross-project targets referenced outside scanned scopes (`target_project_id`, `synthetic_uri`, `referenced_by_uris`, `source_kind`). |
-| `coverage_ledger` | `[]CoverageEntry` | Complete audit log of every `(scope, source)` API query and its `CoverageState`. |
+| `coverage_ledger` | `[]CoverageEntry` | Complete audit log of every `(scope, source)` API query (plus `edge_closure`) and its `CoverageState`. |
 
 ### Annotated `facts.json` (`v3`) Example
 

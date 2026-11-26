@@ -10,8 +10,8 @@ This guide details the OAuth trust boundaries, quota project resolution, GCP err
 
 `gcp-arch` enforces strict separation between **target infrastructure discovery** and **Vertex AI synthesis billing** using two independent OAuth scopes and separate client initializers:
 
-* **Read-Only Discovery Plane (`internal/extract/client.go`):** `NewClients` requests Application Default Credentials strictly scoped to `https://www.googleapis.com/auth/cloud-platform.read-only` (`cloudPlatformReadOnlyScope`). Every gRPC and REST discovery call (`Cloud Asset Inventory`, `Cloud Monitoring`, `BigQuery`, `Dataflow`) carries only read-only tokens and bills API quota to the caller's quota project (`--quota-project` or ADC `quota_project_id`).
-* **Vertex AI Synthesis Plane (`internal/synth/client.go` & Vertex preflight):** `newGenAIClient` and `newCloudPlatformHTTPClient` request `https://www.googleapis.com/auth/cloud-platform` (`cloudPlatformScope`) exclusively against the caller-designated `--vertex-project`. Target customer projects are **never** billed for Gemini inference or sent `cloud-platform` write tokens.
+* **Read-Only Discovery Plane ([`internal/extract/client.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go)):** `NewClients` requests Application Default Credentials strictly scoped to `https://www.googleapis.com/auth/cloud-platform.read-only` (`cloudPlatformReadOnlyScope`). Every gRPC and REST discovery call (`Cloud Asset Inventory`, `Cloud Monitoring`, `BigQuery`, `Dataflow`) carries only read-only tokens and bills API quota to the caller's quota project (`--quota-project` or ADC `quota_project_id`).
+* **Vertex AI Synthesis Plane ([`internal/synth/client.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go) & Vertex preflight):** `newGenAIClient` and `newCloudPlatformHTTPClient` request `https://www.googleapis.com/auth/cloud-platform` (`cloudPlatformScope`) exclusively against the caller-designated `--vertex-project`. Target customer projects are **never** billed for Gemini inference or sent `cloud-platform` write tokens.
 * **Air-Gapped Local Plane (`validate` & `render`):** Operates completely offline on Git-tracked `architecture.yaml` (and optional local `facts.json`) with zero GCP credentials and zero external network calls.
 
 ```mermaid
@@ -54,7 +54,7 @@ flowchart LR
 
 ### Caller Quota Project Resolution (`ResolveQuotaProject`)
 
-Google Cloud APIs such as Cloud Asset Inventory and Cloud Monitoring require a billing/quota project header (`X-Goog-User-Project`) when authenticated with user ADC. `ResolveQuotaProject` (`internal/extract/client.go:426-436`) resolves this strictly in two steps:
+Google Cloud APIs such as Cloud Asset Inventory and Cloud Monitoring require a billing/quota project header (`X-Goog-User-Project`) when authenticated with user ADC. `ResolveQuotaProject` ([`internal/extract/client.go#L426-L436`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L426-L436)) resolves this strictly in two steps:
 
 1. **Explicit override:** `--quota-project` CLI flag (or `quota_project` in `config.yaml`).
 2. **ADC embedded quota project:** `quota_project_id` field inside the local ADC JSON (`~/.config/gcloud/application_default_credentials.json`).
@@ -65,7 +65,7 @@ Google Cloud APIs such as Cloud Asset Inventory and Cloud Monitoring require a b
 
 ### Structured GCP Error Classification (`ClassifyGCPError`)
 
-Both gRPC (`*errdetails.ErrorInfo` + gRPC status codes) and REST (`*googleapi.Error` `Details`, JSON `error.details`, `Errors[0].Reason`, and HTTP status codes) responses are classified by `ClassifyGCPError` (`internal/extract/client.go:125-297`) into seven `ErrorKind` categories to cleanly distinguish **fatal caller problems** from **non-fatal target degradations**:
+Both gRPC (`*errdetails.ErrorInfo` + gRPC status codes) and REST (`*googleapi.Error` `Details`, JSON `error.details`, `Errors[0].Reason`, and HTTP status codes) responses are classified by `ClassifyGCPError` ([`internal/extract/client.go#L125-L297`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L125-L297)) into seven `ErrorKind` categories to cleanly distinguish **fatal caller problems** from **non-fatal target degradations**:
 
 | Error Condition / `ErrorInfo.Reason` | `ErrorKind` | Handling in `preflight` & `extract` | Exit Code |
 | :--- | :--- | :--- | :---: |
@@ -75,10 +75,10 @@ Both gRPC (`*errdetails.ErrorInfo` + gRPC status codes) and REST (`*googleapi.Er
 | `VPC_SERVICE_CONTROLS`, `SECURITY_POLICY_VIOLATED`, or non-empty `metadata.vpcServiceControlsUniqueIdentifier` | `VPC_SC_BLOCKED` | **Degraded** (non-fatal). Captures `VPCSCUUID` for perimeter audit logs and records `VPC_SC_BLOCKED`; scan continues. | `0` |
 | `IAM_PERMISSION_DENIED`, gRPC `PermissionDenied`, or HTTP `403` | `IAM_DENIED` | **Degraded** (non-fatal). Recorded as `DENIED` (`preflight`) or `IAM_DENIED` (`extract` `coverage_ledger`); scan continues with partial visibility. | `0` |
 | gRPC `Unauthenticated` or HTTP `401` | `UNAUTHENTICATED` | **Fatal**. Expired or missing ADC credentials; aborts with `gcloud auth application-default login` remediation. | `1` |
-| Other transport / API / internal errors | `OTHER` | **Fatal** in `preflight` and CAI streaming; propagated as runtime error. | `1` |
+| Other transport / API / internal errors | `OTHER` | **Fatal** in `preflight`, CAI streaming, BigQuery, Dataflow, and Cloud Monitoring enrichers ([`internal/extract/enrichers.go#L353-L360`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L353-L360), [`#L589-L595`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L589-L595), [`#L655-L660`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L655-L660), [`#L876-L881`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L876-L881)) — with the single exception of gRPC `codes.NotFound` (`isGRPCNotFound`, [`internal/extract/enrichers.go#L1050-L1052`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go#L1050-L1052)) on Vertex AI `PublisherModel` metric queries, which is silently ignored. | `1` |
 
 !!! note "Exact Disambiguation of `SERVICE_DISABLED`"
-    In `classifyDisabledServiceKind` (`internal/extract/client.go:246-262`), `SERVICE_DISABLED` is treated as a harmless target degradation **only** when all three conditions hold:
+    In `classifyDisabledServiceKind` ([`internal/extract/client.go#L246-L262`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L246-L262)), `SERVICE_DISABLED` is treated as a harmless target degradation **only** when all three conditions hold:
     1. A target project ID or number is known for the call (e.g., per-project BigQuery, Dataflow, or Monitoring enrichment),
     2. `metadata["consumer"]` matches that target project ID or number, **and**
     3. The caller's quota project is **not** that same project.
@@ -98,7 +98,7 @@ The table below lists every IAM role required or recommended across all three su
 | **Target Project(s)** | `roles/monitoring.viewer` | **Recommended** | `MetricService.ListTimeSeries` (`serviceruntime.googleapis.com/api/request_count`, `aiplatform.googleapis.com/publisher/online_serving/model_invocation_count`, `consumed_token_throughput`) | Skips 7-day `MONITORING_TRAFFIC` edges and Vertex AI `PublisherModel` synthesis (`IAM_DENIED`). |
 | **Target Project(s)** | `roles/bigquery.resourceViewer` | **Recommended** | `bigquery.jobs.list` (`AllUsers=true`, `Projection=full`, partial `Fields`) — USD 0 SQL slot cost | Skips 7-day `BQ_LINEAGE` (`sql_elt` and `bq_job`) edges (`IAM_DENIED`). |
 | **Target Project(s)** | `roles/dataflow.viewer` | **Recommended** | `dataflow.projects.locations.jobs.list` (`Filter=ACTIVE`) and `.get` (`View=JOB_VIEW_DESCRIPTION`) | Skips active `dataflow.googleapis.com/Job` synthesis and pipeline `DisplayData` `CONFIG_REF` edges (`IAM_DENIED`). |
-| **Caller Quota Project** | `roles/serviceusage.serviceUsageConsumer` | **Required** *(when using quota project)* | `X-Goog-User-Project` billing & quota checks across CAI, Monitoring, BigQuery, Dataflow *(also requires `cloudasset.googleapis.com` and `monitoring.googleapis.com` enabled on the quota project)* | **Fatal** `QuotaProjectError` (`USER_PROJECT_DENIED` / `SERVICE_DISABLED`), exit `1`. |
+| **Caller Quota Project** | `roles/serviceusage.serviceUsageConsumer` | **Required** *(when using quota project)* | `X-Goog-User-Project` billing & quota checks across CAI, Monitoring, BigQuery, Dataflow *(because `option.WithQuotaProject(qp)` is attached to the shared `HTTPClient` used by BigQuery and Dataflow in [`internal/extract/client.go#L258-L260`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L258-L260), [`#L509-L537`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L509-L537), `bigquery.googleapis.com` and `dataflow.googleapis.com` also consume quota on the caller's quota project when those enrichers run, in addition to `cloudasset.googleapis.com` and `monitoring.googleapis.com`)* | **Fatal** `QuotaProjectError` (`USER_PROJECT_DENIED` / `SERVICE_DISABLED`, including when `bigquery.googleapis.com` or `dataflow.googleapis.com` is disabled on the quota project while those enrichers run), exit `1`. |
 | **Vertex AI Project (`--vertex-project`)** | `roles/aiplatform.user` | **Required** *(Stage 2 synthesis & Vertex preflight)* | `projects:testIamPermissions` (`aiplatform.endpoints.predict`), `Models.Get` (zero-token preflight), `Models.GenerateContent` (Gemini 4 structured JSON) | Stage 2 `synthesize` fails with permission error; `preflight` flags `vertex.iam` / `vertex.model` as `DENIED`. |
 
 ### Copy-Pasteable `gcloud` Grant Commands
@@ -160,7 +160,12 @@ The table below lists every IAM role required or recommended across all three su
     VERTEX_PROJECT="consultant-ai-sandbox"
 
     # Enable discovery APIs and grant Service Usage Consumer on the caller's quota project
-    gcloud services enable cloudasset.googleapis.com monitoring.googleapis.com \
+    # (bigquery.googleapis.com and dataflow.googleapis.com also consume quota on the quota project when those enrichers run)
+    gcloud services enable \
+      cloudasset.googleapis.com \
+      monitoring.googleapis.com \
+      bigquery.googleapis.com \
+      dataflow.googleapis.com \
       --project="${QUOTA_PROJECT}"
     gcloud projects add-iam-policy-binding "${QUOTA_PROJECT}" \
       --member="${PRINCIPAL}" \
@@ -177,7 +182,7 @@ The table below lists every IAM role required or recommended across all three su
 
 ## `gcp-arch preflight` Deep Dive
 
-`gcp-arch preflight` validates every required permission and zero-token Vertex AI readiness before you invest time in a multi-project extraction or synthesis run (`internal/extract/client.go:857-883`).
+`gcp-arch preflight` validates every required permission and zero-token Vertex AI readiness before you invest time in a multi-project extraction or synthesis run ([`internal/extract/client.go#L857-L883`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L857-L883)).
 
 ### The 7 Probe Stages in Execution Order
 
@@ -202,7 +207,7 @@ After all stages complete, `RunPreflight` deterministically sorts `report.Probes
 | `VPC_SC_BLOCKED` | Blocked by a VPC Service Controls perimeter (`VPC_SERVICE_CONTROLS`, `SECURITY_POLICY_VIOLATED`, or `vpcServiceControlsUniqueIdentifier`). | No (`0`) | `Allow caller egress/ingress in VPC-SC perimeter (audit UUID: <UUID>)` *(also appended as `[vpc_sc_uuid=<UUID>]` in table detail)*. |
 | `SERVICE_DISABLED` | API is disabled on a distinct target child project (caller quota project is healthy). | No (`0`) | None (normal when a target project does not use BigQuery or Dataflow). |
 | `QUOTA_PROJECT_ERROR` | Caller quota project error (`USER_PROJECT_DENIED`, caller `SERVICE_DISABLED`, or caller `BILLING_DISABLED`). | **Yes (`1`)** | Reason-specific `gcloud services enable ...`, `roles/serviceusage.serviceUsageConsumer` binding, or billing link guidance. |
-| `ERROR` | Unauthenticated ADC (`401`/`Unauthenticated`) or unexpected transport/API failure. | **Yes (`1`)** | For `Unauthenticated`: `Run 'gcloud auth application-default login' to refresh Application Default Credentials`. |
+| `ERROR` | Unauthenticated ADC (`401`/`Unauthenticated`) or unexpected transport/API failure. | **Yes (`1`)** | For `Unauthenticated`: ``Run `gcloud auth application-default login` to refresh Application Default Credentials`` ([`internal/extract/client.go#L651`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L651)). |
 
 !!! tip "Exit Code Semantics for CI Automation"
     `preflight` evaluates errors using `firstError()` precedence (`QuotaProjectError` -> `Unauthenticated` -> unexpected `probeErr`). Target-scope degradations (`DENIED`, `VPC_SC_BLOCKED`, `SERVICE_DISABLED`) intentionally exit **`0`** because `extract` can still run with degraded coverage—check `missing_count` in `gcp-arch preflight --json` if your CI pipeline requires 100% probe coverage.
@@ -215,7 +220,7 @@ After all stages complete, `RunPreflight` deterministically sorts `report.Probes
 
 ### 1. Per-Asset Allowlist Projection (`ProjectAttributes`)
 
-During Stage 1 extraction, `ProjectAttributes` (`internal/extract/sanitize.go:529-555`) constructs `FactResource.Attributes` strictly from an explicit allowlist of **75 asset type projectors** (`assetAttrProjectors`, lines `449-523`):
+During Stage 1 extraction, `ProjectAttributes` ([`internal/extract/sanitize.go#L530-L556`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L530-L556)) constructs `FactResource.Attributes` strictly from an explicit allowlist of **75 asset type projectors** (`assetAttrProjectors`, [`internal/extract/sanitize.go#L449-L525`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L449-L525)):
 
 * Every projector extracts only typed structural fields needed for architecture synthesis (such as `cidr`, `vpc`, `subnet`, `machine_type`, `tier`, `database_version`, `ingress`, `service_account`, `kms_key_uri`, `mode`, `workload_pool`, `storage_class`, `schedule`, `repo_url`, `trigger_filter`, `dns_name`).
 * Asset types not in the 75-entry allowlist return `nil` attributes.
@@ -223,7 +228,7 @@ During Stage 1 extraction, `ProjectAttributes` (`internal/extract/sanitize.go:52
 
 ### 2. Unconditionally Dropped Sensitive Keys (`sensitiveDroppedKeys`)
 
-All **22** sensitive payload keys in `sensitiveDroppedKeys` (`internal/extract/sanitize.go:42-65`) are unconditionally excluded from emitted metadata. Where structural links live inside them (for example, container `env`/`args`/`command`, Cloud Build `script`, or ConfigMap `data`), `gcp-arch` scans them in memory with `ExtractSanitizedRefs` and discards the raw strings immediately:
+All **22** sensitive payload keys in `sensitiveDroppedKeys` ([`internal/extract/sanitize.go#L42-L65`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L42-L65)) are unconditionally excluded from emitted metadata. Where structural links live inside them (for example, container `env`/`args`/`command`, Cloud Build `script`, or ConfigMap `data`), `gcp-arch` scans them in memory with `ExtractSanitizedRefs` and discards the raw strings immediately:
 
 | Category | Dropped Keys (`sensitiveDroppedKeys`) |
 | :--- | :--- |
@@ -235,11 +240,11 @@ All **22** sensitive payload keys in `sensitiveDroppedKeys` (`internal/extract/s
 
 ### 3. URL & Reference Sanitization (`SanitizeURL` & `ExtractSanitizedRefs`)
 
-* **`SanitizeURL` (`internal/extract/sanitize.go:231-250`):**
+* **`SanitizeURL` ([`internal/extract/sanitize.go#L232-L251`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L232-L251)):**
   * Strips leading `jdbc:` prefixes (case-insensitive).
   * Parses URLs and removes `u.User` (embedded `user:password@` credentials), `u.RawQuery` (API keys / signed tokens), `u.Fragment`, and trailing `/`.
   * For malformed strings without a scheme/host, truncates at the first `?` or `#`.
-* **`ExtractSanitizedRefs` (`internal/extract/sanitize.go:292-306`):**
+* **`ExtractSanitizedRefs` ([`internal/extract/sanitize.go#L293-L307`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L293-L307)):**
   * Scans raw env vars, CLI args, Cloud Build steps, ConfigMap entries, and Dataflow `DisplayData` in memory and retains **only** recognized structural patterns:
     1. Secret Manager names (`projects/<p>/secrets/<s>`, stripped of version suffix on edges)
     2. Cloud SQL Unix socket paths (`/cloudsql/proj:region:inst`) and bare `proj:region:inst` connection names
@@ -247,12 +252,12 @@ All **22** sensitive payload keys in `sensitiveDroppedKeys` (`internal/extract/s
     4. CLI deploy targets (`--project=<id>`, `--cluster=<name>`, `gcloud run deploy <svc>`)
     5. AIP-122 `//<svc>.googleapis.com/...` URIs, sanitized `googleapis.com` URLs, `gs://<bucket>`, `*.run.app`, `*.cloudfunctions.net`, and relative `projects/...` resource paths
     6. Private IPv4 addresses (RFC 1918 `10/8`, `172.16/12`, `192.168/16`, and CGNAT `100.64/10`) extracted from sanitized connection URLs or IP literals
-    7. `<project>.<dataset>` BigQuery pairs (filtering out 23 common domain/file extensions like `.com`, `.io`, `.internal`, `.yaml`, `.json`, `.sql`)
+    7. `<project>.<dataset>` and `<project>:<dataset>` BigQuery pairs (with optional `.<table>`, normalized to `<project>.<dataset>` by `projDatasetRe` in [`internal/extract/sanitize.go#L29`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L29), [`#L382-L386`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L382-L386), filtering out 23 common domain/file extensions like `.com`, `.io`, `.internal`, `.yaml`, `.json`, `.sql`)
   * All raw passwords, bearer tokens, private keys, inline SQL queries, and shell scripts fail to match and are discarded.
 
 ### 4. File Permissions, `.gitignore` & Crash-Safe Atomic I/O
 
-Every output file written by `gcp-arch` goes through `ioutil.WriteFileAtomic` (`internal/ioutil/atomic.go:19-67`), executing an explicit crash-safe sequence:
+Every output file written by `gcp-arch` goes through `ioutil.WriteFileAtomic` ([`internal/ioutil/atomic.go#L19-L67`](https://github.com/arrase/gcp-arch/blob/main/internal/ioutil/atomic.go#L19-L67)), executing an explicit crash-safe sequence:
 
 ```text
 MkdirAll(dirPerm) -> CreateTemp(dir, ".gcp-arch-*.tmp") -> Write -> Sync (fsync) -> Chmod(filePerm) -> Close -> os.Rename
@@ -271,14 +276,14 @@ If any step fails before `os.Rename`, a deferred cleanup closes and removes the 
 
 Stage 3 (`gcp-arch render`) is hardened against XSS, data exfiltration, and unintended browser telemetry (see [Stage 3 — Offline Rendering & Routing](rendering.md) for full rendering details):
 
-* **Strict Content Security Policy (`internal/render/html.go:22`):** Every generated HTML document embeds:
+* **Strict Content Security Policy ([`internal/render/html.go#L22`](https://github.com/arrase/gcp-arch/blob/main/internal/render/html.go#L22)):** Every generated HTML document embeds:
   ```html
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:; script-src 'unsafe-inline'">
   ```
   All external HTTP/HTTPS requests, WebSockets, beacons, and third-party font/image loads are blocked at the browser engine level. Fonts (`Inter` 400–700, `JetBrains Mono` 400–500) are base64-embedded as `data:font/woff2` URIs.
-* **Strict Inline SVG Validation (`internal/icons/validate.go`):** `ValidateSVG` parses every embedded SVG icon with `encoding/xml` and rejects XML directives, processing instructions, forbidden elements (`<script>`, `<foreignObject>`, `<iframe>`, `<embed>`, `<object>`), `on*` event handlers, non-SVG `xmlns` attributes, `javascript:`/`vbscript:`/`data:` URI schemes, `http://`/`https://` and protocol-relative `//` URLs, CSS backslash escapes, `@import`, `expression()`, and non-local `url(...)` references (only `#id` fragment references are permitted).
+* **Strict Inline SVG Validation ([`internal/icons/validate.go`](https://github.com/arrase/gcp-arch/blob/main/internal/icons/validate.go)):** `ValidateSVG` parses every embedded SVG icon with `encoding/xml` and rejects XML directives, processing instructions, multiple `<svg>` roots ([`#L39-L41`](https://github.com/arrase/gcp-arch/blob/main/internal/icons/validate.go#L39-L41)), trailing content outside `<svg>` ([`#L65-L67`](https://github.com/arrase/gcp-arch/blob/main/internal/icons/validate.go#L65-L67)), forbidden elements (`<script>`, `<foreignObject>`, `<iframe>`, `<embed>`, `<object>`), `on*` event handlers, non-SVG `xmlns` and prefixed `xmlns:*` attributes ([`#L133-L141`](https://github.com/arrase/gcp-arch/blob/main/internal/icons/validate.go#L133-L141)), `javascript:`/`vbscript:`/`data:` URI schemes, `http://`/`https://` and protocol-relative `//` URLs, CSS backslash escapes, `@import`, `expression()`, and non-local `url(...)` references (only `#id` fragment references are permitted).
 * **Script-Breakout Escaping:** Routing metadata is serialized with Go's `encoding/json`, which escapes `<`, `>`, and `&` as `\u003c`, `\u003e`, and `\u0026`, preventing `</script>` injection.
-* **Isolated Ephemeral Headless Chrome (`internal/render/cdp.go:327-360`):** Launches Chrome/Chromium against a temporary `0600` `file://` HTML input inside a dedicated `0700` `--user-data-dir` with `--headless=new`, `--disable-gpu`, `--no-first-run`, `--no-default-browser-check`, `--disable-background-networking`, `--disable-sync`, `--disable-extensions`, `--metrics-recording-only`, and `--mute-audio`. `--no-sandbox` is enabled **only** inside Linux containers (`/.dockerenv`, `/run/.containerenv`, or container cgroup) where unprivileged user namespaces are disabled (`unprivileged_userns_clone == 0`) or running as UID `0`.
+* **Isolated Ephemeral Headless Chrome ([`internal/render/cdp.go#L329-L360`](https://github.com/arrase/gcp-arch/blob/main/internal/render/cdp.go#L329-L360)):** Launches Chrome/Chromium against a temporary `0600` `file://` HTML input inside a dedicated `0700` `--user-data-dir` with `--headless=new`, `--disable-gpu`, `--no-first-run`, `--no-default-browser-check`, `--disable-background-networking`, `--disable-sync`, `--disable-extensions`, `--metrics-recording-only`, and `--mute-audio`. `--no-sandbox` is enabled **only** inside Linux containers (`/.dockerenv`, `/run/.containerenv`, or container cgroup) where unprivileged user namespaces are disabled (`unprivileged_userns_clone == 0`) or running as UID `0` (`needsNoSandbox()`, [`internal/render/cdp.go#L436-L460`](https://github.com/arrase/gcp-arch/blob/main/internal/render/cdp.go#L436-L460)).
 
 ---
 
