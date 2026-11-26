@@ -15,6 +15,8 @@
   const CORRIDOR_WALL_PAD = 12;
   const MAX_CORRIDOR_SIZE = 160;
   const MAX_REFLOW_PASSES = 2;
+  const PRINT_MAX_HEIGHT = 708;
+  const PRINT_MAX_WIDTH = 1040;
   const PORT_CORNER_MARGIN = 10;
   const PILL_HEIGHT = 15;
   const PILL_PAD_X = 5;
@@ -57,7 +59,7 @@
         index: idx,
         x: Math.round((r.left + window.scrollX) * 100) / 100,
         y: Math.round((r.top + window.scrollY) * 100) / 100,
-        width: Math.round(r.width * 100) / 100,
+        width: Math.round(Math.max(r.width, sheet.scrollWidth) * 100) / 100,
         height: Math.round(r.height * 100) / 100
       });
     });
@@ -1307,6 +1309,16 @@
     sheet.appendChild(svg);
   }
 
+  // Fits the sheet's real content box (corridor widening may overflow the fixed 1040px width)
+  // into one A4 landscape page.
+  function applyPrintScale(sheet) {
+    const height = sheet.getBoundingClientRect().height;
+    const scale = Math.min(1, PRINT_MAX_HEIGHT / height, PRINT_MAX_WIDTH / sheet.scrollWidth);
+    if (scale < 1) {
+      sheet.style.setProperty('--print-scale', scale.toFixed(4));
+    }
+  }
+
   async function runRouter() {
     if (document.documentElement.dataset.gcpArchRouted === '1') {
       const res = {
@@ -1333,7 +1345,6 @@
     const sheets = document.querySelectorAll('.view-sheet');
 
     const allCollisions = [];
-    const finalDrawings = [];
 
     sheets.forEach(function (sheet, idx) {
       const viewData = routingViews[idx] || { id: sheet.dataset.viewId || ('view_' + idx), edges: [] };
@@ -1349,13 +1360,12 @@
         }
       }
 
-      if (passRes.collisions.length > 0) {
-        for (const col of passRes.collisions) {
-          allCollisions.push(col);
-        }
-      } else {
-        finalDrawings.push({ sheet: sheet, geom: geom, passRes: passRes });
+      for (const col of passRes.collisions) {
+        allCollisions.push(col);
       }
+      // Connectors are injected even on collision so a browser-opened standalone HTML keeps its edges.
+      injectConnectorSVG(sheet, geom, passRes);
+      applyPrintScale(sheet);
     });
 
     if (allCollisions.length > 0) {
@@ -1368,14 +1378,6 @@
       window.__GCP_ARCH_RENDER_RESULT__ = failRes;
       return failRes;
     }
-
-    finalDrawings.forEach(function (d) {
-      injectConnectorSVG(d.sheet, d.geom, d.passRes);
-      const h = d.sheet.getBoundingClientRect().height;
-      if (h > 708) {
-        d.sheet.style.setProperty('--print-scale', (708 / h).toFixed(4));
-      }
-    });
 
     document.documentElement.dataset.gcpArchRouted = '1';
     const okRes = {

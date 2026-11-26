@@ -96,6 +96,7 @@ type Manifest struct {
 	Containers        []Container        `yaml:"containers,omitempty"`
 	ExcludedResources []ExcludedResource `yaml:"excluded_resources,omitempty"`
 	RejectedEdges     []RejectedEdge     `yaml:"rejected_edges,omitempty"`
+	AcknowledgedEdges []ComponentPair    `yaml:"acknowledged_edges,omitempty"`
 	Views             []View             `yaml:"views"`
 }
 
@@ -149,11 +150,20 @@ type ExcludedResource struct {
 	Reason    string `yaml:"reason"`
 }
 
-// RejectedEdge records a curated tombstone suppressing a directed component edge.
+// RejectedEdge records a curated tombstone suppressing every drawn edge for a directed component
+// pair (all flow kinds).
 type RejectedEdge struct {
 	From   string `yaml:"from"`
 	To     string `yaml:"to"`
 	Reason string `yaml:"reason"`
+}
+
+// ComponentPair records a directed component pair projected from facts.json FactEdges that was
+// already offered to synthesis and intentionally left undrawn, so Day-2 reconciliation does not
+// treat it as new drift.
+type ComponentPair struct {
+	From string `yaml:"from"`
+	To   string `yaml:"to"`
 }
 
 // View defines one rendered diagram page and its placements, containers, and edges.
@@ -198,8 +208,9 @@ type Edge struct {
 
 // ValidationReport is the JSON diagnostic schema emitted by `gcp-arch validate --json`.
 type ValidationReport struct {
-	Valid  bool              `json:"valid"`
-	Errors []ValidationIssue `json:"errors,omitempty"`
+	Valid         bool              `json:"valid"`
+	ExcludedCount int               `json:"excluded_count,omitempty"`
+	Errors        []ValidationIssue `json:"errors,omitempty"`
 }
 
 // ValidationIssue describes a single manifest validation failure.
@@ -304,10 +315,22 @@ func normalizedManifestCopy(m *Manifest) Manifest {
 		Containers:        normalizeContainers(m.Containers),
 		ExcludedResources: normalizeExcludedResources(m.ExcludedResources),
 		RejectedEdges:     normalizeRejectedEdges(m.RejectedEdges),
+		AcknowledgedEdges: normalizeComponentPairs(m.AcknowledgedEdges),
 		Views:             normalizeViews(m.Views),
 	}
 	slices.Sort(out.Metadata.Scopes)
 	return out
+}
+
+func normalizeComponentPairs(in []ComponentPair) []ComponentPair {
+	if len(in) == 0 {
+		return nil
+	}
+	out := slices.Clone(in)
+	slices.SortFunc(out, func(a, b ComponentPair) int {
+		return cmp.Or(cmp.Compare(a.From, b.From), cmp.Compare(a.To, b.To))
+	})
+	return slices.Compact(out)
 }
 
 func normalizeComponents(in []Component) []Component {

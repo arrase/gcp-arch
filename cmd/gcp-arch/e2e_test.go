@@ -210,19 +210,10 @@ func buildAcmePass2Placements(src []manifest.Placement) ([]string, []synth.Pass2
 	placements := make([]synth.Pass2Placement, 0, len(src))
 	for _, p := range src {
 		compIDs = append(compIDs, p.ComponentID)
-		refs := make([]synth.Pass2OffPageRef, 0, len(p.OffPageRefs))
-		for _, r := range p.OffPageRefs {
-			refs = append(refs, synth.Pass2OffPageRef{
-				TargetViewID: r.TargetViewID,
-				Label:        r.Label,
-				Direction:    r.Direction,
-			})
-		}
 		placements = append(placements, synth.Pass2Placement{
 			ComponentID: p.ComponentID,
 			ContainerID: p.ContainerID,
 			Column:      p.Column,
-			OffPageRefs: refs,
 		})
 	}
 	return compIDs, placements

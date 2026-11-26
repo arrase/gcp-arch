@@ -321,18 +321,23 @@ func (st *extractState) indexVPCConnector(a *ingestedAsset) {
 	}
 }
 
+// indexVPCPeerings runs a PSA pass before the regular pass so every Private Services Access tenant
+// (servicenetworking peering or tenant-ID convention) is recorded before any peer project can be
+// registered as an out-of-scope stub.
 func (st *extractState) indexVPCPeerings() {
-	for _, a := range st.assets {
-		if a.suppressed || a.assetType != "compute.googleapis.com/Network" {
-			continue
-		}
-		for _, peer := range a.vpcPeerings {
-			st.indexSingleVPCPeering(a, peer)
+	for _, psaPass := range []bool{true, false} {
+		for _, a := range st.assets {
+			if a.suppressed || a.assetType != "compute.googleapis.com/Network" {
+				continue
+			}
+			for _, peer := range a.vpcPeerings {
+				st.indexSingleVPCPeering(a, peer, psaPass)
+			}
 		}
 	}
 }
 
-func (st *extractState) indexSingleVPCPeering(a *ingestedAsset, peer vpcPeeringInfo) {
+func (st *extractState) indexSingleVPCPeering(a *ingestedAsset, peer vpcPeeringInfo, psaPass bool) {
 	state := strings.ToUpper(strings.TrimSpace(peer.state))
 	if (state != "" && state != "ACTIVE") || peer.network == "" {
 		return
@@ -340,8 +345,13 @@ func (st *extractState) indexSingleVPCPeering(a *ingestedAsset, peer vpcPeeringI
 	peerURI := normalizeComputeNetworkURI(peer.network, a.projectID, st.projIdx)
 	peerProj := extractProjectID(peerURI, nil, st.projIdx)
 	isPSA := IsPSATenantProject(peerProj) || strings.Contains(strings.ToLower(peer.name), "servicenetworking")
-	if isPSA {
-		st.recordPSATenant(a.uri, peerProj)
+	if psaPass {
+		if isPSA {
+			st.recordPSATenant(a.uri, peerProj)
+		}
+		return
+	}
+	if isPSA || st.isPSATenant(peerProj) {
 		return
 	}
 
@@ -940,15 +950,27 @@ func (st *extractState) resolveSingleCloudBuildRef(sourceURI, srcProj, ref strin
 	case strings.HasPrefix(ref, prefixGCR):
 		st.emitOutOfScopeProjectEdge(sourceURI, strings.TrimPrefix(ref, prefixGCR), ref, EdgeCloudBuildStepRef, oosCloudBuildDeployFlag)
 	case strings.HasPrefix(ref, flagClusterPrefix):
-		if tgt := st.findUniqueAssetByName(assetTypeGKECluster, strings.TrimPrefix(ref, flagClusterPrefix), srcProj, targetProjects); tgt != "" {
-			st.addEdge(sourceURI, tgt, EdgeCloudBuildStepRef, ref)
-		}
+		st.resolveCloudBuildClusterRef(sourceURI, srcProj, strings.TrimPrefix(ref, flagClusterPrefix))
 	case strings.HasPrefix(ref, prefixRunDeploy):
 		if tgt := st.findUniqueAssetByName(assetTypeRunService, strings.TrimPrefix(ref, prefixRunDeploy), srcProj, targetProjects); tgt != "" {
 			st.addEdge(sourceURI, tgt, EdgeCloudBuildStepRef, ref)
 		}
 	default:
 		st.resolveSingleConfigRef(sourceURI, srcProj, "", ref, EdgeCloudBuildStepRef, oosCloudBuildDeployFlag)
+	}
+}
+
+// resolveCloudBuildClusterRef links a bare --cluster name to the single same-named GKE cluster within
+// the step's --project scope (encoded by scopeStepClusterRefs as "<p1,p2>/<name>"), else the build's
+// project, else every scanned project; ambiguous or unknown names emit no edge.
+func (st *extractState) resolveCloudBuildClusterRef(sourceURI, srcProj, val string) {
+	name := val
+	var stepProjects []string
+	if scope, n, scoped := strings.Cut(val, "/"); scoped {
+		name, stepProjects = n, strings.Split(scope, ",")
+	}
+	if tgt := st.findUniqueAssetByName(assetTypeGKECluster, name, srcProj, stepProjects); tgt != "" {
+		st.addEdge(sourceURI, tgt, EdgeCloudBuildStepRef, flagClusterPrefix+name)
 	}
 }
 
@@ -1035,22 +1057,30 @@ func (st *extractState) isInScopeEndpoint(uri string) bool {
 }
 
 func (st *extractState) emitTargetEdge(fromURI, toURI string, kind FactEdgeKind, detail, oosKind string) {
+	if from, to, ok := st.resolveEdgeEndpoints(fromURI, toURI, oosKind); ok {
+		st.addEdge(from, to, kind, detail)
+	}
+}
+
+// resolveEdgeEndpoints keeps in-scope endpoints, maps out-of-scope ones to synthetic project stubs,
+// and rejects edges with no in-scope endpoint.
+func (st *extractState) resolveEdgeEndpoints(fromURI, toURI, oosKind string) (string, string, bool) {
 	if fromURI == "" || toURI == "" || fromURI == toURI {
-		return
+		return "", "", false
 	}
 	fromInScope := st.isInScopeEndpoint(fromURI)
 	toInScope := st.isInScopeEndpoint(toURI)
 	if !fromInScope && !toInScope {
-		return
+		return "", "", false
 	}
 
 	resolvedFrom, okFrom := st.resolveTargetEndpoint(fromURI, fromInScope, toURI, oosKind)
 	if !okFrom {
-		return
+		return "", "", false
 	}
 	resolvedTo, okTo := st.resolveTargetEndpoint(toURI, toInScope, fromURI, oosKind)
 	if !okTo || resolvedFrom == resolvedTo {
-		return
+		return "", "", false
 	}
 	if fromInScope {
 		st.referencedURIs[resolvedFrom] = true
@@ -1058,7 +1088,7 @@ func (st *extractState) emitTargetEdge(fromURI, toURI string, kind FactEdgeKind,
 	if toInScope {
 		st.referencedURIs[resolvedTo] = true
 	}
-	st.addEdge(resolvedFrom, resolvedTo, kind, detail)
+	return resolvedFrom, resolvedTo, true
 }
 
 func (st *extractState) resolveTargetEndpoint(uri string, inScope bool, peerURI, oosKind string) (string, bool) {
@@ -1118,30 +1148,32 @@ func (st *extractState) resolveSingleIAMBindingMember(b *iamBindingRecord, membe
 		return
 	}
 
-	targets := st.resolveIAMTargets(b, isAncestor, email, byProjType)
+	targets, heuristic := st.resolveIAMTargets(b, isAncestor, email, byProjType)
 	if len(targets) == 0 {
 		return
 	}
-	st.emitIAMBindingEdges(b, email, targets)
+	st.emitIAMBindingEdges(b, email, targets, heuristic)
 }
 
-func (st *extractState) resolveIAMTargets(b *iamBindingRecord, isAncestor bool, email string, byProjType map[projAssetTypeKey][]*ingestedAsset) []*ingestedAsset {
+// resolveIAMTargets returns the binding's target resources; heuristic is true when a project-level
+// role was attributed only because the project holds a single instance of the role's target service.
+func (st *extractState) resolveIAMTargets(b *iamBindingRecord, isAncestor bool, email string, byProjType map[projAssetTypeKey][]*ingestedAsset) ([]*ingestedAsset, bool) {
 	if !isAncestor {
 		if target := st.assetsByURI[b.resourceURI]; target != nil && !target.suppressed {
-			return []*ingestedAsset{target}
+			return []*ingestedAsset{target}, false
 		}
-		return nil
+		return nil, false
 	}
 	if b.assetType != assetTypeProject {
-		return nil
+		return nil, false
 	}
 	if targets := st.resolveConditionPinnedTargets(b.conditionExpr); len(targets) > 0 {
-		return targets
+		return targets, false
 	}
 	if isDefaultServiceAccount(email) {
-		return nil
+		return nil, false
 	}
-	return resolveUnambiguousRoleTarget(b.projectID, b.role, byProjType)
+	return resolveUnambiguousRoleTarget(b.projectID, b.role, byProjType), true
 }
 
 func (st *extractState) resolveConditionPinnedTargets(expr string) []*ingestedAsset {
@@ -1172,7 +1204,7 @@ func resolveUnambiguousRoleTarget(projectID, role string, byProjType map[projAss
 	return nil
 }
 
-func (st *extractState) emitIAMBindingEdges(b *iamBindingRecord, email string, targets []*ingestedAsset) {
+func (st *extractState) emitIAMBindingEdges(b *iamBindingRecord, email string, targets []*ingestedAsset, heuristic bool) {
 	saURI := st.serviceAccountURI(email, b.projectID)
 	saProj := extractProjectID(saURI, nil, st.projIdx)
 	if st.assetsByURI[saURI] == nil && isDefaultServiceAccount(email) {
@@ -1181,9 +1213,7 @@ func (st *extractState) emitIAMBindingEdges(b *iamBindingRecord, email string, t
 	if saProj != "" && !st.inScopeProjects[saProj] {
 		for _, target := range targets {
 			srcURI := st.registerOutOfScopeProject(saProj, target.uri, "iam_cross_project")
-			if srcURI != "" && srcURI != target.uri {
-				st.addEdge(srcURI, target.uri, EdgeIAMResourceBinding, b.role)
-			}
+			st.putEdge(FactEdge{FromURI: srcURI, ToURI: target.uri, Kind: EdgeIAMResourceBinding, Detail: b.role, Heuristic: heuristic})
 		}
 		return
 	}
@@ -1193,7 +1223,7 @@ func (st *extractState) emitIAMBindingEdges(b *iamBindingRecord, email string, t
 	for _, target := range targets {
 		if saURI != target.uri {
 			st.referencedURIs[saURI] = true
-			st.addEdge(saURI, target.uri, EdgeIAMResourceBinding, b.role)
+			st.putEdge(FactEdge{FromURI: saURI, ToURI: target.uri, Kind: EdgeIAMResourceBinding, Detail: b.role, Heuristic: heuristic})
 		}
 	}
 }

@@ -333,7 +333,7 @@ func testSynthesizeMultiViewRetryRecovery(t *testing.T, facts *extract.FactsFile
 			Placements: []Pass2Placement{
 				{ComponentID: "repo", Column: 0},
 				{ComponentID: "cb", ContainerID: "proj_p1", Column: 1},
-				{ComponentID: "bucket", ContainerID: "proj_p1", Column: 2, OffPageRefs: []Pass2OffPageRef{{TargetViewID: "app_runtime", Label: "Runtime", Direction: "OUT"}}},
+				{ComponentID: "bucket", ContainerID: "proj_p1", Column: 2},
 			},
 			Edges: []Pass2Edge{
 				{From: "repo", To: "cb", Verb: "triggers", FlowKind: manifest.FlowCICD, Provenance: manifest.ProvenanceVerified, EvidenceEdgeIDs: []string{mustTestEID(t, table, facts, 0)}},
@@ -488,15 +488,15 @@ func testSynthesizeRetryExhaustion(t *testing.T, facts *extract.FactsFile, table
 			plan := Pass1Plan{
 				Components: []Pass1Component{
 					{ID: "repo", Title: "GitHub", IconKey: "github", ComponentKind: manifest.KindExternalCaller, ProjectID: "external", BackedByIDs: []string{mustTestRID(t, table, "//github.com/org/repo")}},
+					{ID: "db", Title: "DB", IconKey: "cloud_sql", ComponentKind: manifest.KindDatastore, ProjectID: "p1", BackedByIDs: []string{mustTestRID(t, table, "//sqladmin.googleapis.com/projects/p1/instances/db1")}},
+					{ID: "bkt", Title: "Bucket", IconKey: "cloud_storage", ComponentKind: manifest.KindDatastore, ProjectID: "p1", BackedByIDs: []string{mustTestRID(t, table, "//storage.googleapis.com/b1")}},
 				},
 				ExcludedResources: []Pass1ExcludedResource{
 					{ResourceID: mustTestRID(t, table, "//cloudbuild.googleapis.com/projects/p1/locations/global/triggers/t1"), Reason: "excluded"},
 					{ResourceID: mustTestRID(t, table, "//run.googleapis.com/projects/p1/locations/us-central1/services/app"), Reason: "excluded"},
-					{ResourceID: mustTestRID(t, table, "//sqladmin.googleapis.com/projects/p1/instances/db1"), Reason: "excluded"},
-					{ResourceID: mustTestRID(t, table, "//storage.googleapis.com/b1"), Reason: "excluded"},
 				},
 				DetailViews: []Pass1DetailView{
-					{ID: "v1", Title: "V1", Archetype: manifest.ArchetypeHubSpoke, AccentMode: manifest.AccentRuntime, ComponentIDs: []string{"repo"}},
+					{ID: "v1", Title: "V1", Archetype: manifest.ArchetypeHubSpoke, AccentMode: manifest.AccentRuntime, ComponentIDs: []string{"repo", "db", "bkt"}},
 				},
 			}
 			return json.Marshal(plan)
@@ -1069,7 +1069,7 @@ func TestValidationHelpersAndView0EdgeCases(t *testing.T) {
 			{From: "c3", To: "c4", Verb: "v", FlowKind: manifest.FlowRuntime, Provenance: manifest.ProvenanceInferred, ViaBusID: "mix"},
 			{From: "c1", To: "unplaced", Verb: "", FlowKind: manifest.FlowRuntime, Provenance: manifest.Provenance("BAD")},
 		},
-	}, []string{"c1", "locked_missing"}, compByID, contByID, nil, map[string]bool{"v1": true})
+	}, []string{"c1", "locked_missing"}, compByID, contByID, nil, nil)
 	if len(pvIssues) < 8 {
 		t.Fatalf("expected many Pass 2 validation issues, got %d: %v", len(pvIssues), pvIssues)
 	}
@@ -1089,7 +1089,7 @@ func TestValidationHelpersAndView0EdgeCases(t *testing.T) {
 		},
 	}
 	p2Prompt, err := BuildPass2UserPrompt(plan.DetailViews[1], plan, table, nil)
-	if err != nil || !strings.Contains(p2Prompt, "cross_view_neighbors") || !strings.Contains(p2Prompt, `"r_0001"`) {
+	if err != nil || strings.Contains(p2Prompt, "cross_view_neighbors") || !strings.Contains(p2Prompt, `"r_0001"`) {
 		t.Fatalf("BuildPass2UserPrompt cross-view neighbors & container bridge failed: %v, prompt=%s", err, p2Prompt)
 	}
 

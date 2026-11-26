@@ -102,13 +102,18 @@ func collectView0Externals(detailViews []manifest.View, compByID map[string]mani
 	slices.Sort(extCallers)
 	slices.Sort(extTargets)
 
-	remaining := maxSystemIndexPlacements - len(detailViews)
-	if len(extCallers) > remaining {
-		extCallers = extCallers[:remaining]
-	}
-	remaining -= len(extCallers)
-	if len(extTargets) > remaining {
-		extTargets = extTargets[:remaining]
+	remaining := max(0, maxSystemIndexPlacements-len(detailViews))
+	if len(extCallers)+len(extTargets) > remaining {
+		callerCap := remaining
+		if len(extTargets) > 0 {
+			callerCap = (remaining + 1) / 2
+		}
+		if len(extCallers) > callerCap {
+			extCallers = extCallers[:callerCap]
+		}
+		if rem := remaining - len(extCallers); len(extTargets) > rem {
+			extTargets = extTargets[:rem]
+		}
 	}
 	return extCallers, extTargets, viewPlaced
 }
@@ -214,7 +219,9 @@ func (idx *view0Index) addExternalEdges() {
 }
 
 func (idx *view0Index) addOffPageEdges() {
+	accentByView := make(map[string]manifest.AccentMode, len(idx.detailViews))
 	for _, dv := range idx.detailViews {
+		accentByView[dv.ID] = dv.AccentMode
 		for _, p := range dv.Placements {
 			for _, ref := range p.OffPageRefs {
 				if ref.Direction == "OUT" && idx.placedInIndex[ref.TargetViewID] && ref.TargetViewID != dv.ID {
@@ -223,6 +230,30 @@ func (idx *view0Index) addOffPageEdges() {
 			}
 		}
 	}
+	// Shared datastores/sinks receive incoming edges from both views (symmetric IN refs with no OUT
+	// ref). Connect such view pairs left-to-right first, then fall back to any remaining IN link.
+	idx.addIncomingOffPageEdges(accentByView, true)
+	idx.addIncomingOffPageEdges(accentByView, false)
+}
+
+func (idx *view0Index) addIncomingOffPageEdges(accentByView map[string]manifest.AccentMode, forwardOnly bool) {
+	for _, dv := range idx.detailViews {
+		for _, p := range dv.Placements {
+			for _, ref := range p.OffPageRefs {
+				if idx.eligibleIncomingRef(dv.ID, ref, forwardOnly) {
+					idx.addEdge(ref.TargetViewID, dv.ID, ref.Label, flowFromAccent(accentByView[ref.TargetViewID]))
+				}
+			}
+		}
+	}
+}
+
+func (idx *view0Index) eligibleIncomingRef(viewID string, ref manifest.OffPageRef, forwardOnly bool) bool {
+	from := ref.TargetViewID
+	if ref.Direction != "IN" || !idx.placedInIndex[from] || from == viewID || edgeExistsEitherWay(idx.edgeMap, from, viewID) {
+		return false
+	}
+	return !forwardOnly || idx.colOf[from] <= idx.colOf[viewID]
 }
 
 func (idx *view0Index) addSharedComponentEdges() {

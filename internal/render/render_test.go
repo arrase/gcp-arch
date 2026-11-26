@@ -192,7 +192,7 @@ func TestPrepareDocumentBarycenterWaypointsBusesAndSpans(t *testing.T) {
 		},
 	}
 
-	doc := PrepareDocument(m, reg)
+	doc := mustPrepare(t, m, reg)
 	v := doc.Views[0]
 
 	// Check barycenter ordered b1 above b2 in column 1.
@@ -243,7 +243,7 @@ func TestPrepareDocumentBarycenterWaypointsBusesAndSpans(t *testing.T) {
 			Edges:      []manifest.Edge{{From: "a1", To: "a2", Verb: "call", FlowKind: manifest.FlowRuntime, Provenance: manifest.ProvenanceInferred, InferenceRationale: "r"}},
 		}},
 	}
-	scDoc := PrepareDocument(singleCol, reg)
+	scDoc := mustPrepare(t, singleCol, reg)
 	if !scDoc.Views[0].HasRightEdgeCol {
 		t.Fatalf("expected HasRightEdgeCol on single-column lateral edge")
 	}
@@ -363,7 +363,7 @@ func testRenderLayoutCollisionError(t *testing.T, m *manifest.Manifest, reg *ico
 	if !errors.As(err, &colErr) {
 		t.Fatalf("expected *LayoutCollisionError, got %v", err)
 	}
-	if !strings.Contains(colErr.Error(), "card_segment_collision") {
+	if !strings.Contains(colErr.Error(), "card_segment_collision") || !strings.Contains(colErr.Error(), "move one of the listed components to another column") {
 		t.Fatalf("unexpected LayoutCollisionError message: %v", colErr)
 	}
 	entries, _ := os.ReadDir(outDir)
@@ -765,7 +765,7 @@ func TestHeadlessChromeHubSpokeBidirectionalViaBusAndMinRow1NestedContainers(t *
 			}},
 		}
 
-		doc := PrepareDocument(m, reg)
+		doc := mustPrepare(t, m, reg)
 		seenGroups := map[string]int{}
 		for _, e := range doc.Views[0].Edges {
 			seenGroups[e.BusGroup]++
@@ -817,7 +817,7 @@ func TestHeadlessChromeHubSpokeBidirectionalViaBusAndMinRow1NestedContainers(t *
 			}},
 		}
 
-		doc := PrepareDocument(m, reg)
+		doc := mustPrepare(t, m, reg)
 		if !strings.Contains(doc.Views[0].RowTracksCSS, "var(--corridor-row-1, 52px)") {
 			t.Fatalf("expected row 1 corridor to reserve 52px for depth-1+depth-2 badges on minRow==1, got %q", doc.Views[0].RowTracksCSS)
 		}
@@ -962,4 +962,13 @@ func TestHeadlessChromeForcedCollisionsReturnLayoutCollisionError(t *testing.T) 
 	if !strings.Contains(colErr.Error(), "collinear_collision") {
 		t.Fatalf("expected collinear_collision error, got: %v", colErr)
 	}
+}
+
+func mustPrepare(t *testing.T, m *manifest.Manifest, reg *icons.Registry) *PreparedDocument {
+	t.Helper()
+	doc, err := PrepareDocument(m, reg)
+	if err != nil {
+		t.Fatalf("PrepareDocument: %v", err)
+	}
+	return doc
 }

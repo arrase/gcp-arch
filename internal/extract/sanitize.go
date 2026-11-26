@@ -28,7 +28,7 @@ var (
 	relResourceRe      = regexp.MustCompile(`\bprojects/[a-z0-9-]+/(?:topics|subscriptions|datasets|global|regions|zones|locations|instances)/[^\s"',?#]+`)
 	projDatasetRe      = regexp.MustCompile(`^([a-z][a-z0-9-]{4,28}[a-z0-9])[.:]([a-zA-Z_][a-zA-Z0-9_]*)(?:\.[a-zA-Z0-9_-]+)?$`)
 	ipv4Re             = regexp.MustCompile(`\b(?:\d{1,3}\.){3}\d{1,3}\b`)
-	psaTenantRe        = regexp.MustCompile(`^p[a-z0-9]+-tp$`)
+	psaTenantRe        = regexp.MustCompile(`^p[0-9a-f]{10,}-tp$`)
 
 	excludedDatasetSuffixes = map[string]bool{
 		"com": true, "net": true, "org": true, "io": true, "gov": true, "edu": true,
@@ -216,8 +216,9 @@ func IsPlumbingAssetType(assetType string) bool {
 	return false
 }
 
-// IsPSATenantProject reports whether projectID matches Google's Private Services Access
-// managed tenant project convention (^p[a-z0-9]+-tp$).
+// IsPSATenantProject reports whether projectID matches Google's Private Services Access managed
+// tenant project convention (^p[0-9a-f]{10,}-tp$). It is only a hint: servicenetworking VPC peerings
+// are the authoritative signal, recorded per extraction run.
 func IsPSATenantProject(projectID string) bool {
 	return psaTenantRe.MatchString(strings.ToLower(strings.TrimSpace(projectID)))
 }
@@ -1325,12 +1326,13 @@ func extractCloudBuildPayloadRefs(build *structpb.Struct, projIdx map[string]str
 }
 
 func extractCloudBuildStepRefs(step *structpb.Struct, projIdx map[string]string, refs, secretRefs *[]string) {
-	addExtractedRefs(getStringField(step, "name"), projIdx, refs, secretRefs)
-	addExtractedRefs(getStringField(step, "entrypoint"), projIdx, refs, secretRefs)
-	addExtractedRefs(getStringField(step, "script"), projIdx, refs, secretRefs)
+	var stepRefs []string
+	addExtractedRefs(getStringField(step, "name"), projIdx, &stepRefs, secretRefs)
+	addExtractedRefs(getStringField(step, "entrypoint"), projIdx, &stepRefs, secretRefs)
+	addExtractedRefs(getStringField(step, "script"), projIdx, &stepRefs, secretRefs)
 	args := getStringListField(step, "args")
 	for _, a := range args {
-		addExtractedRefs(a, projIdx, refs, secretRefs)
+		addExtractedRefs(a, projIdx, &stepRefs, secretRefs)
 	}
 	// Join args so multi-token invocations like ["run", "deploy", "my-svc", "--project", "target-p"] match.
 	if len(args) > 1 {
@@ -1338,7 +1340,26 @@ func extractCloudBuildStepRefs(step *structpb.Struct, projIdx map[string]string,
 		if prefix := cloudBuildStepCommandPrefix(step); prefix != "" {
 			joined = prefix + " " + joined
 		}
-		addExtractedRefs(joined, projIdx, refs, secretRefs)
+		addExtractedRefs(joined, projIdx, &stepRefs, secretRefs)
+	}
+	scopeStepClusterRefs(stepRefs)
+	for _, r := range stepRefs {
+		appendUnique(refs, r)
+	}
+}
+
+// scopeStepClusterRefs rewrites --cluster=<name> to --cluster=<p1,p2>/<name> when the same step names
+// --project targets, so the bare cluster name is resolved only within those projects.
+func scopeStepClusterRefs(stepRefs []string) {
+	projects := extractCloudBuildTargetProjects(stepRefs)
+	if len(projects) == 0 {
+		return
+	}
+	scope := strings.Join(projects, ",")
+	for i, r := range stepRefs {
+		if name, ok := strings.CutPrefix(r, flagClusterPrefix); ok {
+			stepRefs[i] = flagClusterPrefix + scope + "/" + name
+		}
 	}
 }
 

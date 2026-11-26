@@ -3,9 +3,6 @@ name: Release Binaries
 on:
   release:
     types: [published]
-  push:
-    tags:
-      - 'v*'
 
 permissions: {}
 
@@ -41,7 +38,7 @@ jobs:
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o release_assets/gcp-arch-windows-amd64.exe ./cmd/gcp-arch
 
       - name: Upload Release Assets
-        # zizmor: ignore[superfluous-actions] -- declarative release creation and asset upload on tag push
+        # zizmor: ignore[superfluous-actions] -- declarative asset upload on release publish
         uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           files: release_assets/*

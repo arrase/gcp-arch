@@ -169,10 +169,13 @@ var documentTemplate = template.Must(template.New("architecture").Funcs(template
       {{- end}}
     </div>
   </div>
-  {{- if .Footnotes}}
+  {{- if or .Footnotes .Excluded}}
   <footer class="view-footnotes">
     {{- range .Footnotes}}
     <div class="view-footnote-item"><span class="view-footnote-tag">[{{.Number}}]</span><strong>{{.EdgeLabel}}</strong>: {{.Rationale}}</div>
+    {{- end}}
+    {{- if .Excluded}}
+    <div class="view-footnote-item"><span class="view-footnote-tag">Excluded ({{len .Excluded}})</span>{{- range $i, $ex := .Excluded}}{{if $i}}; {{end}}<strong>{{$ex.URI}}</strong>: {{$ex.Reason}}{{- end}}</div>
     {{- end}}
   </footer>
   {{- end}}
@@ -201,7 +204,10 @@ func BuildHTML(m *manifest.Manifest, reg *icons.Registry) ([]byte, error) {
 		return nil, err
 	}
 
-	doc := PrepareDocument(m, reg)
+	doc, err := PrepareDocument(m, reg)
+	if err != nil {
+		return nil, err
+	}
 
 	routingViews := make([]routingViewJSON, len(doc.Views))
 	for i, v := range doc.Views {

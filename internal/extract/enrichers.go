@@ -84,6 +84,26 @@ var (
 		"dialogflow.googleapis.com":      {"dialogflow.googleapis.com/Agent"},
 		"documentai.googleapis.com":      {"documentai.googleapis.com/Processor"},
 	}
+
+	// dataPlaneReadMethods lists data-plane reads (lowercased method leaf or "<collection>.<verb>")
+	// that carry real runtime traffic and must never be filtered as read-only discovery. Reads that
+	// do not look like get*/list*/batchget*/watch*/poll* are listed too, so the intent stays explicit.
+	dataPlaneReadMethods = map[string]bool{
+		// Cloud Storage (JSON API and gRPC).
+		"objects.get": true, "objects.list": true, "getobject": true, "readobject": true, "listobjects": true,
+		// Firestore.
+		"listen": true, "batchgetdocuments": true, "getdocument": true, "listdocuments": true, "runquery": true, "runaggregationquery": true,
+		// Datastore.
+		"lookup": true,
+		// Bigtable and BigQuery Storage.
+		"readrows": true,
+		// Spanner.
+		"read": true, "streamingread": true, "executesql": true, "executestreamingsql": true,
+		// BigQuery.
+		"getqueryresults": true, "tabledata.list": true, "tabledataservice.list": true,
+		// Pub/Sub.
+		"pull": true, "streamingpull": true,
+	}
 )
 
 type bqJobLink struct {
@@ -152,9 +172,10 @@ func CanonicalServiceHost(host string) string {
 // IsReadOnlyDiscoveryMethod reports whether a consumed_api resource.labels.method represents
 // a read-only discovery, listing, IAM check, or watch/poll method (case-insensitive) that
 // should be excluded from runtime MONITORING_TRAFFIC attribution (e.g., terraform plan refreshes).
+// Data-plane reads (isDataPlaneReadMethod) are never treated as discovery.
 func IsReadOnlyDiscoveryMethod(method string) bool {
 	s := strings.TrimSpace(method)
-	if s == "" {
+	if s == "" || isDataPlaneReadMethod(s) {
 		return false
 	}
 	if idx := strings.LastIndexAny(s, "./"); idx >= 0 && idx+1 < len(s) {
@@ -168,8 +189,15 @@ func IsReadOnlyDiscoveryMethod(method string) bool {
 		leaf == "testiampermissions" ||
 		strings.HasSuffix(leaf, "testiampermissions") ||
 		leaf == "watch" || strings.HasPrefix(leaf, "watch") ||
-		leaf == "poll" || strings.HasPrefix(leaf, "poll") ||
-		leaf == "listen"
+		leaf == "poll" || strings.HasPrefix(leaf, "poll")
+}
+
+// isDataPlaneReadMethod reports whether method's lowercased leaf or "<collection>.<verb>" suffix is a
+// data-plane read in dataPlaneReadMethods.
+func isDataPlaneReadMethod(method string) bool {
+	segs := strings.FieldsFunc(strings.ToLower(method), func(r rune) bool { return r == '.' || r == '/' })
+	n := len(segs)
+	return n > 0 && (dataPlaneReadMethods[segs[n-1]] || (n > 1 && dataPlaneReadMethods[segs[n-2]+"."+segs[n-1]]))
 }
 
 func (st *extractState) runEnrichers(ctx context.Context, clients *Clients) error {
@@ -464,12 +492,14 @@ func (st *extractState) applySingleBigQueryLink(job *bqJobLink, saWorkloads map[
 	if len(touched) == 0 {
 		return
 	}
-	srcURI := st.resolveBQJobPrincipalSource(job, saWorkloads)
+	srcURI, heuristic := st.resolvePrincipalSource(extractPrincipalEmail(job.principalSubject, job.userEmail), saWorkloads)
 	if srcURI == "" {
 		return
 	}
 	for _, dsURI := range touched {
-		st.emitTargetEdge(srcURI, dsURI, EdgeBQLineage, "bq_job", oosConfigRefCrossProject)
+		if from, to, ok := st.resolveEdgeEndpoints(srcURI, dsURI, oosConfigRefCrossProject); ok {
+			st.putEdge(FactEdge{FromURI: from, ToURI: to, Kind: EdgeBQLineage, Detail: "bq_job", Heuristic: heuristic})
+		}
 	}
 }
 
@@ -502,18 +532,18 @@ func appendUniqueDataset(refDatasets []string, destDS string) []string {
 	return touched
 }
 
-func (st *extractState) resolveBQJobPrincipalSource(job *bqJobLink, saWorkloads map[string][]string) string {
-	email := extractPrincipalEmail(job.principalSubject, job.userEmail)
-	if email == "" {
-		return ""
-	}
-	if wls := saWorkloads[email]; len(wls) == 1 {
-		return wls[0]
+// resolvePrincipalSource attributes a Service Account's activity to its dedicated workload when exactly
+// one workload runs as it; otherwise (0 or >1 workloads) to the unsuppressed Service Account itself.
+// heuristic is true when >1 workloads share the Service Account.
+func (st *extractState) resolvePrincipalSource(email string, saWorkloads map[string][]string) (string, bool) {
+	wls := saWorkloads[email]
+	if len(wls) == 1 {
+		return wls[0], false
 	}
 	if sa := st.saByEmail[email]; sa != nil && !sa.suppressed {
-		return sa.uri
+		return sa.uri, len(wls) > 1
 	}
-	return ""
+	return "", false
 }
 
 func extractPrincipalEmail(principalSubject, userEmail string) string {
@@ -1187,19 +1217,8 @@ func (st *extractState) resolveMonitoringSource(saUID string, saWorkloads map[st
 	if email == "" && strings.Contains(saUID, "@") {
 		email = strings.ToLower(saUID)
 	}
-	if email == "" {
-		return ""
-	}
-	if wls := saWorkloads[email]; len(wls) == 1 {
-		return wls[0]
-	}
-	if len(saWorkloads[email]) > 1 {
-		return ""
-	}
-	if sa := st.saByEmail[email]; sa != nil && !sa.suppressed {
-		return sa.uri
-	}
-	return ""
+	src, _ := st.resolvePrincipalSource(email, saWorkloads)
+	return src
 }
 
 func (st *extractState) emitConsumedAPIEdges(totals map[monitoringAggKey]int64, targetsByProjType map[projAssetTypeKey][]string, saWorkloads map[string][]string) {
@@ -1230,7 +1249,7 @@ func (st *extractState) emitConsumedAPIEdges(totals map[monitoringAggKey]int64, 
 			continue
 		}
 		st.referencedURIs[srcURI] = true
-		st.addEdge(srcURI, targetURIs[0], EdgeMonitoringTraffic, fmt.Sprintf("%s (%d reqs/7d)", k.host, totals[k]))
+		st.putEdge(FactEdge{FromURI: srcURI, ToURI: targetURIs[0], Kind: EdgeMonitoringTraffic, Detail: fmt.Sprintf("%s (%d reqs/7d)", k.host, totals[k]), Heuristic: true})
 	}
 }
 
@@ -1258,7 +1277,7 @@ func (st *extractState) emitPublisherModelEdges(genTotals map[monitoringAggKey]i
 			continue
 		}
 		st.referencedURIs[srcURI] = true
-		st.addEdge(srcURI, models[0], EdgeMonitoringTraffic, fmt.Sprintf("aiplatform.googleapis.com (%d reqs/7d)", genTotals[k]))
+		st.putEdge(FactEdge{FromURI: srcURI, ToURI: models[0], Kind: EdgeMonitoringTraffic, Detail: fmt.Sprintf("aiplatform.googleapis.com (%d reqs/7d)", genTotals[k]), Heuristic: true})
 	}
 }
 

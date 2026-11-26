@@ -65,19 +65,12 @@ type Pass2View struct {
 	Edges        []Pass2Edge      `json:"edges"`
 }
 
-// Pass2Placement positions a component within a Pass 2 detail view.
+// Pass2Placement positions a component within a Pass 2 detail view. Off-page references are
+// derived deterministically in Go after all views are populated.
 type Pass2Placement struct {
-	ComponentID string            `json:"component_id"`
-	ContainerID string            `json:"container_id,omitempty"`
-	Column      int               `json:"column"`
-	OffPageRefs []Pass2OffPageRef `json:"off_page_refs,omitempty"`
-}
-
-// Pass2OffPageRef links a placed component to another detail view.
-type Pass2OffPageRef struct {
-	TargetViewID string `json:"target_view_id"`
-	Label        string `json:"label"`
-	Direction    string `json:"direction"`
+	ComponentID string `json:"component_id"`
+	ContainerID string `json:"container_id,omitempty"`
+	Column      int    `json:"column"`
 }
 
 // Pass2Edge describes a directed edge between two components in a Pass 2 view.
@@ -178,7 +171,6 @@ var (
 		string(manifest.ProvenanceVerified),
 		string(manifest.ProvenanceInferred),
 	}
-	directionEnum = []string{"IN", "OUT"}
 )
 
 func stringSchema(desc string) *genai.Schema {
@@ -238,17 +230,10 @@ func excludedResourceSchema() *genai.Schema {
 }
 
 func placementSchema() *genai.Schema {
-	offPageRefItem := objectSchema(map[string]*genai.Schema{
-		"target_view_id": stringSchema("Target detail view ID"),
-		"label":          stringSchema("Short badge label"),
-		"direction":      enumSchema("Cross-view flow direction", directionEnum),
-	}, "target_view_id", "label", "direction")
-
 	return objectSchema(map[string]*genai.Schema{
-		"component_id":  stringSchema("Locked component ID placed in this view"),
-		"container_id":  stringSchema("Optional active container ID from container_ids"),
-		"column":        {Type: genai.TypeInteger, Description: "0-based archetype column index"},
-		"off_page_refs": arraySchema("Cross-view navigation badges for neighbors in other detail views", offPageRefItem),
+		"component_id": stringSchema("Locked component ID placed in this view"),
+		"container_id": stringSchema("Optional active container ID from container_ids"),
+		"column":       {Type: genai.TypeInteger, Description: "0-based archetype column index"},
 	}, "component_id", "column")
 }
 
@@ -259,7 +244,7 @@ func edgeSchema() *genai.Schema {
 		"verb":                stringSchema("Short action verb (max 16 chars)"),
 		"flow_kind":           enumSchema("Semantic flow category", flowKindEnum),
 		"provenance":          enumSchema("Evidence provenance classification", provenanceEnum),
-		"evidence_edge_ids":   stringArraySchema("Interned e_XXXX IDs forming a directed walk from -> to (required for VERIFIED)"),
+		"evidence_edge_ids":   stringArraySchema("Interned non-heuristic e_XXXX IDs forming a directed walk from -> to (required for VERIFIED)"),
 		"inference_rationale": stringSchema("Concise rationale required when provenance is INFERRED"),
 		"via_bus_id":          stringSchema("Optional shared bus ID for edges sharing one source or one target"),
 	}, "from", "to", "verb", "flow_kind", "provenance")
@@ -319,7 +304,7 @@ func Pass1PlanSchema() *genai.Schema {
 		"components":         arraySchema("Logical architecture blocks covering primary resources", componentSchema()),
 		"container_defs":     arraySchema("Global container frame definitions (max depth 2)", containerDefSchema()),
 		"excluded_resources": arraySchema("Active resources intentionally omitted from visual cards", excludedResourceSchema()),
-		"detail_views":       arraySchema("Focused logical views (target 6-12 components each)", detailViewSchema()),
+		"detail_views":       arraySchema("1-16 focused logical views (target 6-12 components each)", detailViewSchema()),
 	}, "components", "container_defs", "excluded_resources", "detail_views")
 }
 

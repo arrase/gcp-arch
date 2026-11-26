@@ -356,7 +356,7 @@ func TestValidateValidMultiViewWithSystemIndex(t *testing.T) {
 			{
 				From:            "sonarqube",
 				To:              "sonarqube_db",
-				Verb:            "PSA SQL",
+				Verb:            "PostgreSQL 5432",
 				FlowKind:        FlowRuntime,
 				Provenance:      ProvenanceVerified,
 				EvidenceEdgeIDs: []string{facts.Edges[5].ID},

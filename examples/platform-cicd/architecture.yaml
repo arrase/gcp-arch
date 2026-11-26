@@ -438,12 +438,11 @@ views:
         via_bus_id: cb_outputs
       - from: cloudbuild_triggers
         to: cloudbuild_staging_bucket
-        verb: stages builds
-        flow_kind: CICD
+        verb: write access
+        flow_kind: ADMIN
         provenance: VERIFIED
         evidence_edge_ids:
           - 37843a63c84a755f
-        via_bus_id: cb_outputs
       - from: github_acme
         to: cloudbuild_triggers
         verb: triggers builds

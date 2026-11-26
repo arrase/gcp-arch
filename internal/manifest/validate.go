@@ -2,6 +2,8 @@ package manifest
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -64,12 +66,20 @@ const (
 	ErrUnaccountedFactResource     = "UNACCOUNTED_FACT_RESOURCE"
 	ErrUnknownEvidenceEdge         = "UNKNOWN_EVIDENCE_EDGE"
 	ErrInvalidEdgeProvenance       = "INVALID_EDGE_PROVENANCE"
+	ErrExcludedDatastore           = "EXCLUDED_DATASTORE"
+	ErrDuplicateAccountedURI       = "DUPLICATE_ACCOUNTED_URI"
+	ErrTooManyDetailViews          = "TOO_MANY_DETAIL_VIEWS"
+	ErrViewComponentIDCollision    = "VIEW_COMPONENT_ID_COLLISION"
+	ErrUnknownPairComponent        = "UNKNOWN_PAIR_COMPONENT"
+	ErrInconsistentCrossViewEdge   = "INCONSISTENT_CROSS_VIEW_EDGE"
+	ErrPlacementContainerMismatch  = "PLACEMENT_CONTAINER_MISMATCH"
 )
 
 const (
 	maxInlineMetaRows        = 4
 	maxDetailViewPlacements  = 12
 	maxSystemIndexPlacements = 16
+	maxDetailViews           = maxSystemIndexPlacements
 	maxContainerNestingDepth = 2
 	maxEdgeVerbRunes         = 16
 )
@@ -118,18 +128,83 @@ func ValidateWithFacts(m *Manifest, facts *extract.FactsFile, reg *icons.Registr
 		return &ValidationError{Issues: issues}
 	}
 
-	compByID := make(map[string]Component, len(m.Components))
-	for _, c := range m.Components {
-		compByID[c.ID] = c
-	}
-
 	issues = append(issues, validateFactResourceAccounting(m, facts)...)
-	issues = append(issues, validateFactEdgeProvenance(m, facts, compByID)...)
+	issues = append(issues, validateFactEdgeProvenance(m, facts)...)
+	issues = append(issues, validatePlacementContainers(m, facts)...)
 
 	if len(issues) > 0 {
 		return &ValidationError{Issues: issues}
 	}
 	return nil
+}
+
+// validatePlacementContainers rejects placements inside a resource-backed container (VPC, GKE
+// cluster) when the component's resources declare a parent_uri chain that never reaches it.
+func validatePlacementContainers(m *Manifest, facts *extract.FactsFile) []ValidationIssue {
+	parentOf := ParentIndex(facts)
+	contByID := make(map[string]Container, len(m.Containers))
+	for _, ct := range m.Containers {
+		contByID[ct.ID] = ct
+	}
+	compByID := make(map[string]Component, len(m.Components))
+	for _, c := range m.Components {
+		compByID[c.ID] = c
+	}
+
+	var issues []ValidationIssue
+	for _, v := range m.Views {
+		if v.ID == SystemIndexViewID {
+			continue
+		}
+		for _, p := range v.Placements {
+			ct, ok := contByID[p.ContainerID]
+			if ok && !ComponentInsideContainer(compByID[p.ComponentID], ct, parentOf) {
+				issues = append(issues, ValidationIssue{
+					Code:    ErrPlacementContainerMismatch,
+					ViewID:  v.ID,
+					Subject: p.ComponentID,
+					Message: fmt.Sprintf("component %q is placed in container %q but none of its resources has that container's resource in its parent_uri chain", p.ComponentID, ct.ID),
+				})
+			}
+		}
+	}
+	return issues
+}
+
+// ParentIndex maps each facts resource URI to its parent_uri.
+func ParentIndex(facts *extract.FactsFile) map[string]string {
+	parentOf := make(map[string]string, len(facts.Resources))
+	for _, r := range facts.Resources {
+		if r.ParentURI != "" {
+			parentOf[r.URI] = r.ParentURI
+		}
+	}
+	return parentOf
+}
+
+// ComponentInsideContainer reports whether c may be drawn inside ct. Containers without backing
+// resources (PROJECT, PSA_ZONE, EXTERNAL_ZONE, ...) accept any component; so do components whose
+// resources carry no parent_uri information, since they cannot be checked.
+func ComponentInsideContainer(c Component, ct Container, parentOf map[string]string) bool {
+	if len(ct.BackedBy) == 0 {
+		return true
+	}
+	containerURIs := backedURISet(ct.BackedBy)
+	hasParentInfo := false
+	for _, br := range c.BackedBy {
+		if containerURIs[br.URI] {
+			return true
+		}
+		seen := map[string]bool{br.URI: true}
+		for cur, ok := parentOf[br.URI]; ok && !seen[cur]; cur, ok = parentOf[cur] {
+			hasParentInfo = true
+			if containerURIs[cur] {
+				return true
+			}
+			seen[cur] = true
+		}
+	}
+	return !hasParentInfo
 }
 
 func validateFactResourceAccounting(m *Manifest, facts *extract.FactsFile) []ValidationIssue {
@@ -178,69 +253,23 @@ func markBackedURIs(dst map[string]bool, backed []BackedResource) {
 	}
 }
 
-func validateFactEdgeProvenance(m *Manifest, facts *extract.FactsFile, compByID map[string]Component) []ValidationIssue {
-	factEdgeByID := make(map[string]extract.FactEdge, len(facts.Edges))
-	for _, fe := range facts.Edges {
-		factEdgeByID[fe.ID] = fe
-	}
-
+func validateFactEdgeProvenance(m *Manifest, facts *extract.FactsFile) []ValidationIssue {
+	idx := NewEvidenceIndex(m.Components, m.Containers, facts.Edges)
 	var issues []ValidationIssue
 	for _, v := range m.Views {
 		if v.ID == SystemIndexViewID {
 			continue
 		}
 		for _, e := range v.Edges {
-			issues = append(issues, validateSingleEdgeProvenance(v.ID, e, compByID, factEdgeByID)...)
+			if code, msg := idx.WalkIssue(e); code != "" {
+				issues = append(issues, ValidationIssue{
+					Code:    code,
+					ViewID:  v.ID,
+					Subject: e.From + " -> " + e.To,
+					Message: "VERIFIED edge " + e.From + " -> " + e.To + ": " + msg,
+				})
+			}
 		}
-	}
-	return issues
-}
-
-func validateSingleEdgeProvenance(viewID string, e Edge, compByID map[string]Component, factEdgeByID map[string]extract.FactEdge) []ValidationIssue {
-	if e.Provenance != ProvenanceVerified || len(e.EvidenceEdgeIDs) == 0 {
-		return nil
-	}
-	fromComp, okFrom := compByID[e.From]
-	toComp, okTo := compByID[e.To]
-	if !okFrom || !okTo {
-		return nil
-	}
-
-	edgeLabel := e.From + " -> " + e.To
-	cited := make([]extract.FactEdge, 0, len(e.EvidenceEdgeIDs))
-	var issues []ValidationIssue
-	missingAny := false
-	for _, eid := range e.EvidenceEdgeIDs {
-		if strings.TrimSpace(eid) == "" {
-			missingAny = true
-			continue
-		}
-		fe, ok := factEdgeByID[eid]
-		if !ok {
-			missingAny = true
-			issues = append(issues, ValidationIssue{
-				Code:    ErrUnknownEvidenceEdge,
-				ViewID:  viewID,
-				Subject: edgeLabel,
-				Message: fmt.Sprintf("evidence edge ID %q does not exist in facts.json", eid),
-			})
-			continue
-		}
-		cited = append(cited, fe)
-	}
-	if missingAny {
-		return issues
-	}
-
-	fromURIs := backedURISet(fromComp.BackedBy)
-	toURIs := backedURISet(toComp.BackedBy)
-	if !isValidDirectedWalk(cited, fromURIs, toURIs) {
-		issues = append(issues, ValidationIssue{
-			Code:    ErrInvalidEdgeProvenance,
-			ViewID:  viewID,
-			Subject: edgeLabel,
-			Message: fmt.Sprintf("VERIFIED edge %s evidence_edge_ids %v do not form a connected directed walk from %s.backed_by to %s.backed_by", edgeLabel, e.EvidenceEdgeIDs, e.From, e.To),
-		})
 	}
 	return issues
 }
@@ -253,6 +282,18 @@ type structureValidator struct {
 	detailViewIDs         map[string]bool
 	rejectedPairs         map[[2]string]bool
 	placedInAnyDetailView map[string]bool
+	crossViewEdges        map[crossViewEdgeKey]crossViewEdge
+}
+
+type crossViewEdgeKey struct {
+	from, to string
+	flowKind FlowKind
+}
+
+type crossViewEdge struct {
+	viewID     string
+	verb       string
+	provenance Provenance
 }
 
 func (sv *structureValidator) add(code, viewID, subject, msg string) {
@@ -277,7 +318,9 @@ func validateStructureIssues(m *Manifest, reg *icons.Registry) []ValidationIssue
 	sv.compByID = sv.validateComponents(m.Components, reg)
 	sv.contByID = sv.validateContainers(m.Containers)
 	sv.validateExcludedResources(m.ExcludedResources)
+	sv.validateAccountedURIUniqueness(m)
 	sv.rejectedPairs = sv.validateRejectedEdges(m.RejectedEdges)
+	sv.validateAcknowledgedEdges(m.AcknowledgedEdges)
 
 	if len(m.Views) == 0 {
 		sv.add(ErrNoViews, "", "", "manifest must define at least one view")
@@ -286,11 +329,50 @@ func validateStructureIssues(m *Manifest, reg *icons.Registry) []ValidationIssue
 
 	sv.viewIDs, sv.detailViewIDs = sv.validateViewIndex(m.Views)
 	sv.placedInAnyDetailView = make(map[string]bool, len(sv.compByID))
+	sv.crossViewEdges = make(map[crossViewEdgeKey]crossViewEdge)
 	for _, v := range m.Views {
 		sv.validateView(v)
 	}
 	sv.validateAllComponentsPlaced()
 	return sv.issues
+}
+
+// validateAccountedURIUniqueness requires every URI to be accounted exactly once across
+// components[].backed_by, containers[].backed_by, and excluded_resources.
+func (sv *structureValidator) validateAccountedURIUniqueness(m *Manifest) {
+	owners := make(map[string][]string)
+	for _, c := range m.Components {
+		for _, br := range c.BackedBy {
+			owners[br.URI] = append(owners[br.URI], "component "+c.ID)
+		}
+	}
+	for _, ct := range m.Containers {
+		for _, br := range ct.BackedBy {
+			owners[br.URI] = append(owners[br.URI], "container "+ct.ID)
+		}
+	}
+	for _, ex := range m.ExcludedResources {
+		owners[ex.URI] = append(owners[ex.URI], "excluded_resources")
+	}
+	for _, uri := range slices.Sorted(maps.Keys(owners)) {
+		if uri != "" && len(owners[uri]) > 1 {
+			sv.add(ErrDuplicateAccountedURI, "", uri, fmt.Sprintf("resource %q is accounted more than once (%s); each URI must appear exactly once", uri, strings.Join(owners[uri], ", ")))
+		}
+	}
+}
+
+func (sv *structureValidator) validateAcknowledgedEdges(pairs []ComponentPair) {
+	for i, p := range pairs {
+		sv.validatePairComponents(fmt.Sprintf("acknowledged_edges[%d]", i), p.From, p.To)
+	}
+}
+
+func (sv *structureValidator) validatePairComponents(subj, from, to string) {
+	for _, id := range []string{from, to} {
+		if _, ok := sv.compByID[id]; !ok {
+			sv.add(ErrUnknownPairComponent, "", subj, fmt.Sprintf("%s references unknown component %q", subj, id))
+		}
+	}
 }
 
 func (sv *structureValidator) validateComponents(components []Component, reg *icons.Registry) map[string]Component {
@@ -438,16 +520,21 @@ func (sv *structureValidator) validateExcludedResources(excluded []ExcludedResou
 		if strings.TrimSpace(ex.Reason) == "" {
 			sv.add(ErrMissingExclusionReason, "", subj, "excluded_resources entry requires non-empty reason")
 		}
+		if statefulDatastoreAssetTypes[ex.AssetType] {
+			sv.add(ErrExcludedDatastore, "", subj, fmt.Sprintf("stateful datastore %q (%s) must be diagrammed in a component (fold several into a COHORT if needed), not excluded", ex.URI, ex.AssetType))
+		}
 	}
 }
 
 func (sv *structureValidator) validateRejectedEdges(rejected []RejectedEdge) map[[2]string]bool {
 	rejectedPairs := make(map[[2]string]bool, len(rejected))
 	for i, re := range rejected {
+		subj := fmt.Sprintf("rejected_edges[%d]", i)
 		if strings.TrimSpace(re.From) == "" || strings.TrimSpace(re.To) == "" || strings.TrimSpace(re.Reason) == "" {
-			sv.add(ErrInvalidRejectedEdge, "", fmt.Sprintf("rejected_edges[%d]", i), "rejected_edges entry requires non-empty from, to, and reason")
+			sv.add(ErrInvalidRejectedEdge, "", subj, "rejected_edges entry requires non-empty from, to, and reason")
 			continue
 		}
+		sv.validatePairComponents(subj, re.From, re.To)
 		rejectedPairs[[2]string{re.From, re.To}] = true
 	}
 	return rejectedPairs
@@ -474,6 +561,12 @@ func (sv *structureValidator) validateViewIndex(views []View) (map[string]bool, 
 		if strings.TrimSpace(v.Title) == "" {
 			sv.add(ErrEmptyViewTitle, v.ID, v.ID, "view title must not be empty")
 		}
+		if _, clash := sv.compByID[v.ID]; clash {
+			sv.add(ErrViewComponentIDCollision, v.ID, v.ID, fmt.Sprintf("view id %q collides with a component id; View 0 placements reference both namespaces", v.ID))
+		}
+	}
+	if len(detailViewIDs) > maxDetailViews {
+		sv.add(ErrTooManyDetailViews, "", "", fmt.Sprintf("manifest has %d detail views (max %d so View 0 can index every view)", len(detailViewIDs), maxDetailViews))
 	}
 	sv.validateSystemIndexPosition(systemIndexIdx, len(detailViewIDs))
 	return viewIDs, detailViewIDs
@@ -621,6 +714,9 @@ func (sv *structureValidator) validateViewEdges(v View, isSystemIndex bool, plac
 
 	for _, e := range v.Edges {
 		sv.validateSingleViewEdge(v.ID, e, isSystemIndex, placedInView)
+		if !isSystemIndex {
+			sv.validateCrossViewConsistency(v.ID, e)
+		}
 		if e.ViaBusID != "" {
 			b, ok := buses[e.ViaBusID]
 			if !ok {
@@ -645,6 +741,20 @@ func (sv *structureValidator) validateViewEdges(v View, isSystemIndex bool, plac
 		if len(b.froms) > 1 && len(b.tos) > 1 {
 			sv.add(ErrInvalidBusGroup, v.ID, bid, fmt.Sprintf("via_bus_id %q mixes %d distinct sources and %d distinct targets (must share one from or one to)", bid, len(b.froms), len(b.tos)))
 		}
+	}
+}
+
+// validateCrossViewConsistency requires the same (from, to, flow_kind) edge drawn in several
+// detail views to carry the same verb and provenance everywhere.
+func (sv *structureValidator) validateCrossViewConsistency(viewID string, e Edge) {
+	k := crossViewEdgeKey{from: e.From, to: e.To, flowKind: e.FlowKind}
+	prev, seen := sv.crossViewEdges[k]
+	if !seen {
+		sv.crossViewEdges[k] = crossViewEdge{viewID: viewID, verb: e.Verb, provenance: e.Provenance}
+		return
+	}
+	if prev.viewID != viewID && (prev.verb != e.Verb || prev.provenance != e.Provenance) {
+		sv.add(ErrInconsistentCrossViewEdge, viewID, e.From+" -> "+e.To, fmt.Sprintf("edge is drawn as %q/%s here but %q/%s in view %q; the same edge must read identically in every view", e.Verb, e.Provenance, prev.verb, prev.provenance, prev.viewID))
 	}
 }
 
