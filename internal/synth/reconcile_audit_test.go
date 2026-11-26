@@ -233,9 +233,10 @@ func TestView0FairExternalCapAndSharedSinkLink(t *testing.T) {
 			accent = manifest.AccentCICD
 		}
 		var refs []manifest.OffPageRef
-		if i == 0 {
+		switch i {
+		case 0:
 			refs = []manifest.OffPageRef{{TargetViewID: "v_01", Label: "locks state", Direction: "IN"}}
-		} else if i == 1 {
+		case 1:
 			refs = []manifest.OffPageRef{{TargetViewID: "v_00", Label: "updates state", Direction: "IN"}}
 		}
 		m.Views = append(m.Views, manifest.View{

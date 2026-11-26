@@ -39,7 +39,7 @@ func TestValidateAccountingRules(t *testing.T) {
 		m.ExcludedResources = append(m.ExcludedResources, ExcludedResource{
 			URI: "//storage.googleapis.com/orphan", AssetType: "storage.googleapis.com/Bucket", ProjectID: "acme-cicd", Reason: "unused",
 		})
-		assertHasValidationCode(t, ValidateStructure(m, reg), ErrExcludedDatastore)
+		_ = assertHasValidationCode(t, ValidateStructure(m, reg), ErrExcludedDatastore)
 	})
 
 	t.Run("duplicate accounted uri", func(t *testing.T) {
@@ -69,7 +69,7 @@ func TestValidateViewIndexRules(t *testing.T) {
 	t.Run("view id collides with component id", func(t *testing.T) {
 		m, _ := baseFixture()
 		m.Views[0].ID = "atlantis"
-		assertHasValidationCode(t, ValidateStructure(m, reg), ErrViewComponentIDCollision)
+		_ = assertHasValidationCode(t, ValidateStructure(m, reg), ErrViewComponentIDCollision)
 	})
 
 	t.Run("too many detail views", func(t *testing.T) {
@@ -81,7 +81,7 @@ func TestValidateViewIndexRules(t *testing.T) {
 			v.ID = "view_" + string(rune('a'+i))
 			m.Views = append(m.Views, v)
 		}
-		assertHasValidationCode(t, ValidateStructure(m, reg), ErrTooManyDetailViews)
+		_ = assertHasValidationCode(t, ValidateStructure(m, reg), ErrTooManyDetailViews)
 	})
 
 	t.Run("inconsistent cross-view edge", func(t *testing.T) {
@@ -90,7 +90,7 @@ func TestValidateViewIndexRules(t *testing.T) {
 		second.ID = "second"
 		second.Edges = []Edge{{From: "sonarqube", To: "sonarqube_db", Verb: "SQL", FlowKind: FlowRuntime, Provenance: ProvenanceInferred, InferenceRationale: "guess"}}
 		m.Views = append(m.Views, second)
-		assertHasValidationCode(t, ValidateStructure(m, reg), ErrInconsistentCrossViewEdge)
+		_ = assertHasValidationCode(t, ValidateStructure(m, reg), ErrInconsistentCrossViewEdge)
 	})
 }
 
