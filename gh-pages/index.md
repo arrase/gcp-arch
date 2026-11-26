@@ -104,7 +104,7 @@ Build a zero-dependency static binary from source (requires **Go 1.26+**) or dow
 
 === "Pre-Built Release Binaries"
 
-    Static release binaries are published on tag pushes for five targets (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`):
+    Static release binaries are published whenever a GitHub Release is published ([`.github/workflows/release.yml`](https://github.com/arrase/gcp-arch/blob/main/.github/workflows/release.yml)) for five targets (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`):
 
     ```bash
     # Example: Linux amd64
@@ -125,9 +125,9 @@ Build a zero-dependency static binary from source (requires **Go 1.26+**) or dow
    - Target scopes need `roles/cloudasset.viewer` (plus recommended read-only roles for Monitoring, BigQuery, Dataflow, and Folder names).
    - Synthesis bills to a separate `--vertex-project` with `roles/aiplatform.user`. See [Security, IAM & Preflight](security_iam.md) for the exact permission matrix.
 3. **Local Chrome or Chromium** *(for `render` PDF/PNG export & CLI collision verification)*:
-   - Auto-discovered via `--chrome-path`, `CHROME_PATH`, `config.yaml`, `PATH`, or standard Linux/macOS install locations.
+   - Auto-discovered via `--chrome-path`, `CHROME_PATH`, `config.yaml`, `PATH`, or standard Linux/macOS install locations ([`internal/render/cdp.go`](https://github.com/arrase/gcp-arch/blob/main/internal/render/cdp.go)).
    - Runs in an isolated ephemeral `--user-data-dir` with `--headless=new` and `--disable-background-networking`.
-   - `--format html` alone works even without Chrome/Chromium (writing a self-contained HTML dossier with a warning that CLI collision verification was skipped).
+   - `--format html` alone works even without Chrome/Chromium when `--chrome-path` is unset and auto-discovery finds no binary (writing a self-contained HTML dossier with a warning that CLI collision verification was skipped); passing an explicit nonexistent `--chrome-path` still fails fast with exit code `1` ([`cmd/gcp-arch/render.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/render.go#L137-L139)).
 
 ---
 
@@ -159,7 +159,7 @@ gcp-arch render architecture.yaml --format pdf,png,html -o out/
     gcp-arch synthesize facts.json --reconcile architecture.yaml --vertex-project consultant-ai-sandbox
     gcp-arch render architecture.yaml -o out/
     ```
-    When no resources or inter-component edges changed, `--reconcile` finishes in **`< 100 ms`** with **`0` Vertex AI calls** and leaves `architecture.yaml` untouched on disk.
+    When no resources or unsettled structural inter-component edges changed (ignoring `heuristic: true` monitoring fluctuations) — or on deletion-only deltas — `--reconcile` finishes with **`0` Vertex AI calls** without needing `--vertex-project`. On the unchanged fast path (`< 100 ms`), it also runs `refreshEdgeProvenance` (downgrading or restoring transient `VERIFIED` edges in `0` LLM calls) and writes updated YAML only if the canonical bytes changed ([`internal/synth/pipeline.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/pipeline.go#L805-L833), [`internal/synth/finalize.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/finalize.go#L30-L64), [`cmd/gcp-arch/synthesize.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go#L204-L216)).
 
 ---
 
@@ -178,7 +178,7 @@ gcp-arch render architecture.yaml --format pdf,png,html -o out/
 
 ## Visual Output Gallery
 
-Both reference bundles in `examples/` are validated and rendered completely offline from their synthetic `architecture.yaml` manifests:
+Both reference bundles in [`examples/`](https://github.com/arrase/gcp-arch/tree/main/examples) are validated and rendered completely offline from their synthetic `architecture.yaml` manifests:
 
 | Platform CI/CD — System Index Map (`View 0`) | Retail Cloud-Native — System Index Map (`View 0`) |
 | :---: | :---: |
@@ -203,11 +203,11 @@ flowchart LR
     Render --> Deliverables["architecture.pdf\nviews/*.png (3x)\narchitecture.html"]
 ```
 
-1. **Preflight (`gcp-arch preflight`):** Probes read-only target permissions (`cloudasset`, folder display names, `monitoring`, `bigquery`, `dataflow`) and runs zero-token Vertex AI IAM & model availability checks with copy-pasteable `gcloud` remediations.
-2. **Stage 1 — Extract (`gcp-arch extract`):** Streams `ReadTime`-pinned CAI resources and scoped IAM policies, folds noisy sub-resources, resolves GKE/Cloud Build/network relationships, runs concurrent 7-day enrichers, and scrubs secrets into a deterministic `v3` `facts.json`.
-3. **Stage 2 — Synthesize (`gcp-arch synthesize`):** Interns URIs and edges into compact handles (`r_0001`, `e_0001`), runs two-pass Gemini 4 structured synthesis (or Day-2 `--reconcile`), deterministically projects `View 0` (`view_0_system_index`), and validates 100% coverage + directed-walk provenance.
-4. **Validate (`gcp-arch validate`):** Enforces strict `KnownFields(true)` YAML decoding and structural rules offline in Git PR CI, or full resource accounting & directed-walk provenance with `--facts`.
-5. **Stage 3 — Render (`gcp-arch render`):** Compiles a strict-CSP self-contained HTML document with embedded `Inter`/`JetBrains Mono` fonts and 85 SVG icons, runs the orthogonal corridor router with zero-collision verification inside isolated headless Chrome, and exports vector A4 landscape `.pdf`, `3x` `3120px` `.png`s, and pre-routed `.html`.
+1. **Preflight (`gcp-arch preflight` — [`cmd/gcp-arch/preflight.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/preflight.go)):** Probes read-only target permissions (`cloudasset`, folder display names, `monitoring`, `bigquery`, `dataflow`) and runs zero-token Vertex AI IAM & model availability checks with copy-pasteable `gcloud` remediations.
+2. **Stage 1 — Extract (`gcp-arch extract` — [`cmd/gcp-arch/extract.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/extract.go), [`internal/extract/`](https://github.com/arrase/gcp-arch/tree/main/internal/extract)):** Streams `ReadTime`-pinned CAI resources and scoped IAM policies, folds noisy sub-resources, resolves GKE/Cloud Build/network relationships, runs concurrent 7-day enrichers, and scrubs secrets into a deterministic `v3` `facts.json`.
+3. **Stage 2 — Synthesize (`gcp-arch synthesize` — [`cmd/gcp-arch/synthesize.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go), [`internal/synth/`](https://github.com/arrase/gcp-arch/tree/main/internal/synth)):** Interns URIs and edges into compact handles (`r_0001`, `e_0001`), runs two-pass Gemini 4 structured synthesis (or Day-2 `--reconcile`), deterministically projects `View 0` (`view_0_system_index`), and validates 100% coverage + directed-walk provenance.
+4. **Validate (`gcp-arch validate` — [`cmd/gcp-arch/validate.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go), [`internal/manifest/`](https://github.com/arrase/gcp-arch/tree/main/internal/manifest)):** Enforces strict `KnownFields(true)` YAML decoding and structural rules offline in Git PR CI, or full resource accounting & directed-walk provenance with `--facts`.
+5. **Stage 3 — Render (`gcp-arch render` — [`cmd/gcp-arch/render.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/render.go), [`internal/render/`](https://github.com/arrase/gcp-arch/tree/main/internal/render), [`internal/icons/`](https://github.com/arrase/gcp-arch/tree/main/internal/icons)):** Compiles a strict-CSP self-contained HTML document with embedded `Inter`/`JetBrains Mono` fonts and 85 SVG icons, runs the orthogonal corridor router with zero-collision verification inside isolated headless Chrome, and exports vector A4 landscape `.pdf`, `3x` `.png`s (`3120px` nominal), and pre-routed `.html`.
 
 ---
 
@@ -247,7 +247,7 @@ gcp-arch synthesize facts.json \
 
 ### 4. Standalone Offline HTML Dossier Export
 
-Generate a single-file offline `.html` deliverable (works even on machines without Chrome/Chromium):
+Generate a single-file offline `.html` deliverable (works even on machines without Chrome/Chromium when `--chrome-path` is unset):
 
 ```bash
 gcp-arch render architecture.yaml --format html -o out/
@@ -256,6 +256,8 @@ gcp-arch render architecture.yaml --format html -o out/
 ---
 
 ## CLI Commands & Exit Codes
+
+Root CLI entrypoint, config loader, and atomic I/O live in [`cmd/gcp-arch/main.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/main.go), [`cmd/gcp-arch/config.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/config.go), and [`internal/ioutil/`](https://github.com/arrase/gcp-arch/tree/main/internal/ioutil).
 
 | Command | Network / Auth Required | Primary Output |
 | :--- | :--- | :--- |

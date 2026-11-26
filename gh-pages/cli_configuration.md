@@ -48,7 +48,7 @@ Every command supports zero-touch defaults via an optional XDG YAML configuratio
 
 ## Root Command (`gcp-arch`)
 
-Invoking `gcp-arch` prints pipeline help, configuration precedence, and exit code semantics (`cmd/gcp-arch/main.go`).
+Invoking `gcp-arch` prints pipeline help, configuration precedence, and exit code semantics ([`cmd/gcp-arch/main.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/main.go)).
 
 ```bash
 gcp-arch [command]
@@ -58,7 +58,7 @@ gcp-arch --help
 
 | Behavior | Implementation Detail |
 | :--- | :--- |
-| **Binary Version (`--version`, `-v`)** | Defaults to `dev` (`var version = "dev"` in `cmd/gcp-arch/main.go`). Official release binaries inject the Git tag at build time via `-ldflags "-s -w -X main.version=${VERSION}"` (`.github/workflows/release.yml`). |
+| **Binary Version (`--version`, `-v`)** | Defaults to `dev` (`var version = "dev"` in [`cmd/gcp-arch/main.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/main.go#L27)). Official release binaries inject the Git tag at build time via `-ldflags "-s -w -X main.version=${VERSION}"` ([`.github/workflows/release.yml`](https://github.com/arrase/gcp-arch/blob/main/.github/workflows/release.yml)). |
 | **Shell Completion Command** | Disabled by default (`CompletionOptions{DisableDefaultCmd: true}`) to keep the CLI surface restricted to the five pipeline subcommands. |
 | **Error & Usage Output** | `SilenceUsage: true` and `SilenceErrors: true` suppress duplicated Cobra usage dumps. Errors print once to `stderr` as `Error: <message>`. |
 | **Strict Config Pre-Flight (`PersistentPreRunE`)** | Loads and strictly validates `~/.config/gcp-arch/config.yaml` (or `$XDG_CONFIG_HOME/gcp-arch/config.yaml`) before **every** subcommand executes—including offline `validate` and `render`. A typo, unknown YAML key, trailing YAML document, or out-of-range setting aborts immediately with exit code `2` before any command logic runs. |
@@ -103,7 +103,7 @@ gcp-arch preflight [flags]
 
 #### `PreflightReport` JSON Schema (`preflight --json`)
 
-Defined in `cmd/gcp-arch/preflight.go` (`PreflightReport`) and `internal/extract/client.go` (`PreflightProbe`):
+Defined in [`cmd/gcp-arch/preflight.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/preflight.go) (`PreflightReport`) and [`internal/extract/client.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go) (`PreflightProbe`):
 
 ```json
 {
@@ -195,7 +195,7 @@ gcp-arch extract [flags]
 * **`stdout`:** Prints `Wrote <outPath> (<R> resources, <E> edges)` on success (suppressed when `-q/--quiet` is set).
 * **`stderr`:**
   * Streams throttled progress updates (`<= 1/sec`, suppressed by `-q/--quiet`), such as `CAI RESOURCE projects/acme-cicd: page 1 (1000 scanned, 94 retained)` and `Enrich Monitoring: 1/1 projects`.
-  * **Always emits actionable diagnostics even with `-q/--quiet`** (`cmd/gcp-arch/extract.go:102-103`):
+  * **Always emits actionable diagnostics even with `-q/--quiet`** ([`cmd/gcp-arch/extract.go#L102-L103`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/extract.go#L102-L103)):
     * **Out-of-scope deployment targets** (sorted by `(target_project_id, source_kind)`):
       ```text
       Out-of-scope deployment target projects discovered (2):
@@ -224,7 +224,7 @@ gcp-arch synthesize <facts.json> [flags]
 
 | Flag | Short / Alias | Type | Default | `config.yaml` Key | Validation & Behavior |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `--vertex-project` | — | `string` | `""` | `vertex_project` | GCP billing project ID for Vertex AI Gemini calls. Required for Day-1 synthesis (exit `2` if omitted). Optional for Day-2 `--reconcile` when zero deltas exist; required if deltas invoke the LLM (exit `2` with `(pass --vertex-project)`). |
+| `--vertex-project` | — | `string` | `""` | `vertex_project` | GCP billing project ID for Vertex AI Gemini calls. Required for Day-1 synthesis (exit `2` if omitted). Optional for Day-2 `--reconcile` when zero deltas exist or only vanished resources are pruned; required if unclaimed resources or new inter-component edges invoke the LLM (exit `2` with `(pass --vertex-project)`). |
 | `--vertex-location` | — | `string` | `"global"` | `vertex_location` | Vertex AI endpoint location (`synth.DefaultVertexLocation`). |
 | `--model` | — | `string` | `"gemini-4-carbon"` | `model` | Vertex AI model ID (`synth.DefaultVertexModel`). |
 | `--thinking-level` | — | `string` | `""` *(model default)* | `thinking_level` | Case-insensitive Gemini thinking effort: `minimal`, `low`, `medium`, `high`, or `xhigh`. Omit or leave empty to apply Vertex AI's model default. Invalid values exit `2`. |
@@ -235,13 +235,15 @@ gcp-arch synthesize <facts.json> [flags]
 
 #### Stdout, Lazy Vertex Initialization & Day-2 Fast Path
 
-* **Lazy Vertex AI Client (`lazyModelClient`):** Vertex AI ADC discovery and client creation are deferred behind a `sync.Once` wrapper until `GenerateJSON` is actually invoked (`cmd/gcp-arch/synthesize.go:22-40`). Consequently:
+* **Lazy Vertex AI Client (`lazyModelClient`):** Vertex AI ADC discovery and client creation are deferred behind a `sync.Once` wrapper until `GenerateJSON` is actually invoked ([`cmd/gcp-arch/synthesize.go#L22-L40`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go#L22-L40)). Consequently:
   * Scale-limit overflow (`> 500` active resources -> `ScaleLimitError`, exit `2`) fails immediately before touching Vertex AI credentials.
-  * Day-2 `--reconcile` with zero resource or edge deltas completes in `< 100 ms` with **0 LLM calls** and requires no `--vertex-project` or Vertex ADC.
-* **In-Place `Unchanged` Fast Path:** When reconciling in place (`filepath.Clean(targetPath) == filepath.Clean(reconcilePath)`), `gcp-arch` compares the canonical marshaled YAML bytes of the existing and reconciled manifests (`manifestsEqualInPlace`). If identical, the existing file is left untouched on disk (preserving mtime) and `stdout` prints:
-  ```text
-  Unchanged architecture.yaml (0 deltas)
-  ```
+  * Day-2 `--reconcile` with zero resource/edge deltas **or deletion-only deltas** (pruning vanished resources and running `finalizeManifest`, [`internal/synth/pipeline.go#L805-L833`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/pipeline.go#L805-L833)) completes in `< 100 ms` with **0 LLM calls** and requires no `--vertex-project` or Vertex ADC.
+* **In-Place `Unchanged` Fast Path vs. 0-LLM Provenance Refresh:** Even when zero resource or edge deltas exist, `Reconcile` runs `refreshEdgeProvenance` (which may downgrade a `VERIFIED` edge whose walk vanished to `INFERRED`, or restore a recovered edge back to `VERIFIED`) and refreshes `acknowledged_edges` ([`internal/synth/pipeline.go#L808-L810`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/pipeline.go#L808-L810)). When reconciling in place (`filepath.Clean(targetPath) == filepath.Clean(reconcilePath)`), `gcp-arch` compares the canonical marshaled YAML bytes of the existing and reconciled manifests (`manifestsEqualInPlace`, [`cmd/gcp-arch/synthesize.go#L204-L237`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go#L204-L237)):
+  * If canonical bytes are identical, the existing file is left untouched on disk (preserving mtime) and `stdout` prints:
+    ```text
+    Unchanged architecture.yaml (0 deltas)
+    ```
+  * If canonical bytes changed (for example, after deletion-only pruning or a `refreshEdgeProvenance` downgrade/restore in `0` LLM calls), `gcp-arch` atomically writes the updated manifest and prints `Reconciled ...`.
 * **Day-1 & Changed Day-2 Output:** Atomically writes canonical 2-space YAML with `0644` permissions (`0755` dir) and prints to `stdout` (unless `-q`):
   * Day 1: `Wrote architecture.yaml (4 views, 21 components)`
   * Day 2 (updated or redirected via `-o`): `Reconciled architecture.yaml (4 views, 22 components)`
@@ -250,7 +252,7 @@ gcp-arch synthesize <facts.json> [flags]
 
 ### 4. `validate` — Offline Manifest & Provenance Validation
 
-Validates an `architecture.yaml` manifest completely offline with zero network calls. Without `--facts`, enforces strict YAML decoding (`KnownFields(true)`, single document), schema version `v1`, archetype column bounds, placement caps, container nesting depth `<= 2`, embedded icon keys, single-source `via_bus_id`, datastore homogeneity, and `rejected_edges` compliance. With `--facts <facts.json>`, additionally enforces 100% `FactsFile` resource accounting and directed-walk `FactEdge` provenance on every detail-view `VERIFIED` edge. See [Manifest Schema & Validation](manifest_schema.md) for the complete rule catalog.
+Validates an `architecture.yaml` manifest completely offline with zero network calls ([`cmd/gcp-arch/validate.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go), [`internal/manifest/validate.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go)). Without `--facts`, enforces strict YAML decoding (`KnownFields(true)`, single document), schema version `v1`, `1..16` detail views (`TOO_MANY_DETAIL_VIEWS`), disjoint view/component IDs (`VIEW_COMPONENT_ID_COLLISION`), archetype column bounds, placement caps, container nesting depth `<= 2`, embedded icon keys, single-source/single-target `via_bus_id`, datastore homogeneity, non-exclusion of stateful datastores (`EXCLUDED_DATASTORE`), unique `1:1` URI accounting (`DUPLICATE_ACCOUNTED_URI`), `rejected_edges` / `acknowledged_edges` component checks (`UNKNOWN_PAIR_COMPONENT`), and cross-view edge verb/provenance consistency (`INCONSISTENT_CROSS_VIEW_EDGE`). With `--facts <facts.json>`, additionally enforces 100% `FactsFile` resource accounting, `parent_uri` container ancestry (`PLACEMENT_CONTAINER_MISMATCH`), and strict directed-walk `FactEdge` provenance via [`EvidenceIndex.WalkIssue`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/evidence.go#L76-L104) on every detail-view `VERIFIED` edge (rejecting `heuristic: true` edges, blocking walks through container-backed or third-component URIs, and requiring `flow_kind: ADMIN` on permission-only walks). See [Manifest Schema & Validation](manifest_schema.md) for the complete rule catalog.
 
 ```bash
 gcp-arch validate <architecture.yaml> [flags]
@@ -262,26 +264,34 @@ gcp-arch validate <architecture.yaml> [flags]
 
 | Flag | Short / Alias | Type | Default | `config.yaml` Key | Validation & Behavior |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `--facts` | — | `string` | `""` | — | Optional `v3` `facts.json` file for 100% resource coverage and directed-walk edge provenance verification. |
+| `--facts` | — | `string` | `""` | — | Optional `v3` `facts.json` file for 100% resource coverage, container ancestry, and directed-walk edge provenance verification. |
 | `--json` | — | `bool` | `false` | — | Emits `ValidationReport` JSON to `stdout`. |
 
 #### Stdout vs. Stderr Behavior
 
 | Outcome | Text Mode (`stdout` / `stderr`) | `--json` Mode (`stdout` / `stderr`) | Exit Code |
 | :--- | :--- | :--- | :---: |
-| **Valid manifest** | `stdout`: `Valid: <path> (<V> views, <C> components)` | `stdout`: `{"valid": true}` | `0` |
+| **Valid manifest** | `stdout`: `Valid: <path> (<V> views, <C> components)` — or `Valid: <path> (<V> views, <C> components, <E> excluded)` when `len(excluded_resources) > 0` ([`cmd/gcp-arch/validate.go#L78-L83`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L78-L83)) | `stdout`: `{"valid": true}` (includes `"excluded_count": <E>` when `len(excluded_resources) > 0`, [`cmd/gcp-arch/validate.go#L71-L76`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L71-L76)) | `0` |
 | **Structural or `--facts` error** (`*manifest.ValidationError`) | `stderr`: `Error: manifest validation failed (N issue(s)): ...` | `stdout`: full `ValidationReport` JSON; `stderr`: `Error: manifest validation failed (...)` | `2` |
 | **YAML syntax, unknown field, or trailing document** | `stderr`: `Error: decode manifest ...` | `stdout`: `ValidationReport` with `code: "YAML_DECODE_ERROR"`; `stderr`: `Error: decode manifest ...` | `2` |
 | **Missing/unreadable file** (`*os.PathError`) | `stderr`: `Error: read manifest ...` | `stderr` only (no JSON written to `stdout`) | `1` |
 
 #### `ValidationReport` JSON Schema (`validate --json`)
 
-Defined in `internal/manifest/types.go` (`ValidationReport`, `ValidationIssue`) and `cmd/gcp-arch/validate.go` (`YAML_DECODE_ERROR`):
+Defined in [`internal/manifest/types.go#L210-L222`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L210-L222) (`ValidationReport`, `ValidationIssue`) and [`cmd/gcp-arch/validate.go#L71-L102`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L71-L102) (`YAML_DECODE_ERROR`):
 
-=== "Valid Manifest"
+=== "Valid Manifest (No Exclusions)"
     ```json
     {
       "valid": true
+    }
+    ```
+
+=== "Valid Manifest (With `excluded_resources`)"
+    ```json
+    {
+      "valid": true,
+      "excluded_count": 2
     }
     ```
 
@@ -293,13 +303,13 @@ Defined in `internal/manifest/types.go` (`ValidationReport`, `ValidationIssue`) 
         {
           "code": "INVALID_ICON_KEY",
           "subject": "comp_checkout_api",
-          "message": "unknown icon_key \"cloud_run_v2\""
+          "message": "unknown or empty icon_key \"cloud_run_v2\""
         },
         {
           "code": "INVALID_EDGE_PROVENANCE",
           "view_id": "view_runtime",
-          "subject": "comp_checkout_api->comp_orders_db",
-          "message": "evidence_edge_ids do not form a valid directed walk from comp_checkout_api to comp_orders_db"
+          "subject": "comp_checkout_api -> comp_orders_db",
+          "message": "VERIFIED edge comp_checkout_api -> comp_orders_db: evidence_edge_ids [e1] do not form a connected directed walk from comp_checkout_api.backed_by to comp_orders_db.backed_by"
         }
       ]
     }
@@ -322,10 +332,11 @@ Defined in `internal/manifest/types.go` (`ValidationReport`, `ValidationIssue`) 
 | Field | Type | Presence | Description |
 | :--- | :--- | :--- | :--- |
 | `valid` | `bool` | Always | `true` when zero structural and provenance issues exist. |
+| `excluded_count` | `int` | `omitempty` | Number of entries in `excluded_resources`; emitted on valid manifests when `len(m.ExcludedResources) > 0` ([`internal/manifest/types.go#L212`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L212), [`cmd/gcp-arch/validate.go#L72`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L72)). |
 | `errors` | `[]ValidationIssue` | `omitempty` | Non-empty slice of validation issues when `valid` is `false`. |
 | `errors[].code` | `string` | Always | Machine-readable validation error code (e.g., `INVALID_ICON_KEY`, `UNACCOUNTED_FACT_RESOURCE`, `INVALID_EDGE_PROVENANCE`, or `YAML_DECODE_ERROR`). |
 | `errors[].view_id` | `string` | `omitempty` | View ID where a view-scoped issue occurred. |
-| `errors[].subject` | `string` | `omitempty` | Component ID, container ID, edge `from->to`, resource URI, or manifest file path (for `YAML_DECODE_ERROR`). |
+| `errors[].subject` | `string` | `omitempty` | Component ID, container ID, edge `from -> to` ([`internal/manifest/validate.go#L268`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L268), [`#L762`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L762)), resource URI, or manifest file path (for `YAML_DECODE_ERROR`). |
 | `errors[].message` | `string` | Always | Human-readable diagnostic explanation. |
 
 ---
@@ -357,16 +368,18 @@ gcp-arch render <architecture.yaml> [flags]
   Wrote 4 view PNG(s) in out/views
   Wrote out/architecture.html
   ```
-* **`stderr` (Chrome-free `--format html` fallback):** When `--format html` is requested **alone** (no `pdf` or `png`), `--chrome-path` was **not** passed, and no Chrome/Chromium binary is found, `gcp-arch` writes a self-contained `<out>/architecture.html` containing the embedded JS router, exits `0`, and prints:
-  ```text
-  warning: Chrome/Chromium not found (no Chrome or Chromium executable found; install Chrome or pass --chrome-path / CHROME_PATH); wrote self-contained out/architecture.html without CLI collision verification
-  ```
+* **`stderr` & `stdout` (Chrome-free `--format html` fallback):** When `--format html` is requested **alone** (no `pdf` or `png`), `--chrome-path` was **not** passed, and no Chrome/Chromium binary is found ([`cmd/gcp-arch/render.go#L140-L155`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/render.go#L140-L155)):
+  * `render.BuildHTML` first runs `PrepareDocument` pre-browser container collision checks (`container_frame_collision`, `container_overlap_collision`, [`internal/render/prepare.go#L468-L506`](https://github.com/arrase/gcp-arch/blob/main/internal/render/prepare.go#L468-L506)); any violation returns `*render.LayoutCollisionError` and exits **`2`** via [`classifyExitCode`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/main.go#L157-L160) without writing HTML.
+  * Otherwise, `gcp-arch` writes a self-contained `<out>/architecture.html` containing the embedded JS router, prints `Wrote <out>/architecture.html` to `stdout` (unless `-q`, [`cmd/gcp-arch/render.go#L152-L154`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/render.go#L152-L154)), exits `0`, and prints to `stderr`:
+    ```text
+    warning: Chrome/Chromium not found (no Chrome or Chromium executable found; install Chrome or pass --chrome-path / CHROME_PATH); wrote self-contained out/architecture.html without CLI collision verification
+    ```
 
 ---
 
 ## Configuration File (`config.yaml`)
 
-`gcp-arch` reads optional user defaults from an XDG-compliant YAML configuration file (`cmd/gcp-arch/config.go`).
+`gcp-arch` reads optional user defaults from an XDG-compliant YAML configuration file ([`cmd/gcp-arch/config.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/config.go)).
 
 ### File Resolution & Missing/Empty Handling
 
@@ -387,7 +400,7 @@ gcp-arch render <architecture.yaml> [flags]
   * `project_aliases` keys must be all-digit project numbers, values must be valid project IDs, and duplicate conflicting mappings after trimming are rejected.
   * `thinking_level` must be empty or one of `minimal`, `low`, `medium`, `high`, `xhigh`.
   * `concurrency` and `cloudbuild_runs` (when present) must be `>= 1`.
-  * `format` (when non-null) must contain only `pdf`, `png`, `html`.
+  * `format` (when non-null) must be non-empty and contain only `pdf`, `png`, `html`; an empty non-null sequence `format: []` fails validation with exit code `2` (`--format cannot be empty`, [`cmd/gcp-arch/config.go#L139-L143`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/config.go#L139-L143)).
 
 ### Precedence Chain
 
@@ -477,7 +490,7 @@ format:
 
 ## Chrome / Chromium Discovery & `--format` Matrix
 
-For `render`, `render.FindChrome` (`internal/render/cdp.go:270-299`) resolves a local Chrome or Chromium binary in strict 5-step priority order:
+For `render`, `render.FindChrome` ([`internal/render/cdp.go#L272-L301`](https://github.com/arrase/gcp-arch/blob/main/internal/render/cdp.go#L272-L301)) resolves a local Chrome or Chromium binary in strict 5-step priority order:
 
 ```mermaid
 flowchart TD
@@ -513,20 +526,20 @@ Standard OS fallback paths inspected in Step 5 (`defaultChromeOSPaths`):
 | Contains `pdf` or `png` | Any | Yes | Runs isolated headless Chrome (`router.js` + zero-collision gate) and exports all requested formats. | `0` *(or `2` on layout collision)* |
 | Contains `pdf` or `png` | Any | No | Aborts immediately: `Chrome/Chromium binary required for pdf/png output: ...` | `1` |
 | `html` only | Omitted | Yes | Runs isolated headless Chrome to verify zero layout collisions and writes post-routed `architecture.html`. | `0` *(or `2` on layout collision)* |
-| `html` only | Omitted | No | Writes self-contained `architecture.html` with embedded `router.js`, prints `warning: ... without CLI collision verification` to `stderr`, and succeeds. | `0` |
+| `html` only | Omitted | No | Runs pre-browser container collision checks (`PrepareDocument`), then writes self-contained `architecture.html` with embedded `router.js`, prints `warning: ... without CLI collision verification` to `stderr` and `Wrote <out>/architecture.html` to `stdout` (unless `-q`), and succeeds. | `0` *(or `2` on pre-browser container layout collision)* |
 | `html` only | Set to missing file | No | Fails fast (`explicit chrome path "<path>" not found`); **does not** fall back to Chrome-free HTML. | `1` |
 
 ---
 
 ## Exit Codes Reference
 
-`classifyExitCode` (`cmd/gcp-arch/main.go:145-167`) maps every error returned by Cobra or a subcommand into three deterministic exit codes:
+`classifyExitCode` ([`cmd/gcp-arch/main.go#L145-L167`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/main.go#L145-L167)) maps every error returned by Cobra or a subcommand into three deterministic exit codes:
 
 | Exit Code | Constant | Triggering Go Error Types & Conditions |
 | :---: | :--- | :--- |
-| **`0`** | `exitOK` | Command completed cleanly. Includes `preflight` when only non-fatal degradations (`DENIED`, `VPC_SC_BLOCKED`, `SERVICE_DISABLED`) occur, `extract` with degraded `coverage_ledger` warnings, Day-2 `synthesize --reconcile` zero-delta `Unchanged` fast path, and Chrome-free `render --format html` fallback. |
+| **`0`** | `exitOK` | Command completed cleanly. Includes `preflight` when only non-fatal degradations (`DENIED`, `VPC_SC_BLOCKED`, `SERVICE_DISABLED`) occur, `extract` with degraded `coverage_ledger` warnings, Day-2 `synthesize --reconcile` zero-delta `Unchanged` fast path, and Chrome-free `render --format html` fallback (when pre-browser container checks pass). |
 | **`1`** | `exitRuntime` | External, I/O, or runtime failures wrapped via `runtimeErr`: `*extract.QuotaProjectError` (`USER_PROJECT_DENIED`, caller `SERVICE_DISABLED`/`BILLING_DISABLED`), GCP `Unauthenticated` / transport failures, Vertex AI RPC errors, missing/unreadable input files (`*os.PathError` when reading `config.yaml`, `facts.json`, or `architecture.yaml`), atomic write failures, missing Chrome for `pdf`/`png`, or an explicit nonexistent `--chrome-path`. |
-| **`2`** | `exitUsage` | CLI usage, schema, scale, or layout invariant failures: unknown flags or bad arg counts (unwrapped Cobra errors), invalid flags (`--cloudbuild-runs < 1`, `--concurrency < 1`, invalid `--thinking-level`, invalid `--project-alias`, empty scopes, unsupported `--format`), malformed or unknown-key `config.yaml` / `architecture.yaml` (`YAML_DECODE_ERROR`), invalid `facts.json` JSON or wrong `schema_version`, `*synth.ScaleLimitError` (`> 500` active resources), `*manifest.ValidationError` (structural or `--facts` provenance failure), and `*render.LayoutCollisionError` (`router.js` unresolved overlap). |
+| **`2`** | `exitUsage` | CLI usage, schema, scale, or layout invariant failures: unknown flags or bad arg counts (unwrapped Cobra errors), invalid flags (`--cloudbuild-runs < 1`, `--concurrency < 1`, invalid `--thinking-level`, invalid `--project-alias`, empty scopes, unsupported `--format`), malformed or unknown-key `config.yaml` / `architecture.yaml` (`YAML_DECODE_ERROR`), invalid `facts.json` JSON or wrong `schema_version`, `*synth.ScaleLimitError` (`> 500` active resources), `*manifest.ValidationError` (structural or `--facts` provenance failure), and `*render.LayoutCollisionError` (both pre-browser `container_frame_collision` / `container_overlap_collision` from [`PrepareDocument`](https://github.com/arrase/gcp-arch/blob/main/internal/render/prepare.go#L129-L131) -> [`checkContainerFrames`](https://github.com/arrase/gcp-arch/blob/main/internal/render/prepare.go#L468-L506) — including on Chrome-free `--format html` fallback — and `router.js` unresolved browser overlaps). |
 
 ---
 

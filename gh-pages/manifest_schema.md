@@ -8,7 +8,7 @@ Every `backed_by` entry (on components and containers) and every `excluded_resou
 
 ## Complete Annotated `architecture.yaml` Example
 
-The example below illustrates every top-level section and feature supported by `schema_version: v1`: `metadata`, `components` (with `notes`, folded `backed_by`, and `inline_meta`), `containers` (with depth-2 `parent_container_id` and container `backed_by`), `excluded_resources`, `rejected_edges`, `view_0_system_index`, and detail views featuring `off_page_refs`, `VERIFIED` and `INFERRED` edges, and shared `via_bus_id` bus spines.
+The example below illustrates every top-level section and feature supported by `schema_version: v1`: `metadata`, `components` (with `notes`, folded `backed_by`, and `inline_meta`), `containers` (with depth-2 `parent_container_id` and container `backed_by`), `excluded_resources`, `rejected_edges`, `acknowledged_edges`, `view_0_system_index`, and detail views featuring `off_page_refs`, `VERIFIED` and `INFERRED` edges, and shared `via_bus_id` bus spines.
 
 ```yaml
 schema_version: v1
@@ -152,6 +152,11 @@ rejected_edges:
     to: acme_tfstate
     reason: Ingress never accesses Terraform state directly; traffic terminates at Atlantis
 
+# Non-heuristic FactEdge component pairs already offered to synthesis and intentionally left undrawn
+acknowledged_edges:
+  - from: atlantis
+    to: vpc_cicd_net
+
 views:
   # Required at views[0] whenever >= 2 detail views exist; projected deterministically by Go
   - id: view_0_system_index
@@ -189,7 +194,7 @@ views:
       - gke_cicd
       - proj_acme_cicd
       - psa_tenant
-    # Placement order within each column is preserved as the Stage 3 barycenter tie-breaker
+    # Placement order governs Stage 3 container band packing (allocateContainerBands) and barycenter tie-breaking
     placements:
       - component_id: github_acme
         container_id: ext_source
@@ -276,19 +281,19 @@ views:
 
 ## Strict YAML Codec & Canonical Serialization
 
-`internal/manifest/types.go` implements strict decoding and deterministic serialization so human edits in Git stay clean, minimal, and free of silent typos.
+[`internal/manifest/types.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go) implements strict decoding and deterministic serialization so human edits in Git stay clean, minimal, and free of silent typos.
 
 ### Strict Decoding (`manifest.Load`)
 
-1. **`KnownFields(true)`:** `manifest.Load` decodes YAML with `gopkg.in/yaml.v3` and `dec.KnownFields(true)`. Any unknown or misspelled field name (such as `icon:` instead of `icon_key:`) fails immediately rather than being silently ignored.
+1. **`KnownFields(true)`:** [`manifest.Load`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L257-L274) decodes YAML with `gopkg.in/yaml.v3` and `dec.KnownFields(true)`. Any unknown or misspelled field name (such as `icon:` instead of `icon_key:`) fails immediately rather than being silently ignored.
 2. **Single-Document Guard:** After decoding `Manifest`, `manifest.Load` attempts a second decode and asserts `errors.Is(err, io.EOF)`. Multi-document YAML streams (`---`) are rejected with `unexpected trailing YAML document`.
-3. **CLI Error Handling:** Under `gcp-arch validate --json`, decode errors emit a `ValidationReport` containing code `YAML_DECODE_ERROR` and exit with code **`2`**. Filesystem read errors (`*os.PathError`, such as a missing file) return CLI exit code **`1`**.
+3. **CLI Error Handling:** Under `gcp-arch validate --json` ([`cmd/gcp-arch/validate.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L86-L102)), decode errors emit a `ValidationReport` containing code `YAML_DECODE_ERROR` and exit with code **`2`**. Filesystem read errors (`*os.PathError`, such as a missing file) return CLI exit code **`1`**.
 
 ### Canonical Serialization (`manifest.Marshal` & `manifest.Write`)
 
-`manifest.Marshal` clones `m` (never mutating the caller's struct) and encodes deterministic **2-space indented UTF-8 YAML**. `manifest.Write` persists the output atomically (`ioutil.WriteFileAtomic`) with mode **`0644`** (creating parent directories with **`0755`**).
+[`manifest.Marshal`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L279-L296) clones `m` (never mutating the caller's struct) and encodes deterministic **2-space indented UTF-8 YAML**. [`manifest.Write`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L299-L305) persists the output atomically ([`ioutil.WriteFileAtomic`](https://github.com/arrase/gcp-arch/blob/main/internal/ioutil/atomic.go#L19-L23)) with mode **`0644`** (creating parent directories with **`0755`**).
 
-To produce stable Git diffs while preserving meaningful visual and cryptographic ordering, `normalizedManifestCopy` sorts structural sets deterministically and explicitly preserves three ordered slices:
+To produce stable Git diffs while preserving meaningful visual and cryptographic ordering, [`normalizedManifestCopy`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L307-L334) sorts structural sets deterministically and explicitly preserves three ordered slices:
 
 | Slice Path | Behavior on `Marshal` | Sort Key / Preservation Reason |
 | :--- | :--- | :--- |
@@ -299,12 +304,13 @@ To produce stable Git diffs while preserving meaningful visual and cryptographic
 | `containers[].backed_by` | **Sorted** | By `(uri, asset_type, project_id)`. |
 | `excluded_resources` | **Sorted** | By `(uri, asset_type, project_id, reason)`. |
 | `rejected_edges` | **Sorted** | By `(from, to, reason)`. |
+| `acknowledged_edges` | **Sorted & Deduplicated** | By `(from, to)`, with adjacent duplicates collapsed via `slices.Compact` ([`normalizeComponentPairs`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L325-L334)). |
 | `views` | **Sorted** | `view_0_system_index` pinned at `views[0]`; all other views sorted by `id`. |
 | `views[].container_ids` | **Sorted** | Lexicographical ascending. |
 | `views[].placements[].off_page_refs` | **Sorted** | By `(target_view_id, direction, label)`. |
 | `views[].edges` | **Sorted** | By `(from, to, flow_kind, verb, provenance, via_bus_id, inference_rationale, evidence_edge_ids)`. |
 | **`components[].inline_meta`** | **Order Preserved** | Controls top-to-bottom metadata row order inside rendered component cards. |
-| **`views[].placements`** | **Order Preserved** | Encodes preferred top-to-bottom column order and acts as the deterministic **barycenter tie-breaker** (`yamlIdx` in `internal/render/prepare.go`) during Stage 3 rendering. |
+| **`views[].placements`** | **Order Preserved** | Governs first-appearance row-band packing in [`allocateContainerBands`](https://github.com/arrase/gcp-arch/blob/main/internal/render/prepare.go#L298-L331) and acts as the deterministic **barycenter tie-breaker** (`yamlIdx` in [`internal/render/prepare.go`](https://github.com/arrase/gcp-arch/blob/main/internal/render/prepare.go#L396-L422)) during Stage 3 rendering. |
 | **`views[].edges[].evidence_edge_ids`** | **Order Preserved** | Preserves the human-readable directed-walk hop sequence from source to target. |
 
 ---
@@ -317,13 +323,14 @@ To produce stable Git diffs while preserving meaningful visual and cryptographic
 
 | YAML Key | Type | Required | Description |
 | :--- | :--- | :---: | :--- |
-| `schema_version` | `string` | **Yes** | Must equal `"v1"` (`manifest.SchemaVersion`). |
-| `metadata` | `Metadata` | **Yes** | Generation timestamp and scanned GCP scopes. |
+| `schema_version` | `string` | **Yes** | Must equal `"v1"` ([`manifest.SchemaVersion`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L20)). |
+| `metadata` | `Metadata` | Optional | Generation timestamp and scanned GCP scopes. Always serialized by `manifest.Marshal` (no `omitempty`), but optional in `ValidateStructure` (omitting `metadata` passes both `manifest.Load` and `manifest.ValidateStructure`). |
 | `components` | `[]Component` | **Yes** | Global logical architecture blocks referenced by detail views. |
 | `containers` | `[]Container` | Optional | Global visual grouping frames (`omitempty`). |
 | `excluded_resources` | `[]ExcludedResource` | Optional | Active resources intentionally omitted from cards with audit reasons (`omitempty`). |
-| `rejected_edges` | `[]RejectedEdge` | Optional | Curated tombstones suppressing directed `(from, to)` edges (`omitempty`). |
-| `views` | `[]View` | **Yes** | One or more diagram views (`views[0]` must be `view_0_system_index` when `>= 2` detail views exist). |
+| `rejected_edges` | `[]RejectedEdge` | Optional | Curated tombstones suppressing directed `(from, to)` component edges (`omitempty`). |
+| `acknowledged_edges` | `[]ComponentPair` | Optional | Directed `(from, to)` component pairs projected from non-heuristic `FactEdge`s that were already offered to synthesis and intentionally left undrawn, preventing repeated Day-2 reconciliation churn (`omitempty`, [`internal/manifest/types.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L99)). |
+| `views` | `[]View` | **Yes** | One or more diagram views (`views[0]` must be `view_0_system_index` when `>= 2` detail views exist; max `16` detail views). |
 
 #### `Metadata`
 
@@ -339,7 +346,7 @@ To produce stable Git diffs while preserving meaningful visual and cryptographic
 | `id` | `string` | **Yes** | Unique, non-empty canonical slug (conventionally `snake_case`). |
 | `title` | `string` | **Yes** | Non-empty human-readable card title. |
 | `subtitle` | `string` | Optional | Concise technical sublabel (`omitempty`). |
-| `icon_key` | `string` | **Yes** | Registered icon slug present in the 85-icon embedded registry (`internal/icons/assets/icons.yaml`). |
+| `icon_key` | `string` | **Yes** | Registered icon slug present in the 85-icon embedded registry ([`internal/icons/assets/icons.yaml`](https://github.com/arrase/gcp-arch/blob/main/internal/icons/assets/icons.yaml)). |
 | `component_kind` | `ComponentKind` | **Yes** | Architectural role enum (8 allowed values). |
 | `project_id` | `string` | **Yes** | Non-empty owning GCP project ID (or `"external"` for external actors/targets). |
 | `notes` | `string` | Optional | Free-form human curation notes stored in Git and preserved across Day-2 `--reconcile` (`omitempty`). |
@@ -376,8 +383,8 @@ To produce stable Git diffs while preserving meaningful visual and cryptographic
 
 | YAML Key | Type | Required | Description |
 | :--- | :--- | :---: | :--- |
-| `uri` | `string` | **Yes** | Non-empty canonical resource URI. |
-| `asset_type` | `string` | **Yes** | Non-empty CAI asset type. |
+| `uri` | `string` | **Yes** | Non-empty canonical resource URI. Must be unique across `components[].backed_by`, `containers[].backed_by`, and `excluded_resources` (`DUPLICATE_ACCOUNTED_URI`). |
+| `asset_type` | `string` | **Yes** | Non-empty CAI asset type. Must **not** be one of the 15 stateful datastore asset types (`EXCLUDED_DATASTORE`). |
 | `project_id` | `string` | **Yes** | Non-empty owning project ID. |
 | `reason` | `string` | **Yes** | Non-empty audit justification explaining why the resource is excluded from cards. |
 
@@ -385,9 +392,16 @@ To produce stable Git diffs while preserving meaningful visual and cryptographic
 
 | YAML Key | Type | Required | Description |
 | :--- | :--- | :---: | :--- |
-| `from` | `string` | **Yes** | Non-empty source component ID (or View 0 node ID). |
-| `to` | `string` | **Yes** | Non-empty target component ID (or View 0 node ID). |
-| `reason` | `string` | **Yes** | Non-empty rationale explaining why this directed `(from, to)` edge is suppressed. |
+| `from` | `string` | **Yes** | Non-empty source ID referencing a declared top-level `components[].id` ([`validateRejectedEdges`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L529-L541) -> [`validatePairComponents`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L370-L376)). Naming a detail `view.id` fails validation (`UNKNOWN_PAIR_COMPONENT`, because `VIEW_COMPONENT_ID_COLLISION` forbids sharing IDs between views and components). |
+| `to` | `string` | **Yes** | Non-empty target ID referencing a declared top-level `components[].id` (`UNKNOWN_PAIR_COMPONENT` otherwise). |
+| `reason` | `string` | **Yes** | Non-empty rationale explaining why this directed `(from, to)` edge is suppressed across all views and Day-2 `--reconcile`. |
+
+#### `ComponentPair` (`acknowledged_edges[]`)
+
+| YAML Key | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `from` | `string` | **Yes** | Source ID referencing a declared top-level `components[].id` ([`internal/manifest/types.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L164-L167), [`validateAcknowledgedEdges`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L364-L376)). |
+| `to` | `string` | **Yes** | Target ID referencing a declared top-level `components[].id` (`UNKNOWN_PAIR_COMPONENT` otherwise). |
 
 #### `View`
 
@@ -417,7 +431,7 @@ To produce stable Git diffs while preserving meaningful visual and cryptographic
 | YAML Key | Type | Required | Description |
 | :--- | :--- | :---: | :--- |
 | `target_view_id` | `string` | **Yes** | ID of another existing view in `manifest.views` (must not equal the current view's ID). |
-| `label` | `string` | **Yes** | Non-empty concise badge label (also projected as a `View 0` edge verb when `direction == "OUT"`). |
+| `label` | `string` | **Yes** | Non-empty concise badge label (projected as a `View 0` edge verb for `direction == "OUT"` as `dv.ID -> target_view_id`, and for `direction == "IN"` as `target_view_id -> dv.ID` when no edge already connects the two views; see [`addOffPageEdges`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/view0.go#L221-L257)). |
 | `direction` | `string` | **Yes** | `"IN"` or `"OUT"`. |
 
 #### `Edge`
@@ -483,13 +497,13 @@ To produce stable Git diffs while preserving meaningful visual and cryptographic
 | :--- | :--- | :--- |
 | **`FlowKind`** (3) | `RUNTIME`, `CICD`, `ADMIN` | Drives edge styling in Stage 3 and priority ranking (`RUNTIME > CICD > ADMIN`) in `View 0` external flow projection. |
 | **`Provenance`** (2) | `VERIFIED`, `INFERRED` | `VERIFIED` renders as a solid evidence-backed connector; `INFERRED` renders dashed with a numbered footnote quoting `inference_rationale`. |
-| **`OffPageRef.Direction`** (2) | `IN`, `OUT` | `OUT` badges are deterministically projected into `View 0` cross-view summary edges. |
+| **`OffPageRef.Direction`** (2) | `IN`, `OUT` | `OUT` badges project deterministically onto `View 0` as `dv.ID -> target_view_id`; `IN` badges also project as `target_view_id -> dv.ID` (left-to-right pass first, then remaining) whenever no edge already connects the two views ([`internal/synth/view0.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/view0.go#L221-L257)). |
 
 ---
 
 ## Stateful Datastore Homogeneity
 
-To prevent architectural diagrams from collapsing fundamentally different persistence technologies (for example, Cloud SQL + Cloud Storage + BigQuery) into a single ambiguous "Databases" box, both Stage 2 (`internal/synth/pipeline.go`) and offline validation (`internal/manifest/validate.go`) enforce **stateful datastore homogeneity** across the following **15** exact GCP CAI asset types (`statefulDatastoreAssetTypes`):
+To prevent architectural diagrams from collapsing fundamentally different persistence technologies (for example, Cloud SQL + Cloud Storage + BigQuery) into a single ambiguous "Databases" box, both Stage 2 ([`internal/synth/pipeline.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/pipeline.go)) and offline validation ([`internal/manifest/validate.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L87-L103)) enforce **stateful datastore homogeneity** across the following **15** exact GCP CAI asset types (`statefulDatastoreAssetTypes`):
 
 | # | Exact GCP CAI Asset Type | GCP Product |
 | :---: | :--- | :--- |
@@ -509,33 +523,33 @@ To prevent architectural diagrams from collapsing fundamentally different persis
 | 14 | `file.googleapis.com/Instance` | Cloud Filestore Instance |
 | 15 | `pubsub.googleapis.com/Topic` | Pub/Sub Topic |
 
-**How the check works:** For each component, `validateComponentBackedBy` collects the set of distinct `br.AssetType` values in `component.backed_by` that belong to the 15-entry map above. If `len(datastoreTypes) > 1`, validation emits **`HETEROGENEOUS_DATASTORE`**.
+**How the checks work:**
 
-* **Allowed:**
-  * One stateful datastore type folded with non-datastore helper resources—for example, `pubsub.googleapis.com/Topic` + `pubsub.googleapis.com/Subscription`, `sqladmin.googleapis.com/Instance` + `kms.googleapis.com/CryptoKey`, or `storage.googleapis.com/Bucket` + `iam.googleapis.com/ServiceAccount`.
-  * Multiple resources of the *same* datastore asset type inside one component (for example, two `storage.googleapis.com/Bucket` resources grouped intentionally), because `len(datastoreTypes) == 1`.
-* **Rejected (`HETEROGENEOUS_DATASTORE`):**
-  * Mixing two distinct asset types from the 15-entry table inside one `backed_by` list—such as `sqladmin.googleapis.com/Instance` + `storage.googleapis.com/Bucket`, or `alloydb.googleapis.com/Cluster` + `alloydb.googleapis.com/Instance`, or `spanner.googleapis.com/Instance` + `spanner.googleapis.com/Database`.
+* **Component Homogeneity (`HETEROGENEOUS_DATASTORE`):** For each component, [`validateComponentBackedBy`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L413-L436) collects the set of distinct `br.AssetType` values in `component.backed_by` that belong to the 15-entry map above. If `len(datastoreTypes) > 1`, validation emits **`HETEROGENEOUS_DATASTORE`**.
+  * **Allowed:** One stateful datastore type folded with non-datastore helper resources (e.g., `pubsub.googleapis.com/Topic` + `pubsub.googleapis.com/Subscription`, `sqladmin.googleapis.com/Instance` + `kms.googleapis.com/CryptoKey`, or `storage.googleapis.com/Bucket` + `iam.googleapis.com/ServiceAccount`), or multiple resources of the *same* datastore asset type inside one component (e.g., two `storage.googleapis.com/Bucket` resources grouped into a `COHORT`), because `len(datastoreTypes) == 1`.
+  * **Rejected (`HETEROGENEOUS_DATASTORE`):** Mixing two distinct asset types from the 15-entry table inside one `backed_by` list—such as `sqladmin.googleapis.com/Instance` + `storage.googleapis.com/Bucket`, or `alloydb.googleapis.com/Cluster` + `alloydb.googleapis.com/Instance`, or `spanner.googleapis.com/Instance` + `spanner.googleapis.com/Database`.
+* **No Excluded Datastores (`EXCLUDED_DATASTORE`):** [`validateExcludedResources`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L511-L527) rejects placing any resource whose `asset_type` is in the 15-type set into `excluded_resources`. Stateful datastores must be diagrammed in a component (folding several of the same asset type into a `COHORT` if needed), never suppressed.
 
 ---
 
 ## Offline Structural Validation (`ValidateStructure`)
 
-Running `gcp-arch validate <architecture.yaml>` executes strict YAML decoding followed by `manifest.ValidateStructure` (`internal/manifest/validate.go`) completely offline with zero network calls.
+Running `gcp-arch validate <architecture.yaml>` executes strict YAML decoding followed by [`manifest.ValidateStructure`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L105-L113) ([`internal/manifest/validate.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go)) completely offline with zero network calls.
 
 ### Hard Structural Limits
 
-| Constant (`internal/manifest/validate.go`) | Limit | Scope |
+| Constant ([`internal/manifest/validate.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L78-L85)) | Limit | Scope |
 | :--- | :---: | :--- |
 | `maxInlineMetaRows` | **`4`** | Maximum `inline_meta` key-value rows per component card. |
 | `maxDetailViewPlacements` | **`12`** | Maximum component placements (`1..12`) per detail view. |
 | `maxSystemIndexPlacements` | **`16`** | Maximum placements (`1..16`) on `view_0_system_index`. |
+| `maxDetailViews` | **`16`** | Maximum number of detail views (equals `maxSystemIndexPlacements` so `view_0_system_index` can index every detail view). |
 | `maxContainerNestingDepth` | **`2`** | Maximum active container parent-child nesting depth within any view. |
 | `maxEdgeVerbRunes` | **`16`** | Maximum UTF-8 rune count (`1..16`) for `edge.verb`. |
 
 ### Exhaustive Offline Validation Error Codes
 
-All **48** structural error codes in `internal/manifest/validate.go` (plus `YAML_DECODE_ERROR` from `cmd/gcp-arch/validate.go`) are listed below:
+All **54** offline structural error codes in [`internal/manifest/validate.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L17-L75) (**59** total including the 5 `--facts` codes below, plus `YAML_DECODE_ERROR` from [`cmd/gcp-arch/validate.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L95)) are listed below:
 
 #### YAML Decode & Schema
 
@@ -573,13 +587,16 @@ All **48** structural error codes in `internal/manifest/validate.go` (plus `YAML
 | `CONTAINER_CYCLE` | Walking `parent_container_id` links forms a cycle. | `subject: <container.id>` |
 | `CONTAINER_DEPTH_EXCEEDED` | Active nesting depth of a container within `view.container_ids` exceeds `2`. | `view_id: <view.id>`, `subject: <container.id>` |
 
-#### Exclusions & Tombstones
+#### Exclusions, Resource Accounting & Component Pairs
 
 | Error Code | Trigger Condition | `view_id` / `subject` |
 | :--- | :--- | :--- |
 | `INVALID_EXCLUDED_RESOURCE` | An `excluded_resources` entry has an empty `uri`, `asset_type`, or `project_id`. | `subject: <uri \| excluded_resources[i]>` |
 | `MISSING_EXCLUSION_REASON` | An `excluded_resources` entry has an empty `reason`. | `subject: <uri \| excluded_resources[i]>` |
+| `EXCLUDED_DATASTORE` | An `excluded_resources` entry has an `asset_type` in the 15-type `statefulDatastoreAssetTypes` set ([`validateExcludedResources`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L523-L525)). | `subject: <uri \| excluded_resources[i]>` |
+| `DUPLICATE_ACCOUNTED_URI` | The same non-empty resource URI appears more than once across `components[].backed_by`, `containers[].backed_by`, and `excluded_resources` ([`validateAccountedURIUniqueness`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L342-L362)). | `view_id: ""`, `subject: <uri>` |
 | `INVALID_REJECTED_EDGE` | A `rejected_edges` entry has an empty `from`, `to`, or `reason`. | `subject: rejected_edges[i]` |
+| `UNKNOWN_PAIR_COMPONENT` | A `rejected_edges[i]` or `acknowledged_edges[i]` entry references a `from` or `to` ID not declared in top-level `components` ([`validateAcknowledgedEdges`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L364-L376), [`validateRejectedEdges`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L529-L541)). | `view_id: ""`, `subject: rejected_edges[i] \| acknowledged_edges[i]` |
 
 #### Views & System Index (`View 0`)
 
@@ -589,6 +606,8 @@ All **48** structural error codes in `internal/manifest/validate.go` (plus `YAML
 | `EMPTY_VIEW_ID` | `view.id` is empty or whitespace. | `subject: views[i]` |
 | `DUPLICATE_VIEW_ID` | Two views share the same `id`. | `view_id: <view.id>`, `subject: <view.id>` |
 | `EMPTY_VIEW_TITLE` | `view.title` is empty or whitespace. | `view_id: <view.id>`, `subject: <view.id>` |
+| `VIEW_COMPONENT_ID_COLLISION` | A `view.id` collides with a top-level `component.id` (disallowed because `view_0_system_index` placements reference both namespaces; [`validateViewIndex`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L564-L566)). | `view_id: <view.id>`, `subject: <view.id>` |
+| `TOO_MANY_DETAIL_VIEWS` | Manifest defines more than `16` (`maxDetailViews`) detail views, exceeding `view_0_system_index` capacity ([`validateViewIndex`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L568-L570)). | `view_id: ""`, `subject: ""` |
 | `MISSING_SYSTEM_INDEX_VIEW` | `>= 2` detail views exist, but `view_0_system_index` is absent. | `view_id: ""`, `subject: view_0_system_index` |
 | `UNEXPECTED_SYSTEM_INDEX_VIEW` | `< 2` detail views exist, yet `view_0_system_index` is present. | `view_id: view_0_system_index`, `subject: view_0_system_index` |
 | `MISPLACED_SYSTEM_INDEX_VIEW` | `view_0_system_index` exists at an index `> 0` instead of `views[0]`. | `view_id: view_0_system_index`, `subject: view_0_system_index` |
@@ -619,13 +638,14 @@ All **48** structural error codes in `internal/manifest/validate.go` (plus `YAML
 | `INVALID_PROVENANCE` | `edge.provenance` is not `VERIFIED` or `INFERRED`. | `view_id: <view.id>`, `subject: "<from> -> <to>"` |
 | `MISSING_EVIDENCE_EDGE_IDS` | Detail-view `VERIFIED` edge has empty `evidence_edge_ids` or contains a blank ID string *(exempt on `view_0_system_index`)*. | `view_id: <view.id>`, `subject: "<from> -> <to>"` |
 | `MISSING_INFERENCE_RATIONALE` | `INFERRED` edge has an empty or whitespace `inference_rationale`. | `view_id: <view.id>`, `subject: "<from> -> <to>"` |
+| `INCONSISTENT_CROSS_VIEW_EDGE` | The same `(from, to, flow_kind)` edge appears in multiple detail views with a different `verb` or `provenance` ([`validateCrossViewConsistency`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L747-L759)). | `view_id: <view.id>`, `subject: "<from> -> <to>"` |
 | `INVALID_BUS_GROUP` | Edges sharing one `via_bus_id` within a view contain both `> 1` distinct `from` sources AND `> 1` distinct `to` targets. | `view_id: <view.id>`, `subject: <via_bus_id>` |
 
 ---
 
 ## `--facts` Provenance & Coverage Validation (`ValidateWithFacts`)
 
-Passing `--facts <facts.json>` runs all 48 offline structural rules **plus** four facts-coupled guarantees via `manifest.ValidateWithFacts` (`internal/manifest/validate.go`):
+Passing `--facts <facts.json>` runs all **54** offline structural rules **plus** **5** facts-coupled guarantees (**59** error codes total) via [`manifest.ValidateWithFacts`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L118-L139) ([`internal/manifest/validate.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go)) and [`EvidenceIndex.WalkIssue`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/evidence.go#L76-L113) ([`internal/manifest/evidence.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/evidence.go)):
 
 ```bash
 gcp-arch validate architecture.yaml --facts facts.json
@@ -636,11 +656,16 @@ gcp-arch validate architecture.yaml --facts facts.json
 | `NIL_FACTS` | `facts` argument passed to `ValidateWithFacts` is `nil`. | `view_id: ""`, `subject: ""` |
 | `UNACCOUNTED_FACT_RESOURCE` | A resource URI in `facts.Resources` does not appear in any of `components[].backed_by`, `containers[].backed_by`, or `excluded_resources`. | `view_id: ""`, `subject: <resource.uri>` |
 | `UNKNOWN_EVIDENCE_EDGE` | A detail-view `VERIFIED` edge cites an `evidence_edge_ids` entry that does not exist in `facts.Edges`. | `view_id: <view.id>`, `subject: "<from> -> <to>"` |
-| `INVALID_EDGE_PROVENANCE` | The cited `evidence_edge_ids` on a detail-view `VERIFIED` edge do not pass the dual-BFS directed-walk check from `from.backed_by` to `to.backed_by`. | `view_id: <view.id>`, `subject: "<from> -> <to>"` |
+| `INVALID_EDGE_PROVENANCE` | A detail-view `VERIFIED` edge fails [`EvidenceIndex.WalkIssue`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/evidence.go#L76-L113): cites a `Heuristic: true` `FactEdge`, touches a container-backed or third-component URI, fails the dual-BFS directed walk, or uses permission-only evidence (`IAM_RESOURCE_BINDING` / `WORKLOAD_IDENTITY`) on a non-`ADMIN` edge. | `view_id: <view.id>`, `subject: "<from> -> <to>"` |
+| `PLACEMENT_CONTAINER_MISMATCH` | A detail-view placement assigns a component to a resource-backed container (`len(container.backed_by) > 0`, such as a GKE cluster or VPC), and the component's resources declare `parent_uri` metadata in `facts.json`, yet neither a component URI nor its `parent_uri` ancestor chain reaches any URI in `container.backed_by` ([`validatePlacementContainers`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L143-L208) -> `ParentIndex` / `ComponentInsideContainer`). Containers without `backed_by` and components with no `parent_uri` metadata pass. | `view_id: <view.id>`, `subject: <component_id>` |
 
-### How the Dual-BFS Directed-Walk Proof Works
+### How `EvidenceIndex.WalkIssue` & the Dual-BFS Directed-Walk Proof Work
 
-`isValidDirectedWalk(cited, fromURIs, toURIs)` proves that an edge's `evidence_edge_ids` form an authentic, unbroken causal chain without extraneous padding:
+[`EvidenceIndex.WalkIssue`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/evidence.go#L12-L113) verifies every detail-view `VERIFIED` edge against `facts.Edges` and the manifest's component/container ownership before accepting it:
+
+1. **No Heuristic Evidence (`fe.Heuristic`):** Rejects any cited `FactEdge` with `Heuristic: true` (for example, `MONITORING_TRAFFIC`, shared-SA BigQuery jobs, or single-target project IAM bindings) with `INVALID_EDGE_PROVENANCE`; heuristic edges may only inform `INFERRED` edges.
+2. **No Container or Third-Component Shortcuts (`EvidenceIndex.blocked`):** Rejects any cited edge whose `FromURI` or `ToURI` belongs to a container's `backed_by` set (`containers[].backed_by`) or to a third component's `backed_by` set (`owner != from && owner != to`). Walks may only traverse URIs owned by `from`, `to`, or unowned/excluded helper resources, preventing edges from routing through a shared VPC/cluster container or bypassing an intermediate component.
+3. **Dual-BFS Directed Walk (`isValidDirectedWalk`):** Proves via [`isValidDirectedWalk`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L831-L851) that the cited `evidence_edge_ids` form an authentic, unbroken causal chain from `from.backed_by` to `to.backed_by` without extraneous padding:
 
 ```mermaid
 flowchart LR
@@ -655,23 +680,26 @@ flowchart LR
     end
 ```
 
-1. **Subgraph Construction:** Build forward adjacency (`fe.FromURI -> fe.ToURI`) and reverse adjacency (`fe.ToURI -> fe.FromURI`) using **only** the `FactEdge`s listed in `edge.evidence_edge_ids`.
-2. **Forward BFS (`fwdReach`):** Seed BFS with every URI in `from.backed_by` and follow forward edges.
-3. **Reverse BFS (`bwdReach`):** Seed BFS with every URI in `to.backed_by` and follow reverse edges.
-4. **Universal Walk Check:** Every cited edge `fe` MUST satisfy **both** `fwdReach[fe.FromURI]` and `bwdReach[fe.ToURI]`.
+   * **Subgraph Construction:** Build forward adjacency (`fe.FromURI -> fe.ToURI`) and reverse adjacency (`fe.ToURI -> fe.FromURI`) using **only** the `FactEdge`s listed in `edge.evidence_edge_ids`.
+   * **Forward BFS (`fwdReach`):** Seed BFS with every URI in `from.backed_by` and follow forward edges.
+   * **Reverse BFS (`bwdReach`):** Seed BFS with every URI in `to.backed_by` and follow reverse edges.
+   * **Universal Walk Check:** Every cited edge `fe` MUST satisfy **both** `fwdReach[fe.FromURI]` and `bwdReach[fe.ToURI]`. Because every cited edge is checked individually, a single disconnected or unrelated `FactEdge.ID` inside `evidence_edge_ids` fails validation with `INVALID_EDGE_PROVENANCE` even if another subset of cited edges connects `from` to `to`.
 
-Because every cited edge is checked individually, a single disconnected or unrelated `FactEdge.ID` inside `evidence_edge_ids` fails validation with `INVALID_EDGE_PROVENANCE` even if another subset of cited edges connects `from` to `to`. Edges on `view_0_system_index` are exempt from `evidence_edge_ids` because they are deterministic view-level rollups rather than direct resource walks.
+4. **Permission-Only Evidence Requires `flow_kind: ADMIN`:** If every cited `FactEdge` has kind `IAM_RESOURCE_BINDING` or `WORKLOAD_IDENTITY` ([`permissionEdgeKinds`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/evidence.go#L12-L16), [`permissionOnly`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/evidence.go#L106-L113)), `edge.flow_kind` MUST equal `ADMIN` (IAM/identity grants prove access rather than live runtime traffic or CI/CD delivery).
+
+Edges on `view_0_system_index` are exempt from `evidence_edge_ids` and `WalkIssue` checks because they are deterministic view-level rollups rather than direct resource walks.
 
 ---
 
 ## `--json` Output & Git PR CI Workflow
 
-Passing `--json` to `gcp-arch validate` emits a structured `ValidationReport` (`internal/manifest/types.go`):
+Passing `--json` to `gcp-arch validate` emits a structured [`ValidationReport`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L210-L222) ([`internal/manifest/types.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L210-L222)):
 
 ```go
 type ValidationReport struct {
-    Valid  bool              `json:"valid"`
-    Errors []ValidationIssue `json:"errors,omitempty"`
+    Valid         bool              `json:"valid"`
+    ExcludedCount int               `json:"excluded_count,omitempty"`
+    Errors        []ValidationIssue `json:"errors,omitempty"`
 }
 
 type ValidationIssue struct {
@@ -686,9 +714,12 @@ type ValidationIssue struct {
 
     ```json
     {
-      "valid": true
+      "valid": true,
+      "excluded_count": 1
     }
     ```
+
+    *(`excluded_count` is omitted when `excluded_resources` is empty.)*
 
 === "Failing Manifest (Exit Code 2)"
 
@@ -712,9 +743,9 @@ type ValidationIssue struct {
     }
     ```
 
-| Exit Code | Meaning (`gcp-arch validate`) |
+| Exit Code | Meaning ([`cmd/gcp-arch/validate.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L71-L83)) |
 | :---: | :--- |
-| `0` | Manifest is valid (prints `Valid: <file> (<V> views, <C> components)` or `{"valid": true}`). |
+| `0` | Manifest is valid. Prints `Valid: <file> (<V> views, <C> components)` (or `Valid: <file> (<V> views, <C> components, <E> excluded)` when `len(excluded_resources) > 0`), or `{"valid": true}` with `"excluded_count": <E>` when `> 0` under `--json`. |
 | `1` | Runtime / I/O failure (e.g., unreadable or missing `architecture.yaml` or `--facts` file). |
 | `2` | YAML decode failure (`YAML_DECODE_ERROR`), invalid `--facts` JSON/schema version, or one or more `ValidationError` issues. |
 
@@ -760,13 +791,14 @@ Teams are encouraged to review and polish `architecture.yaml` in Git pull reques
 | **`components[].notes` & `views[].notes`** | Add ADR references, ownership notes, or security review context. | Any valid YAML string. | **Frozen & preserved.** |
 | **`components[].inline_meta`** | Reorder, trim, or enrich card metadata rows (e.g., SLO tier, CIDR, VPC egress mode). | Max **`4`** rows; non-empty `label` and `value`. | **Frozen & preserved** (exact row order maintained). |
 | **`components[].icon_key`** | Swap a component's icon to a more specific product icon. | Must exist in the 85-icon embedded registry (`INVALID_ICON_KEY`). | **Frozen & preserved.** |
-| **`views[].placements` order & `column`** | Reorder cards top-to-bottom within a column (sets Stage 3 barycenter tie-breaker) or move a card to another valid column. | `column` within `0..4` (`0..2` for `hub_spoke`); `1..12` placements per detail view; every component placed in `>= 1` detail view. | **Preserved** on existing placements; new components are appended only to views with remaining capacity (`< 12`). |
-| **`rejected_edges`** | Tombstone a noisy or architecturally misleading edge (remove it from `views[].edges` and add `{from, to, reason}` to `rejected_edges`). | Non-empty `from`, `to`, and `reason`; matching edge must not remain in any view (`REJECTED_EDGE_PRESENT`). | **Frozen & strictly respected** across Paths A, B, and C as well as deterministic `View 0` projection. |
-| **Manual `INFERRED` edges** | Document logical or out-of-band flows not visible in CAI/Monitoring facts. | `provenance: INFERRED`, non-empty `inference_rationale`, `verb` `1..16` runes, endpoints placed in the view. | **Preserved** across all Day-2 paths as long as both endpoints remain placed. |
-| **`excluded_resources`** | Move boilerplate resources out of components into `excluded_resources` with an audit reason. | Non-empty `uri`, `asset_type`, `project_id`, and `reason`; remaining components must keep `>= 1` `backed_by` resource. | **Preserved** until the resource vanishes from GCP (at which point Path B prunes it). |
+| **`views[].placements` order & `column`** | Reorder cards top-to-bottom within a column (governs Stage 3 `allocateContainerBands` packing order and barycenter tie-breaking) or move a card to another valid column. | `column` within `0..4` (`0..2` for `hub_spoke`); `1..12` placements per detail view; every component placed in `>= 1` detail view. | **Preserved** on existing placements; new components are appended only to views with remaining capacity (`< 12`). |
+| **`rejected_edges`** | Tombstone a noisy or architecturally misleading edge (remove it from `views[].edges` and add `{from, to, reason}` to `rejected_edges`). | Non-empty `from`, `to` (both must be declared top-level `components[].id`, otherwise `UNKNOWN_PAIR_COMPONENT`), and `reason`; matching edge must not remain in any view (`REJECTED_EDGE_PRESENT`). | **Frozen & strictly respected** across Paths A, B, and C (pruned by Path B only if either endpoint component is removed). |
+| **`acknowledged_edges`** | Record non-heuristic inter-component pairs intentionally left undrawn so Day-2 reconciliation does not treat them as drift. | Both `from` and `to` must be declared top-level `components[].id` (`UNKNOWN_PAIR_COMPONENT`). | **Recomputed** from `undrawnProjectedPairs` on Paths A, B, and C (replacing `acknowledged_edges` with the current set of undrawn, unrejected non-heuristic projected pairs in `facts.Edges`; Path B also prunes removed components beforehand). |
+| **Manual `INFERRED` edges** | Document logical or out-of-band flows not visible in CAI/Monitoring facts. | `provenance: INFERRED`, non-empty `inference_rationale`, `verb` `1..16` runes, endpoints placed in the view; identical `(from, to, flow_kind)` edges across detail views must share `verb` and `provenance` (`INCONSISTENT_CROSS_VIEW_EDGE`). | **Preserved** across all Day-2 paths as long as both endpoints remain placed. |
+| **`excluded_resources`** | Move boilerplate resources out of components into `excluded_resources` with an audit reason. | Non-empty `uri`, `asset_type`, `project_id`, and `reason`; unique URI (`DUPLICATE_ACCOUNTED_URI`); must **not** exclude any of the 15 stateful datastore asset types (`EXCLUDED_DATASTORE`); remaining components must keep `>= 1` `backed_by` resource. | **Preserved** until the resource vanishes from GCP (at which point Path B prunes it). |
 
 !!! warning "Edits That Trigger Reconciliation Deltas or Overwrites"
-    * **Do not hand-edit `view_0_system_index` expecting changes to survive drift:** On Path A (zero deltas), `view_0_system_index` is left untouched on disk. Whenever Path B (deletions) or Path C (drift patch) runs, `rebuildSystemIndex` regenerates `view_0_system_index` deterministically from the detail views. To customize a `View 0` edge label, edit the source placement's `off_page_refs[].label` (`direction: OUT`) or add a `rejected_edges` tombstone instead.
+    * **Do not hand-edit `view_0_system_index` expecting changes to survive drift:** On Path A (zero deltas), `view_0_system_index` is left untouched on disk. Whenever Path B (deletions) or Path C (drift patch) runs, `finalizeManifest` regenerates `view_0_system_index` deterministically from the detail views. To customize a `View 0` edge label, edit the corresponding `off_page_refs[].label` (`direction: OUT`, or `direction: IN` when no edge already connects the two views). To suppress an unwanted flow before it reaches detail views and `View 0`, tombstone the underlying top-level component pair(s) in `rejected_edges` — do **not** put detail `view.id`s in `rejected_edges`, as `validateRejectedEdges` requires declared component IDs (`UNKNOWN_PAIR_COMPONENT`).
     * **Removing URIs from `backed_by`:** Deleting an active GCP resource URI from `components[].backed_by` without placing it in another component, a container, or `excluded_resources` will fail `validate --facts` (`UNACCOUNTED_FACT_RESOURCE`) and cause the next `--reconcile` to treat that URI as an unclaimed resource (triggering Path C).
 
 ---

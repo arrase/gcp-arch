@@ -191,7 +191,7 @@ gcp-arch validate architecture.yaml --facts facts.json --json
 
 Flags:
 - `--facts <FILE>`: Optional `v3` `facts.json` for provenance and 100% resource coverage verification.
-- `--json`: Emit `ValidationReport` JSON (`{"valid": true|false, "errors": [...]}`).
+- `--json`: Emit `ValidationReport` JSON (`{"valid": true|false, "excluded_count": <N>, "errors": [...]}`; `"excluded_count"` is omitted when `0` and emitted whenever `excluded_resources` is non-empty, while text output appends `, <E> excluded` when exclusions exist).
 
 ### 5. `gcp-arch render <architecture.yaml>`
 
@@ -260,6 +260,9 @@ rejected_edges:
   - from: atlantis
     to: sonarqube_db
     reason: Suppress unrelated monitoring correlation
+acknowledged_edges:                           # Undrawn projected pairs settled across Day-2 --reconcile
+  - from: cloudbuild_triggers
+    to: atlantis
 views:
   - id: gke_developer_platform
     title: GKE Developer Platform & Ingress
@@ -276,7 +279,7 @@ views:
         verb: locks tfstate                   # <= 16 chars
         flow_kind: CICD                       # RUNTIME | CICD | ADMIN
         provenance: VERIFIED                  # VERIFIED | INFERRED
-        evidence_edge_ids: ["f4375d18be109a23"]
+        evidence_edge_ids: ["c21876e6fb659711"]
 ```
 
 ### Day-2 Reconciliation (`--reconcile`)
