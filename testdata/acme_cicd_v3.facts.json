@@ -1234,7 +1234,8 @@
       "from_uri": "//iam.googleapis.com/projects/acme-cicd/serviceAccounts/sonarqube@acme-cicd.iam.gserviceaccount.com",
       "to_uri": "//sqladmin.googleapis.com/projects/acme-cicd/instances/sonarqube",
       "kind": "IAM_RESOURCE_BINDING",
-      "detail": "roles/cloudsql.client"
+      "detail": "roles/cloudsql.client",
+      "heuristic": true
     }
   ],
   "suppressed_plumbing_counts": {

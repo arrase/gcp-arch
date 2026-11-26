@@ -3,6 +3,7 @@ package render
 import (
 	"cmp"
 	"fmt"
+	"math"
 	"slices"
 	"sort"
 	"strings"
@@ -38,6 +39,7 @@ type PreparedView struct {
 	Cards           []PreparedCard
 	Edges           []RoutingEdge
 	Footnotes       []PreparedFootnote
+	Excluded        []manifest.ExcludedResource
 }
 
 // StageBanner labels a column in a stage_pipeline view.
@@ -96,9 +98,11 @@ type PreparedFootnote struct {
 	Rationale string
 }
 
-// PrepareDocument runs deterministic barycenter row sorting, flat container span calculation,
-// multi-column waypoint / same-column lateral detour assignment, and >=2-edge bus spine grouping.
-func PrepareDocument(m *manifest.Manifest, reg *icons.Registry) *PreparedDocument {
+// PrepareDocument runs deterministic container band allocation, barycenter row sweeps, container
+// frame verification, multi-column waypoint / same-column lateral detour assignment, and >=2-edge
+// bus spine grouping. It returns a *LayoutCollisionError when a container frame encloses a foreign
+// card or overlaps a sibling frame.
+func PrepareDocument(m *manifest.Manifest, reg *icons.Registry) (*PreparedDocument, error) {
 	compByID := make(map[string]manifest.Component, len(m.Components))
 	for _, c := range m.Components {
 		compByID[c.ID] = c
@@ -116,9 +120,21 @@ func PrepareDocument(m *manifest.Manifest, reg *icons.Registry) *PreparedDocumen
 
 	usedIcons := make(map[string]bool)
 	views := make([]PreparedView, 0, len(m.Views))
+	var collisions []Collision
 	for i, v := range m.Views {
-		pv := prepareView(i, v, compByID, contByID, detailByID, reg, usedIcons)
+		pv, viewCollisions := prepareView(i, v, compByID, contByID, detailByID, reg, usedIcons)
 		views = append(views, pv)
+		collisions = append(collisions, viewCollisions...)
+	}
+	if len(collisions) > 0 {
+		return nil, &LayoutCollisionError{Collisions: collisions}
+	}
+	if len(views) > 0 && len(m.ExcludedResources) > 0 {
+		excl := slices.Clone(m.ExcludedResources)
+		slices.SortFunc(excl, func(a, b manifest.ExcludedResource) int {
+			return cmp.Compare(a.URI, b.URI)
+		})
+		views[0].Excluded = excl
 	}
 
 	iconKeys := make([]string, 0, len(usedIcons))
@@ -131,28 +147,29 @@ func PrepareDocument(m *manifest.Manifest, reg *icons.Registry) *PreparedDocumen
 		Metadata:     m.Metadata,
 		Views:        views,
 		UsedIconKeys: iconKeys,
-	}
+	}, nil
 }
 
 type cardSlot struct {
 	placement manifest.Placement
 	yamlIdx   int
 	gridCol   int
-	outerCont string
-	innerCont string
+	cont      string
 	row       int
 }
 
-type baryGroupKey struct {
-	hasBary bool
-	minBary float64
-	minYAML int
+// layoutBlock is a rectangle of grid cells packed as one unit: a single card or a container band.
+type layoutBlock struct {
+	slot           *cardSlot
+	children       []*layoutBlock
+	minCol, maxCol int
+	height         int
+	row            int // start row relative to the enclosing block
 }
 
 type containerSpan struct {
 	minCol, maxCol int
 	minRow, maxRow int
-	hasMember      bool
 }
 
 func prepareView(
@@ -163,19 +180,17 @@ func prepareView(
 	detailByID map[string]manifest.View,
 	reg *icons.Registry,
 	usedIcons map[string]bool,
-) PreparedView {
+) (PreparedView, []Collision) {
 	colMap, origCols, numCols := computeDenseColumns(v)
+	viewParent := buildViewParents(v.ContainerIDs, contByID)
 
-	viewContSet := make(map[string]bool, len(v.ContainerIDs))
-	for _, cid := range v.ContainerIDs {
-		viewContSet[cid] = true
-	}
-
-	cols, slotsByID := buildCardSlots(v.Placements, colMap, numCols, viewContSet, contByID)
+	cols, slots, slotsByID := buildCardSlots(v.Placements, colMap, numCols)
+	numRows := allocateContainerBands(slots, viewParent)
 	runBarycenterSweeps(cols, slotsByID, v.Edges, numCols)
-	numRows := maxColumnRows(cols)
 
-	preparedContainers, hasInnerTopAtRow, badgeAtRowCol := buildPreparedContainers(v.ContainerIDs, cols, viewContSet, contByID)
+	spans := computeContainerSpans(slots, viewParent)
+	collisions := checkContainerFrames(v.ID, spans, slots, viewParent, origCols)
+	preparedContainers, hasInnerTopAtRow, badgeAtRowCol := buildPreparedContainers(v.ContainerIDs, spans, viewParent, contByID)
 	busGroup, busKind := assignBusGroups(v.Edges, slotsByID)
 	routingEdges, footnotes, portCounts, hasRightEdgeCol := buildRoutingEdges(v.Edges, slotsByID, busGroup, busKind, numCols, numRows, badgeAtRowCol)
 	cards := buildPreparedCards(v.ID, cols, compByID, detailByID, reg, usedIcons, portCounts)
@@ -201,7 +216,7 @@ func prepareView(
 		Cards:           cards,
 		Edges:           routingEdges,
 		Footnotes:       footnotes,
-	}
+	}, collisions
 }
 
 func computeDenseColumns(v manifest.View) (map[int]int, []int, int) {
@@ -230,42 +245,130 @@ func computeDenseColumns(v manifest.View) (map[int]int, []int, int) {
 	return colMap, origCols, numCols
 }
 
-func buildCardSlots(
-	placements []manifest.Placement,
-	colMap map[int]int,
-	numCols int,
-	viewContSet map[string]bool,
-	contByID map[string]manifest.Container,
-) ([][]*cardSlot, map[string]*cardSlot) {
+// buildViewParents maps every view container to its nearest ancestor also listed in
+// view.container_ids ("" for top-level frames), mirroring manifest viewContainerDepth.
+func buildViewParents(containerIDs []string, contByID map[string]manifest.Container) map[string]string {
+	inView := make(map[string]bool, len(containerIDs))
+	for _, cid := range containerIDs {
+		inView[cid] = true
+	}
+	viewParent := make(map[string]string, len(containerIDs))
+	for _, cid := range containerIDs {
+		parent := contByID[cid].ParentContainerID
+		for parent != "" && !inView[parent] {
+			parent = contByID[parent].ParentContainerID
+		}
+		viewParent[cid] = parent
+	}
+	return viewParent
+}
+
+// structuralDepth is 1 + the number of ancestors of cid listed in view.container_ids.
+func structuralDepth(cid string, viewParent map[string]string) int {
+	depth := 1
+	for p := viewParent[cid]; p != ""; p = viewParent[p] {
+		depth++
+	}
+	return depth
+}
+
+func isWithinContainer(cid, ancestor string, viewParent map[string]string) bool {
+	for ; cid != ""; cid = viewParent[cid] {
+		if cid == ancestor {
+			return true
+		}
+	}
+	return false
+}
+
+func buildCardSlots(placements []manifest.Placement, colMap map[int]int, numCols int) ([][]*cardSlot, []*cardSlot, map[string]*cardSlot) {
+	slots := make([]*cardSlot, 0, len(placements))
 	slotsByID := make(map[string]*cardSlot, len(placements))
 	cols := make([][]*cardSlot, numCols)
 	for i, p := range placements {
 		gc := colMap[p.Column]
-		s := &cardSlot{
-			placement: p,
-			yamlIdx:   i,
-			gridCol:   gc,
-			outerCont: resolveOuterContainer(p.ContainerID, viewContSet, contByID),
-			innerCont: p.ContainerID,
-			row:       len(cols[gc]),
-		}
+		s := &cardSlot{placement: p, yamlIdx: i, gridCol: gc, cont: p.ContainerID}
+		slots = append(slots, s)
 		slotsByID[p.ComponentID] = s
 		cols[gc] = append(cols[gc], s)
 	}
-	return cols, slotsByID
+	return cols, slots, slotsByID
 }
 
-func resolveOuterContainer(cid string, viewContSet map[string]bool, contByID map[string]manifest.Container) string {
-	if cid == "" || !viewContSet[cid] {
-		return ""
+// allocateContainerBands assigns every card a row so each container owns one contiguous row band
+// spanning all columns between its leftmost and rightmost member. Cards and containers form a tree
+// (top-level cards and frames under the root, nested frames as sub-bands); the children of every
+// node are taken in first-appearance placements[] order and each is placed at the lowest relative
+// row where its (column span x height) rectangle overlaps no previously placed sibling. It returns
+// the total number of rows.
+func allocateContainerBands(slots []*cardSlot, viewParent map[string]string) int {
+	root := &layoutBlock{}
+	containerBlocks := make(map[string]*layoutBlock)
+	var containerBlock func(cid string) *layoutBlock
+	containerBlock = func(cid string) *layoutBlock {
+		if b, ok := containerBlocks[cid]; ok {
+			return b
+		}
+		b := &layoutBlock{}
+		containerBlocks[cid] = b
+		parent := root
+		if p := viewParent[cid]; p != "" {
+			parent = containerBlock(p)
+		}
+		parent.children = append(parent.children, b)
+		return b
 	}
-	ct := contByID[cid]
-	if ct.ParentContainerID != "" && viewContSet[ct.ParentContainerID] {
-		return ct.ParentContainerID
+	for _, s := range slots {
+		parent := root
+		if s.cont != "" {
+			parent = containerBlock(s.cont)
+		}
+		parent.children = append(parent.children, &layoutBlock{slot: s, minCol: s.gridCol, maxCol: s.gridCol, height: 1})
 	}
-	return cid
+	packBlock(root)
+	assignBlockRows(root, 0)
+	return max(1, root.height)
 }
 
+func packBlock(b *layoutBlock) {
+	if b.slot != nil {
+		return
+	}
+	b.minCol, b.maxCol = math.MaxInt, -1
+	for i, c := range b.children {
+		packBlock(c)
+		for slices.ContainsFunc(b.children[:i], func(placed *layoutBlock) bool { return blocksOverlap(c, placed) }) {
+			c.row++
+		}
+		b.minCol = min(b.minCol, c.minCol)
+		b.maxCol = max(b.maxCol, c.maxCol)
+		b.height = max(b.height, c.row+c.height)
+	}
+}
+
+func blocksOverlap(a, b *layoutBlock) bool {
+	return a.minCol <= b.maxCol && b.minCol <= a.maxCol && a.row < b.row+b.height && b.row < a.row+a.height
+}
+
+func assignBlockRows(b *layoutBlock, top int) {
+	if b.slot != nil {
+		b.slot.row = top
+		return
+	}
+	for _, c := range b.children {
+		assignBlockRows(c, top+c.row)
+	}
+}
+
+const barycenterSweepIterations = 2
+
+// runBarycenterSweeps orders cards inside the bands from allocateContainerBands (whose initial rows
+// follow placements[] YAML order). For multi-column views, it runs barycenterSweepIterations
+// iterations of a left-to-right pass (columns 1..n-1, anchoring column 0) followed by a
+// right-to-left pass (columns n-2..0, anchoring column n-1). Each column visit groups the column's
+// cards by direct container ("" for uncontained cards) and permutes every group over the rows it
+// already occupies, sorted by the median current row of each card's neighbors in other columns;
+// cards without such neighbors go last and ties fall back to placements[] order.
 func runBarycenterSweeps(cols [][]*cardSlot, slotsByID map[string]*cardSlot, edges []manifest.Edge, numCols int) {
 	neighbors := make(map[string][]string, len(slotsByID))
 	for _, e := range edges {
@@ -277,33 +380,44 @@ func runBarycenterSweeps(cols [][]*cardSlot, slotsByID map[string]*cardSlot, edg
 		neighbors[e.From] = append(neighbors[e.From], e.To)
 		neighbors[e.To] = append(neighbors[e.To], e.From)
 	}
-	for c := 1; c < numCols; c++ {
-		sortColumnByBarycenter(cols[c], slotsByID, neighbors)
+	for range barycenterSweepIterations {
+		for c := 1; c < numCols; c++ {
+			sortColumnByBarycenter(cols[c], slotsByID, neighbors)
+		}
+		for c := numCols - 2; c >= 0; c-- {
+			sortColumnByBarycenter(cols[c], slotsByID, neighbors)
+		}
 	}
-	for c := numCols - 2; c >= 0; c-- {
-		sortColumnByBarycenter(cols[c], slotsByID, neighbors)
+	for _, colSlots := range cols {
+		slices.SortFunc(colSlots, func(a, b *cardSlot) int { return cmp.Compare(a.row, b.row) })
 	}
-	sortColumnByBarycenter(cols[numCols-1], slotsByID, neighbors)
 }
 
 func sortColumnByBarycenter(colSlots []*cardSlot, slotsByID map[string]*cardSlot, neighbors map[string][]string) {
-	if len(colSlots) <= 1 {
-		return
-	}
 	bary, hasBary := computeSlotBarycenters(colSlots, slotsByID, neighbors)
-	outerKeys, innerKeys := computeContainerGroupKeys(colSlots, bary, hasBary)
-
-	slices.SortFunc(colSlots, func(a, b *cardSlot) int {
-		if a.outerCont != b.outerCont {
-			return compareContainerSlot(a, b, a.outerCont, b.outerCont, outerKeys, bary, hasBary)
+	groups := make(map[string][]*cardSlot)
+	for _, s := range colSlots {
+		groups[s.cont] = append(groups[s.cont], s)
+	}
+	for _, group := range groups {
+		rows := make([]int, len(group))
+		for i, s := range group {
+			rows[i] = s.row
 		}
-		if a.innerCont != b.innerCont {
-			return compareContainerSlot(a, b, a.innerCont, b.innerCont, innerKeys, bary, hasBary)
+		sort.Ints(rows)
+		slices.SortFunc(group, func(a, b *cardSlot) int {
+			ida, idb := a.placement.ComponentID, b.placement.ComponentID
+			if hasBary[ida] != hasBary[idb] {
+				if hasBary[ida] {
+					return -1
+				}
+				return 1
+			}
+			return cmp.Or(cmp.Compare(bary[ida], bary[idb]), cmp.Compare(a.yamlIdx, b.yamlIdx))
+		})
+		for i, s := range group {
+			s.row = rows[i]
 		}
-		return compareBaryGroup(slotGroupKey(a, bary, hasBary), slotGroupKey(b, bary, hasBary))
-	})
-	for r, s := range colSlots {
-		s.row = r
 	}
 }
 
@@ -317,12 +431,7 @@ func computeSlotBarycenters(colSlots []*cardSlot, slotsByID map[string]*cardSlot
 		}
 		rows := make([]int, 0, len(nbs))
 		for _, nb := range nbs {
-			if ns, ok := slotsByID[nb]; ok {
-				rows = append(rows, ns.row)
-			}
-		}
-		if len(rows) == 0 {
-			continue
+			rows = append(rows, slotsByID[nb].row)
 		}
 		sort.Ints(rows)
 		mid := len(rows) / 2
@@ -336,114 +445,102 @@ func computeSlotBarycenters(colSlots []*cardSlot, slotsByID map[string]*cardSlot
 	return bary, hasBary
 }
 
-func computeContainerGroupKeys(colSlots []*cardSlot, bary map[string]float64, hasBary map[string]bool) (map[string]baryGroupKey, map[string]baryGroupKey) {
-	outerKeys := make(map[string]baryGroupKey)
-	innerKeys := make(map[string]baryGroupKey)
-	for _, s := range colSlots {
-		if s.outerCont != "" {
-			updateGroupKey(outerKeys, s.outerCont, s, bary, hasBary)
-		}
-		if s.innerCont != "" {
-			updateGroupKey(innerKeys, s.innerCont, s, bary, hasBary)
-		}
-	}
-	return outerKeys, innerKeys
-}
-
-func updateGroupKey(m map[string]baryGroupKey, k string, s *cardSlot, bary map[string]float64, hasBary map[string]bool) {
-	hb := hasBary[s.placement.ComponentID]
-	bv := bary[s.placement.ComponentID]
-	cur, exists := m[k]
-	if !exists {
-		m[k] = baryGroupKey{hasBary: hb, minBary: bv, minYAML: s.yamlIdx}
-		return
-	}
-	if s.yamlIdx < cur.minYAML {
-		cur.minYAML = s.yamlIdx
-	}
-	if hb && (!cur.hasBary || bv < cur.minBary) {
-		cur.hasBary = true
-		cur.minBary = bv
-	}
-	m[k] = cur
-}
-
-func slotGroupKey(s *cardSlot, bary map[string]float64, hasBary map[string]bool) baryGroupKey {
-	return baryGroupKey{
-		hasBary: hasBary[s.placement.ComponentID],
-		minBary: bary[s.placement.ComponentID],
-		minYAML: s.yamlIdx,
-	}
-}
-
-func compareContainerSlot(a, b *cardSlot, contA, contB string, keys map[string]baryGroupKey, bary map[string]float64, hasBary map[string]bool) int {
-	ka := slotGroupKey(a, bary, hasBary)
-	if contA != "" {
-		ka = keys[contA]
-	}
-	kb := slotGroupKey(b, bary, hasBary)
-	if contB != "" {
-		kb = keys[contB]
-	}
-	if c := compareBaryGroup(ka, kb); c != 0 {
-		return c
-	}
-	return cmp.Compare(contA, contB)
-}
-
-func compareBaryGroup(a, b baryGroupKey) int {
-	if a.hasBary && b.hasBary && a.minBary != b.minBary {
-		return cmp.Compare(a.minBary, b.minBary)
-	}
-	if a.hasBary != b.hasBary {
-		if a.hasBary {
-			return -1
-		}
-		return 1
-	}
-	return cmp.Compare(a.minYAML, b.minYAML)
-}
-
-func maxColumnRows(cols [][]*cardSlot) int {
-	numRows := 1
-	for _, colSlots := range cols {
-		if len(colSlots) > numRows {
-			numRows = len(colSlots)
+func computeContainerSpans(slots []*cardSlot, viewParent map[string]string) map[string]*containerSpan {
+	spans := make(map[string]*containerSpan, len(viewParent))
+	for _, s := range slots {
+		for cid := s.cont; cid != ""; cid = viewParent[cid] {
+			sp, ok := spans[cid]
+			if !ok {
+				spans[cid] = &containerSpan{minCol: s.gridCol, maxCol: s.gridCol, minRow: s.row, maxRow: s.row}
+				continue
+			}
+			sp.minCol = min(sp.minCol, s.gridCol)
+			sp.maxCol = max(sp.maxCol, s.gridCol)
+			sp.minRow = min(sp.minRow, s.row)
+			sp.maxRow = max(sp.maxRow, s.row)
 		}
 	}
-	return numRows
+	return spans
+}
+
+// checkContainerFrames reports every card lying inside the frame rectangle of a container it does
+// not belong to, and every pair of non-nested container frames whose rectangles intersect.
+func checkContainerFrames(viewID string, spans map[string]*containerSpan, slots []*cardSlot, viewParent map[string]string, origCols []int) []Collision {
+	ids := make([]string, 0, len(spans))
+	for cid := range spans {
+		ids = append(ids, cid)
+	}
+	sort.Strings(ids)
+
+	var collisions []Collision
+	for i, cid := range ids {
+		sp := spans[cid]
+		for _, s := range slots {
+			inside := s.gridCol >= sp.minCol && s.gridCol <= sp.maxCol && s.row >= sp.minRow && s.row <= sp.maxRow
+			if inside && !isWithinContainer(s.cont, cid, viewParent) {
+				collisions = append(collisions, Collision{
+					ViewID:   viewID,
+					Kind:     "container_frame_collision",
+					Subjects: []string{cid, s.placement.ComponentID},
+					Detail: fmt.Sprintf("card %q (column %d) lies inside the frame of container %q (columns %d-%d) without belonging to it",
+						s.placement.ComponentID, s.placement.Column, cid, origCols[sp.minCol], origCols[sp.maxCol]),
+				})
+			}
+		}
+		for _, other := range ids[i+1:] {
+			op := spans[other]
+			if isWithinContainer(other, cid, viewParent) || isWithinContainer(cid, other, viewParent) {
+				continue
+			}
+			if sp.minCol <= op.maxCol && op.minCol <= sp.maxCol && sp.minRow <= op.maxRow && op.minRow <= sp.maxRow {
+				collisions = append(collisions, Collision{
+					ViewID:   viewID,
+					Kind:     "container_overlap_collision",
+					Subjects: []string{cid, other},
+					Detail:   fmt.Sprintf("frames of sibling containers %q and %q overlap", cid, other),
+				})
+			}
+		}
+	}
+	return collisions
 }
 
 func buildPreparedContainers(
 	containerIDs []string,
-	cols [][]*cardSlot,
-	viewContSet map[string]bool,
+	spans map[string]*containerSpan,
+	viewParent map[string]string,
 	contByID map[string]manifest.Container,
 ) ([]PreparedContainer, map[int]bool, map[[2]int]bool) {
-	spans := computeContainerSpans(cols, viewContSet, contByID)
 	sortedContIDs := slices.Clone(containerIDs)
 	sort.Strings(sortedContIDs)
 
-	hasInnerTop, hasInnerTopAtRow := findContainersWithInnerTop(sortedContIDs, spans, viewContSet, contByID)
+	hasInnerTop := make(map[string]bool)
+	hasInnerTopAtRow := make(map[int]bool)
+	for _, cid := range sortedContIDs {
+		sp, parent := spans[cid], viewParent[cid]
+		if sp == nil || parent == "" {
+			continue
+		}
+		if psp := spans[parent]; psp.minRow == sp.minRow {
+			hasInnerTop[parent] = true
+			hasInnerTopAtRow[psp.minRow] = true
+		}
+	}
 
 	badgeAtRowCol := make(map[[2]int]bool)
 	var prepared []PreparedContainer
 	for _, cid := range sortedContIDs {
 		sp := spans[cid]
-		if sp == nil || !sp.hasMember {
+		if sp == nil {
 			continue
 		}
 		ct := contByID[cid]
-		depth := 1
-		if isChildContainerInView(ct, viewContSet) {
-			depth = 2
-		}
 		badgeAtRowCol[[2]int{sp.minRow, sp.minCol}] = true
 		prepared = append(prepared, PreparedContainer{
 			ID:           ct.ID,
 			Title:        ct.Title,
 			Kind:         ct.Kind,
-			Depth:        depth,
+			Depth:        structuralDepth(cid, viewParent),
 			HasInnerTop:  hasInnerTop[ct.ID],
 			GridColSpec:  fmt.Sprintf("%d / %d", 2*sp.minCol+1, 2*sp.maxCol+2),
 			GridRowSpec:  fmt.Sprintf("%d / %d", 2*sp.minRow+2, 2*sp.maxRow+3),
@@ -457,64 +554,10 @@ func buildPreparedContainers(
 	return prepared, hasInnerTopAtRow, badgeAtRowCol
 }
 
-func isChildContainerInView(ct manifest.Container, viewContSet map[string]bool) bool {
-	return ct.ParentContainerID != "" && viewContSet[ct.ParentContainerID]
-}
-
-func findContainersWithInnerTop(
-	sortedContIDs []string,
-	spans map[string]*containerSpan,
-	viewContSet map[string]bool,
-	contByID map[string]manifest.Container,
-) (map[string]bool, map[int]bool) {
-	hasInnerTop := make(map[string]bool)
-	hasInnerTopAtRow := make(map[int]bool)
-	for _, cid := range sortedContIDs {
-		sp := spans[cid]
-		if sp == nil || !sp.hasMember {
-			continue
-		}
-		ct := contByID[cid]
-		if !isChildContainerInView(ct, viewContSet) {
-			continue
-		}
-		if psp := spans[ct.ParentContainerID]; psp != nil && psp.minRow == sp.minRow {
-			hasInnerTop[ct.ParentContainerID] = true
-			hasInnerTopAtRow[psp.minRow] = true
-		}
-	}
-	return hasInnerTop, hasInnerTopAtRow
-}
-
-func computeContainerSpans(cols [][]*cardSlot, viewContSet map[string]bool, contByID map[string]manifest.Container) map[string]*containerSpan {
-	spans := make(map[string]*containerSpan, len(viewContSet))
-	record := func(cid string, col, row int) {
-		sp, ok := spans[cid]
-		if !ok {
-			spans[cid] = &containerSpan{minCol: col, maxCol: col, minRow: row, maxRow: row, hasMember: true}
-			return
-		}
-		sp.minCol = min(sp.minCol, col)
-		sp.maxCol = max(sp.maxCol, col)
-		sp.minRow = min(sp.minRow, row)
-		sp.maxRow = max(sp.maxRow, row)
-	}
-	for _, colSlots := range cols {
-		for _, s := range colSlots {
-			cid := s.innerCont
-			if cid == "" || !viewContSet[cid] {
-				continue
-			}
-			record(cid, s.gridCol, s.row)
-			parent := contByID[cid].ParentContainerID
-			if parent != "" && viewContSet[parent] {
-				record(parent, s.gridCol, s.row)
-			}
-		}
-	}
-	return spans
-}
-
+// assignBusGroups gives every cross-column edge at most one bus group, deterministically:
+// explicit via_bus_id groups first, then auto fan-out groups (from, flow_kind, direction), then
+// auto fan-in groups (to, flow_kind, direction) over the edges still unassigned. A candidate group
+// with fewer than 2 remaining edges is dissolved and its edges stay available to later stages.
 func assignBusGroups(edges []manifest.Edge, slotsByID map[string]*cardSlot) ([]string, []string) {
 	busGroup := make([]string, len(edges))
 	busKind := make([]string, len(edges))

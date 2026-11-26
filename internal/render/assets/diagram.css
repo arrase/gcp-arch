@@ -207,16 +207,17 @@ html, body {
   margin-top: -46px;
 }
 
-.arch-container[data-kind="PSA_ZONE"],
-.arch-container[data-kind="EXTERNAL_ZONE"] {
-  border-style: dashed;
-}
-
 .arch-container[data-depth="2"] {
   background: #F1F5F9;
   border: 1px solid #CBD5E1;
   margin: -22px -4px -4px -4px;
   z-index: 2;
+}
+
+/* Depth (structural nesting in the view) drives fill, margins and badges; kind only drives the dash. */
+.arch-container[data-kind="PSA_ZONE"],
+.arch-container[data-kind="EXTERNAL_ZONE"] {
+  border-style: dashed;
 }
 
 .arch-container-badge {

@@ -21,10 +21,10 @@ You are a Principal GCP Cloud Architect decomposing verified Cloud Asset Invento
 Operate strictly in a closed world: only reference interned resource handles (r_XXXX) present in the input JSON. Never invent resources or IDs.
 
 Mandatory rules:
-1. 100%% Resource Accounting: Every r_XXXX in input.resources MUST appear in at least one of components[].backed_by_ids, container_defs[].backed_by_ids, or excluded_resources[].resource_id.
+1. 100%% Resource Accounting: Every r_XXXX in input.resources MUST appear in exactly one of components[].backed_by_ids, container_defs[].backed_by_ids, or excluded_resources[].resource_id (never in two places).
 2. 1:1 Folding: Fold dedicated 1:1 ServiceAccount, Secret, CryptoKey, Ingress, k8s.io/Service, and ForwardingRule resources into their owning workload/ingress component's backed_by_ids and surface concise details in inline_meta (max 4 rows).
-3. Stateful Datastore Homogeneity: Never mix distinct stateful datastore asset types (Cloud SQL, AlloyDB, Spanner, Bigtable, Firestore, Memorystore, Cloud Storage, BigQuery Dataset, Artifact Registry, Filestore, Pub/Sub Topic) inside one component's backed_by_ids.
-4. Focused Detail Views: Partition into 1..M cohesive detail views targeting 6-12 components each (hard cap 12). Never emit view_0_system_index (Go generates View 0 deterministically). Every component must appear in at least one detail view.
+3. Stateful Datastore Homogeneity: Never mix distinct stateful datastore asset types (Cloud SQL, AlloyDB, Spanner, Bigtable, Firestore, Memorystore, Cloud Storage, BigQuery Dataset, Artifact Registry, Filestore, Pub/Sub Topic) inside one component's backed_by_ids. Never put a stateful datastore in excluded_resources: diagram it, folding several of the same asset type into one COHORT component when needed.
+4. Focused Detail Views: Partition into 1..16 cohesive detail views targeting 6-12 components each (hard cap 12). Never emit view_0_system_index (Go generates View 0 deterministically). Every component must appear in at least one detail view. View IDs must differ from every component ID.
 5. Containers: Define flat background containers (PROJECT, VPC, GKE_CLUSTER, PSA_ZONE, EXTERNAL_ZONE, SHARED_HUB) with parent nesting depth <= 2. Account for VPC/GKE Cluster r_XXXX handles via container_defs[].backed_by_ids or dedicated hub components.
 6. Archetypes: Choose stage_pipeline for CI/CD/ETL flows, hub_spoke for VPC/PSA networking topologies, or landscape_matrix for application/ingress landscapes.
 7. Valid icon_key values (choose strictly from this list): %s
@@ -40,9 +40,9 @@ Operate strictly in a closed world using only the locked component_ids, containe
 Mandatory rules:
 1. Placements: Place every locked component_id once (1-12 placements). Assign column within 0..max_column (0..4 for landscape_matrix/stage_pipeline; 0..2 for hub_spoke). Order placements in preferred vertical top-to-bottom order per column.
 2. Containers: Only include container_ids whose nesting depth within this view is <= 2.
-3. Off-Page Refs: When a placed component connects to components in another detail view listed in cross_view_neighbors, attach concise off_page_refs (direction IN or OUT).
-4. Edge Verbs: Keep verb concise and <= 16 characters.
-5. Directed-Walk Provenance: Set provenance to VERIFIED ONLY when evidence_edge_ids (e_XXXX handles) form a connected directed walk starting at a resource in from.backed_by_ids and ending at a resource in to.backed_by_ids. Otherwise set provenance to INFERRED with a concise inference_rationale.
+3. Edge Verbs: Keep verb concise and <= 16 characters.
+4. Directed-Walk Provenance: Set provenance to VERIFIED ONLY when evidence_edge_ids (e_XXXX handles) form a connected directed walk starting at a resource in from.backed_by_ids and ending at a resource in to.backed_by_ids, using only edges without "heuristic": true, and passing only through resources owned by the two endpoint components or by no component/container. Otherwise set provenance to INFERRED with a concise inference_rationale.
+5. Permissions Are Not Traffic: When every cited evidence edge is IAM_RESOURCE_BINDING or WORKLOAD_IDENTITY, the edge proves access only and flow_kind MUST be ADMIN.
 6. Shared Bus Spines: When >= 2 edges share the same source (or same target) and flow_kind, you may assign a shared via_bus_id; never mix multiple distinct sources AND multiple distinct targets on one via_bus_id.
 `)
 }
@@ -57,10 +57,10 @@ Operate strictly in a closed world using only the r_XXXX and e_XXXX handles in t
 
 Mandatory rules:
 1. Freeze Existing Curation: Never alter existing view IDs, archetypes, curated component titles, notes, or rejected_edges.
-2. Cover Every Unclaimed Resource: Every r_XXXX in unclaimed_resources MUST be accounted for via append_backed_by, append_container_backed_by, new_components, or new_excluded_resources.
-3. Respect View Capacity: Only add new_placements to existing views with remaining_capacity > 0 (never exceed 12 total placements). If existing views lack capacity, create overflow new_views (1-12 placements, never view_0_system_index).
+2. Cover Every Unclaimed Resource: Every r_XXXX in unclaimed_resources MUST be accounted for exactly once via append_backed_by, append_container_backed_by, new_components, or new_excluded_resources (never exclude a stateful datastore).
+3. Respect View Capacity: Only add new_placements to existing views with remaining_capacity > 0 (never exceed 12 total placements). If existing views lack capacity, create overflow new_views (1-12 placements, never view_0_system_index, at most 16 detail views in total, IDs distinct from component IDs).
 4. Respect Rejected Edges: Never emit an edge whose (from, to) pair appears in rejected_edges.
-5. Directed-Walk Provenance & Homogeneity: Enforce <= 16-char verbs, single-source/single-target via_bus_id, stateful datastore homogeneity, and VERIFIED directed walks over e_XXXX handles.
+5. Directed-Walk Provenance & Homogeneity: Enforce <= 16-char verbs, single-source/single-target via_bus_id, stateful datastore homogeneity, and VERIFIED directed walks over non-heuristic e_XXXX handles that pass only through resources of the two endpoint components or of no component/container; IAM_RESOURCE_BINDING/WORKLOAD_IDENTITY-only evidence requires flow_kind ADMIN.
 6. Valid icon_key values: %s
 `, strings.Join(keys, ", ")))
 }
@@ -78,11 +78,12 @@ type internedResourceDesc struct {
 }
 
 type internedEdgeDesc struct {
-	ID     string               `json:"id"`
-	FromID string               `json:"from_id"`
-	ToID   string               `json:"to_id"`
-	Kind   extract.FactEdgeKind `json:"kind"`
-	Detail string               `json:"detail,omitempty"`
+	ID        string               `json:"id"`
+	FromID    string               `json:"from_id"`
+	ToID      string               `json:"to_id"`
+	Kind      extract.FactEdgeKind `json:"kind"`
+	Detail    string               `json:"detail,omitempty"`
+	Heuristic bool                 `json:"heuristic,omitempty"`
 }
 
 func makeResourceDesc(id string, r extract.FactResource, table *InternTable) internedResourceDesc {
@@ -105,8 +106,10 @@ func makeResourceDesc(id string, r extract.FactResource, table *InternTable) int
 	}
 }
 
-// BuildPass1UserPrompt builds the deterministic JSON prompt for Pass 1 planning.
-func BuildPass1UserPrompt(facts *extract.FactsFile, table *InternTable, feedback []string) (string, error) {
+// BuildPass1UserPrompt builds the deterministic JSON prompt for Pass 1 planning. On retries,
+// previousPlan carries the rejected response so the model corrects only what feedback lists
+// instead of regenerating (and re-breaking) the whole plan.
+func BuildPass1UserPrompt(facts *extract.FactsFile, table *InternTable, feedback []string, previousPlan json.RawMessage) (string, error) {
 	resIDs := table.ResourceIDs()
 	descs := make([]internedResourceDesc, 0, len(resIDs))
 	for _, id := range resIDs {
@@ -119,12 +122,14 @@ func BuildPass1UserPrompt(facts *extract.FactsFile, table *InternTable, feedback
 		Hierarchy          extract.Hierarchy           `json:"hierarchy"`
 		Resources          []internedResourceDesc      `json:"resources"`
 		Adjacency          map[string][]AdjacencyEntry `json:"adjacency"`
+		PreviousPlan       json.RawMessage             `json:"previous_plan,omitempty"`
 		ValidationFeedback []string                    `json:"validation_feedback,omitempty"`
 	}{
 		Scopes:             facts.Scopes,
 		Hierarchy:          facts.Hierarchy,
 		Resources:          descs,
 		Adjacency:          BuildAdjacency(facts, table),
+		PreviousPlan:       previousPlan,
 		ValidationFeedback: feedback,
 	}
 
@@ -133,13 +138,6 @@ func BuildPass1UserPrompt(facts *extract.FactsFile, table *InternTable, feedback
 		return "", fmt.Errorf("marshal pass 1 prompt: %w", err)
 	}
 	return string(data), nil
-}
-
-type crossNeighbor struct {
-	LocalComponentID  string   `json:"local_component_id"`
-	RemoteComponentID string   `json:"remote_component_id"`
-	RemoteViewIDs     []string `json:"remote_view_ids"`
-	Direction         string   `json:"direction"`
 }
 
 // BuildPass2UserPrompt builds the deterministic JSON prompt for one Pass 2 detail view.
@@ -154,23 +152,11 @@ func BuildPass2UserPrompt(view Pass1DetailView, plan *Pass1Plan, table *InternTa
 		compSet[cid] = true
 	}
 
-	compViews := buildOtherViewMemberships(view.ID, plan.DetailViews)
-	viewComps, viewResSet, resToComp := collectPass2ViewComponents(plan.Components, compSet)
+	viewComps, viewResSet := collectPass2ViewComponents(plan.Components, compSet)
 	bridgeSet := buildPass1BridgeSet(plan)
-	collector := &pass2Collector{
-		table:        table,
-		compSet:      compSet,
-		compViews:    compViews,
-		viewResSet:   viewResSet,
-		resToComp:    resToComp,
-		bridgeSet:    bridgeSet,
-		neighborSeen: make(map[string]bool),
-		neededRes:    maps.Clone(viewResSet),
-	}
-	collector.collect(view.ComponentIDs)
-
-	resDescs := buildSortedResourceDescs(collector.neededRes, table)
-	otherViewIDs := collectOtherViewIDs(view.ID, plan.DetailViews)
+	neededRes := maps.Clone(viewResSet)
+	incidentEdges := collectIncidentEdges(table, viewResSet, bridgeSet, neededRes)
+	resDescs := buildSortedResourceDescs(neededRes, table)
 
 	payload := struct {
 		View               Pass1DetailView        `json:"view"`
@@ -179,8 +165,6 @@ func BuildPass2UserPrompt(view Pass1DetailView, plan *Pass1Plan, table *InternTa
 		ContainerDefs      []Pass1ContainerDef    `json:"container_defs"`
 		Resources          []internedResourceDesc `json:"resources"`
 		IncidentEdges      []internedEdgeDesc     `json:"incident_edges"`
-		OtherViewIDs       []string               `json:"other_view_ids,omitempty"`
-		CrossViewNeighbors []crossNeighbor        `json:"cross_view_neighbors,omitempty"`
 		ValidationFeedback []string               `json:"validation_feedback,omitempty"`
 	}{
 		View:               view,
@@ -188,9 +172,7 @@ func BuildPass2UserPrompt(view Pass1DetailView, plan *Pass1Plan, table *InternTa
 		Components:         viewComps,
 		ContainerDefs:      plan.ContainerDefs,
 		Resources:          resDescs,
-		IncidentEdges:      collector.incidentEdges,
-		OtherViewIDs:       otherViewIDs,
-		CrossViewNeighbors: collector.crossNeighbors,
+		IncidentEdges:      incidentEdges,
 		ValidationFeedback: feedback,
 	}
 
@@ -201,30 +183,10 @@ func BuildPass2UserPrompt(view Pass1DetailView, plan *Pass1Plan, table *InternTa
 	return string(data), nil
 }
 
-func buildOtherViewMemberships(currentViewID string, detailViews []Pass1DetailView) map[string][]string {
-	compViews := make(map[string][]string)
-	for _, dv := range detailViews {
-		if dv.ID == currentViewID {
-			continue
-		}
-		for _, cid := range dv.ComponentIDs {
-			compViews[cid] = append(compViews[cid], dv.ID)
-		}
-	}
-	for cid := range compViews {
-		slices.Sort(compViews[cid])
-	}
-	return compViews
-}
-
-func collectPass2ViewComponents(components []Pass1Component, compSet map[string]bool) ([]Pass1Component, map[string]bool, map[string][]string) {
+func collectPass2ViewComponents(components []Pass1Component, compSet map[string]bool) ([]Pass1Component, map[string]bool) {
 	viewComps := make([]Pass1Component, 0, len(compSet))
 	viewResSet := make(map[string]bool)
-	resToComp := make(map[string][]string)
 	for _, c := range components {
-		for _, rid := range c.BackedByIDs {
-			resToComp[rid] = append(resToComp[rid], c.ID)
-		}
 		if compSet[c.ID] {
 			viewComps = append(viewComps, c)
 			for _, rid := range c.BackedByIDs {
@@ -233,7 +195,7 @@ func collectPass2ViewComponents(components []Pass1Component, compSet map[string]
 		}
 	}
 	slices.SortFunc(viewComps, func(a, b Pass1Component) int { return cmp.Compare(a.ID, b.ID) })
-	return viewComps, viewResSet, resToComp
+	return viewComps, viewResSet
 }
 
 func buildPass1BridgeSet(plan *Pass1Plan) map[string]bool {
@@ -249,58 +211,22 @@ func buildPass1BridgeSet(plan *Pass1Plan) map[string]bool {
 	return bridgeSet
 }
 
-type pass2Collector struct {
-	table          *InternTable
-	compSet        map[string]bool
-	compViews      map[string][]string
-	viewResSet     map[string]bool
-	resToComp      map[string][]string
-	bridgeSet      map[string]bool
-	neighborSeen   map[string]bool
-	incidentEdges  []internedEdgeDesc
-	crossNeighbors []crossNeighbor
-	neededRes      map[string]bool
-}
-
-func (c *pass2Collector) collect(componentIDs []string) {
-	for _, eid := range c.table.EdgeIDs() {
-		c.inspectEdge(eid)
+// collectIncidentEdges returns the edges between the view's resources, or between a view resource
+// and a bridge (excluded or container-backed) resource, marking their endpoints as needed.
+func collectIncidentEdges(table *InternTable, viewResSet, bridgeSet, neededRes map[string]bool) []internedEdgeDesc {
+	var edges []internedEdgeDesc
+	for _, eid := range table.EdgeIDs() {
+		fe, _ := table.EdgeByID(eid)
+		fromRID, okF := table.ResourceID(fe.FromURI)
+		toRID, okT := table.ResourceID(fe.ToURI)
+		if !okF || !okT || !isIncidentEdge(viewResSet[fromRID], viewResSet[toRID], bridgeSet[fromRID], bridgeSet[toRID]) {
+			continue
+		}
+		edges = append(edges, internedEdgeDesc{ID: eid, FromID: fromRID, ToID: toRID, Kind: fe.Kind, Detail: fe.Detail, Heuristic: fe.Heuristic})
+		neededRes[fromRID] = true
+		neededRes[toRID] = true
 	}
-	c.addSharedViewNeighbors(componentIDs)
-	slices.SortFunc(c.crossNeighbors, func(a, b crossNeighbor) int {
-		return cmp.Or(
-			cmp.Compare(a.LocalComponentID, b.LocalComponentID),
-			cmp.Compare(a.Direction, b.Direction),
-			cmp.Compare(a.RemoteComponentID, b.RemoteComponentID),
-		)
-	})
-}
-
-func (c *pass2Collector) inspectEdge(eid string) {
-	fe, _ := c.table.EdgeByID(eid)
-	fromRID, okF := c.table.ResourceID(fe.FromURI)
-	toRID, okT := c.table.ResourceID(fe.ToURI)
-	if !okF || !okT {
-		return
-	}
-	inViewFrom := c.viewResSet[fromRID]
-	inViewTo := c.viewResSet[toRID]
-	if isIncidentEdge(inViewFrom, inViewTo, c.bridgeSet[fromRID], c.bridgeSet[toRID]) {
-		c.incidentEdges = append(c.incidentEdges, internedEdgeDesc{
-			ID:     eid,
-			FromID: fromRID,
-			ToID:   toRID,
-			Kind:   fe.Kind,
-			Detail: fe.Detail,
-		})
-		c.neededRes[fromRID] = true
-		c.neededRes[toRID] = true
-	}
-	if inViewFrom && !inViewTo {
-		c.addCrossNeighbors(c.resToComp[fromRID], c.resToComp[toRID], "OUT")
-	} else if inViewTo && !inViewFrom {
-		c.addCrossNeighbors(c.resToComp[toRID], c.resToComp[fromRID], "IN")
-	}
+	return edges
 }
 
 func isIncidentEdge(inViewFrom, inViewTo, bridgeFrom, bridgeTo bool) bool {
@@ -308,53 +234,6 @@ func isIncidentEdge(inViewFrom, inViewTo, bridgeFrom, bridgeTo bool) bool {
 		return inViewTo || bridgeTo
 	}
 	return inViewTo && bridgeFrom
-}
-
-func (c *pass2Collector) addSharedViewNeighbors(componentIDs []string) {
-	for _, cid := range componentIDs {
-		if len(c.compViews[cid]) == 0 {
-			continue
-		}
-		key := cid + "|SHARED|" + cid
-		if c.neighborSeen[key] {
-			continue
-		}
-		c.neighborSeen[key] = true
-		c.crossNeighbors = append(c.crossNeighbors, crossNeighbor{
-			LocalComponentID:  cid,
-			RemoteComponentID: cid,
-			RemoteViewIDs:     c.compViews[cid],
-			Direction:         "OUT",
-		})
-	}
-}
-
-func (c *pass2Collector) addCrossNeighbors(localComps, remoteComps []string, dir string) {
-	for _, localCID := range localComps {
-		if !c.compSet[localCID] {
-			continue
-		}
-		c.addCrossNeighborsForLocal(localCID, remoteComps, dir)
-	}
-}
-
-func (c *pass2Collector) addCrossNeighborsForLocal(localCID string, remoteComps []string, dir string) {
-	for _, remoteCID := range remoteComps {
-		if c.compSet[remoteCID] || len(c.compViews[remoteCID]) == 0 {
-			continue
-		}
-		key := localCID + "|" + dir + "|" + remoteCID
-		if c.neighborSeen[key] {
-			continue
-		}
-		c.neighborSeen[key] = true
-		c.crossNeighbors = append(c.crossNeighbors, crossNeighbor{
-			LocalComponentID:  localCID,
-			RemoteComponentID: remoteCID,
-			RemoteViewIDs:     c.compViews[remoteCID],
-			Direction:         dir,
-		})
-	}
 }
 
 func buildSortedResourceDescs(neededRes map[string]bool, table *InternTable) []internedResourceDesc {
@@ -369,17 +248,6 @@ func buildSortedResourceDescs(neededRes map[string]bool, table *InternTable) []i
 		resDescs = append(resDescs, makeResourceDesc(rid, r, table))
 	}
 	return resDescs
-}
-
-func collectOtherViewIDs(currentViewID string, detailViews []Pass1DetailView) []string {
-	otherViewIDs := make([]string, 0, len(detailViews))
-	for _, dv := range detailViews {
-		if dv.ID != currentViewID {
-			otherViewIDs = append(otherViewIDs, dv.ID)
-		}
-	}
-	slices.Sort(otherViewIDs)
-	return otherViewIDs
 }
 
 // ReconcileDelta summarizes the unclaimed resources and newly projected inter-component edges
@@ -531,11 +399,12 @@ func buildReconcileDeltaEdges(ids []string, table *InternTable) []internedEdgeDe
 		toRID, okT := table.ResourceID(fe.ToURI)
 		if okF && okT {
 			newEdges = append(newEdges, internedEdgeDesc{
-				ID:     eid,
-				FromID: fromRID,
-				ToID:   toRID,
-				Kind:   fe.Kind,
-				Detail: fe.Detail,
+				ID:        eid,
+				FromID:    fromRID,
+				ToID:      toRID,
+				Kind:      fe.Kind,
+				Detail:    fe.Detail,
+				Heuristic: fe.Heuristic,
 			})
 		}
 	}

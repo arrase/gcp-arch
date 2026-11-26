@@ -179,7 +179,7 @@ func (f *scopeFlags) register(cmd *cobra.Command) {
 		}
 		return pflag.NormalizedName(name)
 	})
-	cmd.Flags().StringArrayVar(&f.orgs, "org", nil, "GCP Organization `ID`(s) (repeatable or comma-separated)")
+	cmd.Flags().StringArrayVar(&f.orgs, "org", nil, "GCP Organization `ID`(s) (small orgs <= 500 active resources; repeatable or comma-separated)")
 	cmd.Flags().StringArrayVar(&f.folders, "folder", nil, "GCP Folder `ID`(s) (repeatable or comma-separated)")
 	cmd.Flags().StringArrayVar(&f.projects, "projects", nil, "GCP Project `ID`(s) (repeatable or comma-separated; alias --project)")
 }

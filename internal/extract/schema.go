@@ -44,6 +44,7 @@ const (
 	CoverageVPCSCBlocked    CoverageState = "VPC_SC_BLOCKED"
 	CoverageServiceDisabled CoverageState = "SERVICE_DISABLED"
 	CoverageTruncatingCap   CoverageState = "TRUNCATING_CAP"
+	CoverageDanglingEdges   CoverageState = "DANGLING_EDGES_DROPPED"
 )
 
 // FactsFile is the on-disk v3 contract emitted by Stage 1 extraction.
@@ -109,6 +110,9 @@ type FactEdge struct {
 	ToURI   string       `json:"to_uri"`
 	Kind    FactEdgeKind `json:"kind"`
 	Detail  string       `json:"detail,omitempty"`
+	// Heuristic marks correlation-derived edges (single-instance target joins, shared-principal
+	// attribution) that may back INFERRED diagram edges but never VERIFIED ones.
+	Heuristic bool `json:"heuristic,omitempty"`
 }
 
 // OutOfScopeHint records a project referenced by extracted resources outside the scanned scopes.

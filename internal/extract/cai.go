@@ -250,7 +250,7 @@ type extractState struct {
 	runNameToURIs    map[string][]string
 
 	edges             []FactEdge
-	edgeSeen          map[string]bool
+	edgeIdx           map[string]int
 	externalResources map[string]FactResource
 	outOfScope        map[oosKey]*OutOfScopeHint
 	referencedURIs    map[string]bool
@@ -300,7 +300,7 @@ func newExtractState(scopes []string, aliases map[string]string, cbRuns int) *ex
 		privateIPTargets:   make(map[netIPKey][]string),
 		runHostToURI:       make(map[string]string),
 		runNameToURIs:      make(map[string][]string),
-		edgeSeen:           make(map[string]bool),
+		edgeIdx:            make(map[string]int),
 		externalResources:  make(map[string]FactResource),
 		outOfScope:         make(map[oosKey]*OutOfScopeHint),
 		referencedURIs:     make(map[string]bool),
@@ -360,23 +360,24 @@ func (st *extractState) addCoverage(entry CoverageEntry) {
 }
 
 func (st *extractState) addEdge(fromURI, toURI string, kind FactEdgeKind, detail string) {
-	if fromURI == "" || toURI == "" || fromURI == toURI {
+	st.putEdge(FactEdge{FromURI: fromURI, ToURI: toURI, Kind: kind, Detail: detail})
+}
+
+// putEdge records e once per EdgeID; when the same edge is emitted both structurally and
+// heuristically, the structural (non-heuristic) version wins.
+func (st *extractState) putEdge(e FactEdge) {
+	if e.FromURI == "" || e.ToURI == "" || e.FromURI == e.ToURI {
 		return
 	}
-	id := EdgeID(kind, fromURI, toURI, detail)
+	e.ID = EdgeID(e.Kind, e.FromURI, e.ToURI, e.Detail)
 	st.edgeMu.Lock()
 	defer st.edgeMu.Unlock()
-	if st.edgeSeen[id] {
+	if i, seen := st.edgeIdx[e.ID]; seen {
+		st.edges[i].Heuristic = st.edges[i].Heuristic && e.Heuristic
 		return
 	}
-	st.edgeSeen[id] = true
-	st.edges = append(st.edges, FactEdge{
-		ID:      id,
-		FromURI: fromURI,
-		ToURI:   toURI,
-		Kind:    kind,
-		Detail:  detail,
-	})
+	st.edgeIdx[e.ID] = len(st.edges)
+	st.edges = append(st.edges, e)
 }
 
 func (st *extractState) collectCAI(ctx context.Context, clients *Clients) error {
@@ -2460,22 +2461,34 @@ func (st *extractState) collectFactResources() ([]FactResource, map[string]bool)
 	return resources, validURIs
 }
 
+// filterFactEdges enforces edge closure: every emitted edge endpoint must exist in resources[].
+// In-scope Project endpoints (triggerless builds, project-level refs) are materialized on demand;
+// any remaining dangling edge is dropped and reported in the coverage ledger.
 func (st *extractState) filterFactEdges(resources *[]FactResource, validURIs map[string]bool) []FactEdge {
-	// Include project URIs for triggerless Cloud Build builds only if referenced by edges.
 	edges := make([]FactEdge, 0, len(st.edges))
+	dropped := 0
 	for _, e := range st.edges {
-		if !validURIs[e.FromURI] {
-			st.maybeAddInScopeProjectResource(e.FromURI, resources, validURIs)
-		}
+		st.maybeAddInScopeProjectResource(e.FromURI, resources, validURIs)
+		st.maybeAddInScopeProjectResource(e.ToURI, resources, validURIs)
 		if validURIs[e.FromURI] && validURIs[e.ToURI] {
 			edges = append(edges, e)
+		} else {
+			dropped++
 		}
+	}
+	if dropped > 0 {
+		st.addCoverage(CoverageEntry{
+			Scope:  "facts",
+			Source: "edge_closure",
+			State:  CoverageDanglingEdges,
+			Detail: fmt.Sprintf("dropped %d edge(s) whose endpoint is missing from resources[]", dropped),
+		})
 	}
 	return edges
 }
 
 func (st *extractState) maybeAddInScopeProjectResource(uri string, resources *[]FactResource, validURIs map[string]bool) {
-	if !strings.HasPrefix(uri, "//cloudresourcemanager.googleapis.com/projects/") {
+	if validURIs[uri] || !strings.HasPrefix(uri, "//cloudresourcemanager.googleapis.com/projects/") {
 		return
 	}
 	proj := shortResourceName(uri)
@@ -2517,6 +2530,13 @@ func canonicalizeSlice(items []string, projIdx map[string]string) []string {
 			v = CanonicalizeAIP122(it, projIdx)
 		case strings.HasPrefix(it, flagProjectPrefix):
 			v = flagProjectPrefix + mapProject(strings.TrimPrefix(it, flagProjectPrefix), projIdx)
+		case strings.HasPrefix(it, flagClusterPrefix) && strings.Contains(it, "/"):
+			scope, name, _ := strings.Cut(strings.TrimPrefix(it, flagClusterPrefix), "/")
+			projects := strings.Split(scope, ",")
+			for i, p := range projects {
+				projects[i] = mapProject(p, projIdx)
+			}
+			v = flagClusterPrefix + strings.Join(projects, ",") + "/" + name
 		case strings.HasPrefix(it, prefixGCR):
 			v = prefixGCR + mapProject(strings.TrimPrefix(it, prefixGCR), projIdx)
 		}

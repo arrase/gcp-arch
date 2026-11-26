@@ -179,6 +179,15 @@ func hasEdgeDetail(edges []FactEdge, from, to string, kind FactEdgeKind, detail 
 	return false
 }
 
+func findEdge(edges []FactEdge, from, to string, kind FactEdgeKind) *FactEdge {
+	for i := range edges {
+		if edges[i].FromURI == from && edges[i].ToURI == to && edges[i].Kind == kind {
+			return &edges[i]
+		}
+	}
+	return nil
+}
+
 func findResource(resources []FactResource, uri string) *FactResource {
 	for i := range resources {
 		if resources[i].URI == uri {
@@ -1651,6 +1660,11 @@ func TestExtractStructuralEdgesAndIAMCondition(t *testing.T) {
 	if hasEdge(facts.Edges, saURI, db2URI, EdgeIAMResourceBinding) {
 		t.Fatal("IAM condition-pinned binding leaked onto db-2")
 	}
+	for _, pair := range [][2]string{{saURI, db1URI}, {"//cloudresourcemanager.googleapis.com/projects/ext-caller", bktURI}} {
+		if e := findEdge(facts.Edges, pair[0], pair[1], EdgeIAMResourceBinding); e == nil || e.Heuristic {
+			t.Errorf("condition-pinned/resource-scoped IAM edge %s -> %s must be structural: %+v", pair[0], pair[1], e)
+		}
+	}
 	var sawIAMHint bool
 	for _, h := range facts.OutOfScopeTargets {
 		if h.TargetProjectID == "ext-caller" && h.SourceKind == "iam_cross_project" {
@@ -1710,8 +1724,13 @@ func assertReadOnlyDiscoveryMethodFilter(t *testing.T) {
 		"redis.projects.locations.instances.list",
 		"compute.instances.aggregatedList",
 		"google.firestore.admin.v1.FirestoreAdmin.ListDatabases",
-		"google.firestore.v1.Firestore.BatchGetDocuments",
 		"google.iam.v1.IAMPolicy.TestIamPermissions",
+		"google.iam.v1.IAMPolicy.GetIamPolicy",
+		"storage.buckets.list",
+		"google.storage.v2.Storage.GetBucket",
+		"bigquery.datasets.get",
+		"google.cloud.bigquery.v2.DatasetService.GetDataset",
+		"google.spanner.admin.instance.v1.InstanceAdmin.ListInstances",
 		"google.cloud.redis.v1.CloudRedis.GetInstance",
 		"WatchChanges",
 		"PollStatus",
@@ -1725,6 +1744,19 @@ func assertReadOnlyDiscoveryMethodFilter(t *testing.T) {
 		"storage.objects.insert",
 		"google.pubsub.v1.Publisher.Publish",
 		"google.cloud.aiplatform.v1.PredictionService.GenerateContent",
+		// Data-plane reads, lowercase JSON-API and PascalCase gRPC forms.
+		"storage.objects.get", "storage.objects.list", "STORAGE.OBJECTS.GET",
+		"google.storage.v1.Storage.GetObject", "google.storage.v2.Storage.ReadObject", "google.storage.v1.Storage.ListObjects",
+		"google.firestore.v1.Firestore.Listen", "google.firestore.v1.Firestore.BatchGetDocuments",
+		"google.firestore.v1.Firestore.GetDocument", "google.firestore.v1.Firestore.ListDocuments", "google.firestore.v1.Firestore.RunQuery",
+		"listen", "batchgetdocuments", "getdocument", "listdocuments",
+		"google.datastore.v1.Datastore.Lookup", "google.datastore.v1.Datastore.RunQuery",
+		"google.bigtable.v2.Bigtable.ReadRows", "google.cloud.bigquery.storage.v1.BigQueryRead.ReadRows",
+		"google.spanner.v1.Spanner.Read", "google.spanner.v1.Spanner.StreamingRead",
+		"google.spanner.v1.Spanner.ExecuteSql", "google.spanner.v1.Spanner.ExecuteStreamingSql",
+		"google.cloud.bigquery.v2.JobService.GetQueryResults", "bigquery.jobs.getQueryResults",
+		"bigquery.tabledata.list", "google.cloud.bigquery.v2.TableDataService.List",
+		"google.pubsub.v1.Subscriber.Pull", "google.pubsub.v1.Subscriber.StreamingPull",
 	} {
 		if IsReadOnlyDiscoveryMethod(active) {
 			t.Errorf("IsReadOnlyDiscoveryMethod(%q) = true, want false", active)
@@ -1888,8 +1920,11 @@ func assertEnricherFacts(t *testing.T, facts *FactsFile) {
 	if findResource(facts.Resources, pmURI) == nil {
 		t.Fatalf("expected PublisherModel %s in resources", pmURI)
 	}
-	if !hasEdge(facts.Edges, workerURI, pmURI, EdgeMonitoringTraffic) {
-		t.Errorf("expected MONITORING_TRAFFIC edge %s -> %s", workerURI, pmURI)
+	if e := findEdge(facts.Edges, workerURI, pmURI, EdgeMonitoringTraffic); e == nil || !e.Heuristic {
+		t.Errorf("expected heuristic MONITORING_TRAFFIC edge %s -> %s, got %+v", workerURI, pmURI, e)
+	}
+	if e := findEdge(facts.Edges, workerURI, goldDS, EdgeBQLineage); e == nil || e.Heuristic {
+		t.Errorf("dedicated-workload BQ_LINEAGE attribution must not be heuristic: %+v", e)
 	}
 	for _, r := range facts.Resources {
 		if strings.Contains(r.AssetType, "firestore") || strings.Contains(r.AssetType, "redis") {
@@ -1966,6 +2001,11 @@ func TestExtractMonitoringUnambiguousCompanionAPI(t *testing.T) {
 	}
 	if !hasEdge(facts.Edges, appURI, "//aiplatform.googleapis.com/projects/p1/locations/global/publishers/google/models/gemini-4-carbon", EdgeMonitoringTraffic) {
 		t.Errorf("missing MONITORING_TRAFFIC app -> PublisherModel")
+	}
+	for _, e := range facts.Edges {
+		if e.Kind == EdgeMonitoringTraffic && !e.Heuristic {
+			t.Errorf("MONITORING_TRAFFIC edge must be heuristic: %+v", e)
+		}
 	}
 }
 
@@ -2819,7 +2859,7 @@ func TestExtractK8sDefaultServiceAccountNoGCECollision(t *testing.T) {
 						"project_id":    "k1",
 						"service":       "storage.googleapis.com",
 						"credential_id": "serviceaccount:22222",
-						"method":        "storage.objects.get",
+						"method":        "storage.buckets.get",
 					}},
 					Points: []*monitoringpb.Point{{Value: &monitoringpb.TypedValue{Value: &monitoringpb.TypedValue_Int64Value{Int64Value: 25}}}},
 				}},

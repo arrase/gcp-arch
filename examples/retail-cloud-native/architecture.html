@@ -220,16 +220,17 @@ html, body {
   margin-top: -46px;
 }
 
-.arch-container[data-kind="PSA_ZONE"],
-.arch-container[data-kind="EXTERNAL_ZONE"] {
-  border-style: dashed;
-}
-
 .arch-container[data-depth="2"] {
   background: #F1F5F9;
   border: 1px solid #CBD5E1;
   margin: -22px -4px -4px -4px;
   z-index: 2;
+}
+
+/* Depth (structural nesting in the view) drives fill, margins and badges; kind only drives the dash. */
+.arch-container[data-kind="PSA_ZONE"],
+.arch-container[data-kind="EXTERNAL_ZONE"] {
+  border-style: dashed;
 }
 
 .arch-container-badge {
@@ -530,7 +531,10 @@ html, body {
       </article>
     </div>
   </div>
-<svg class="connector-layer" viewBox="0 0 1040.0 431.7" width="1040.0" height="431.7"><line x1="596.2" y1="169.1" x2="612.2" y2="169.1" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="612.2" y1="295.0" x2="852.6" y2="295.0" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="852.6" y1="295.0" x2="852.6" y2="361.3" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="852.6" y1="361.3" x2="876.6" y2="361.3" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="612.2" y1="169.1" x2="669.2" y2="169.1" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="612.2" y1="169.1" x2="612.2" y2="295.0" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="370.8" y1="91.3" x2="399.8" y2="91.3" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="399.8" y1="91.3" x2="399.8" y2="287.0" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="844.6" y1="287.0" x2="844.6" y2="169.1" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="844.6" y1="169.1" x2="876.6" y2="169.1" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="444.8" y1="99.3" x2="407.8" y2="99.3" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="407.8" y1="99.3" x2="407.8" y2="247.0" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="163.4" y1="169.1" x2="191.4" y2="169.1" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="191.4" y1="169.1" x2="191.4" y2="279.0" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="415.8" y1="279.0" x2="415.8" y2="239.0" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="415.8" y1="239.0" x2="444.8" y2="239.0" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><path d="M 399.8 287.0 L 608.2 287.0 A 4 4 0 0 1 616.2 287.0 L 844.6 287.0" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" data-bridge-halo="1"></path><path d="M 399.8 287.0 L 608.2 287.0 A 4 4 0 0 1 616.2 287.0 L 844.6 287.0" fill="none" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round" data-bridge="1"></path><path d="M 407.8 247.0 L 403.8 247.0 A 4 4 0 0 0 395.8 247.0 L 370.8 247.0" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" data-bridge-halo="1"></path><path d="M 407.8 247.0 L 403.8 247.0 A 4 4 0 0 0 395.8 247.0 L 370.8 247.0" fill="none" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round" data-bridge="1"></path><path d="M 191.4 279.0 L 395.8 279.0 A 4 4 0 0 1 403.8 279.0 L 415.8 279.0" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" data-bridge-halo="1"></path><path d="M 191.4 279.0 L 395.8 279.0 A 4 4 0 0 1 403.8 279.0 L 415.8 279.0" fill="none" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round" data-bridge="1"></path><circle cx="612.2" cy="295.0" r="2.5" fill="#1D4ED8"></circle><circle cx="612.2" cy="169.1" r="2.5" fill="#1D4ED8"></circle><polygon points="876.6,361.3 870.6,358.1 870.6,364.5" fill="#1D4ED8"></polygon><polygon points="669.2,169.1 663.2,165.9 663.2,172.3" fill="#1D4ED8"></polygon><polygon points="876.6,169.1 870.6,165.9 870.6,172.3" fill="#1D4ED8"></polygon><polygon points="370.8,247.0 376.8,243.8 376.8,250.2" fill="#1D4ED8"></polygon><polygon points="444.8,239.0 438.8,235.8 438.8,242.2" fill="#1D4ED8"></polygon><g class="verb-pill"><rect x="701.9" y="287.5" width="61.0" height="15.0" rx="3" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="0.75"></rect><text x="732.4" y="298.0" text-anchor="middle" font-family="Inter, sans-serif" font-size="8.5" font-weight="500" fill="#1D4ED8">sends traffic</text></g><g class="verb-pill"><rect x="601.2" y="161.6" width="63.0" height="15.0" rx="3" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="0.75"></rect><text x="632.7" y="172.1" text-anchor="middle" font-family="Inter, sans-serif" font-size="8.5" font-weight="500" fill="#1D4ED8">PSA network</text></g><g class="verb-pill"><rect x="591.7" y="279.5" width="61.0" height="15.0" rx="3" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="0.75"></rect><text x="622.2" y="290.0" text-anchor="middle" font-family="Inter, sans-serif" font-size="8.5" font-weight="500" fill="#1D4ED8">sends traffic</text></g><g class="verb-pill"><rect x="375.8" y="239.5" width="64.0" height="15.0" rx="3" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="0.75"></rect><text x="407.8" y="250.0" text-anchor="middle" font-family="Inter, sans-serif" font-size="8.5" font-weight="500" fill="#1D4ED8">Order stream</text></g><g class="verb-pill"><rect x="273.1" y="271.5" width="61.0" height="15.0" rx="3" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="0.75"></rect><text x="303.6" y="282.0" text-anchor="middle" font-family="Inter, sans-serif" font-size="8.5" font-weight="500" fill="#1D4ED8">calls ingress</text></g></svg></section>
+  <footer class="view-footnotes">
+    <div class="view-footnote-item"><span class="view-footnote-tag">Excluded (2)</span><strong>//compute.googleapis.com/projects/nova-retail-prod/global/networks/default</strong>: Unused GCP default VPC network suppressed as boilerplate; <strong>//logging.googleapis.com/projects/nova-retail-prod/sinks/_Default</strong>: Default Cloud Logging sink suppressed as platform plumbing</div>
+  </footer>
+<svg class="connector-layer" viewBox="0 0 1040.0 471.3" width="1040.0" height="471.3"><line x1="596.2" y1="169.1" x2="612.2" y2="169.1" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="612.2" y1="295.0" x2="852.6" y2="295.0" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="852.6" y1="295.0" x2="852.6" y2="361.3" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="852.6" y1="361.3" x2="876.6" y2="361.3" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="612.2" y1="169.1" x2="669.2" y2="169.1" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="612.2" y1="169.1" x2="612.2" y2="295.0" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="370.8" y1="91.3" x2="399.8" y2="91.3" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="399.8" y1="91.3" x2="399.8" y2="287.0" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="844.6" y1="287.0" x2="844.6" y2="169.1" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="844.6" y1="169.1" x2="876.6" y2="169.1" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="444.8" y1="99.3" x2="407.8" y2="99.3" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="407.8" y1="99.3" x2="407.8" y2="247.0" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="163.4" y1="169.1" x2="191.4" y2="169.1" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="191.4" y1="169.1" x2="191.4" y2="279.0" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="415.8" y1="279.0" x2="415.8" y2="239.0" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><line x1="415.8" y1="239.0" x2="444.8" y2="239.0" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round"></line><path d="M 399.8 287.0 L 608.2 287.0 A 4 4 0 0 1 616.2 287.0 L 844.6 287.0" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" data-bridge-halo="1"></path><path d="M 399.8 287.0 L 608.2 287.0 A 4 4 0 0 1 616.2 287.0 L 844.6 287.0" fill="none" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round" data-bridge="1"></path><path d="M 407.8 247.0 L 403.8 247.0 A 4 4 0 0 0 395.8 247.0 L 370.8 247.0" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" data-bridge-halo="1"></path><path d="M 407.8 247.0 L 403.8 247.0 A 4 4 0 0 0 395.8 247.0 L 370.8 247.0" fill="none" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round" data-bridge="1"></path><path d="M 191.4 279.0 L 395.8 279.0 A 4 4 0 0 1 403.8 279.0 L 415.8 279.0" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" data-bridge-halo="1"></path><path d="M 191.4 279.0 L 395.8 279.0 A 4 4 0 0 1 403.8 279.0 L 415.8 279.0" fill="none" stroke="#1D4ED8" stroke-width="1.5" stroke-linecap="round" data-bridge="1"></path><circle cx="612.2" cy="295.0" r="2.5" fill="#1D4ED8"></circle><circle cx="612.2" cy="169.1" r="2.5" fill="#1D4ED8"></circle><polygon points="876.6,361.3 870.6,358.1 870.6,364.5" fill="#1D4ED8"></polygon><polygon points="669.2,169.1 663.2,165.9 663.2,172.3" fill="#1D4ED8"></polygon><polygon points="876.6,169.1 870.6,165.9 870.6,172.3" fill="#1D4ED8"></polygon><polygon points="370.8,247.0 376.8,243.8 376.8,250.2" fill="#1D4ED8"></polygon><polygon points="444.8,239.0 438.8,235.8 438.8,242.2" fill="#1D4ED8"></polygon><g class="verb-pill"><rect x="701.9" y="287.5" width="61.0" height="15.0" rx="3" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="0.75"></rect><text x="732.4" y="298.0" text-anchor="middle" font-family="Inter, sans-serif" font-size="8.5" font-weight="500" fill="#1D4ED8">sends traffic</text></g><g class="verb-pill"><rect x="601.2" y="161.6" width="63.0" height="15.0" rx="3" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="0.75"></rect><text x="632.7" y="172.1" text-anchor="middle" font-family="Inter, sans-serif" font-size="8.5" font-weight="500" fill="#1D4ED8">PSA network</text></g><g class="verb-pill"><rect x="591.7" y="279.5" width="61.0" height="15.0" rx="3" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="0.75"></rect><text x="622.2" y="290.0" text-anchor="middle" font-family="Inter, sans-serif" font-size="8.5" font-weight="500" fill="#1D4ED8">sends traffic</text></g><g class="verb-pill"><rect x="375.8" y="239.5" width="64.0" height="15.0" rx="3" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="0.75"></rect><text x="407.8" y="250.0" text-anchor="middle" font-family="Inter, sans-serif" font-size="8.5" font-weight="500" fill="#1D4ED8">Order stream</text></g><g class="verb-pill"><rect x="273.1" y="271.5" width="61.0" height="15.0" rx="3" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="0.75"></rect><text x="303.6" y="282.0" text-anchor="middle" font-family="Inter, sans-serif" font-size="8.5" font-weight="500" fill="#1D4ED8">calls ingress</text></g></svg></section>
 <section class="view-sheet" data-view-id="data_ai_pipeline" data-archetype="stage_pipeline" data-cols="4" style="--corridor-col-0: 82px; --corridor-col-1: 80px; --corridor-col-2: 91px;">
   <header class="view-header">
     <div class="view-title-group">
@@ -1030,6 +1034,8 @@ html, body {
   const CORRIDOR_WALL_PAD = 12;
   const MAX_CORRIDOR_SIZE = 160;
   const MAX_REFLOW_PASSES = 2;
+  const PRINT_MAX_HEIGHT = 708;
+  const PRINT_MAX_WIDTH = 1040;
   const PORT_CORNER_MARGIN = 10;
   const PILL_HEIGHT = 15;
   const PILL_PAD_X = 5;
@@ -1072,7 +1078,7 @@ html, body {
         index: idx,
         x: Math.round((r.left + window.scrollX) * 100) / 100,
         y: Math.round((r.top + window.scrollY) * 100) / 100,
-        width: Math.round(r.width * 100) / 100,
+        width: Math.round(Math.max(r.width, sheet.scrollWidth) * 100) / 100,
         height: Math.round(r.height * 100) / 100
       });
     });
@@ -2322,6 +2328,16 @@ html, body {
     sheet.appendChild(svg);
   }
 
+  // Fits the sheet's real content box (corridor widening may overflow the fixed 1040px width)
+  // into one A4 landscape page.
+  function applyPrintScale(sheet) {
+    const height = sheet.getBoundingClientRect().height;
+    const scale = Math.min(1, PRINT_MAX_HEIGHT / height, PRINT_MAX_WIDTH / sheet.scrollWidth);
+    if (scale < 1) {
+      sheet.style.setProperty('--print-scale', scale.toFixed(4));
+    }
+  }
+
   async function runRouter() {
     if (document.documentElement.dataset.gcpArchRouted === '1') {
       const res = {
@@ -2348,7 +2364,6 @@ html, body {
     const sheets = document.querySelectorAll('.view-sheet');
 
     const allCollisions = [];
-    const finalDrawings = [];
 
     sheets.forEach(function (sheet, idx) {
       const viewData = routingViews[idx] || { id: sheet.dataset.viewId || ('view_' + idx), edges: [] };
@@ -2364,13 +2379,12 @@ html, body {
         }
       }
 
-      if (passRes.collisions.length > 0) {
-        for (const col of passRes.collisions) {
-          allCollisions.push(col);
-        }
-      } else {
-        finalDrawings.push({ sheet: sheet, geom: geom, passRes: passRes });
+      for (const col of passRes.collisions) {
+        allCollisions.push(col);
       }
+      // Connectors are injected even on collision so a browser-opened standalone HTML keeps its edges.
+      injectConnectorSVG(sheet, geom, passRes);
+      applyPrintScale(sheet);
     });
 
     if (allCollisions.length > 0) {
@@ -2383,14 +2397,6 @@ html, body {
       window.__GCP_ARCH_RENDER_RESULT__ = failRes;
       return failRes;
     }
-
-    finalDrawings.forEach(function (d) {
-      injectConnectorSVG(d.sheet, d.geom, d.passRes);
-      const h = d.sheet.getBoundingClientRect().height;
-      if (h > 708) {
-        d.sheet.style.setProperty('--print-scale', (708 / h).toFixed(4));
-      }
-    });
 
     document.documentElement.dataset.gcpArchRouted = '1';
     const okRes = {

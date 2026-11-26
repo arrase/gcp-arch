@@ -69,12 +69,16 @@ func executeValidate(stdout io.Writer, manifestPath, factsPath string, asJSON bo
 	}
 
 	if asJSON {
-		if err := writeJSON(stdout, manifest.ValidationReport{Valid: true}); err != nil {
+		if err := writeJSON(stdout, manifest.ValidationReport{Valid: true, ExcludedCount: len(m.ExcludedResources)}); err != nil {
 			return runtimeErr(err)
 		}
 		return nil
 	}
 
+	if len(m.ExcludedResources) > 0 {
+		_, _ = fmt.Fprintf(stdout, "Valid: %s (%d views, %d components, %d excluded)\n", manifestPath, len(m.Views), len(m.Components), len(m.ExcludedResources))
+		return nil
+	}
 	_, _ = fmt.Fprintf(stdout, "Valid: %s (%d views, %d components)\n", manifestPath, len(m.Views), len(m.Components))
 	return nil
 }

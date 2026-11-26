@@ -52,6 +52,8 @@ func (e *LayoutCollisionError) Error() string {
 	for _, c := range e.Collisions {
 		fmt.Fprintf(&b, "\n  - [%s] view=%s subjects=%v: %s", c.Kind, c.ViewID, c.Subjects, c.Detail)
 	}
+	b.WriteString("\nfix: in architecture.yaml, move one of the listed components to another column (placements[].column) " +
+		"or into the right container (placements[].container_id), or split the view into smaller views, then re-run gcp-arch render")
 	return b.String()
 }
 
