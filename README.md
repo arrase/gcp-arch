@@ -1,4 +1,158 @@
-# `gcp-arch` — Semantic Multi-View GCP Architecture Pipeline
+<div align="center">
+
+# gcp-arch
+
+**Turn live Google Cloud environments into clean, presentation-ready architecture diagrams — automatically, safely, and tracked in Git.**
+
+[![Docs](https://img.shields.io/badge/Docs-arrase.github.io%2Fgcp--arch-4f46e5?logo=materialformkdocs&logoColor=white)](https://arrase.github.io/gcp-arch/)
+[![Release](https://img.shields.io/github/v/release/arrase/gcp-arch?logo=github&color=0ea5e9)](https://github.com/arrase/gcp-arch/releases)
+[![Go](https://img.shields.io/badge/Go-1.26%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=alert_status)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=coverage)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
+
+[Documentation](https://arrase.github.io/gcp-arch/) · [Quick Start](#quick-start) · [Example Gallery](#example-gallery) · [Releases](https://github.com/arrase/gcp-arch/releases)
+
+<br>
+
+<a href="https://arrase.github.io/gcp-arch/examples/">
+  <img src="examples/retail-cloud-native/views/00-view_0_system_index.png" alt="gcp-arch Retail Cloud-Native System Architecture Overview" width="100%">
+</a>
+
+*Generated automatically from GCP metadata — multi-project Shared VPC, Cloud Run, AlloyDB, Pub/Sub, Dataflow, BigQuery & Vertex AI.*
+
+</div>
+
+---
+
+## Why `gcp-arch`?
+
+Cloud architecture diagrams go stale the day they are drawn, while raw infrastructure exports dump hundreds of low-level routes and rules onto an unreadable canvas.
+
+`gcp-arch` bridges the gap with a single static CLI binary:
+
+| | |
+| :--- | :--- |
+| **Real infrastructure, zero guesswork** | Scans live projects, folders, and organizations in read-only mode — capturing real topology, IAM, GKE, CI/CD, and runtime traffic. |
+| **Multi-view clarity** | Produces an executive **System Overview** plus focused detail views, collapsing noisy plumbing and separating IAM, KMS, and Secrets into a governance sidebar. |
+| **Git-tracked source of truth** | Compiles your cloud into a clean, readable `architecture.yaml` you can review in Pull Requests and enrich with your own titles and notes. |
+| **Effortless Day-2 updates** | Re-run with `--reconcile` as your environment evolves — human edits are preserved, and unchanged topologies complete locally with zero AI calls. |
+| **Export anywhere, 100% offline** | Renders vector **PDF** reports (one page per view), crisp **Retina PNGs** ready for Google Docs/Slides, and self-contained **HTML** dossiers. |
+| **Safe by design** | Strictly read-only target scanning, zero secret values collected, and Vertex AI synthesis billed separately to your own project. |
+
+---
+
+## How It Works
+
+```mermaid
+flowchart LR
+    GCP["Google Cloud\n(Org / Folder / Projects)"] -->|"1. Read-only scan"| Extract["gcp-arch extract\n→ facts.json"]
+    Extract -->|"2. Gemini 4 on Vertex AI"| Synth["gcp-arch synthesize\n→ architecture.yaml"]
+    Synth -->|"3. 100% offline render"| Render["gcp-arch render\n→ PDF · PNG · HTML"]
+```
+
+1. **[Extract](https://arrase.github.io/gcp-arch/extraction/)** — Collects sanitized, read-only metadata and runtime signals from your GCP scopes into a local `facts.json` file.
+2. **[Synthesize](https://arrase.github.io/gcp-arch/synthesis/)** — Builds a structured containment skeleton and annotates it with Gemini 4 on Vertex AI to produce a Git-tracked `architecture.yaml` with full resource conservation.
+3. **[Render](https://arrase.github.io/gcp-arch/rendering/)** — Turns `architecture.yaml` into print-ready **PDF**, **Retina PNG**, and standalone **HTML** deliverables completely offline — no cloud credentials or `facts.json` needed.
+
+---
+
+## Quick Start
+
+### 1. Install
+
+Download a pre-built binary for Linux, macOS, or Windows from [GitHub Releases](https://github.com/arrase/gcp-arch/releases):
+
+```bash
+# Example: Linux amd64
+curl -fL "https://github.com/arrase/gcp-arch/releases/latest/download/gcp-arch-linux-amd64" -o gcp-arch
+chmod +x gcp-arch
+```
+
+Or build from source (requires **Go 1.26+**):
+
+```bash
+git clone https://github.com/arrase/gcp-arch.git
+cd gcp-arch
+CGO_ENABLED=0 go build -o ./bin/gcp-arch ./cmd/gcp-arch
+```
+
+### 2. Authenticate
+
+Sign in with Google Cloud Application Default Credentials:
+
+```bash
+gcloud auth application-default login
+```
+
+> **Prerequisites:** Read-only access (`roles/cloudasset.viewer`) on your target GCP scope, `roles/aiplatform.user` on a Vertex AI project for synthesis, and local Chrome/Chromium for PDF/PNG export (HTML works standalone). See [Security & IAM](https://arrase.github.io/gcp-arch/security_iam/) and [CLI & Configuration](https://arrase.github.io/gcp-arch/cli_configuration/) for details.
+
+### 3. Generate Your First Architecture
+
+```bash
+# Check permissions and Vertex AI readiness
+gcp-arch preflight --projects my-gcp-project --vertex-project my-vertex-project
+
+# 1. Extract read-only cloud metadata
+gcp-arch extract --projects my-gcp-project -o facts.json
+
+# 2. Synthesize a multi-view architecture manifest
+gcp-arch synthesize facts.json --vertex-project my-vertex-project -o architecture.yaml
+
+# 3. Render PDF, Retina PNGs, and standalone HTML offline
+gcp-arch render architecture.yaml -o out/
+```
+
+### 4. Keep Diagrams Updated (Day 2)
+
+After your team edits titles, subtitles, or notes in `architecture.yaml`, sync infrastructure changes without losing manual curation:
+
+```bash
+gcp-arch extract --projects my-gcp-project -o facts.json
+gcp-arch synthesize facts.json --reconcile architecture.yaml --vertex-project my-vertex-project
+gcp-arch render architecture.yaml -o out/
+```
+
+---
+
+## Example Gallery
+
+Explore **6 complete multi-view reference architectures** (20 rendered views spanning 49 Google Cloud APIs) in [`examples/`](examples/README.md) or browse the full [Examples & Visual Gallery](https://arrase.github.io/gcp-arch/examples/).
+
+| Platform CI/CD & GKE DevOps | Agentic AI & Document RAG |
+| :---: | :---: |
+| [![Platform CI/CD](examples/platform-cicd/views/00-view_0_system_index.png)](examples/platform-cicd/) | [![Agentic AI & Document Platform](examples/agentic-ai-document-platform/views/00-view_0_system_index.png)](examples/agentic-ai-document-platform/) |
+| Cloud Build cohorts, GKE workloads, PSA Cloud SQL & multi-env deploys | Vertex AI Agent Engine, Vector Search, Dialogflow CX, Document AI & Eventarc |
+
+| Global FinTech Payments | Enterprise Lakehouse & MLOps |
+| :---: | :---: |
+| [![FinTech Global Payments](examples/fintech-global-payments/views/00-view_0_system_index.png)](examples/fintech-global-payments/) | [![Enterprise Lakehouse & MLOps](examples/enterprise-lakehouse-mlops/views/00-view_0_system_index.png)](examples/enterprise-lakehouse-mlops/) |
+| Hybrid NCC transit, PSC fabrics, Private GKE, Spanner, AlloyDB & Bigtable | Managed Kafka, Datastream CDC, Composer, Dataflow, Dataproc, BigQuery & Vertex AI |
+
+Plus **[Retail Cloud-Native](examples/retail-cloud-native/)** *(shown above)* and **[Multi-Region Zero-Trust Mesh](examples/enterprise-zero-trust-mesh/)**.
+
+---
+
+## Documentation
+
+Full technical guides, flag references, IAM matrices, schema specifications, and internals live in the **[GCP Arch Documentation](https://arrase.github.io/gcp-arch/)** (source in [`gh-pages/`](gh-pages/)).
+
+| Guide | What You'll Find |
+| :--- | :--- |
+| **[CLI & Configuration](https://arrase.github.io/gcp-arch/cli_configuration/)** | All five subcommands, flags, `~/.config/gcp-arch/config.yaml`, Chrome auto-discovery, and exit codes |
+| **[Security, IAM & Preflight](https://arrase.github.io/gcp-arch/security_iam/)** | Minimum read-only IAM roles, credential isolation, secret scrubbing, and preflight checks |
+| **[Stage 1 — Read-Only Extraction](https://arrase.github.io/gcp-arch/extraction/)** | Cloud Asset Inventory, IAM, GKE, Cloud Build, Cloud Monitoring, BigQuery & Dataflow discovery |
+| **[Stage 2 — Synthesis & Day-2](https://arrase.github.io/gcp-arch/synthesis/)** | Containment skeleton, Vertex AI Gemini 4 annotation, conservation guarantees, and `--reconcile` |
+| **[Stage 3 — Offline Rendering](https://arrase.github.io/gcp-arch/rendering/)** | Nested layouts, orthogonal routing, embedded fonts & 85 icons, PDF/PNG exports, and geometry verification |
+| **[Manifest Schema & Validation](https://arrase.github.io/gcp-arch/manifest_schema/)** | `architecture.yaml` (`v1`) schema, offline PR CI checks, and Day-2 curation guide |
+| **[Examples & Visual Gallery](https://arrase.github.io/gcp-arch/examples/)** | Walkthrough of all 6 reference bundles and 20 high-DPI diagrams |
+| **[System Architecture](https://arrase.github.io/gcp-arch/architecture/)** & **[Developer Guide](https://arrase.github.io/gcp-arch/developer_guide/)** | Package map, design specification, local testing, linting, and release workflow |
+
+---
+
+<details>
+<summary>Code Quality & Security Metrics (SonarCloud)</summary>
+
+<br>
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=alert_status)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=coverage)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
@@ -12,328 +166,4 @@
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=sqale_rating)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
 [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=ncloc)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
 
-`gcp-arch` is a standalone static Go binary (`CGO_ENABLED=0`) that generates page-fitted Google Cloud Platform (GCP) architecture deliverables — vector `.pdf` reports (1:1 per-view pagination), high-DPI Retina `.png` images (adaptive up to `2.0x`) for Google Docs, and self-contained offline `.html` dossiers — from a Git-tracked `architecture.yaml` manifest.
-
-It runs as a strictly linear three-stage pipeline across five CLI subcommands (`preflight`, `extract`, `synthesize`, `validate`, `render`); see the unified architecture specification in [`docs/designs/semantic-multi-view-pipeline.md`](docs/designs/semantic-multi-view-pipeline.md):
-
-1. **Stage 1 (`extract` → `facts.json`, [`internal/extract/`](internal/extract/)):** Collects rate-limited, read-only multi-project metadata from Cloud Asset Inventory (CAI), IAM policies, GKE (`Ingress`, `Service` NEG/L4 annotations, workloads, Workload Identity), in-stream Cloud Build triggers and top-`N` succeeded builds, Cloud Monitoring runtime traffic (including Vertex AI `PublisherModel` metrics `model_invocation_count` and `consumed_token_throughput` when `aiplatform.googleapis.com` is enabled, synthesizing `aiplatform.googleapis.com/PublisherModel` resources and `MONITORING_TRAFFIC` edges), active Dataflow jobs, and BigQuery SQL lineage into a credential-scrubbed `v3` `facts.json` (`0600`, gitignored).
-2. **Stage 2 (`synthesize` → `architecture.yaml`, [`internal/synth/`](internal/synth/), [`internal/manifest/`](internal/manifest/)):** Builds a deterministic GCP containment skeleton in Go (`<= 500` active resources, with 1:1 plumbing folds, homogeneous cohorts, transversal separation, topological ranking, and barycenter ordering), enriches it via a single bounded Vertex AI Gemini 4 call (`google.golang.org/genai` with `cloud.google.com/go/auth`, billed to a separate `--vertex-project`) into `View 0` (`view_0_system_index`) plus stage-partitioned detail views (`layered_flow`), and verifies 100% resource/edge conservation and directed-walk `FactEdge` provenance.
-3. **Stage 3 (`render` → `.pdf`, Retina `.png`, `.html`, [`internal/render/`](internal/render/), [`internal/icons/`](internal/icons/)):** Renders `architecture.yaml` completely offline (zero network calls, zero `facts.json` dependency) using embedded `Inter` and `JetBrains Mono` `.woff2` fonts, 85 inline SVG `<symbol>` service icons, unlimited-depth nested Flexbox containers with a responsive transversal governance panel, an in-page DOM-measured Hanan-grid A* orthogonal router with zero-collision checks, streaming scanline PNG verification (`< 1 MB` Go RAM), and a single isolated local headless Chrome/Chromium session via `chromedp`.
-
----
-
-## Build & Setup
-
-Requires **Go 1.26+**:
-
-```bash
-CGO_ENABLED=0 go build -o ./bin/gcp-arch ./cmd/gcp-arch
-```
-
-Verify static build metadata:
-
-```bash
-go version -m ./bin/gcp-arch | grep CGO_ENABLED=0
-```
-
-Authenticate locally with Application Default Credentials (ADC):
-
-```bash
-gcloud auth application-default login
-```
-
-### Chrome / Chromium Setup (for `render`)
-
-`gcp-arch render` locates a local Chrome or Chromium binary automatically in this order:
-
-1. `--chrome-path <BINARY>` (fails fast with exit code `1` if the specified path does not exist, for all formats including `--format html` alone)
-2. `CHROME_PATH` environment variable (falls back to `config.yaml` if unset or pointing to a non-existent path)
-3. `chrome_path` in `~/.config/gcp-arch/config.yaml` (falls back to `PATH` if unset or pointing to a non-existent path)
-4. `PATH` (`google-chrome`, `google-chrome-stable`, `chromium`, `chromium-browser`)
-5. Standard OS install locations (`/usr/bin/...` on Linux, `/Applications/Google Chrome.app/...` on macOS)
-
-Chrome runs in an isolated ephemeral `--user-data-dir` (safe even when a desktop Chrome session is already open) with `--headless=new` and `--disable-background-networking`.
-
-- **`pdf` and `png` exports** require local Chrome/Chromium (exit code `1` if absent).
-- **`--format html` alone (without an explicit `--chrome-path`)** works even when Chrome/Chromium auto-discovery finds no binary: `gcp-arch` writes a self-contained unrouted `out/architecture.html` with the embedded JS router and prints a warning on `stderr` that CLI collision verification was skipped. Passing an explicit missing `--chrome-path` still fails fast with exit code `1`.
-
-### User Configuration File (`~/.config/gcp-arch/config.yaml`)
-
-To avoid repeating common flags across invocations, `gcp-arch` automatically reads `~/.config/gcp-arch/config.yaml` (or `$XDG_CONFIG_HOME/gcp-arch/config.yaml` when `XDG_CONFIG_HOME` is set) if the file exists (see [`cmd/gcp-arch/config.go`](cmd/gcp-arch/config.go)).
-
-**Precedence:** `CLI flags` > `environment variables` (`CHROME_PATH` for Chrome binary discovery; `XDG_CONFIG_HOME` for config file location) > `config.yaml` > `built-in defaults`.
-
-When present, `~/.config/gcp-arch/config.yaml` is strictly validated on **all** subcommands (including `validate`); unknown keys or invalid values fail fast with exit code `2`. List fields (`org`, `folder`, `projects`, and `format`) accept either a YAML list or a single scalar value. Passing any scope flag (`--org`, `--folder`, or `--projects`/`--project`) on the CLI completely replaces the default scopes from `config.yaml`; `--project-alias` flags overlay `project_aliases` from `config.yaml`.
-
-```yaml
-# ~/.config/gcp-arch/config.yaml
-# org, folder, projects, and format accept either a YAML list or a single scalar.
-org: []
-folder: []
-projects:
-  - acme-cicd
-project_aliases:
-  999000111222: shared-vpc-host
-quota_project: my-quota-proj
-vertex_project: my-vertex-project
-vertex_location: global
-model: gemini-4-carbon
-thinking_level: high       # minimal | low | medium | high | xhigh (omit for model default)
-cloudbuild_runs: 3
-chrome_path: /usr/bin/google-chrome
-format:
-  - pdf
-  - png
-  - html
-```
-
----
-
-## Separated Credentials & Minimum IAM Roles
-
-`gcp-arch` isolates read-only target GCP inspection from Vertex AI synthesis billing:
-
-- **Target scopes (`preflight`, `extract`):** Authenticate exclusively with `https://www.googleapis.com/auth/cloud-platform.read-only`. Secret Manager payloads, Kubernetes `Secret` / `ConfigMap` data, Cloud Storage object bytes, and BigQuery table rows are never retained in `facts.json`.
-- **Vertex AI billing project (`--vertex-project` on `preflight`, `synthesize`):** Authenticates separately with `https://www.googleapis.com/auth/cloud-platform` (`roles/aiplatform.user`) against your billing/sandbox project. Only sanitized structural metadata (`facts.json` allowlisted attributes and edges) is sent to Vertex AI.
-
-| Scope | Role | Purpose | Required |
-| :--- | :--- | :--- | :--- |
-| Target org / folder / project(s) | `roles/cloudasset.viewer` | CAI `RESOURCE` and scoped `IAM_POLICY` streaming (`<= 80` RPM), including in-stream Cloud Build `BuildTrigger` & `Build` folding | Required |
-| Organization / Folder | `roles/resourcemanager.folderViewer` | Resolve human-readable `Folder` display names on `--org` / `--folder` scans | Recommended for org/folder |
-| Target project(s) | `roles/monitoring.viewer` | 7-day `consumed_api` runtime traffic grouped by `resource.labels.method` (`<= 10` QPS); when `aiplatform.googleapis.com` is enabled, also queries Vertex AI `PublisherModel` metrics (`model_invocation_count`, `consumed_token_throughput`) to synthesize `aiplatform.googleapis.com/PublisherModel` resources and `MONITORING_TRAFFIC` edges ([`internal/extract/enrichers.go`](internal/extract/enrichers.go)) | Recommended |
-| Target project(s) | `roles/bigquery.resourceViewer` | 7-day `bigquery.jobs.list` SQL lineage metadata (USD 0 SQL slot cost; raw SQL never read) | Recommended |
-| Target project(s) | `roles/dataflow.viewer` | Active Dataflow job pipeline links (streaming and batch jobs, `<= 10` QPS, gated on enabled API) | Optional |
-| Caller `--quota-project` | `roles/serviceusage.serviceUsageConsumer` | Quota attribution for target-scope read-only API calls (defaults to ADC `quota_project_id`) | Required on quota project |
-| `--vertex-project` | `roles/aiplatform.user` | Vertex AI Gemini 4 calls (`aiplatform.endpoints.predict` + model metadata check) | Required for `synthesize` |
-
----
-
-## CLI Command Reference
-
-Root entrypoint ([`cmd/gcp-arch/main.go`](cmd/gcp-arch/main.go)):
-- `gcp-arch --version`: Print the binary version (`dev` in local builds; release versions are injected at build time via `-ldflags "-X main.version=..."` in [`.github/workflows/release.yml`](.github/workflows/release.yml)).
-
-### 1. `gcp-arch preflight`
-
-Probes read-only target permissions (`cloudasset.assets.listResource`, `cai.folders` folder-name resolution via `roles/resourcemanager.folderViewer` on `--org` and `--folder` scopes, `monitoring.timeSeries.list`, `bigquery.jobs.list`, `dataflow.jobs.list`) and, when `--vertex-project` is provided, runs a zero-token Vertex AI IAM (`aiplatform.endpoints.predict`) and model availability probe ([`cmd/gcp-arch/preflight.go`](cmd/gcp-arch/preflight.go), [`internal/extract/client.go`](internal/extract/client.go)).
-
-```bash
-gcp-arch preflight --projects acme-cicd --vertex-project my-vertex-project
-gcp-arch preflight --folder 555000111 --quota-project my-quota-proj --json
-```
-
-Flags:
-- `--org <ID>` / `--folder <ID>` / `--projects <p1,p2>` (alias `--project`): Target scope(s); repeatable or comma-separated (at least one required).
-- `--project-alias <NUM=ID>`: Repeatable mapping from project number to project ID.
-- `--quota-project <ID>`: Explicit GCP quota project (defaults to ADC `quota_project_id`).
-- `--vertex-project <ID>`: Optional Vertex AI billing project for zero-token readiness checks.
-- `--vertex-location <LOC>`: Vertex AI location (default `global`).
-- `--model <MODEL>`: Vertex AI model ID (default `gemini-4-carbon`).
-- `-q, --quiet`: Suppress progress output on `stderr`.
-- `--json`: Emit `PreflightReport` as JSON.
-
-### 2. `gcp-arch extract`
-
-Extracts multi-project structural facts into a deterministic, `0600`-permissioned `v3` `facts.json` file (inside a `0700` parent directory if newly created) and prints discovered out-of-scope deployment target projects to `stderr` ([`cmd/gcp-arch/extract.go`](cmd/gcp-arch/extract.go)).
-
-```bash
-gcp-arch extract --projects acme-cicd -o facts.json
-gcp-arch extract --projects app-prod,data-prod --project-alias 999000111222=shared-vpc-host -o prod.facts.json
-```
-
-Flags:
-- `--org <ID>` / `--folder <ID>` / `--projects <p1,p2>` (alias `--project`): Target scope(s) (at least one required).
-- `--project-alias <NUM=ID>`: Repeatable project number-to-ID override.
-- `--quota-project <ID>`: Explicit GCP quota project.
-- `--cloudbuild-runs <N>`: Latest succeeded Cloud Build runs folded in-stream per trigger (default `3`).
-- `-q, --quiet`: Suppress progress output and the stdout summary (actionable out-of-scope target hints and degraded coverage warnings are still printed to `stderr`).
-- `-o, --out <FILE>`: Output path (default `facts.json`).
-
-### 3. `gcp-arch synthesize <facts.json>`
-
-Builds a deterministic GCP containment skeleton and enriches it via a single bounded Vertex AI Gemini 4 annotation call to produce a Git-tracked `architecture.yaml` (Day 1), or incrementally reconciles resource and edge deltas into an existing curated `architecture.yaml` (Day 2 via `--reconcile`; [`cmd/gcp-arch/synthesize.go`](cmd/gcp-arch/synthesize.go)).
-
-**Active-Resource Ceiling (`<= 500`):** After plumbing and default-resource suppression, `synthesize` enforces a hard ceiling of `500` active `FactResource` entries per run. Exceeding `500` fails immediately with exit code `2` without calling Vertex AI; narrow `--projects` or `--folder` to a single application domain.
-
-```bash
-# Day 1: synthesize a new multi-view architecture.yaml
-gcp-arch synthesize facts.json --vertex-project my-vertex-project -o architecture.yaml
-
-# Day 2: reconcile drift in place (0 LLM calls in < 5 ms when unchanged; --vertex-project optional on fast path)
-gcp-arch synthesize facts.json --reconcile architecture.yaml --vertex-project my-vertex-project
-```
-
-Flags:
-- `--vertex-project <ID>`: Billing project for Vertex AI calls (required on Day 1; optional on Day 2 on the `0`-LLM zero-delta fast path).
-- `--vertex-location <LOC>`: Vertex AI location (default `global`).
-- `--model <MODEL>`: Vertex AI model ID (default `gemini-4-carbon`).
-- `--thinking-level <LEVEL>`: Vertex AI thinking/effort level (`minimal`, `low`, `medium`, `high`, `xhigh`; omitted by default so Vertex AI uses the model default).
-- `--reconcile <FILE>`: Existing `architecture.yaml` for Day-2 reconciliation. When `-o` is omitted, updates `<FILE>` atomically in place; when unchanged, leaves `<FILE>` untouched with zero diff.
-- `-o, --out <FILE>`: Output manifest path (default `architecture.yaml`, or `--reconcile` path when omitted on Day 2).
-- `-q, --quiet`: Suppress informational stdout summary.
-
-### 4. `gcp-arch validate <architecture.yaml>`
-
-Validates `architecture.yaml` strictly offline with zero network calls ([`cmd/gcp-arch/validate.go`](cmd/gcp-arch/validate.go)):
-
-- **Without `--facts` (Git PR CI):** Enforces strict `yaml.v3` `KnownFields(true)` decoding, `schema_version: v1`, valid icon keys (`85` icons), 1:1 unique URI accounting across `components[].backed_by`, `containers[].backed_by`, `transversal_items[].backed_by`, and `excluded_resources`, stateful datastore homogeneity (and forbids excluding stateful datastores), every component placed in `>= 1` detail view (or in `view_0_system_index` on single-view `layered_flow` manifests), `View 0` rules (`view_0_system_index` required when `2..16` detail views exist, forbidden only when `1` detail view exists, valid standalone when `0` detail views exist; disjoint view and component IDs), `>= 1` placements per view, archetype column bounds (`>= 0` for `layered_flow`, `0..4` for `landscape_matrix`/`stage_pipeline`, `0..2` for `hub_spoke`), cycle-free unlimited container nesting, `len(verb) <= 16`, cross-view `(from, to, flow_kind)` verb/provenance consistency, single-source/single-target `via_bus_id`, and `rejected_edges` / `acknowledged_edges` integrity.
-- **With `--facts <facts.json>` (Extraction/Artifact CI):** Runs `ValidateWithFactsAndConservation`, verifying 100% `FactsFile` resource accounting across all four buckets, checking that placements inside resource-backed containers (`VPC`, `GKE_CLUSTER`) match `FactResource.ParentURI` chains across all views, enforcing that every `VERIFIED` edge's `evidence_edge_ids` (including `View 0` on `layered_flow` manifests) form a connected non-heuristic directed walk in `facts.Edges` from `from.backed_by` to `to.backed_by` without shortcutting other components or containers (requiring `flow_kind: ADMIN` when backed solely by IAM/Workload Identity permissions), and gating `layered_flow` manifests on deterministic `VerifyConservation` (`Status == "PASS"`).
-
-```bash
-# Clean-checkout Git PR CI (no facts.json needed)
-gcp-arch validate architecture.yaml
-
-# Full provenance & 100% resource coverage check
-gcp-arch validate architecture.yaml --facts facts.json --json
-```
-
-Flags:
-- `--facts <FILE>`: Optional `v3` `facts.json` for provenance, conservation, and 100% resource coverage verification.
-- `--json`: Emit `ValidationReport` JSON (`{"valid": true|false, "excluded_count": <N>, "conservation": {...}, "errors": [...]}`; `"excluded_count"` is omitted when `0`, `"conservation"` is emitted whenever `--facts` is supplied, and text output appends `, <E> excluded` and/or `, conservation=<STATUS> primary=<R>/<F>, view0=<V0>` when applicable).
-
-### 5. `gcp-arch render <architecture.yaml>`
-
-Validates `architecture.yaml` structurally and exports 1:1 per-view vector `out/architecture.pdf` (one A4 landscape page per view), adaptive up to `2.0x` Retina per-view `out/views/<00..NN>-<view_id>.png` (`8,192px` max dimension / `28M` px cap), and self-contained offline `out/architecture.html` (no `facts.json` required; [`cmd/gcp-arch/render.go`](cmd/gcp-arch/render.go)). Streaming scanline PNG pixel and geometry verification (`< 1 MB` Go RAM) runs automatically on every PNG render and fails with `*render.GeometryReportError` (exit code `2`) on any dimension, aspect-ratio, pixel-integrity, or layout violation.
-
-```bash
-gcp-arch render architecture.yaml --format pdf,png,html -o out/
-gcp-arch render architecture.yaml --facts facts.json --geometry-report -o out/
-gcp-arch render architecture.yaml --format html -o examples/platform-cicd/
-```
-
-Flags:
-- `--format <LIST>`: Comma-separated subset of `pdf`, `png`, `html` (default `pdf,png,html`).
-- `-o, --out <DIR>`: Output directory (default `out`).
-- `--facts <FILE>`: Optional `v3` `facts.json` to include deterministic resource/edge conservation status in geometry verification.
-- `--geometry-report`: Opt-in flag to write machine-readable `geometry_report.json` alongside rendered PNGs (streaming PNG pixel & geometry checks run automatically even when omitted).
-- `--chrome-path <BINARY>`: Explicit path to Chrome or Chromium executable.
-- `-q, --quiet`: Suppress informational stdout summary.
-
----
-
-## Exit Codes
-
-| Exit Code | Meaning |
-| :--- | :--- |
-| `0` | Success. |
-| `1` | Runtime or external I/O failure: ADC/GCP authentication or quota error, Vertex AI RPC error, missing input file, or missing Chrome/Chromium binary (when `pdf`/`png` is requested, or when an explicit `--chrome-path` does not exist). |
-| `2` | Usage, schema, scale, validation, or layout/geometry failure: invalid CLI flags/args, `> 500` active resources (`ScaleLimitError`), invalid YAML or unknown fields (`KnownFields`), `validate` rule/provenance/coverage violation (`ValidationError`), unresolved card/badge/pill/wire/text collisions (`LayoutCollisionError`), or PNG pixel/aspect-ratio/conservation failures (`GeometryReportError`). |
-
----
-
-## `architecture.yaml` Schema & Day-2 Curation
-
-`architecture.yaml` (`schema_version: v1`) is the Git-tracked source of truth. Every `backed_by` and `excluded_resources` entry carries `{uri, asset_type, project_id}` so `validate` and `render` work standalone without `facts.json`. See [`examples/platform-cicd/architecture.yaml`](examples/platform-cicd/architecture.yaml) and [`examples/README.md`](examples/README.md) for complete multi-view reference bundles.
-
-```yaml
-schema_version: v1
-metadata:
-  generated_at: "2026-11-27T02:00:00Z"
-  scopes:
-    - projects/acme-cicd
-components:
-  - id: atlantis
-    title: Atlantis PR Automation
-    subtitle: gke:cicd / ns:atlantis
-    icon_key: k8s_workload
-    component_kind: WORKLOAD
-    project_id: acme-cicd
-    topo_rank: 2
-    sub_rank: 1
-    notes: Curated title for client handoff   # Preserved across Day-2 --reconcile
-    backed_by:
-      - uri: //container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/apps/deployments/atlantis
-        asset_type: apps.k8s.io/Deployment
-        project_id: acme-cicd
-    badges:
-      - kind: sa
-        label: atlantis
-    inline_meta:
-      - label: Service Account
-        value: atlantis@acme-cicd.iam
-containers:
-  - id: gke_cicd
-    title: "GKE Cluster: cicd"
-    subtitle: europe-southwest1-b
-    kind: GKE_CLUSTER
-    parent_container_id: proj_acme_cicd
-    backed_by:
-      - uri: //container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd
-        asset_type: container.googleapis.com/Cluster
-        project_id: acme-cicd
-transversal_items:
-  - id: sa_atlantis
-    category: IAM_SA
-    asset_type: iam.googleapis.com/ServiceAccount
-    display_name: atlantis@acme-cicd.iam.gserviceaccount.com
-    project_id: acme-cicd
-    attached_node_ids: [atlantis]
-    backed_by:
-      - uri: //iam.googleapis.com/projects/acme-cicd/serviceAccounts/atlantis@acme-cicd.iam.gserviceaccount.com
-        asset_type: iam.googleapis.com/ServiceAccount
-        project_id: acme-cicd
-structural_edges: []
-suppressed_plumbing_counts: {}
-excluded_resources: []
-views:
-  - id: view_0_system_index
-    title: System Architecture Overview
-    focus_summary: End-to-end CI/CD delivery and GKE tooling topology
-    include_transversal_panel: true
-    archetype: layered_flow                   # layered_flow (default) | landscape_matrix | stage_pipeline | hub_spoke
-    accent_mode: MIXED                        # RUNTIME | CICD | MIXED
-    container_ids: [proj_acme_cicd, gke_cicd]
-    placements:
-      - component_id: atlantis
-        container_id: gke_cicd
-        column: 2
-    edges:
-      - from: atlantis
-        to: acme_tfstate
-        verb: locks tfstate                   # <= 16 chars (synthesized <= 14)
-        flow_kind: CICD                       # RUNTIME | CICD | ADMIN
-        semantic_tag: cicd                    # ingress | traffic | data | async | retry | dlq | cicd | peering | hybrid
-        provenance: VERIFIED                  # VERIFIED | INFERRED
-        evidence_edge_ids: ["c21876e6fb659711"]
-```
-
-### Day-2 Reconciliation (`--reconcile`)
-
-When your environment changes after teams have edited titles, subtitles, or `notes` in Git:
-
-1. Re-run `gcp-arch extract --projects <p> -o facts.json`.
-2. Run `gcp-arch synthesize facts.json --reconcile architecture.yaml --vertex-project <ai-proj>` ([`internal/synth/reconcile.go`](internal/synth/reconcile.go)):
-   - **Zero-delta fast path (all active URIs and functional/transversal edges match):** completes in `< 5 ms` with `0` Vertex AI calls (even without `--vertex-project`), refreshes `VERIFIED` edge provenance in place (downgrading vanished transient lineage to `INFERRED` with rationale footnote rather than deleting it), validates with `ValidateWithFactsAndConservation`, and leaves `architecture.yaml` untouched on disk when canonical YAML is unchanged.
-   - **Topology or edge delta detected:** runs the unified synthesis pipeline (deterministic containment skeleton + single bounded Vertex AI Gemini 4 call with automatic transient `genai.APIError` `429`/`503`/`504` retries in [`internal/synth/client.go`](internal/synth/client.go)), preserves curated human edits (`title`, `subtitle`, `notes` on matching components and `title`, non-auto `subtitle`, `notes` on matching views), verifies 100% resource and functional-edge conservation, and atomically writes `architecture.yaml`.
-3. Re-render via `gcp-arch render architecture.yaml -o out/`.
-
----
-
-## Architecture & Source Map
-
-Design specification: [`docs/designs/semantic-multi-view-pipeline.md`](docs/designs/semantic-multi-view-pipeline.md)
-
-| Area | Source | Responsibility |
-| :--- | :--- | :--- |
-| CLI & Config | [`cmd/gcp-arch/main.go`](cmd/gcp-arch/main.go), [`cmd/gcp-arch/config.go`](cmd/gcp-arch/config.go) | Cobra root (`--version`), exit-code classification, and `~/.config/gcp-arch/config.yaml` defaults |
-| Subcommands | [`preflight.go`](cmd/gcp-arch/preflight.go), [`extract.go`](cmd/gcp-arch/extract.go), [`synthesize.go`](cmd/gcp-arch/synthesize.go), [`validate.go`](cmd/gcp-arch/validate.go), [`render.go`](cmd/gcp-arch/render.go) | Flag wiring, config fallback, and output formatting for the five CLI commands |
-| Stage 1 (`extract`) | [`internal/extract/`](internal/extract/) | Read-only CAI, IAM, GKE, Cloud Build, Cloud Monitoring (`consumed_api` & Vertex `PublisherModel`), BigQuery, and Dataflow extraction + preflight probes |
-| Stage 2 (`synthesize`) | [`internal/synth/`](internal/synth/) | Deterministic containment skeleton (`skeleton.go`, `containers.go`, `edges.go`, `ranking.go`, `assets.go`), Vertex AI Gemini 4 SDK client (`google.golang.org/genai`) & bounded annotator (`synth.go`, `client.go`, `annotate.go`), and Day-2 `--reconcile` (`reconcile.go`) |
-| Manifest & Validation | [`internal/manifest/`](internal/manifest/) | `architecture.yaml` (`v1`) schema, strict `KnownFields` YAML codec, deterministic conservation (`conservation.go`), and structural/provenance validation |
-| Stage 3 (`render`) | [`internal/render/`](internal/render/) | Offline HTML/CSS/SVG/JS generation (`prepare.go`, `html.go`), Hanan-grid A* orthogonal router, headless Chrome (`chromedp`) PDF/PNG export (`render.go`, `chrome.go`), and streaming PNG pixel & geometry verification (`geometry.go`, `pngcheck.go`) |
-| Embedded Icons | [`internal/icons/`](internal/icons/) | `85` embedded GCP and third-party SVG icons (`icons.yaml`), XSS validation (`validate.go`), and `<symbol>` sprite compiler (`registry.go`) |
-| Atomic File I/O | [`internal/atomicfile/`](internal/atomicfile/) | Crash-safe atomic writes (`Write`, `WriteFunc`) with explicit file and directory permissions |
-| E2E & Catalog Suite | [`e2e/`](e2e/), [`testdata/catalog/`](testdata/catalog/README.md) | Offline catalog fixture & examples PNG streaming regressions (`go test ./e2e`) and live Vertex AI + Chrome catalog & stability verification (`GCP_ARCH_E2E=1 GCP_ARCH_VERTEX_PROJECT=<proj> go test -v ./e2e`) |
-
----
-
-## Examples
-
-Complete rendered multi-view reference bundles (6 complex architectures spanning **49 GCP APIs** and **75 unique asset types**, all verified with `conservation=PASS`, `view0=1.00`, and automated geometry & streaming PNG pixel verification) are published under [`examples/`](examples/README.md) (see [`examples/README.md`](examples/README.md) for previews, paired `v3` facts fixtures, and regeneration commands):
-
-- **[`examples/platform-cicd/`](examples/platform-cicd/):** Multi-Project CI/CD, GKE DevOps & PSA Network (`17` components, `3` views).
-- **[`examples/retail-cloud-native/`](examples/retail-cloud-native/):** Cloud-Native E-Commerce Runtime, Data/AI Streaming & Shared VPC (`18` components, `3` views).
-- **[`examples/fintech-global-payments/`](examples/fintech-global-payments/):** Global FinTech Payments, Hybrid NCC Transit (Interconnect/HA VPN), PSC Fabrics & Multi-Engine Ledger (`31` components, `4` views).
-- **[`examples/enterprise-lakehouse-mlops/`](examples/enterprise-lakehouse-mlops/):** Enterprise CDC Lakehouse (Kafka, Data Fusion, Datastream, Composer, Dataflow, Dataproc, Dataform, Dataplex, BigQuery) & Vertex AI MLOps (`30` components, `4` views).
-- **[`examples/agentic-ai-document-platform/`](examples/agentic-ai-document-platform/):** Agentic AI (Vertex AI Reasoning Engine, Vector Search, Discovery Engine, Dialogflow CX, Gemini) & Document AI OCR Pipeline (`25` components, `3` views).
-- **[`examples/enterprise-zero-trust-mesh/`](examples/enterprise-zero-trust-mesh/):** Multi-Region Zero-Trust Mesh (Shared VPC, Private GKE, Cloud Deploy, App Engine, Cloud Batch, Cloud Run, AlloyDB/Cloud SQL PSA & Risk AI) (`26` components, `3` views).
+</details>
