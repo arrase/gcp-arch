@@ -1,0 +1,2105 @@
+schema_version: v1
+metadata:
+  generated_at: "2026-11-27T19:17:20Z"
+  scopes:
+    - organizations/910100001
+components:
+  - id: n_external_card_network_acquirer
+    title: card-network-acquirer
+    subtitle: External card scheme & acquirer gateway
+    icon_key: family_network
+    component_kind: EXTERNAL_TARGET
+    project_id: external
+    topo_rank: 11
+    sub_rank: 29
+    backed_by:
+      - uri: //external.http/endpoints/card-network-acquirer
+        asset_type: external.http/Endpoint
+        project_id: external
+    members:
+      - card-network-acquirer
+    badges:
+      - kind: exposure
+        label: EXTERNAL
+  - id: n_external_core_banking_dc
+    title: core-banking-dc
+    subtitle: On-premises core banking datacenter
+    icon_key: cloud_interconnect
+    component_kind: EXTERNAL_CALLER
+    project_id: external
+    sub_rank: 1
+    backed_by:
+      - uri: //external.onprem/datacenters/core-banking-dc
+        asset_type: external.onprem/Datacenter
+        project_id: external
+    members:
+      - core-banking-dc
+    badges:
+      - kind: exposure
+        label: EXTERNAL
+  - id: n_external_global_merchant_clients
+    title: global-merchant-clients
+    subtitle: External merchant API and mobile callers
+    icon_key: external_client
+    component_kind: EXTERNAL_CALLER
+    project_id: external
+    backed_by:
+      - uri: //external.internet/clients/global-merchant-clients
+        asset_type: external.internet/ClientGroup
+        project_id: external
+    members:
+      - global-merchant-clients
+    badges:
+      - kind: exposure
+        label: EXTERNAL
+  - id: n_meridian_edge_prod_ledger_psc_ep
+    title: ledger-psc-ep
+    subtitle: Internal PSC consumer forwarding rule
+    icon_key: cloud_load_balancing
+    component_kind: INGRESS
+    project_id: meridian-edge-prod
+    topo_rank: 4
+    sub_rank: 12
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/forwardingRules/ledger-psc-ep
+        asset_type: compute.googleapis.com/ForwardingRule
+        project_id: meridian-edge-prod
+    members:
+      - ledger-psc-ep
+    badges:
+      - kind: exposure
+        label: INTERNAL
+    inline_meta:
+      - label: VIP
+        value: 10.20.16.50
+      - label: Scheme
+        value: INTERNAL
+  - id: n_meridian_edge_prod_merchant_bff_run
+    title: merchant-bff-run
+    subtitle: Private Cloud Run merchant BFF service
+    icon_key: cloud_run
+    component_kind: WORKLOAD
+    project_id: meridian-edge-prod
+    topo_rank: 3
+    sub_rank: 10
+    backed_by:
+      - uri: //run.googleapis.com/projects/meridian-edge-prod/locations/europe-west1/services/merchant-bff-run
+        asset_type: run.googleapis.com/Service
+        project_id: meridian-edge-prod
+    members:
+      - merchant-bff-run
+    badges:
+      - kind: sa
+        label: 'SA: merchant-bff-sa'
+      - kind: secret
+        label: 'Secret: openbanking-jwks-key'
+    inline_meta:
+      - label: Ingress
+        value: INTERNAL_LOAD_BALANCER
+  - id: n_meridian_edge_prod_merchant_webhook_run
+    title: merchant-webhook-run
+    subtitle: Cloud Run outbound webhook dispatcher
+    icon_key: cloud_run
+    component_kind: WORKLOAD
+    project_id: meridian-edge-prod
+    topo_rank: 10
+    sub_rank: 28
+    backed_by:
+      - uri: //run.googleapis.com/projects/meridian-edge-prod/locations/europe-west1/services/merchant-webhook-run
+        asset_type: run.googleapis.com/Service
+        project_id: meridian-edge-prod
+    members:
+      - merchant-webhook-run
+    badges:
+      - kind: sa
+        label: 'SA: merchant-bff-sa'
+    inline_meta:
+      - label: Ingress
+        value: INTERNAL_ONLY
+  - id: n_meridian_edge_prod_openbanking_api_gw
+    title: openbanking-api-gw
+    subtitle: Managed OpenBanking REST API Gateway
+    icon_key: api_gateway
+    component_kind: INGRESS
+    project_id: meridian-edge-prod
+    topo_rank: 2
+    sub_rank: 7
+    backed_by:
+      - uri: //apigateway.googleapis.com/projects/meridian-edge-prod/locations/europe-west1/gateways/openbanking-api-gw
+        asset_type: apigateway.googleapis.com/Gateway
+        project_id: meridian-edge-prod
+    members:
+      - openbanking-api-gw
+  - id: n_meridian_edge_prod_pay_global_waf_lb
+    title: pay-global-waf-lb
+    subtitle: Public HTTPS WAF global load balancer
+    icon_key: cloud_load_balancing
+    component_kind: INGRESS
+    project_id: meridian-edge-prod
+    topo_rank: 1
+    sub_rank: 3
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-edge-prod/global/forwardingRules/pay-global-waf-lb
+        asset_type: compute.googleapis.com/GlobalForwardingRule
+        project_id: meridian-edge-prod
+    members:
+      - pay-global-waf-lb
+    badges:
+      - kind: exposure
+        label: PUBLIC
+    inline_meta:
+      - label: VIP
+        value: 198.51.100.10:443-443
+      - label: Scheme
+        value: EXTERNAL_MANAGED
+  - id: n_meridian_fraud_prod_fraud_scoring_svc
+    title: fraud-scoring-svc
+    subtitle: Private Cloud Run real-time fraud scorer
+    icon_key: cloud_run
+    component_kind: WORKLOAD
+    project_id: meridian-fraud-prod
+    topo_rank: 8
+    sub_rank: 20
+    backed_by:
+      - uri: //run.googleapis.com/projects/meridian-fraud-prod/locations/europe-west1/services/fraud-scoring-svc
+        asset_type: run.googleapis.com/Service
+        project_id: meridian-fraud-prod
+    members:
+      - fraud-scoring-svc
+    badges:
+      - kind: sa
+        label: 'SA: fraud-scoring-sa'
+    inline_meta:
+      - label: Ingress
+        value: INTERNAL_ONLY
+  - id: n_meridian_fraud_prod_fraud_telemetry_bigtable
+    title: fraud-telemetry-bigtable
+    subtitle: Low-latency Bigtable fraud feature store
+    icon_key: cloud_bigtable
+    component_kind: DATASTORE
+    project_id: meridian-fraud-prod
+    topo_rank: 9
+    sub_rank: 23
+    backed_by:
+      - uri: //bigtableadmin.googleapis.com/projects/meridian-fraud-prod/instances/fraud-telemetry-bigtable
+        asset_type: bigtableadmin.googleapis.com/Instance
+        project_id: meridian-fraud-prod
+    members:
+      - fraud-telemetry-bigtable
+    badges:
+      - kind: kms
+        label: 'KMS: bigtable-fraud-cmek'
+      - kind: sa
+        label: 'SA: fraud-scoring-sa'
+  - id: n_meridian_ledger_prod_cardholder_vault_alloydb
+    title: cardholder-vault-alloydb
+    subtitle: PSA-isolated AlloyDB cardholder vault
+    icon_key: alloydb
+    component_kind: DATASTORE
+    project_id: meridian-ledger-prod
+    topo_rank: 9
+    sub_rank: 26
+    backed_by:
+      - uri: //alloydb.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/cardholder-vault-alloydb
+        asset_type: alloydb.googleapis.com/Cluster
+        project_id: meridian-ledger-prod
+    members:
+      - cardholder-vault-alloydb
+    badges:
+      - kind: kms
+        label: 'KMS: pci-vault-hsm-cmek'
+      - kind: psa
+        label: PSA Peering
+    inline_meta:
+      - label: Engine
+        value: POSTGRES_16
+      - label: Private IP
+        value: 10.62.16.10
+  - id: n_meridian_ledger_prod_clearing_files_filestore
+    title: clearing-files-filestore
+    subtitle: Regional Filestore NFS clearing share
+    icon_key: filestore
+    component_kind: DATASTORE
+    project_id: meridian-ledger-prod
+    topo_rank: 11
+    sub_rank: 30
+    backed_by:
+      - uri: //file.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1-b/instances/clearing-files-filestore
+        asset_type: file.googleapis.com/Instance
+        project_id: meridian-ledger-prod
+    members:
+      - clearing-files-filestore
+  - id: n_meridian_ledger_prod_clearing_reconciler_cron
+    title: clearing-reconciler-cron
+    subtitle: GKE scheduled clearing reconciler job
+    icon_key: batch
+    component_kind: WORKLOAD
+    project_id: meridian-ledger-prod
+    topo_rank: 2
+    sub_rank: 6
+    backed_by:
+      - uri: //container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/batch/cronjobs/clearing-reconciler-cron
+        asset_type: batch.k8s.io/CronJob
+        project_id: meridian-ledger-prod
+    members:
+      - clearing-reconciler-cron
+  - id: n_meridian_ledger_prod_eod_settlement_job
+    title: eod-settlement-job
+    subtitle: Cloud Run batch end-of-day settlement job
+    icon_key: cloud_run
+    component_kind: WORKLOAD
+    project_id: meridian-ledger-prod
+    topo_rank: 10
+    sub_rank: 27
+    backed_by:
+      - uri: //run.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/jobs/eod-settlement-job
+        asset_type: run.googleapis.com/Job
+        project_id: meridian-ledger-prod
+    members:
+      - eod-settlement-job
+    badges:
+      - kind: sa
+        label: 'SA: ledger-posting-sa'
+  - id: n_meridian_ledger_prod_global_payments_spanner
+    title: global-payments-spanner
+    subtitle: Cloud Spanner global ledger database
+    icon_key: cloud_spanner
+    component_kind: DATASTORE
+    project_id: meridian-ledger-prod
+    topo_rank: 9
+    sub_rank: 24
+    backed_by:
+      - uri: //spanner.googleapis.com/projects/meridian-ledger-prod/instances/global-payments-spanner
+        asset_type: spanner.googleapis.com/Instance
+        project_id: meridian-ledger-prod
+    members:
+      - global-payments-spanner
+    badges:
+      - kind: kms
+        label: 'KMS: spanner-ledger-cmek'
+      - kind: sa
+        label: 'SA: ledger-posting-sa'
+  - id: n_meridian_ledger_prod_hsm_signing_mig
+    title: hsm-signing-mig
+    subtitle: Managed VM group for cryptographic signing
+    icon_key: compute_engine
+    component_kind: WORKLOAD
+    project_id: meridian-ledger-prod
+    topo_rank: 8
+    sub_rank: 22
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-ledger-prod/zones/europe-west1-b/instanceGroupManagers/hsm-signing-mig
+        asset_type: compute.googleapis.com/InstanceGroupManager
+        project_id: meridian-ledger-prod
+    members:
+      - hsm-signing-mig
+    badges:
+      - kind: secret
+        label: 'Secret: hsm-signing-pin'
+  - id: n_meridian_ledger_prod_idempotency_redis_cluster
+    title: idempotency-redis-cluster
+    subtitle: Memorystore Redis idempotency cache
+    icon_key: memorystore
+    component_kind: DATASTORE
+    project_id: meridian-ledger-prod
+    topo_rank: 8
+    sub_rank: 21
+    backed_by:
+      - uri: //redis.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/idempotency-redis-cluster
+        asset_type: redis.googleapis.com/Cluster
+        project_id: meridian-ledger-prod
+    members:
+      - idempotency-redis-cluster
+    inline_meta:
+      - label: Redis
+        value: REDIS_7_2
+  - id: n_meridian_ledger_prod_ledger_internal_ilb
+    title: ledger-internal-ilb
+    subtitle: Internal passthrough/proxy load balancer
+    icon_key: cloud_load_balancing
+    component_kind: INGRESS
+    project_id: meridian-ledger-prod
+    topo_rank: 6
+    sub_rank: 17
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/forwardingRules/ledger-internal-ilb
+        asset_type: compute.googleapis.com/ForwardingRule
+        project_id: meridian-ledger-prod
+    members:
+      - ledger-internal-ilb
+    badges:
+      - kind: exposure
+        label: INTERNAL
+    inline_meta:
+      - label: VIP
+        value: 10.30.0.25:8443-8443
+      - label: Scheme
+        value: INTERNAL_MANAGED
+  - id: n_meridian_ledger_prod_ledger_posting_svc
+    title: ledger-posting-svc
+    subtitle: GKE double-entry ledger posting service
+    icon_key: k8s_workload
+    component_kind: WORKLOAD
+    project_id: meridian-ledger-prod
+    topo_rank: 8
+    sub_rank: 19
+    backed_by:
+      - uri: //container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/ledger-posting-svc
+        asset_type: apps.k8s.io/Deployment
+        project_id: meridian-ledger-prod
+      - uri: //container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/services/ledger-posting-svc
+        asset_type: k8s.io/Service
+        project_id: meridian-ledger-prod
+    members:
+      - ledger-posting-svc
+    badges:
+      - kind: sa
+        label: 'SA: ledger-posting-sa'
+      - kind: svc
+        label: 'svc: ledger-posting-svc'
+    folded_edge_ids:
+      - 928e1301d7f11c2b
+    inline_meta:
+      - label: Namespace
+        value: payments
+  - id: n_meridian_ledger_prod_ledger_psc_attachment
+    title: ledger-psc-attachment
+    subtitle: PSC producer service attachment for ledger
+    icon_key: private_service_connect
+    component_kind: INGRESS
+    project_id: meridian-ledger-prod
+    topo_rank: 5
+    sub_rank: 16
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/serviceAttachments/ledger-psc-attachment
+        asset_type: compute.googleapis.com/ServiceAttachment
+        project_id: meridian-ledger-prod
+    members:
+      - ledger-psc-attachment
+  - id: n_meridian_ledger_prod_payments_auth_api
+    title: payments-auth-api
+    subtitle: GKE payment authorization microservice
+    icon_key: k8s_workload
+    component_kind: WORKLOAD
+    project_id: meridian-ledger-prod
+    topo_rank: 7
+    sub_rank: 18
+    backed_by:
+      - uri: //container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/payments-auth-api
+        asset_type: apps.k8s.io/Deployment
+        project_id: meridian-ledger-prod
+      - uri: //container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/services/payments-auth-api
+        asset_type: k8s.io/Service
+        project_id: meridian-ledger-prod
+    members:
+      - payments-auth-api
+    badges:
+      - kind: log
+        label: 'Obs: pci-latency-slo-alert'
+      - kind: sa
+        label: 'SA: payments-auth-sa'
+      - kind: secret
+        label: 'Secret: acquirer-mtls-cert'
+      - kind: svc
+        label: 'svc: payments-auth-api'
+    folded_edge_ids:
+      - 3e08ee95fc72871c
+    inline_meta:
+      - label: Namespace
+        value: payments
+  - id: n_meridian_ledger_prod_settlement_dlq_replay_fn
+    title: settlement-dlq-replay-fn
+    subtitle: Cloud Function DLQ event replay worker
+    icon_key: cloud_functions
+    component_kind: WORKLOAD
+    project_id: meridian-ledger-prod
+    topo_rank: 5
+    sub_rank: 14
+    backed_by:
+      - uri: //cloudfunctions.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/functions/settlement-dlq-replay-fn
+        asset_type: cloudfunctions.googleapis.com/CloudFunction
+        project_id: meridian-ledger-prod
+    members:
+      - settlement-dlq-replay-fn
+    badges:
+      - kind: sa
+        label: 'SA: ledger-posting-sa'
+    inline_meta:
+      - label: Runtime
+        value: go122
+  - id: n_meridian_ledger_prod_settlement_events_dlq
+    title: settlement-events-dlq
+    subtitle: Pub/Sub dead-letter topic for settlements
+    icon_key: pubsub
+    component_kind: MESSAGING
+    project_id: meridian-ledger-prod
+    topo_rank: 4
+    sub_rank: 13
+    backed_by:
+      - uri: //pubsub.googleapis.com/projects/meridian-ledger-prod/subscriptions/settlement-dlq-sub
+        asset_type: pubsub.googleapis.com/Subscription
+        project_id: meridian-ledger-prod
+      - uri: //pubsub.googleapis.com/projects/meridian-ledger-prod/topics/settlement-events-dlq
+        asset_type: pubsub.googleapis.com/Topic
+        project_id: meridian-ledger-prod
+    members:
+      - settlement-dlq-sub
+      - settlement-events-dlq
+    badges:
+      - kind: sub
+        label: 'sub: settlement-dlq-sub'
+    folded_edge_ids:
+      - 7756a6a12b12aa8b
+    inline_meta:
+      - label: Subscriptions
+        value: "1"
+  - id: n_meridian_ledger_prod_settlement_events_topic
+    title: settlement-events-topic
+    subtitle: Primary Pub/Sub settlement events bus
+    icon_key: pubsub
+    component_kind: MESSAGING
+    project_id: meridian-ledger-prod
+    topo_rank: 9
+    sub_rank: 25
+    backed_by:
+      - uri: //pubsub.googleapis.com/projects/meridian-ledger-prod/subscriptions/settlement-eod-sub
+        asset_type: pubsub.googleapis.com/Subscription
+        project_id: meridian-ledger-prod
+      - uri: //pubsub.googleapis.com/projects/meridian-ledger-prod/topics/settlement-events-topic
+        asset_type: pubsub.googleapis.com/Topic
+        project_id: meridian-ledger-prod
+    members:
+      - settlement-eod-sub
+      - settlement-events-topic
+    badges:
+      - kind: sub
+        label: 'sub: settlement-eod-sub'
+    folded_edge_ids:
+      - 469b04db3c5c7e20
+    inline_meta:
+      - label: Subscriptions
+        value: "1"
+  - id: n_meridian_ncc_hub_dc_frankfurt_interconnect
+    title: dc-frankfurt-interconnect
+    subtitle: 10G Dedicated Interconnect VLAN attachment
+    icon_key: cloud_interconnect
+    component_kind: INGRESS
+    project_id: meridian-ncc-hub
+    topo_rank: 1
+    sub_rank: 4
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-ncc-hub/regions/europe-west1/interconnectAttachments/dc-frankfurt-interconnect
+        asset_type: compute.googleapis.com/InterconnectAttachment
+        project_id: meridian-ncc-hub
+    members:
+      - dc-frankfurt-interconnect
+  - id: n_meridian_ncc_hub_enterprise_ncc_hub
+    title: enterprise-ncc-hub
+    subtitle: Central Network Connectivity Center hub
+    icon_key: network_connectivity_center
+    component_kind: INGRESS
+    project_id: meridian-ncc-hub
+    topo_rank: 2
+    sub_rank: 8
+    backed_by:
+      - uri: //networkconnectivity.googleapis.com/projects/meridian-ncc-hub/locations/global/hubs/enterprise-ncc-hub
+        asset_type: networkconnectivity.googleapis.com/Hub
+        project_id: meridian-ncc-hub
+    members:
+      - enterprise-ncc-hub
+    badges:
+      - kind: ncc
+        label: NCC Spoke
+      - kind: sa
+        label: 'SA: ncc-net-sa'
+  - id: n_meridian_ncc_hub_partner_ha_vpn
+    title: partner-ha-vpn
+    subtitle: Regional HA VPN gateway with BGP
+    icon_key: cloud_vpn
+    component_kind: INGRESS
+    project_id: meridian-ncc-hub
+    topo_rank: 1
+    sub_rank: 5
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-ncc-hub/regions/europe-west1/vpnGateways/partner-ha-vpn
+        asset_type: compute.googleapis.com/VpnGateway
+        project_id: meridian-ncc-hub
+    members:
+      - partner-ha-vpn
+  - id: n_meridian_ops_sec_meridian_audit_vault
+    title: meridian-audit-vault
+    subtitle: Immutable Cloud Storage regulatory vault
+    icon_key: cloud_storage
+    component_kind: DATASTORE
+    project_id: meridian-ops-sec
+    topo_rank: 5
+    sub_rank: 15
+    backed_by:
+      - uri: //storage.googleapis.com/meridian-audit-vault
+        asset_type: storage.googleapis.com/Bucket
+        project_id: meridian-ops-sec
+    members:
+      - meridian-audit-vault
+    badges:
+      - kind: log
+        label: 'Obs: pci-central-audit-sink'
+    inline_meta:
+      - label: Class
+        value: ARCHIVE
+  - id: n_meridian_ops_sec_meridian_corp_dns
+    title: meridian-corp-dns
+    subtitle: Private Cloud DNS corporate managed zone
+    icon_key: cloud_dns
+    component_kind: INGRESS
+    project_id: meridian-ops-sec
+    topo_rank: 1
+    sub_rank: 2
+    backed_by:
+      - uri: //dns.googleapis.com/projects/meridian-ops-sec/managedZones/meridian-corp-dns
+        asset_type: dns.googleapis.com/ManagedZone
+        project_id: meridian-ops-sec
+    members:
+      - meridian-corp-dns
+    badges:
+      - kind: dns
+        label: 'DNS: ops-mgmt-vpc'
+  - id: n_meridian_ops_sec_ops_jumpbox_vm
+    title: ops-jumpbox-vm
+    subtitle: Hardened operations bastion GCE VM
+    icon_key: compute_engine
+    component_kind: WORKLOAD
+    project_id: meridian-ops-sec
+    topo_rank: 3
+    sub_rank: 11
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-ops-sec/zones/europe-west1-b/instances/ops-jumpbox-vm
+        asset_type: compute.googleapis.com/Instance
+        project_id: meridian-ops-sec
+    members:
+      - ops-jumpbox-vm
+    badges:
+      - kind: sa
+        label: 'SA: ops-bastion-sa'
+  - id: n_meridian_ops_sec_payments_container_repo
+    title: payments-container-repo
+    subtitle: Private Artifact Registry container repo
+    icon_key: artifact_registry
+    component_kind: DATASTORE
+    project_id: meridian-ops-sec
+    topo_rank: 3
+    sub_rank: 9
+    backed_by:
+      - uri: //artifactregistry.googleapis.com/projects/meridian-ops-sec/locations/europe-west1/repositories/payments-container-repo
+        asset_type: artifactregistry.googleapis.com/Repository
+        project_id: meridian-ops-sec
+    members:
+      - payments-container-repo
+    inline_meta:
+      - label: Format
+        value: DOCKER
+containers:
+  - id: ext_sources
+    title: External Callers & Sources
+    kind: EXTERNAL_ZONE
+    exposure: EXTERNAL
+    order_hint: -100
+  - id: ext_targets
+    title: External Targets & Peered Networks
+    kind: EXTERNAL_ZONE
+    exposure: EXTERNAL
+    order_hint: 900
+  - id: folder_520100
+    title: 'Folder: network-backbone'
+    subtitle: folders/520100
+    kind: FOLDER
+    parent_container_id: org_910100001
+    order_hint: 20
+  - id: folder_520200
+    title: 'Folder: payments-core'
+    subtitle: folders/520200
+    kind: FOLDER
+    parent_container_id: org_910100001
+    order_hint: 20
+  - id: gke_meridian_ledger_prod_europe_west1_gke_payments_core
+    title: 'GKE Cluster: gke-payments-core'
+    subtitle: europe-west1
+    kind: GKE_CLUSTER
+    exposure: PRIVATE
+    parent_container_id: sub_meridian_ledger_prod_europe_west1_pay_gke_subnet
+    badges:
+      - Private Nodes
+    order_hint: 70
+    backed_by:
+      - uri: //container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core
+        asset_type: container.googleapis.com/Cluster
+        project_id: meridian-ledger-prod
+  - id: org_910100001
+    title: 'Org: Meridian FinTech Corp'
+    subtitle: organizations/910100001
+    kind: ORG
+    order_hint: 10
+  - id: proj_meridian_edge_prod
+    title: Meridian Edge Prod (meridian-edge-prod)
+    kind: PROJECT
+    parent_container_id: folder_520200
+    order_hint: 30
+  - id: proj_meridian_fraud_prod
+    title: Meridian Fraud Prod (meridian-fraud-prod)
+    kind: PROJECT
+    parent_container_id: folder_520200
+    order_hint: 30
+  - id: proj_meridian_ledger_prod
+    title: Meridian Ledger Prod (meridian-ledger-prod)
+    kind: PROJECT
+    parent_container_id: folder_520200
+    order_hint: 30
+  - id: proj_meridian_ncc_hub
+    title: Meridian NCC Hub (meridian-ncc-hub)
+    kind: PROJECT
+    parent_container_id: folder_520100
+    order_hint: 30
+  - id: proj_meridian_ops_sec
+    title: Meridian Ops Sec (meridian-ops-sec)
+    kind: PROJECT
+    parent_container_id: folder_520100
+    order_hint: 30
+  - id: reg_vpc_meridian_edge_prod_pay_edge_vpc_europe_west1
+    title: 'Region: europe-west1'
+    kind: REGION
+    parent_container_id: vpc_meridian_edge_prod_pay_edge_vpc
+    order_hint: 50
+  - id: reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+    title: 'Region: europe-west1'
+    kind: REGION
+    parent_container_id: vpc_meridian_ledger_prod_pay_core_vpc
+    order_hint: 50
+  - id: reg_vpc_meridian_ncc_hub_ncc_transit_vpc_europe_west1
+    title: 'Region: europe-west1'
+    kind: REGION
+    parent_container_id: vpc_meridian_ncc_hub_ncc_transit_vpc
+    order_hint: 50
+  - id: reg_vpc_meridian_ops_sec_ops_mgmt_vpc_europe_west1
+    title: 'Region: europe-west1'
+    kind: REGION
+    parent_container_id: vpc_meridian_ops_sec_ops_mgmt_vpc
+    order_hint: 50
+  - id: sub_meridian_edge_prod_europe_west1_pay_app_subnet
+    title: 'Subnet: pay-app-subnet'
+    subtitle: 10.20.16.0/22
+    kind: SUBNET
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_meridian_edge_prod_pay_edge_vpc_europe_west1
+    badges:
+      - PRIVATE
+    order_hint: 62
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/subnetworks/pay-app-subnet
+        asset_type: compute.googleapis.com/Subnetwork
+        project_id: meridian-edge-prod
+  - id: sub_meridian_edge_prod_europe_west1_pay_dmz_subnet
+    title: 'Subnet: pay-dmz-subnet'
+    subtitle: 10.20.0.0/24
+    kind: SUBNET
+    exposure: PUBLIC
+    parent_container_id: reg_vpc_meridian_edge_prod_pay_edge_vpc_europe_west1
+    badges:
+      - PUBLIC
+    order_hint: 60
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/subnetworks/pay-dmz-subnet
+        asset_type: compute.googleapis.com/Subnetwork
+        project_id: meridian-edge-prod
+  - id: sub_meridian_ledger_prod_europe_west1_pay_gke_subnet
+    title: 'Subnet: pay-gke-subnet'
+    subtitle: 10.30.0.0/20
+    kind: SUBNET
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+    badges:
+      - PRIVATE
+    order_hint: 62
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/subnetworks/pay-gke-subnet
+        asset_type: compute.googleapis.com/Subnetwork
+        project_id: meridian-ledger-prod
+  - id: sub_meridian_ledger_prod_europe_west1_pay_hsm_subnet
+    title: 'Subnet: pay-hsm-subnet'
+    subtitle: 10.30.32.0/24
+    kind: SUBNET
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+    badges:
+      - PRIVATE
+    order_hint: 62
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/subnetworks/pay-hsm-subnet
+        asset_type: compute.googleapis.com/Subnetwork
+        project_id: meridian-ledger-prod
+  - id: sub_meridian_ncc_hub_europe_west1_ncc_transit_subnet
+    title: 'Subnet: ncc-transit-subnet'
+    subtitle: 10.10.0.0/24
+    kind: SUBNET
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_meridian_ncc_hub_ncc_transit_vpc_europe_west1
+    badges:
+      - PRIVATE
+    order_hint: 62
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-ncc-hub/regions/europe-west1/subnetworks/ncc-transit-subnet
+        asset_type: compute.googleapis.com/Subnetwork
+        project_id: meridian-ncc-hub
+  - id: sub_meridian_ops_sec_europe_west1_ops_mgmt_subnet
+    title: 'Subnet: ops-mgmt-subnet'
+    subtitle: 10.11.0.0/24
+    kind: SUBNET
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_meridian_ops_sec_ops_mgmt_vpc_europe_west1
+    badges:
+      - PRIVATE
+    order_hint: 62
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-ops-sec/regions/europe-west1/subnetworks/ops-mgmt-subnet
+        asset_type: compute.googleapis.com/Subnetwork
+        project_id: meridian-ops-sec
+  - id: vpc_meridian_edge_prod_pay_edge_vpc
+    title: 'VPC: pay-edge-vpc'
+    subtitle: 'Host: meridian-edge-prod'
+    kind: VPC
+    parent_container_id: proj_meridian_edge_prod
+    badges:
+      - 'NAT: pay-edge-nat'
+      - NCC Spoke
+    order_hint: 40
+    folded_edge_ids:
+      - abb0dd71c67d8e0e
+      - efb1f6ec8d867da6
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-edge-prod/global/networks/pay-edge-vpc
+        asset_type: compute.googleapis.com/Network
+        project_id: meridian-edge-prod
+  - id: vpc_meridian_ledger_prod_pay_core_vpc
+    title: 'VPC: pay-core-vpc'
+    subtitle: 'Host: meridian-ledger-prod'
+    kind: VPC
+    parent_container_id: proj_meridian_ledger_prod
+    badges:
+      - NCC Spoke
+    order_hint: 40
+    folded_edge_ids:
+      - 2dcb1df403a88622
+      - 46cf0799519f8e38
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc
+        asset_type: compute.googleapis.com/Network
+        project_id: meridian-ledger-prod
+  - id: vpc_meridian_ncc_hub_ncc_transit_vpc
+    title: 'VPC: ncc-transit-vpc'
+    subtitle: 'Host: meridian-ncc-hub'
+    kind: VPC
+    parent_container_id: proj_meridian_ncc_hub
+    badges:
+      - 'NAT: ncc-bgp-router'
+    order_hint: 40
+    folded_edge_ids:
+      - de09680b2bc753d3
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-ncc-hub/global/networks/ncc-transit-vpc
+        asset_type: compute.googleapis.com/Network
+        project_id: meridian-ncc-hub
+  - id: vpc_meridian_ops_sec_ops_mgmt_vpc
+    title: 'VPC: ops-mgmt-vpc'
+    subtitle: 'Host: meridian-ops-sec'
+    kind: VPC
+    parent_container_id: proj_meridian_ops_sec
+    badges:
+      - 'DNS: meridian-corp-dns'
+      - NCC Spoke
+    order_hint: 40
+    folded_edge_ids:
+      - 5187c5eab6641e98
+      - de9ad7c4946585f9
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-ops-sec/global/networks/ops-mgmt-vpc
+        asset_type: compute.googleapis.com/Network
+        project_id: meridian-ops-sec
+  - id: zone_exposure_zone_internal_sub_meridian_edge_prod_europe_west1_pay_app_subnet
+    title: Internal Exposure
+    kind: EXPOSURE_ZONE
+    exposure: INTERNAL
+    parent_container_id: sub_meridian_edge_prod_europe_west1_pay_app_subnet
+    order_hint: 63
+  - id: zone_exposure_zone_internal_sub_meridian_ledger_prod_europe_west1_pay_gke_subnet
+    title: Internal Exposure
+    kind: EXPOSURE_ZONE
+    exposure: INTERNAL
+    parent_container_id: sub_meridian_ledger_prod_europe_west1_pay_gke_subnet
+    order_hint: 63
+  - id: zone_exposure_zone_private_proj_meridian_edge_prod
+    title: Managed Services & Messaging
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: proj_meridian_edge_prod
+    order_hint: 80
+  - id: zone_exposure_zone_private_proj_meridian_fraud_prod
+    title: Managed Services & Messaging
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: proj_meridian_fraud_prod
+    order_hint: 80
+  - id: zone_exposure_zone_private_proj_meridian_ledger_prod
+    title: Managed Services & Messaging
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: proj_meridian_ledger_prod
+    order_hint: 80
+  - id: zone_exposure_zone_private_proj_meridian_ops_sec
+    title: Managed Services & Messaging
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: proj_meridian_ops_sec
+    order_hint: 80
+  - id: zone_exposure_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+    title: Private VPC Services
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+    order_hint: 72
+  - id: zone_exposure_zone_private_sub_meridian_edge_prod_europe_west1_pay_app_subnet
+    title: Private Workloads
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: sub_meridian_edge_prod_europe_west1_pay_app_subnet
+    order_hint: 64
+  - id: zone_exposure_zone_private_sub_meridian_ledger_prod_europe_west1_pay_hsm_subnet
+    title: Private Workloads
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: sub_meridian_ledger_prod_europe_west1_pay_hsm_subnet
+    order_hint: 64
+  - id: zone_exposure_zone_private_sub_meridian_ops_sec_europe_west1_ops_mgmt_subnet
+    title: Private Workloads
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: sub_meridian_ops_sec_europe_west1_ops_mgmt_subnet
+    order_hint: 64
+  - id: zone_exposure_zone_public_vpc_meridian_edge_prod_pay_edge_vpc_external_managed
+    title: Public Edge Ingress
+    subtitle: EXTERNAL_MANAGED
+    kind: EXPOSURE_ZONE
+    exposure: PUBLIC
+    parent_container_id: vpc_meridian_edge_prod_pay_edge_vpc
+    order_hint: 45
+  - id: zone_hybrid_zone_private_reg_vpc_meridian_ncc_hub_ncc_transit_vpc_europe_west1
+    title: Hybrid Connectivity (VPN / Interconnect)
+    kind: HYBRID_ZONE
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_meridian_ncc_hub_ncc_transit_vpc_europe_west1
+    order_hint: 58
+  - id: zone_psa_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1_p910100abcdef12_tp
+    title: PSA Private Service Access
+    subtitle: 'Tenant: p910100abcdef12-tp'
+    kind: PSA_ZONE
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+    badges:
+      - PSA Peering
+    order_hint: 75
+    folded_edge_ids:
+      - 2dcb1df403a88622
+  - id: zone_shared_hub_private_proj_meridian_ncc_hub
+    title: Network Connectivity Hub
+    kind: SHARED_HUB
+    exposure: PRIVATE
+    parent_container_id: proj_meridian_ncc_hub
+    order_hint: 42
+transversal_items:
+  - id: tr_meridian_edge_prod_serviceaccount_merchant_bff_sa_meridian_ed
+    category: IAM_SA
+    asset_type: iam.googleapis.com/ServiceAccount
+    display_name: merchant-bff-sa@meridian-edge-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
+    project_id: meridian-edge-prod
+    owner_container_id: proj_meridian_edge_prod
+    attached_node_ids:
+      - n_meridian_edge_prod_merchant_bff_run
+    backed_by:
+      - uri: //iam.googleapis.com/projects/meridian-edge-prod/serviceAccounts/merchant-bff-sa@meridian-edge-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: meridian-edge-prod
+    backed_edge_ids:
+      - 350f692d5d924868
+  - id: tr_meridian_fraud_prod_serviceaccount_fraud_scoring_sa_meridian
+    category: IAM_SA
+    asset_type: iam.googleapis.com/ServiceAccount
+    display_name: fraud-scoring-sa@meridian-fraud-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
+    project_id: meridian-fraud-prod
+    owner_container_id: proj_meridian_fraud_prod
+    attached_node_ids:
+      - n_meridian_fraud_prod_fraud_scoring_svc
+      - n_meridian_fraud_prod_fraud_telemetry_bigtable
+    backed_by:
+      - uri: //iam.googleapis.com/projects/meridian-fraud-prod/serviceAccounts/fraud-scoring-sa@meridian-fraud-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: meridian-fraud-prod
+    backed_edge_ids:
+      - 45786f8afa4e0689
+      - ac1a7d296346bcac
+    roles:
+      - roles/bigtable.user
+  - id: tr_meridian_ledger_prod_serviceaccount_ledger_posting_sa_meridia
+    category: IAM_SA
+    asset_type: iam.googleapis.com/ServiceAccount
+    display_name: ledger-posting-sa@meridian-ledger-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
+    project_id: meridian-ledger-prod
+    owner_container_id: proj_meridian_ledger_prod
+    attached_node_ids:
+      - n_meridian_ledger_prod_global_payments_spanner
+      - n_meridian_ledger_prod_ledger_posting_svc
+    backed_by:
+      - uri: //iam.googleapis.com/projects/meridian-ledger-prod/serviceAccounts/ledger-posting-sa@meridian-ledger-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: meridian-ledger-prod
+    backed_edge_ids:
+      - 532c9dbceaa86f65
+      - d66a8909ae5ce06b
+    roles:
+      - roles/spanner.databaseUser
+  - id: tr_meridian_ledger_prod_serviceaccount_payments_auth_sa_meridian
+    category: IAM_SA
+    asset_type: iam.googleapis.com/ServiceAccount
+    display_name: payments-auth-sa@meridian-ledger-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
+    project_id: meridian-ledger-prod
+    owner_container_id: proj_meridian_ledger_prod
+    attached_node_ids:
+      - n_meridian_ledger_prod_payments_auth_api
+    backed_by:
+      - uri: //iam.googleapis.com/projects/meridian-ledger-prod/serviceAccounts/payments-auth-sa@meridian-ledger-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: meridian-ledger-prod
+    backed_edge_ids:
+      - 2d6a17e0d97b358a
+  - id: tr_meridian_ncc_hub_serviceaccount_ncc_net_sa_meridian_ncc_hub_i
+    category: IAM_SA
+    asset_type: iam.googleapis.com/ServiceAccount
+    display_name: ncc-net-sa@meridian-ncc-hub.iam.gserviceaccount.com
+    detail: ServiceAccount
+    project_id: meridian-ncc-hub
+    owner_container_id: proj_meridian_ncc_hub
+    attached_node_ids:
+      - n_meridian_ncc_hub_enterprise_ncc_hub
+    backed_by:
+      - uri: //iam.googleapis.com/projects/meridian-ncc-hub/serviceAccounts/ncc-net-sa@meridian-ncc-hub.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: meridian-ncc-hub
+    backed_edge_ids:
+      - 1646377733195ca0
+    roles:
+      - roles/networkconnectivity.hubAdmin
+  - id: tr_meridian_ops_sec_serviceaccount_ops_bastion_sa_meridian_ops_s
+    category: IAM_SA
+    asset_type: iam.googleapis.com/ServiceAccount
+    display_name: ops-bastion-sa@meridian-ops-sec.iam.gserviceaccount.com
+    detail: ServiceAccount
+    project_id: meridian-ops-sec
+    owner_container_id: proj_meridian_ops_sec
+    attached_node_ids:
+      - n_meridian_ops_sec_ops_jumpbox_vm
+    backed_by:
+      - uri: //iam.googleapis.com/projects/meridian-ops-sec/serviceAccounts/ops-bastion-sa@meridian-ops-sec.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: meridian-ops-sec
+    backed_edge_ids:
+      - 577f148c481f8d16
+  - id: tr_meridian_fraud_prod_cryptokey_bigtable_fraud_cmek
+    category: KMS
+    asset_type: cloudkms.googleapis.com/CryptoKey
+    display_name: bigtable-fraud-cmek
+    detail: europe-west1 | ENCRYPT_DECRYPT
+    project_id: meridian-fraud-prod
+    owner_container_id: proj_meridian_fraud_prod
+    attached_node_ids:
+      - n_meridian_fraud_prod_fraud_telemetry_bigtable
+    backed_by:
+      - uri: //cloudkms.googleapis.com/projects/meridian-fraud-prod/locations/europe-west1/keyRings/fraud-keyring/cryptoKeys/bigtable-fraud-cmek
+        asset_type: cloudkms.googleapis.com/CryptoKey
+        project_id: meridian-fraud-prod
+    backed_edge_ids:
+      - e7ec462d3f556b63
+  - id: tr_meridian_ledger_prod_cryptokey_pci_vault_hsm_cmek
+    category: KMS
+    asset_type: cloudkms.googleapis.com/CryptoKey
+    display_name: pci-vault-hsm-cmek
+    detail: europe-west1 | ENCRYPT_DECRYPT
+    project_id: meridian-ledger-prod
+    owner_container_id: proj_meridian_ledger_prod
+    attached_node_ids:
+      - n_meridian_ledger_prod_cardholder_vault_alloydb
+    backed_by:
+      - uri: //cloudkms.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/keyRings/hsm-keyring/cryptoKeys/pci-vault-hsm-cmek
+        asset_type: cloudkms.googleapis.com/CryptoKey
+        project_id: meridian-ledger-prod
+    backed_edge_ids:
+      - c43f277418cf4405
+  - id: tr_meridian_ledger_prod_cryptokey_spanner_ledger_cmek
+    category: KMS
+    asset_type: cloudkms.googleapis.com/CryptoKey
+    display_name: spanner-ledger-cmek
+    detail: europe-west1 | ENCRYPT_DECRYPT
+    project_id: meridian-ledger-prod
+    owner_container_id: proj_meridian_ledger_prod
+    attached_node_ids:
+      - n_meridian_ledger_prod_global_payments_spanner
+    backed_by:
+      - uri: //cloudkms.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/keyRings/hsm-keyring/cryptoKeys/spanner-ledger-cmek
+        asset_type: cloudkms.googleapis.com/CryptoKey
+        project_id: meridian-ledger-prod
+    backed_edge_ids:
+      - f4846cb47b03c57b
+  - id: tr_meridian_edge_prod_router_pay_edge_nat
+    category: NAT_ROUTER
+    asset_type: compute.googleapis.com/Router
+    display_name: pay-edge-nat
+    detail: europe-west1
+    project_id: meridian-edge-prod
+    owner_container_id: vpc_meridian_edge_prod_pay_edge_vpc
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/routers/pay-edge-nat
+        asset_type: compute.googleapis.com/Router
+        project_id: meridian-edge-prod
+    backed_edge_ids:
+      - efb1f6ec8d867da6
+  - id: tr_meridian_ncc_hub_router_ncc_bgp_router
+    category: NAT_ROUTER
+    asset_type: compute.googleapis.com/Router
+    display_name: ncc-bgp-router
+    detail: europe-west1
+    project_id: meridian-ncc-hub
+    owner_container_id: vpc_meridian_ncc_hub_ncc_transit_vpc
+    backed_by:
+      - uri: //compute.googleapis.com/projects/meridian-ncc-hub/regions/europe-west1/routers/ncc-bgp-router
+        asset_type: compute.googleapis.com/Router
+        project_id: meridian-ncc-hub
+    backed_edge_ids:
+      - de09680b2bc753d3
+  - id: tr_meridian_ops_sec_alertpolicy_pci_latency_slo_alert
+    category: OBSERVABILITY
+    asset_type: monitoring.googleapis.com/AlertPolicy
+    display_name: pci-latency-slo-alert
+    detail: global
+    project_id: meridian-ops-sec
+    owner_container_id: proj_meridian_ops_sec
+    attached_node_ids:
+      - n_meridian_ledger_prod_payments_auth_api
+    backed_by:
+      - uri: //monitoring.googleapis.com/projects/meridian-ops-sec/alertPolicies/9202001
+        asset_type: monitoring.googleapis.com/AlertPolicy
+        project_id: meridian-ops-sec
+    backed_edge_ids:
+      - 6056d8198803b2a0
+  - id: tr_meridian_ops_sec_logbucket_pci_immutable_log_bucket
+    category: OBSERVABILITY
+    asset_type: logging.googleapis.com/LogBucket
+    display_name: pci-immutable-log-bucket
+    detail: global
+    project_id: meridian-ops-sec
+    owner_container_id: proj_meridian_ops_sec
+    backed_by:
+      - uri: //logging.googleapis.com/projects/meridian-ops-sec/locations/global/buckets/pci-immutable-log-bucket
+        asset_type: logging.googleapis.com/LogBucket
+        project_id: meridian-ops-sec
+    backed_edge_ids:
+      - 05db7b6756cacaef
+  - id: tr_meridian_ops_sec_logsink_pci_central_audit_sink
+    category: OBSERVABILITY
+    asset_type: logging.googleapis.com/LogSink
+    display_name: pci-central-audit-sink
+    detail: global
+    project_id: meridian-ops-sec
+    owner_container_id: proj_meridian_ops_sec
+    attached_node_ids:
+      - n_meridian_ops_sec_meridian_audit_vault
+    backed_by:
+      - uri: //logging.googleapis.com/projects/meridian-ops-sec/sinks/pci-central-audit-sink
+        asset_type: logging.googleapis.com/LogSink
+        project_id: meridian-ops-sec
+    backed_edge_ids:
+      - 05db7b6756cacaef
+      - 7c712e2fb86b3718
+  - id: tr_meridian_edge_prod_secret_openbanking_jwks_key
+    category: SECRET
+    asset_type: secretmanager.googleapis.com/Secret
+    display_name: openbanking-jwks-key
+    detail: automatic
+    project_id: meridian-edge-prod
+    owner_container_id: proj_meridian_edge_prod
+    attached_node_ids:
+      - n_meridian_edge_prod_merchant_bff_run
+    backed_by:
+      - uri: //secretmanager.googleapis.com/projects/meridian-edge-prod/secrets/openbanking-jwks-key
+        asset_type: secretmanager.googleapis.com/Secret
+        project_id: meridian-edge-prod
+    backed_edge_ids:
+      - 4a26ea50558967ee
+  - id: tr_meridian_ledger_prod_secret_acquirer_mtls_cert
+    category: SECRET
+    asset_type: secretmanager.googleapis.com/Secret
+    display_name: acquirer-mtls-cert
+    detail: automatic
+    project_id: meridian-ledger-prod
+    owner_container_id: proj_meridian_ledger_prod
+    attached_node_ids:
+      - n_meridian_ledger_prod_payments_auth_api
+    backed_by:
+      - uri: //secretmanager.googleapis.com/projects/meridian-ledger-prod/secrets/acquirer-mtls-cert
+        asset_type: secretmanager.googleapis.com/Secret
+        project_id: meridian-ledger-prod
+    backed_edge_ids:
+      - f2cef0f40717c9f6
+  - id: tr_meridian_ledger_prod_secret_hsm_signing_pin
+    category: SECRET
+    asset_type: secretmanager.googleapis.com/Secret
+    display_name: hsm-signing-pin
+    detail: automatic
+    project_id: meridian-ledger-prod
+    owner_container_id: proj_meridian_ledger_prod
+    attached_node_ids:
+      - n_meridian_ledger_prod_hsm_signing_mig
+    backed_by:
+      - uri: //secretmanager.googleapis.com/projects/meridian-ledger-prod/secrets/hsm-signing-pin
+        asset_type: secretmanager.googleapis.com/Secret
+        project_id: meridian-ledger-prod
+    backed_edge_ids:
+      - 62a3c67bf798581c
+structural_edges:
+  - edge_id: 2dcb1df403a88622
+    kind: PSA_PEERING
+    from_uri: //compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc
+    to_uri: //alloydb.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/cardholder-vault-alloydb
+    reason: psa_container_boundary
+    target_id: zone_psa_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1_p910100abcdef12_tp
+  - edge_id: 3e08ee95fc72871c
+    kind: K8S_SERVICE_SELECTOR
+    from_uri: //container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/services/payments-auth-api
+    to_uri: //container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/payments-auth-api
+    reason: 1to1_plumbing_fold
+    target_id: n_meridian_ledger_prod_payments_auth_api
+  - edge_id: 469b04db3c5c7e20
+    kind: CONFIG_REF
+    from_uri: //pubsub.googleapis.com/projects/meridian-ledger-prod/topics/settlement-events-topic
+    to_uri: //pubsub.googleapis.com/projects/meridian-ledger-prod/subscriptions/settlement-eod-sub
+    reason: 1to1_plumbing_fold
+    target_id: n_meridian_ledger_prod_settlement_events_topic
+  - edge_id: 46cf0799519f8e38
+    kind: CONFIG_REF
+    from_uri: //networkconnectivity.googleapis.com/projects/meridian-ncc-hub/locations/global/hubs/enterprise-ncc-hub
+    to_uri: //compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc
+    reason: container_attachment
+    target_id: vpc_meridian_ledger_prod_pay_core_vpc
+  - edge_id: 5187c5eab6641e98
+    kind: CONFIG_REF
+    from_uri: //dns.googleapis.com/projects/meridian-ops-sec/managedZones/meridian-corp-dns
+    to_uri: //compute.googleapis.com/projects/meridian-ops-sec/global/networks/ops-mgmt-vpc
+    reason: container_attachment
+    target_id: vpc_meridian_ops_sec_ops_mgmt_vpc
+  - edge_id: 7756a6a12b12aa8b
+    kind: CONFIG_REF
+    from_uri: //pubsub.googleapis.com/projects/meridian-ledger-prod/topics/settlement-events-dlq
+    to_uri: //pubsub.googleapis.com/projects/meridian-ledger-prod/subscriptions/settlement-dlq-sub
+    reason: 1to1_plumbing_fold
+    target_id: n_meridian_ledger_prod_settlement_events_dlq
+  - edge_id: 928e1301d7f11c2b
+    kind: K8S_SERVICE_SELECTOR
+    from_uri: //container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/services/ledger-posting-svc
+    to_uri: //container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/ledger-posting-svc
+    reason: 1to1_plumbing_fold
+    target_id: n_meridian_ledger_prod_ledger_posting_svc
+  - edge_id: abb0dd71c67d8e0e
+    kind: CONFIG_REF
+    from_uri: //networkconnectivity.googleapis.com/projects/meridian-ncc-hub/locations/global/hubs/enterprise-ncc-hub
+    to_uri: //compute.googleapis.com/projects/meridian-edge-prod/global/networks/pay-edge-vpc
+    reason: container_attachment
+    target_id: vpc_meridian_edge_prod_pay_edge_vpc
+  - edge_id: de9ad7c4946585f9
+    kind: CONFIG_REF
+    from_uri: //networkconnectivity.googleapis.com/projects/meridian-ncc-hub/locations/global/hubs/enterprise-ncc-hub
+    to_uri: //compute.googleapis.com/projects/meridian-ops-sec/global/networks/ops-mgmt-vpc
+    reason: container_attachment
+    target_id: vpc_meridian_ops_sec_ops_mgmt_vpc
+suppressed_plumbing_counts:
+  bigtableadmin.googleapis.com/Table: 12
+  compute.googleapis.com/BackendService: 5
+  compute.googleapis.com/Firewall: 36
+  compute.googleapis.com/Route: 22
+  compute.googleapis.com/SecurityPolicy: 4
+  container.googleapis.com/NodePool: 3
+  networkconnectivity.googleapis.com/Spoke: 4
+  spanner.googleapis.com/Database: 3
+views:
+  - id: view_0_system_index
+    title: System Architecture Overview
+    subtitle: 31 components · 36 flows · 17 governance items
+    focus_summary: Global open-banking and card payment processing platform spanning WAF/API ingress, hybrid NCC connectivity, PSC-isolated GKE core ledger services, event-driven settlement with DLQ replay, and multi-engine financial datastores.
+    include_transversal_panel: true
+    archetype: layered_flow
+    accent_mode: MIXED
+    container_ids:
+      - ext_sources
+      - ext_targets
+      - folder_520100
+      - folder_520200
+      - gke_meridian_ledger_prod_europe_west1_gke_payments_core
+      - org_910100001
+      - proj_meridian_edge_prod
+      - proj_meridian_fraud_prod
+      - proj_meridian_ledger_prod
+      - proj_meridian_ncc_hub
+      - proj_meridian_ops_sec
+      - reg_vpc_meridian_edge_prod_pay_edge_vpc_europe_west1
+      - reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+      - reg_vpc_meridian_ncc_hub_ncc_transit_vpc_europe_west1
+      - reg_vpc_meridian_ops_sec_ops_mgmt_vpc_europe_west1
+      - sub_meridian_edge_prod_europe_west1_pay_app_subnet
+      - sub_meridian_edge_prod_europe_west1_pay_dmz_subnet
+      - sub_meridian_ledger_prod_europe_west1_pay_gke_subnet
+      - sub_meridian_ledger_prod_europe_west1_pay_hsm_subnet
+      - sub_meridian_ncc_hub_europe_west1_ncc_transit_subnet
+      - sub_meridian_ops_sec_europe_west1_ops_mgmt_subnet
+      - vpc_meridian_edge_prod_pay_edge_vpc
+      - vpc_meridian_ledger_prod_pay_core_vpc
+      - vpc_meridian_ncc_hub_ncc_transit_vpc
+      - vpc_meridian_ops_sec_ops_mgmt_vpc
+      - zone_exposure_zone_internal_sub_meridian_edge_prod_europe_west1_pay_app_subnet
+      - zone_exposure_zone_internal_sub_meridian_ledger_prod_europe_west1_pay_gke_subnet
+      - zone_exposure_zone_private_proj_meridian_edge_prod
+      - zone_exposure_zone_private_proj_meridian_fraud_prod
+      - zone_exposure_zone_private_proj_meridian_ledger_prod
+      - zone_exposure_zone_private_proj_meridian_ops_sec
+      - zone_exposure_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+      - zone_exposure_zone_private_sub_meridian_edge_prod_europe_west1_pay_app_subnet
+      - zone_exposure_zone_private_sub_meridian_ledger_prod_europe_west1_pay_hsm_subnet
+      - zone_exposure_zone_private_sub_meridian_ops_sec_europe_west1_ops_mgmt_subnet
+      - zone_exposure_zone_public_vpc_meridian_edge_prod_pay_edge_vpc_external_managed
+      - zone_hybrid_zone_private_reg_vpc_meridian_ncc_hub_ncc_transit_vpc_europe_west1
+      - zone_psa_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1_p910100abcdef12_tp
+      - zone_shared_hub_private_proj_meridian_ncc_hub
+    placements:
+      - component_id: n_external_global_merchant_clients
+        container_id: ext_sources
+        column: 0
+      - component_id: n_external_core_banking_dc
+        container_id: ext_sources
+        column: 0
+      - component_id: n_meridian_ops_sec_meridian_corp_dns
+        container_id: zone_exposure_zone_private_proj_meridian_ops_sec
+        column: 1
+      - component_id: n_meridian_edge_prod_pay_global_waf_lb
+        container_id: zone_exposure_zone_public_vpc_meridian_edge_prod_pay_edge_vpc_external_managed
+        column: 1
+      - component_id: n_meridian_ncc_hub_dc_frankfurt_interconnect
+        container_id: zone_hybrid_zone_private_reg_vpc_meridian_ncc_hub_ncc_transit_vpc_europe_west1
+        column: 1
+      - component_id: n_meridian_ncc_hub_partner_ha_vpn
+        container_id: zone_hybrid_zone_private_reg_vpc_meridian_ncc_hub_ncc_transit_vpc_europe_west1
+        column: 1
+      - component_id: n_meridian_ledger_prod_clearing_reconciler_cron
+        container_id: gke_meridian_ledger_prod_europe_west1_gke_payments_core
+        column: 2
+      - component_id: n_meridian_edge_prod_openbanking_api_gw
+        container_id: zone_exposure_zone_private_proj_meridian_edge_prod
+        column: 2
+      - component_id: n_meridian_ncc_hub_enterprise_ncc_hub
+        container_id: zone_shared_hub_private_proj_meridian_ncc_hub
+        column: 2
+      - component_id: n_meridian_ops_sec_payments_container_repo
+        container_id: zone_exposure_zone_private_proj_meridian_ops_sec
+        column: 3
+      - component_id: n_meridian_edge_prod_merchant_bff_run
+        container_id: zone_exposure_zone_private_sub_meridian_edge_prod_europe_west1_pay_app_subnet
+        column: 3
+      - component_id: n_meridian_ops_sec_ops_jumpbox_vm
+        container_id: zone_exposure_zone_private_sub_meridian_ops_sec_europe_west1_ops_mgmt_subnet
+        column: 3
+      - component_id: n_meridian_edge_prod_ledger_psc_ep
+        container_id: zone_exposure_zone_internal_sub_meridian_edge_prod_europe_west1_pay_app_subnet
+        column: 4
+      - component_id: n_meridian_ledger_prod_settlement_events_dlq
+        container_id: zone_exposure_zone_private_proj_meridian_ledger_prod
+        column: 4
+      - component_id: n_meridian_ledger_prod_settlement_dlq_replay_fn
+        container_id: zone_exposure_zone_private_proj_meridian_ledger_prod
+        column: 5
+      - component_id: n_meridian_ops_sec_meridian_audit_vault
+        container_id: zone_exposure_zone_private_proj_meridian_ops_sec
+        column: 5
+      - component_id: n_meridian_ledger_prod_ledger_psc_attachment
+        container_id: zone_exposure_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+        column: 5
+      - component_id: n_meridian_ledger_prod_ledger_internal_ilb
+        container_id: zone_exposure_zone_internal_sub_meridian_ledger_prod_europe_west1_pay_gke_subnet
+        column: 6
+      - component_id: n_meridian_ledger_prod_payments_auth_api
+        container_id: gke_meridian_ledger_prod_europe_west1_gke_payments_core
+        column: 7
+      - component_id: n_meridian_ledger_prod_ledger_posting_svc
+        container_id: gke_meridian_ledger_prod_europe_west1_gke_payments_core
+        column: 8
+      - component_id: n_meridian_fraud_prod_fraud_scoring_svc
+        container_id: zone_exposure_zone_private_proj_meridian_fraud_prod
+        column: 8
+      - component_id: n_meridian_ledger_prod_idempotency_redis_cluster
+        container_id: zone_exposure_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+        column: 8
+      - component_id: n_meridian_ledger_prod_hsm_signing_mig
+        container_id: zone_exposure_zone_private_sub_meridian_ledger_prod_europe_west1_pay_hsm_subnet
+        column: 8
+      - component_id: n_meridian_fraud_prod_fraud_telemetry_bigtable
+        container_id: zone_exposure_zone_private_proj_meridian_fraud_prod
+        column: 9
+      - component_id: n_meridian_ledger_prod_global_payments_spanner
+        container_id: zone_exposure_zone_private_proj_meridian_ledger_prod
+        column: 9
+      - component_id: n_meridian_ledger_prod_settlement_events_topic
+        container_id: zone_exposure_zone_private_proj_meridian_ledger_prod
+        column: 9
+      - component_id: n_meridian_ledger_prod_cardholder_vault_alloydb
+        container_id: zone_psa_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1_p910100abcdef12_tp
+        column: 9
+      - component_id: n_meridian_ledger_prod_eod_settlement_job
+        container_id: zone_exposure_zone_private_proj_meridian_ledger_prod
+        column: 10
+      - component_id: n_meridian_edge_prod_merchant_webhook_run
+        container_id: zone_exposure_zone_private_sub_meridian_edge_prod_europe_west1_pay_app_subnet
+        column: 10
+      - component_id: n_external_card_network_acquirer
+        container_id: ext_targets
+        column: 11
+      - component_id: n_meridian_ledger_prod_clearing_files_filestore
+        container_id: zone_exposure_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+        column: 11
+    edges:
+      - from: n_external_core_banking_dc
+        to: n_meridian_ncc_hub_dc_frankfurt_interconnect
+        verb: 10G link
+        flow_kind: RUNTIME
+        semantic_tag: hybrid
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 7f05725a832d5f13
+      - from: n_external_core_banking_dc
+        to: n_meridian_ncc_hub_partner_ha_vpn
+        verb: IPsec BGP
+        flow_kind: RUNTIME
+        semantic_tag: hybrid
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 220d77136301f54c
+      - from: n_external_global_merchant_clients
+        to: n_meridian_edge_prod_pay_global_waf_lb
+        verb: HTTPS :443
+        flow_kind: RUNTIME
+        semantic_tag: ingress
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 43ebb0535f553a42
+      - from: n_meridian_edge_prod_ledger_psc_ep
+        to: n_meridian_ledger_prod_ledger_psc_attachment
+        verb: PSC tunnel
+        flow_kind: RUNTIME
+        semantic_tag: peering
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 4d5ae1c3ba3f2bb3
+      - from: n_meridian_edge_prod_merchant_bff_run
+        to: n_meridian_edge_prod_ledger_psc_ep
+        verb: PSC request
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - a8ea257db3a3eed2
+      - from: n_meridian_edge_prod_merchant_webhook_run
+        to: n_external_card_network_acquirer
+        verb: HTTPS webhook
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 58974212583ecb2b
+      - from: n_meridian_edge_prod_openbanking_api_gw
+        to: n_meridian_edge_prod_merchant_bff_run
+        verb: Routes HTTPS
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - fec7542e4e6e09ee
+      - from: n_meridian_edge_prod_pay_global_waf_lb
+        to: n_meridian_edge_prod_openbanking_api_gw
+        verb: Forwards :443
+        flow_kind: RUNTIME
+        semantic_tag: ingress
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 43d507ee2dfa14ef
+      - from: n_meridian_fraud_prod_fraud_scoring_svc
+        to: n_meridian_fraud_prod_fraud_telemetry_bigtable
+        verb: Reads features
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - bfb5978cb9235026
+      - from: n_meridian_ledger_prod_clearing_reconciler_cron
+        to: n_meridian_ledger_prod_clearing_files_filestore
+        verb: Reads NFS
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 06bc5b930d5dd749
+      - from: n_meridian_ledger_prod_clearing_reconciler_cron
+        to: n_meridian_ops_sec_meridian_audit_vault
+        verb: Archives log
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - e0608ff1442e8564
+      - from: n_meridian_ledger_prod_eod_settlement_job
+        to: n_meridian_ledger_prod_clearing_files_filestore
+        verb: Writes NFS
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 00fa18454f5acf4b
+      - from: n_meridian_ledger_prod_ledger_internal_ilb
+        to: n_meridian_ledger_prod_payments_auth_api
+        verb: NEG backend
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 0bca804a974bc2e3
+      - from: n_meridian_ledger_prod_ledger_posting_svc
+        to: n_meridian_ledger_prod_cardholder_vault_alloydb
+        verb: Queries vault
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 43bbda6a8f9a2e09
+      - from: n_meridian_ledger_prod_ledger_posting_svc
+        to: n_meridian_ledger_prod_global_payments_spanner
+        verb: Writes ledger
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - a3ac01dbb119528c
+      - from: n_meridian_ledger_prod_ledger_posting_svc
+        to: n_meridian_ledger_prod_settlement_events_topic
+        verb: Publishes
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 3050a3c3b82ed31a
+      - from: n_meridian_ledger_prod_ledger_psc_attachment
+        to: n_meridian_ledger_prod_ledger_internal_ilb
+        verb: NATs to ILB
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 8fcfb71faec3e41e
+      - from: n_meridian_ledger_prod_payments_auth_api
+        to: n_external_card_network_acquirer
+        verb: ISO8583 mTLS
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - a36349d56a3cf1b2
+      - from: n_meridian_ledger_prod_payments_auth_api
+        to: n_meridian_fraud_prod_fraud_scoring_svc
+        verb: gRPC score
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 259bec6bf0863579
+      - from: n_meridian_ledger_prod_payments_auth_api
+        to: n_meridian_ledger_prod_hsm_signing_mig
+        verb: Signs payload
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 32163e2a18270cbc
+      - from: n_meridian_ledger_prod_payments_auth_api
+        to: n_meridian_ledger_prod_idempotency_redis_cluster
+        verb: Checks key
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 1d8d6192664fc560
+      - from: n_meridian_ledger_prod_payments_auth_api
+        to: n_meridian_ledger_prod_ledger_posting_svc
+        verb: gRPC post
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - de00c0581474238e
+      - from: n_meridian_ledger_prod_settlement_dlq_replay_fn
+        to: n_meridian_ledger_prod_settlement_events_topic
+        verb: Retry publish
+        flow_kind: RUNTIME
+        semantic_tag: retry
+        is_retry_or_dlq: true
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - a0e5bc75ce4cb2a3
+      - from: n_meridian_ledger_prod_settlement_events_dlq
+        to: n_meridian_ledger_prod_settlement_dlq_replay_fn
+        verb: DLQ push
+        flow_kind: RUNTIME
+        semantic_tag: dlq
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - d05184cffc0dc36f
+      - from: n_meridian_ledger_prod_settlement_events_topic
+        to: n_meridian_edge_prod_merchant_webhook_run
+        verb: Pushes event
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - e520c6f94a32088a
+      - from: n_meridian_ledger_prod_settlement_events_topic
+        to: n_meridian_ledger_prod_eod_settlement_job
+        verb: Pulls batch
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 1f0801ba6e5bff4f
+      - from: n_meridian_ledger_prod_settlement_events_topic
+        to: n_meridian_ledger_prod_settlement_events_dlq
+        verb: Dead-letter
+        flow_kind: RUNTIME
+        semantic_tag: dlq
+        is_retry_or_dlq: true
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - ef40c498c90a3af5
+      - from: n_meridian_ncc_hub_dc_frankfurt_interconnect
+        to: n_meridian_ncc_hub_enterprise_ncc_hub
+        verb: Hybrid spoke
+        flow_kind: RUNTIME
+        semantic_tag: hybrid
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - a7532927da7d474a
+      - from: n_meridian_ncc_hub_enterprise_ncc_hub
+        to: n_meridian_edge_prod_ledger_psc_ep
+        verb: Hub transit
+        flow_kind: RUNTIME
+        semantic_tag: peering
+        provenance: INFERRED
+        inference_rationale: NCC hub spoke attachment to VPC pay-edge-vpc
+      - from: n_meridian_ncc_hub_enterprise_ncc_hub
+        to: n_meridian_ledger_prod_ledger_internal_ilb
+        verb: Hub transit
+        flow_kind: RUNTIME
+        semantic_tag: peering
+        provenance: INFERRED
+        inference_rationale: NCC hub spoke attachment to VPC pay-core-vpc
+      - from: n_meridian_ncc_hub_enterprise_ncc_hub
+        to: n_meridian_ops_sec_ops_jumpbox_vm
+        verb: Hub transit
+        flow_kind: ADMIN
+        semantic_tag: peering
+        provenance: INFERRED
+        inference_rationale: NCC hub spoke attachment to VPC ops-mgmt-vpc
+      - from: n_meridian_ncc_hub_partner_ha_vpn
+        to: n_meridian_ncc_hub_enterprise_ncc_hub
+        verb: VPN spoke
+        flow_kind: RUNTIME
+        semantic_tag: hybrid
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 478213af02f4485b
+      - from: n_meridian_ops_sec_meridian_corp_dns
+        to: n_meridian_ops_sec_ops_jumpbox_vm
+        verb: Resolves DNS
+        flow_kind: ADMIN
+        semantic_tag: traffic
+        provenance: INFERRED
+        inference_rationale: Private DNS zone meridian-corp-dns attached to VPC ops-mgmt-vpc
+      - from: n_meridian_ops_sec_ops_jumpbox_vm
+        to: n_meridian_ledger_prod_ledger_internal_ilb
+        verb: Admin transit
+        flow_kind: ADMIN
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - b12ea1f4c8860252
+      - from: n_meridian_ops_sec_payments_container_repo
+        to: n_meridian_ledger_prod_ledger_posting_svc
+        verb: Pulls image
+        flow_kind: CICD
+        semantic_tag: cicd
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 451a7774e08dfa48
+      - from: n_meridian_ops_sec_payments_container_repo
+        to: n_meridian_ledger_prod_payments_auth_api
+        verb: Pulls image
+        flow_kind: CICD
+        semantic_tag: cicd
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 0763ce0fbf5e3806
+  - id: view_1
+    title: Edge Ingress, Hybrid Transit & Scheduled Reconciler
+    subtitle: Global WAF/API ingress, hybrid NCC hub, and core cron jobs
+    focus_summary: External merchant traffic enters via Global WAF LB and API Gateway while on-premises core banking connects through Dedicated Interconnect and HA VPN into Network Connectivity Center.
+    include_transversal_panel: true
+    archetype: layered_flow
+    accent_mode: MIXED
+    container_ids:
+      - ext_sources
+      - folder_520100
+      - folder_520200
+      - gke_meridian_ledger_prod_europe_west1_gke_payments_core
+      - org_910100001
+      - proj_meridian_edge_prod
+      - proj_meridian_ledger_prod
+      - proj_meridian_ncc_hub
+      - proj_meridian_ops_sec
+      - reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+      - reg_vpc_meridian_ncc_hub_ncc_transit_vpc_europe_west1
+      - sub_meridian_ledger_prod_europe_west1_pay_gke_subnet
+      - vpc_meridian_edge_prod_pay_edge_vpc
+      - vpc_meridian_ledger_prod_pay_core_vpc
+      - vpc_meridian_ncc_hub_ncc_transit_vpc
+      - zone_exposure_zone_private_proj_meridian_edge_prod
+      - zone_exposure_zone_private_proj_meridian_ops_sec
+      - zone_exposure_zone_public_vpc_meridian_edge_prod_pay_edge_vpc_external_managed
+      - zone_hybrid_zone_private_reg_vpc_meridian_ncc_hub_ncc_transit_vpc_europe_west1
+      - zone_shared_hub_private_proj_meridian_ncc_hub
+    placements:
+      - component_id: n_external_global_merchant_clients
+        container_id: ext_sources
+        column: 0
+      - component_id: n_external_core_banking_dc
+        container_id: ext_sources
+        column: 0
+      - component_id: n_meridian_ops_sec_meridian_corp_dns
+        container_id: zone_exposure_zone_private_proj_meridian_ops_sec
+        column: 1
+        off_page_refs:
+          - target_view_id: view_2
+            label: ops-jumpbox-vm (view_2)
+            direction: OUT
+      - component_id: n_meridian_edge_prod_pay_global_waf_lb
+        container_id: zone_exposure_zone_public_vpc_meridian_edge_prod_pay_edge_vpc_external_managed
+        column: 1
+      - component_id: n_meridian_ncc_hub_dc_frankfurt_interconnect
+        container_id: zone_hybrid_zone_private_reg_vpc_meridian_ncc_hub_ncc_transit_vpc_europe_west1
+        column: 1
+      - component_id: n_meridian_ncc_hub_partner_ha_vpn
+        container_id: zone_hybrid_zone_private_reg_vpc_meridian_ncc_hub_ncc_transit_vpc_europe_west1
+        column: 1
+      - component_id: n_meridian_ledger_prod_clearing_reconciler_cron
+        container_id: gke_meridian_ledger_prod_europe_west1_gke_payments_core
+        column: 2
+        off_page_refs:
+          - target_view_id: view_3
+            label: clearing-files-filestore (+1 in view_3)
+            direction: OUT
+      - component_id: n_meridian_edge_prod_openbanking_api_gw
+        container_id: zone_exposure_zone_private_proj_meridian_edge_prod
+        column: 2
+        off_page_refs:
+          - target_view_id: view_2
+            label: merchant-bff-run (view_2)
+            direction: OUT
+      - component_id: n_meridian_ncc_hub_enterprise_ncc_hub
+        container_id: zone_shared_hub_private_proj_meridian_ncc_hub
+        column: 2
+        off_page_refs:
+          - target_view_id: view_2
+            label: ledger-internal-ilb (+2 in view_2)
+            direction: OUT
+    edges:
+      - from: n_external_core_banking_dc
+        to: n_meridian_ncc_hub_dc_frankfurt_interconnect
+        verb: 10G link
+        flow_kind: RUNTIME
+        semantic_tag: hybrid
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 7f05725a832d5f13
+      - from: n_external_core_banking_dc
+        to: n_meridian_ncc_hub_partner_ha_vpn
+        verb: IPsec BGP
+        flow_kind: RUNTIME
+        semantic_tag: hybrid
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 220d77136301f54c
+      - from: n_external_global_merchant_clients
+        to: n_meridian_edge_prod_pay_global_waf_lb
+        verb: HTTPS :443
+        flow_kind: RUNTIME
+        semantic_tag: ingress
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 43ebb0535f553a42
+      - from: n_meridian_edge_prod_pay_global_waf_lb
+        to: n_meridian_edge_prod_openbanking_api_gw
+        verb: Forwards :443
+        flow_kind: RUNTIME
+        semantic_tag: ingress
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 43d507ee2dfa14ef
+      - from: n_meridian_ncc_hub_dc_frankfurt_interconnect
+        to: n_meridian_ncc_hub_enterprise_ncc_hub
+        verb: Hybrid spoke
+        flow_kind: RUNTIME
+        semantic_tag: hybrid
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - a7532927da7d474a
+      - from: n_meridian_ncc_hub_partner_ha_vpn
+        to: n_meridian_ncc_hub_enterprise_ncc_hub
+        verb: VPN spoke
+        flow_kind: RUNTIME
+        semantic_tag: hybrid
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 478213af02f4485b
+  - id: view_2
+    title: Core Payment Services, PSC Routing & Settlement Pipelines
+    subtitle: PSC-bridged microservices, fraud scoring, and event workers
+    focus_summary: Merchant BFF routes via Private Service Connect to GKE payment authorization, HSM signing, fraud scoring, and Pub/Sub settlement pipelines with automated DLQ replay.
+    include_transversal_panel: true
+    archetype: layered_flow
+    accent_mode: MIXED
+    container_ids:
+      - folder_520100
+      - folder_520200
+      - gke_meridian_ledger_prod_europe_west1_gke_payments_core
+      - org_910100001
+      - proj_meridian_edge_prod
+      - proj_meridian_fraud_prod
+      - proj_meridian_ledger_prod
+      - proj_meridian_ops_sec
+      - reg_vpc_meridian_edge_prod_pay_edge_vpc_europe_west1
+      - reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+      - reg_vpc_meridian_ops_sec_ops_mgmt_vpc_europe_west1
+      - sub_meridian_edge_prod_europe_west1_pay_app_subnet
+      - sub_meridian_ledger_prod_europe_west1_pay_gke_subnet
+      - sub_meridian_ledger_prod_europe_west1_pay_hsm_subnet
+      - sub_meridian_ops_sec_europe_west1_ops_mgmt_subnet
+      - vpc_meridian_edge_prod_pay_edge_vpc
+      - vpc_meridian_ledger_prod_pay_core_vpc
+      - vpc_meridian_ops_sec_ops_mgmt_vpc
+      - zone_exposure_zone_internal_sub_meridian_edge_prod_europe_west1_pay_app_subnet
+      - zone_exposure_zone_internal_sub_meridian_ledger_prod_europe_west1_pay_gke_subnet
+      - zone_exposure_zone_private_proj_meridian_fraud_prod
+      - zone_exposure_zone_private_proj_meridian_ledger_prod
+      - zone_exposure_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+      - zone_exposure_zone_private_sub_meridian_edge_prod_europe_west1_pay_app_subnet
+      - zone_exposure_zone_private_sub_meridian_ledger_prod_europe_west1_pay_hsm_subnet
+      - zone_exposure_zone_private_sub_meridian_ops_sec_europe_west1_ops_mgmt_subnet
+    placements:
+      - component_id: n_meridian_edge_prod_merchant_bff_run
+        container_id: zone_exposure_zone_private_sub_meridian_edge_prod_europe_west1_pay_app_subnet
+        column: 3
+        off_page_refs:
+          - target_view_id: view_1
+            label: openbanking-api-gw (view_1)
+            direction: IN
+      - component_id: n_meridian_ops_sec_ops_jumpbox_vm
+        container_id: zone_exposure_zone_private_sub_meridian_ops_sec_europe_west1_ops_mgmt_subnet
+        column: 3
+        off_page_refs:
+          - target_view_id: view_1
+            label: enterprise-ncc-hub (+1 in view_1)
+            direction: IN
+      - component_id: n_meridian_edge_prod_ledger_psc_ep
+        container_id: zone_exposure_zone_internal_sub_meridian_edge_prod_europe_west1_pay_app_subnet
+        column: 4
+        off_page_refs:
+          - target_view_id: view_1
+            label: enterprise-ncc-hub (view_1)
+            direction: IN
+      - component_id: n_meridian_ledger_prod_settlement_events_dlq
+        container_id: zone_exposure_zone_private_proj_meridian_ledger_prod
+        column: 4
+      - component_id: n_meridian_ledger_prod_settlement_dlq_replay_fn
+        container_id: zone_exposure_zone_private_proj_meridian_ledger_prod
+        column: 5
+      - component_id: n_meridian_ledger_prod_ledger_psc_attachment
+        container_id: zone_exposure_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+        column: 5
+      - component_id: n_meridian_ledger_prod_ledger_internal_ilb
+        container_id: zone_exposure_zone_internal_sub_meridian_ledger_prod_europe_west1_pay_gke_subnet
+        column: 6
+        off_page_refs:
+          - target_view_id: view_1
+            label: enterprise-ncc-hub (view_1)
+            direction: IN
+      - component_id: n_meridian_ledger_prod_payments_auth_api
+        container_id: gke_meridian_ledger_prod_europe_west1_gke_payments_core
+        column: 7
+        off_page_refs:
+          - target_view_id: view_3
+            label: payments-container-repo (view_3)
+            direction: IN
+          - target_view_id: view_3
+            label: card-network-acquirer (+1 in view_3)
+            direction: OUT
+      - component_id: n_meridian_ledger_prod_ledger_posting_svc
+        container_id: gke_meridian_ledger_prod_europe_west1_gke_payments_core
+        column: 8
+        off_page_refs:
+          - target_view_id: view_3
+            label: payments-container-repo (view_3)
+            direction: IN
+          - target_view_id: view_3
+            label: cardholder-vault-alloydb (+1 in view_3)
+            direction: OUT
+      - component_id: n_meridian_fraud_prod_fraud_scoring_svc
+        container_id: zone_exposure_zone_private_proj_meridian_fraud_prod
+        column: 8
+        off_page_refs:
+          - target_view_id: view_3
+            label: fraud-telemetry-bigtable (view_3)
+            direction: OUT
+      - component_id: n_meridian_ledger_prod_hsm_signing_mig
+        container_id: zone_exposure_zone_private_sub_meridian_ledger_prod_europe_west1_pay_hsm_subnet
+        column: 8
+      - component_id: n_meridian_ledger_prod_settlement_events_topic
+        container_id: zone_exposure_zone_private_proj_meridian_ledger_prod
+        column: 9
+      - component_id: n_meridian_ledger_prod_eod_settlement_job
+        container_id: zone_exposure_zone_private_proj_meridian_ledger_prod
+        column: 10
+        off_page_refs:
+          - target_view_id: view_3
+            label: clearing-files-filestore (view_3)
+            direction: OUT
+      - component_id: n_meridian_edge_prod_merchant_webhook_run
+        container_id: zone_exposure_zone_private_sub_meridian_edge_prod_europe_west1_pay_app_subnet
+        column: 10
+        off_page_refs:
+          - target_view_id: view_3
+            label: card-network-acquirer (view_3)
+            direction: OUT
+    edges:
+      - from: n_meridian_edge_prod_ledger_psc_ep
+        to: n_meridian_ledger_prod_ledger_psc_attachment
+        verb: PSC tunnel
+        flow_kind: RUNTIME
+        semantic_tag: peering
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 4d5ae1c3ba3f2bb3
+      - from: n_meridian_edge_prod_merchant_bff_run
+        to: n_meridian_edge_prod_ledger_psc_ep
+        verb: PSC request
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - a8ea257db3a3eed2
+      - from: n_meridian_ledger_prod_ledger_internal_ilb
+        to: n_meridian_ledger_prod_payments_auth_api
+        verb: NEG backend
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 0bca804a974bc2e3
+      - from: n_meridian_ledger_prod_ledger_posting_svc
+        to: n_meridian_ledger_prod_settlement_events_topic
+        verb: Publishes
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 3050a3c3b82ed31a
+      - from: n_meridian_ledger_prod_ledger_psc_attachment
+        to: n_meridian_ledger_prod_ledger_internal_ilb
+        verb: NATs to ILB
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 8fcfb71faec3e41e
+      - from: n_meridian_ledger_prod_payments_auth_api
+        to: n_meridian_fraud_prod_fraud_scoring_svc
+        verb: gRPC score
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 259bec6bf0863579
+      - from: n_meridian_ledger_prod_payments_auth_api
+        to: n_meridian_ledger_prod_hsm_signing_mig
+        verb: Signs payload
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 32163e2a18270cbc
+      - from: n_meridian_ledger_prod_payments_auth_api
+        to: n_meridian_ledger_prod_ledger_posting_svc
+        verb: gRPC post
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - de00c0581474238e
+      - from: n_meridian_ledger_prod_settlement_dlq_replay_fn
+        to: n_meridian_ledger_prod_settlement_events_topic
+        verb: Retry publish
+        flow_kind: RUNTIME
+        semantic_tag: retry
+        is_retry_or_dlq: true
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - a0e5bc75ce4cb2a3
+      - from: n_meridian_ledger_prod_settlement_events_dlq
+        to: n_meridian_ledger_prod_settlement_dlq_replay_fn
+        verb: DLQ push
+        flow_kind: RUNTIME
+        semantic_tag: dlq
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - d05184cffc0dc36f
+      - from: n_meridian_ledger_prod_settlement_events_topic
+        to: n_meridian_edge_prod_merchant_webhook_run
+        verb: Pushes event
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - e520c6f94a32088a
+      - from: n_meridian_ledger_prod_settlement_events_topic
+        to: n_meridian_ledger_prod_eod_settlement_job
+        verb: Pulls batch
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 1f0801ba6e5bff4f
+      - from: n_meridian_ledger_prod_settlement_events_topic
+        to: n_meridian_ledger_prod_settlement_events_dlq
+        verb: Dead-letter
+        flow_kind: RUNTIME
+        semantic_tag: dlq
+        is_retry_or_dlq: true
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - ef40c498c90a3af5
+      - from: n_meridian_ops_sec_ops_jumpbox_vm
+        to: n_meridian_ledger_prod_ledger_internal_ilb
+        verb: Admin transit
+        flow_kind: ADMIN
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - b12ea1f4c8860252
+  - id: view_3
+    title: Financial Ledger Stores, Vaults & Card Network Egress
+    subtitle: Spanner, AlloyDB, Bigtable, Redis, Filestore & acquirer API
+    focus_summary: Transactional ledger state, cardholder vaults, idempotency caches, fraud telemetry, regulatory archives, and external card network acquirer endpoints.
+    include_transversal_panel: true
+    archetype: layered_flow
+    accent_mode: MIXED
+    container_ids:
+      - ext_targets
+      - folder_520100
+      - folder_520200
+      - org_910100001
+      - proj_meridian_fraud_prod
+      - proj_meridian_ledger_prod
+      - proj_meridian_ops_sec
+      - reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+      - vpc_meridian_ledger_prod_pay_core_vpc
+      - zone_exposure_zone_private_proj_meridian_fraud_prod
+      - zone_exposure_zone_private_proj_meridian_ledger_prod
+      - zone_exposure_zone_private_proj_meridian_ops_sec
+      - zone_exposure_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+      - zone_psa_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1_p910100abcdef12_tp
+    placements:
+      - component_id: n_meridian_ops_sec_payments_container_repo
+        container_id: zone_exposure_zone_private_proj_meridian_ops_sec
+        column: 3
+        off_page_refs:
+          - target_view_id: view_2
+            label: ledger-posting-svc (+1 in view_2)
+            direction: OUT
+      - component_id: n_meridian_ops_sec_meridian_audit_vault
+        container_id: zone_exposure_zone_private_proj_meridian_ops_sec
+        column: 5
+        off_page_refs:
+          - target_view_id: view_1
+            label: clearing-reconciler-cron (view_1)
+            direction: IN
+      - component_id: n_meridian_ledger_prod_idempotency_redis_cluster
+        container_id: zone_exposure_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+        column: 8
+        off_page_refs:
+          - target_view_id: view_2
+            label: payments-auth-api (view_2)
+            direction: IN
+      - component_id: n_meridian_fraud_prod_fraud_telemetry_bigtable
+        container_id: zone_exposure_zone_private_proj_meridian_fraud_prod
+        column: 9
+        off_page_refs:
+          - target_view_id: view_2
+            label: fraud-scoring-svc (view_2)
+            direction: IN
+      - component_id: n_meridian_ledger_prod_global_payments_spanner
+        container_id: zone_exposure_zone_private_proj_meridian_ledger_prod
+        column: 9
+        off_page_refs:
+          - target_view_id: view_2
+            label: ledger-posting-svc (view_2)
+            direction: IN
+      - component_id: n_meridian_ledger_prod_cardholder_vault_alloydb
+        container_id: zone_psa_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1_p910100abcdef12_tp
+        column: 9
+        off_page_refs:
+          - target_view_id: view_2
+            label: ledger-posting-svc (view_2)
+            direction: IN
+      - component_id: n_external_card_network_acquirer
+        container_id: ext_targets
+        column: 11
+        off_page_refs:
+          - target_view_id: view_2
+            label: merchant-webhook-run (+1 in view_2)
+            direction: IN
+      - component_id: n_meridian_ledger_prod_clearing_files_filestore
+        container_id: zone_exposure_zone_private_reg_vpc_meridian_ledger_prod_pay_core_vpc_europe_west1
+        column: 11
+        off_page_refs:
+          - target_view_id: view_1
+            label: clearing-reconciler-cron (view_1)
+            direction: IN
+          - target_view_id: view_2
+            label: eod-settlement-job (view_2)
+            direction: IN

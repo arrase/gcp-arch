@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 	"google.golang.org/genai"
@@ -39,6 +40,21 @@ func (l *lazyModelClient) GenerateJSON(ctx context.Context, systemPrompt, userPr
 	return l.client.GenerateJSON(ctx, systemPrompt, userPrompt, schema)
 }
 
+func (l *lazyModelClient) GenerateJSONWithUsage(ctx context.Context, systemPrompt, userPrompt string, schema *genai.Schema) ([]byte, synth.UsageStats, error) {
+	l.once.Do(func() {
+		l.client, l.err = l.initFn(ctx)
+	})
+	if l.err != nil {
+		return nil, synth.UsageStats{}, l.err
+	}
+	if uc, ok := l.client.(synth.UsageModelClient); ok {
+		return uc.GenerateJSONWithUsage(ctx, systemPrompt, userPrompt, schema)
+	}
+	start := time.Now()
+	raw, err := l.client.GenerateJSON(ctx, systemPrompt, userPrompt, schema)
+	return raw, synth.UsageStats{DurationMs: time.Since(start).Milliseconds(), ResponseBytes: len(raw)}, err
+}
+
 type synthesizeCmdOpts struct {
 	vertexProject  string
 	vertexLocation string
@@ -46,7 +62,6 @@ type synthesizeCmdOpts struct {
 	thinkingLevel  string
 	reconcilePath  string
 	outPath        string
-	concurrency    int
 	quiet          bool
 }
 
@@ -56,15 +71,16 @@ func newSynthesizeCmd(stdout io.Writer, deps appDeps, cfg *appConfig) *cobra.Com
 	cmd := &cobra.Command{
 		Use:   "synthesize <facts.json>",
 		Short: "Synthesize or Day-2 reconcile a multi-view architecture.yaml manifest via Vertex AI",
-		Long: `Run two-pass closed-world Vertex AI Gemini 4 synthesis over a v3 facts.json file
-to produce a Git-tracked architecture.yaml manifest (Day 1), or incrementally reconcile
-resource and edge deltas into an existing architecture.yaml (Day 2 via --reconcile).
+		Long: `Build a deterministic GCP containment skeleton from a v3 facts.json file and
+enrich it via bounded Vertex AI Gemini 4 annotation into a Git-tracked
+architecture.yaml manifest (Day 1), or incrementally reconcile resource and edge
+deltas into an existing architecture.yaml (Day 2 via --reconcile).
 
 When --reconcile is used and -o/--out is omitted, updates are written atomically in place;
-if zero resource or edge deltas exist, reconcile finishes in < 100 ms with 0 LLM calls
-(requiring no --vertex-project) and leaves the existing file untouched.`,
-		Example: `  gcp-arch synthesize facts.json --vertex-project consultant-ai-sandbox -o architecture.yaml
-  gcp-arch synthesize facts.json --reconcile architecture.yaml --vertex-project consultant-ai-sandbox`,
+if zero resource or edge deltas exist, reconcile finishes with 0 LLM calls (requiring no
+--vertex-project) and leaves the existing file untouched.`,
+		Example: `  gcp-arch synthesize facts.json --vertex-project my-vertex-project -o architecture.yaml
+  gcp-arch synthesize facts.json --reconcile architecture.yaml --vertex-project my-vertex-project`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.applyConfigDefaults(cmd, cfg)
@@ -79,7 +95,6 @@ if zero resource or edge deltas exist, reconcile finishes in < 100 ms with 0 LLM
 	cmd.Flags().StringVar(&opts.thinkingLevel, "thinking-level", "", "Vertex AI thinking level (minimal, low, medium, high, xhigh; omit for model default)")
 	cmd.Flags().StringVar(&opts.reconcilePath, "reconcile", "", "Existing architecture.yaml `FILE` for Day-2 delta reconciliation")
 	cmd.Flags().StringVarP(&opts.outPath, "out", "o", "architecture.yaml", "Output architecture.yaml `FILE`")
-	cmd.Flags().IntVar(&opts.concurrency, "concurrency", synth.DefaultConcurrency, "Max concurrent Pass-2 view synthesis calls")
 	cmd.Flags().BoolVarP(&opts.quiet, "quiet", "q", false, "Suppress informational stdout summary")
 	return cmd
 }
@@ -97,17 +112,11 @@ func (o *synthesizeCmdOpts) applyConfigDefaults(cmd *cobra.Command, cfg *appConf
 	if !cmd.Flags().Changed("thinking-level") && cfg.ThinkingLevel != "" {
 		o.thinkingLevel = cfg.ThinkingLevel
 	}
-	if !cmd.Flags().Changed("concurrency") && cfg.Concurrency != nil {
-		o.concurrency = *cfg.Concurrency
-	}
 }
 
 func executeSynthesize(cmd *cobra.Command, factsPath string, stdout io.Writer, deps appDeps, opts synthesizeCmdOpts) error {
 	if _, err := synth.ParseThinkingLevel(opts.thinkingLevel); err != nil {
 		return usageErr(err)
-	}
-	if opts.concurrency < 1 {
-		return usageErr(fmt.Errorf("--concurrency must be >= 1"))
 	}
 
 	isReconcile := strings.TrimSpace(opts.reconcilePath) != ""
@@ -138,7 +147,6 @@ func executeSynthesize(cmd *cobra.Command, factsPath string, stdout io.Writer, d
 		facts:         facts,
 		client:        buildLazyModelClient(vp, opts, deps),
 		reg:           reg,
-		synthOpts:     synth.Options{Concurrency: opts.concurrency},
 		reconcilePath: opts.reconcilePath,
 		targetPath:    targetPath,
 		quiet:         opts.quiet,
@@ -154,7 +162,6 @@ type synthesizeRun struct {
 	facts         *extract.FactsFile
 	client        synth.ModelClient
 	reg           *icons.Registry
-	synthOpts     synth.Options
 	reconcilePath string
 	targetPath    string
 	quiet         bool
@@ -177,15 +184,21 @@ func buildLazyModelClient(vertexProject string, opts synthesizeCmdOpts, deps app
 }
 
 func (r synthesizeRun) executeDay1(ctx context.Context) error {
-	result, err := synth.Synthesize(ctx, r.facts, r.client, r.reg, r.synthOpts)
+	res, err := synth.Synthesize(ctx, r.facts, r.client, r.reg)
 	if err != nil {
 		return classifySynthError(err, false)
 	}
-	if err := manifest.Write(r.targetPath, result); err != nil {
+	if err := manifest.Write(r.targetPath, res.Manifest); err != nil {
 		return runtimeErr(err)
 	}
 	if !r.quiet {
-		_, _ = fmt.Fprintf(r.stdout, "Wrote %s (%d views, %d components)\n", r.targetPath, len(result.Views), len(result.Components))
+		_, _ = fmt.Fprintf(
+			r.stdout,
+			"Wrote %s (%d views, %d components, conservation=%s primary=%d/%d, tokens=%d/%d/%d, duration=%dms)\n",
+			r.targetPath, len(res.Manifest.Views), len(res.Manifest.Components), res.Conservation.Status,
+			res.Conservation.RepresentedPrimaryCount, res.Conservation.FactsPrimaryCount,
+			res.Usage.PromptTokens, res.Usage.CandidateTokens, res.Usage.TotalTokens, res.Usage.DurationMs,
+		)
 	}
 	return nil
 }
@@ -196,7 +209,7 @@ func (r synthesizeRun) executeDay2(ctx context.Context) error {
 		return err
 	}
 
-	reconciled, err := synth.Reconcile(ctx, r.facts, existing, r.client, r.reg, r.synthOpts)
+	reconciled, err := synth.Reconcile(ctx, r.facts, existing, r.client, r.reg)
 	if err != nil {
 		return classifySynthError(err, r.client == nil)
 	}

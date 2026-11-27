@@ -1,0 +1,1371 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-27T00:00:00Z",
+  "scopes": [
+    "organizations/940400001"
+  ],
+  "hierarchy": {
+    "organizations": [
+      {
+        "org_id": "940400001",
+        "display_name": "Aegis Cloud Enterprise"
+      }
+    ],
+    "folders": [
+      {
+        "folder_id": "550100",
+        "display_name": "platform-shared",
+        "parent": "organizations/940400001"
+      },
+      {
+        "folder_id": "550200",
+        "display_name": "prod-domains",
+        "parent": "organizations/940400001"
+      }
+    ],
+    "projects": [
+      {
+        "project_id": "aegis-commerce-prod",
+        "project_number": "5502001001",
+        "display_name": "Aegis Commerce Prod",
+        "parent": "folders/550200",
+        "shared_vpc_host_project": "aegis-net-host"
+      },
+      {
+        "project_id": "aegis-delivery-sec",
+        "project_number": "5501001002",
+        "display_name": "Aegis Delivery Sec",
+        "parent": "folders/550100"
+      },
+      {
+        "project_id": "aegis-net-host",
+        "project_number": "5501001001",
+        "display_name": "Aegis Net Host",
+        "parent": "folders/550100"
+      },
+      {
+        "project_id": "aegis-risk-prod",
+        "project_number": "5502001002",
+        "display_name": "Aegis Risk Prod",
+        "parent": "folders/550200",
+        "shared_vpc_host_project": "aegis-net-host"
+      },
+      {
+        "project_id": "p940400abcdef12-tp",
+        "display_name": "Google PSA Tenant",
+        "is_psa_tenant": true
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//aiplatform.googleapis.com/projects/aegis-risk-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "asset_type": "aiplatform.googleapis.com/PublisherModel",
+      "project_id": "aegis-risk-prod",
+      "location": "global",
+      "display_name": "gemini-4-carbon",
+      "attributes": {
+        "invocations": 78200,
+        "model_id": "gemini-4-carbon",
+        "publisher": "google"
+      }
+    },
+    {
+      "uri": "//alloydb.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/clusters/risk-features-alloydb",
+      "asset_type": "alloydb.googleapis.com/Cluster",
+      "project_id": "aegis-risk-prod",
+      "location": "europe-west4",
+      "display_name": "risk-features-alloydb",
+      "parent_uri": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc",
+      "attributes": {
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/keyRings/risk-ring/cryptoKeys/risk-alloydb-cmek",
+        "private_ip": "10.93.0.10",
+        "psa_tenant_project": "p940400abcdef12-tp",
+        "vpc": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc"
+      }
+    },
+    {
+      "uri": "//appengine.googleapis.com/projects/aegis-commerce-prod/services/aegis-admin-portal",
+      "asset_type": "appengine.googleapis.com/Service",
+      "project_id": "aegis-commerce-prod",
+      "location": "europe-west1",
+      "display_name": "aegis-admin-portal",
+      "attributes": {
+        "runtime": "go122"
+      }
+    },
+    {
+      "uri": "//artifactregistry.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/repositories/aegis-signed-containers",
+      "asset_type": "artifactregistry.googleapis.com/Repository",
+      "project_id": "aegis-delivery-sec",
+      "location": "europe-west1",
+      "display_name": "aegis-signed-containers",
+      "attributes": {
+        "format": "DOCKER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/keyRings/supplychain-ring/cryptoKeys/binary-authz-cmek",
+        "mode": "STANDARD_REPOSITORY"
+      }
+    },
+    {
+      "uri": "//batch.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/jobs/montecarlo-risk-batch",
+      "asset_type": "batch.googleapis.com/Job",
+      "project_id": "aegis-risk-prod",
+      "location": "europe-west4",
+      "display_name": "montecarlo-risk-batch",
+      "parent_uri": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west4/subnetworks/ew4-risk-compute-subnet",
+      "attributes": {
+        "service_account": "montecarlo-batch-sa@aegis-risk-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west4/subnetworks/ew4-risk-compute-subnet",
+        "vpc": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc"
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/aegis-commerce-prod/datasets/commerce_audit_dw",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "aegis-commerce-prod",
+      "location": "EU",
+      "display_name": "commerce_audit_dw",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/keyRings/risk-ring/cryptoKeys/compliance-bq-cmek",
+        "location": "EU",
+        "table_count": 26
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/aegis-risk-prod/datasets/risk_compliance_mart",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "aegis-risk-prod",
+      "location": "EU",
+      "display_name": "risk_compliance_mart",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/keyRings/risk-ring/cryptoKeys/compliance-bq-cmek",
+        "location": "EU",
+        "table_count": 14
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-commerce-gateway",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "aegis-delivery-sec",
+      "location": "europe-west1",
+      "display_name": "build-commerce-gateway",
+      "attributes": {
+        "service_account": "cloudbuild-signer-sa@aegis-delivery-sec.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-inventory-allocator",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "aegis-delivery-sec",
+      "location": "europe-west1",
+      "display_name": "build-inventory-allocator",
+      "attributes": {
+        "service_account": "cloudbuild-signer-sa@aegis-delivery-sec.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-order-orchestrator",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "aegis-delivery-sec",
+      "location": "europe-west1",
+      "display_name": "build-order-orchestrator",
+      "attributes": {
+        "service_account": "cloudbuild-signer-sa@aegis-delivery-sec.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-risk-policy-engine",
+      "asset_type": "cloudbuild.googleapis.com/BuildTrigger",
+      "project_id": "aegis-delivery-sec",
+      "location": "europe-west1",
+      "display_name": "build-risk-policy-engine",
+      "attributes": {
+        "service_account": "cloudbuild-signer-sa@aegis-delivery-sec.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//clouddeploy.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/deliveryPipelines/aegis-progressive-deploy",
+      "asset_type": "clouddeploy.googleapis.com/DeliveryPipeline",
+      "project_id": "aegis-delivery-sec",
+      "location": "europe-west1",
+      "display_name": "aegis-progressive-deploy",
+      "attributes": {
+        "service_account": "clouddeploy-rollout-sa@aegis-delivery-sec.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//cloudfunctions.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/functions/tax-enrichment-fn",
+      "asset_type": "cloudfunctions.googleapis.com/CloudFunction",
+      "project_id": "aegis-commerce-prod",
+      "location": "europe-west1",
+      "display_name": "tax-enrichment-fn",
+      "parent_uri": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west1/subnetworks/ew1-gke-commerce-subnet",
+      "attributes": {
+        "ingress": "ALLOW_INTERNAL_ONLY",
+        "runtime": "go122",
+        "service_account": "tax-enrichment-sa@aegis-commerce-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/keyRings/commerce-ring/cryptoKeys/commerce-sql-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "aegis-commerce-prod",
+      "location": "europe-west1",
+      "display_name": "commerce-sql-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/keyRings/supplychain-ring/cryptoKeys/binary-authz-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "aegis-delivery-sec",
+      "location": "europe-west1",
+      "display_name": "binary-authz-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/keyRings/risk-ring/cryptoKeys/compliance-bq-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "aegis-risk-prod",
+      "location": "europe-west4",
+      "display_name": "compliance-bq-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/keyRings/risk-ring/cryptoKeys/risk-alloydb-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "aegis-risk-prod",
+      "location": "europe-west4",
+      "display_name": "risk-alloydb-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/aegis-commerce-prod/global/forwardingRules/aegis-edge-waf-lb",
+      "asset_type": "compute.googleapis.com/GlobalForwardingRule",
+      "project_id": "aegis-commerce-prod",
+      "location": "global",
+      "display_name": "aegis-edge-waf-lb",
+      "attributes": {
+        "ingress_hosts": [
+          "commerce.aegis.example.com"
+        ],
+        "ip_address": "198.51.100.80",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "EXTERNAL_MANAGED",
+        "port_range": "443-443",
+        "tls": true
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "aegis-net-host",
+      "location": "global",
+      "display_name": "aegis-zero-trust-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "GLOBAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west1/routers/ew1-nat-router",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "aegis-net-host",
+      "location": "europe-west1",
+      "display_name": "ew1-nat-router",
+      "parent_uri": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc",
+      "attributes": {
+        "nat_count": 1,
+        "vpc": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west1/subnetworks/ew1-dmz-public-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "aegis-net-host",
+      "location": "europe-west1",
+      "display_name": "ew1-dmz-public-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc",
+      "attributes": {
+        "cidr": "10.90.0.0/24",
+        "exposure": "public_ingress",
+        "vpc": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west1/subnetworks/ew1-gke-commerce-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "aegis-net-host",
+      "location": "europe-west1",
+      "display_name": "ew1-gke-commerce-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc",
+      "attributes": {
+        "cidr": "10.90.16.0/20",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west4/routers/ew4-nat-router",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "aegis-net-host",
+      "location": "europe-west4",
+      "display_name": "ew4-nat-router",
+      "parent_uri": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc",
+      "attributes": {
+        "nat_count": 1,
+        "vpc": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west4/subnetworks/ew4-risk-compute-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "aegis-net-host",
+      "location": "europe-west4",
+      "display_name": "ew4-risk-compute-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc",
+      "attributes": {
+        "cidr": "10.91.16.0/20",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/aegis-risk-prod/regions/europe-west4/forwardingRules/risk-internal-ilb",
+      "asset_type": "compute.googleapis.com/ForwardingRule",
+      "project_id": "aegis-risk-prod",
+      "location": "europe-west4",
+      "display_name": "risk-internal-ilb",
+      "parent_uri": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west4/subnetworks/ew4-risk-compute-subnet",
+      "attributes": {
+        "ip_address": "10.91.16.25",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "INTERNAL_MANAGED",
+        "port_range": "8443-8443",
+        "subnet": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west4/subnetworks/ew4-risk-compute-subnet",
+        "vpc": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1",
+      "asset_type": "container.googleapis.com/Cluster",
+      "project_id": "aegis-commerce-prod",
+      "location": "europe-west1",
+      "display_name": "gke-commerce-ew1",
+      "parent_uri": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west1/subnetworks/ew1-gke-commerce-subnet",
+      "attributes": {
+        "private_nodes": true,
+        "subnet": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west1/subnetworks/ew1-gke-commerce-subnet",
+        "vpc": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/commerce-gateway-api",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "aegis-commerce-prod",
+      "location": "europe-west1",
+      "display_name": "commerce-gateway-api",
+      "parent_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1",
+      "attributes": {
+        "namespace": "commerce",
+        "service_account": "commerce-gateway-sa@aegis-commerce-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/inventory-allocator-svc",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "aegis-commerce-prod",
+      "location": "europe-west1",
+      "display_name": "inventory-allocator-svc",
+      "parent_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1",
+      "attributes": {
+        "namespace": "commerce",
+        "service_account": "inventory-allocator-sa@aegis-commerce-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/order-orchestrator-svc",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "aegis-commerce-prod",
+      "location": "europe-west1",
+      "display_name": "order-orchestrator-svc",
+      "parent_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1",
+      "attributes": {
+        "namespace": "commerce",
+        "service_account": "order-orchestrator-sa@aegis-commerce-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/batch/cronjobs/pci-compliance-auditor",
+      "asset_type": "batch.k8s.io/CronJob",
+      "project_id": "aegis-commerce-prod",
+      "location": "europe-west1",
+      "display_name": "pci-compliance-auditor",
+      "parent_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1",
+      "attributes": {
+        "namespace": "commerce",
+        "schedule": "0 1 * * *"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/networking.k8s.io/ingresses/commerce-gateway-ingress",
+      "asset_type": "networking.k8s.io/Ingress",
+      "project_id": "aegis-commerce-prod",
+      "location": "europe-west1",
+      "display_name": "commerce-gateway-ingress",
+      "parent_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1",
+      "attributes": {
+        "namespace": "commerce"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/commerce-gateway-api",
+      "asset_type": "k8s.io/Service",
+      "project_id": "aegis-commerce-prod",
+      "location": "europe-west1",
+      "display_name": "commerce-gateway-api",
+      "parent_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1",
+      "attributes": {
+        "namespace": "commerce"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/inventory-allocator-svc",
+      "asset_type": "k8s.io/Service",
+      "project_id": "aegis-commerce-prod",
+      "location": "europe-west1",
+      "display_name": "inventory-allocator-svc",
+      "parent_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1",
+      "attributes": {
+        "namespace": "commerce"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/order-orchestrator-svc",
+      "asset_type": "k8s.io/Service",
+      "project_id": "aegis-commerce-prod",
+      "location": "europe-west1",
+      "display_name": "order-orchestrator-svc",
+      "parent_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1",
+      "attributes": {
+        "namespace": "commerce"
+      }
+    },
+    {
+      "uri": "//dns.googleapis.com/projects/aegis-net-host/managedZones/aegis-internal-dns",
+      "asset_type": "dns.googleapis.com/ManagedZone",
+      "project_id": "aegis-net-host",
+      "location": "global",
+      "display_name": "aegis-internal-dns",
+      "attributes": {
+        "dns_name": "internal.aegis.example.net.",
+        "visibility": "private"
+      }
+    },
+    {
+      "uri": "//external.internet/clients/global-enterprise-clients",
+      "asset_type": "external.internet/ClientGroup",
+      "project_id": "external",
+      "location": "global",
+      "display_name": "global-enterprise-clients",
+      "is_external": true
+    },
+    {
+      "uri": "//github.com/aegis-corp/enterprise-platform",
+      "asset_type": "external.github.com/Repository",
+      "project_id": "external",
+      "location": "global",
+      "display_name": "github-aegis-monorepo",
+      "is_external": true
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/aegis-commerce-prod/serviceAccounts/commerce-gateway-sa@aegis-commerce-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "aegis-commerce-prod",
+      "display_name": "commerce-gateway-sa@aegis-commerce-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "commerce-gateway-sa@aegis-commerce-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/aegis-commerce-prod/serviceAccounts/inventory-allocator-sa@aegis-commerce-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "aegis-commerce-prod",
+      "display_name": "inventory-allocator-sa@aegis-commerce-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "inventory-allocator-sa@aegis-commerce-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/aegis-commerce-prod/serviceAccounts/order-orchestrator-sa@aegis-commerce-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "aegis-commerce-prod",
+      "display_name": "order-orchestrator-sa@aegis-commerce-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "order-orchestrator-sa@aegis-commerce-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/aegis-commerce-prod/serviceAccounts/tax-enrichment-sa@aegis-commerce-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "aegis-commerce-prod",
+      "display_name": "tax-enrichment-sa@aegis-commerce-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "tax-enrichment-sa@aegis-commerce-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/aegis-delivery-sec/serviceAccounts/cloudbuild-signer-sa@aegis-delivery-sec.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "aegis-delivery-sec",
+      "display_name": "cloudbuild-signer-sa@aegis-delivery-sec.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "cloudbuild-signer-sa@aegis-delivery-sec.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/aegis-delivery-sec/serviceAccounts/clouddeploy-rollout-sa@aegis-delivery-sec.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "aegis-delivery-sec",
+      "display_name": "clouddeploy-rollout-sa@aegis-delivery-sec.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "clouddeploy-rollout-sa@aegis-delivery-sec.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/aegis-risk-prod/serviceAccounts/montecarlo-batch-sa@aegis-risk-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "aegis-risk-prod",
+      "display_name": "montecarlo-batch-sa@aegis-risk-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "montecarlo-batch-sa@aegis-risk-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/aegis-risk-prod/serviceAccounts/risk-policy-sa@aegis-risk-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "aegis-risk-prod",
+      "display_name": "risk-policy-sa@aegis-risk-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "risk-policy-sa@aegis-risk-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/aegis-net-host/locations/global/buckets/compliance-7yr-log-bucket",
+      "asset_type": "logging.googleapis.com/LogBucket",
+      "project_id": "aegis-net-host",
+      "location": "global",
+      "display_name": "compliance-7yr-log-bucket",
+      "attributes": {
+        "retention_days": 2555
+      }
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/aegis-net-host/sinks/org-siem-audit-sink",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "aegis-net-host",
+      "location": "global",
+      "display_name": "org-siem-audit-sink"
+    },
+    {
+      "uri": "//monitoring.googleapis.com/projects/aegis-commerce-prod/alertPolicies/9505001",
+      "asset_type": "monitoring.googleapis.com/AlertPolicy",
+      "project_id": "aegis-commerce-prod",
+      "location": "global",
+      "display_name": "commerce-slo-burn-alert",
+      "attributes": {
+        "enabled": true
+      }
+    },
+    {
+      "uri": "//monitoring.googleapis.com/projects/aegis-risk-prod/alertPolicies/9505002",
+      "asset_type": "monitoring.googleapis.com/AlertPolicy",
+      "project_id": "aegis-risk-prod",
+      "location": "global",
+      "display_name": "risk-dlq-backlog-alert",
+      "attributes": {
+        "enabled": true
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/aegis-commerce-prod/subscriptions/domain-dlq-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "aegis-commerce-prod",
+      "location": "global",
+      "display_name": "domain-dlq-sub"
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/aegis-commerce-prod/subscriptions/risk-events-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "aegis-commerce-prod",
+      "location": "global",
+      "display_name": "risk-events-sub"
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/aegis-commerce-prod/topics/domain-events-bus",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "aegis-commerce-prod",
+      "location": "global",
+      "display_name": "domain-events-bus"
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/aegis-commerce-prod/topics/domain-events-dlq",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "aegis-commerce-prod",
+      "location": "global",
+      "display_name": "domain-events-dlq"
+    },
+    {
+      "uri": "//redis.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/shared-session-redis",
+      "asset_type": "redis.googleapis.com/Cluster",
+      "project_id": "aegis-commerce-prod",
+      "location": "europe-west1",
+      "display_name": "shared-session-redis",
+      "parent_uri": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc",
+      "attributes": {
+        "redis_version": "REDIS_7_2",
+        "vpc": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/services/fraud-alert-dispatcher",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "aegis-risk-prod",
+      "location": "europe-west4",
+      "display_name": "fraud-alert-dispatcher",
+      "parent_uri": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west4/subnetworks/ew4-risk-compute-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_ONLY",
+        "service_account": "risk-policy-sa@aegis-risk-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west4/subnetworks/ew4-risk-compute-subnet",
+        "vpc": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/services/risk-policy-engine",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "aegis-risk-prod",
+      "location": "europe-west4",
+      "display_name": "risk-policy-engine",
+      "parent_uri": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west4/subnetworks/ew4-risk-compute-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "service_account": "risk-policy-sa@aegis-risk-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west4/subnetworks/ew4-risk-compute-subnet",
+        "vpc": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/aegis-commerce-prod/secrets/commerce-db-credentials",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "aegis-commerce-prod",
+      "display_name": "commerce-db-credentials",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/aegis-commerce-prod/secrets/tax-provider-api-token",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "aegis-commerce-prod",
+      "display_name": "tax-provider-api-token",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/aegis-risk-prod/secrets/risk-model-signing-key",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "aegis-risk-prod",
+      "display_name": "risk-model-signing-key",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/aegis-risk-prod/secrets/siem-webhook-secret",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "aegis-risk-prod",
+      "display_name": "siem-webhook-secret",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//sqladmin.googleapis.com/projects/aegis-commerce-prod/instances/commerce-orders-sql",
+      "asset_type": "sqladmin.googleapis.com/Instance",
+      "project_id": "aegis-commerce-prod",
+      "location": "europe-west1",
+      "display_name": "commerce-orders-sql",
+      "parent_uri": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc",
+      "attributes": {
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/keyRings/commerce-ring/cryptoKeys/commerce-sql-cmek",
+        "private_ip": "10.92.0.5",
+        "psa_tenant_project": "p940400abcdef12-tp",
+        "vpc": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/aegis-build-attestations",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "aegis-delivery-sec",
+      "location": "EU",
+      "display_name": "aegis-build-attestations",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/keyRings/supplychain-ring/cryptoKeys/binary-authz-cmek",
+        "storage_class": "STANDARD"
+      }
+    },
+    {
+      "uri": "//vpcaccess.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/connectors/ew1-serverless-conn",
+      "asset_type": "vpcaccess.googleapis.com/Connector",
+      "project_id": "aegis-commerce-prod",
+      "location": "europe-west1",
+      "display_name": "ew1-serverless-conn",
+      "parent_uri": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west1/subnetworks/ew1-gke-commerce-subnet",
+      "attributes": {
+        "subnet": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west1/subnetworks/ew1-gke-commerce-subnet",
+        "vpc": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "84f4cbc1bec93ff7",
+      "from_uri": "//alloydb.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/clusters/risk-features-alloydb",
+      "to_uri": "//cloudkms.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/keyRings/risk-ring/cryptoKeys/risk-alloydb-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "8716fac03a2d3fc1",
+      "from_uri": "//appengine.googleapis.com/projects/aegis-commerce-prod/services/aegis-admin-portal",
+      "to_uri": "//sqladmin.googleapis.com/projects/aegis-commerce-prod/instances/commerce-orders-sql",
+      "kind": "CONFIG_REF",
+      "detail": "admin_sql"
+    },
+    {
+      "id": "cf74ba3b9a41f393",
+      "from_uri": "//artifactregistry.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/repositories/aegis-signed-containers",
+      "to_uri": "//clouddeploy.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/deliveryPipelines/aegis-progressive-deploy",
+      "kind": "CONFIG_REF",
+      "detail": "release_artifact"
+    },
+    {
+      "id": "c47b717954fa9896",
+      "from_uri": "//artifactregistry.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/repositories/aegis-signed-containers",
+      "to_uri": "//cloudkms.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/keyRings/supplychain-ring/cryptoKeys/binary-authz-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "0d25c3f9912c3fa8",
+      "from_uri": "//batch.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/jobs/montecarlo-risk-batch",
+      "to_uri": "//alloydb.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/clusters/risk-features-alloydb",
+      "kind": "CONFIG_REF",
+      "detail": "batch_read"
+    },
+    {
+      "id": "a716254fbde0c273",
+      "from_uri": "//batch.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/jobs/montecarlo-risk-batch",
+      "to_uri": "//bigquery.googleapis.com/projects/aegis-risk-prod/datasets/risk_compliance_mart",
+      "kind": "CONFIG_REF",
+      "detail": "batch_write"
+    },
+    {
+      "id": "87d71166b90271bd",
+      "from_uri": "//batch.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/jobs/montecarlo-risk-batch",
+      "to_uri": "//iam.googleapis.com/projects/aegis-risk-prod/serviceAccounts/montecarlo-batch-sa@aegis-risk-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "47d31fd3c674d0a6",
+      "from_uri": "//bigquery.googleapis.com/projects/aegis-commerce-prod/datasets/commerce_audit_dw",
+      "to_uri": "//bigquery.googleapis.com/projects/aegis-risk-prod/datasets/risk_compliance_mart",
+      "kind": "BQ_LINEAGE",
+      "detail": "compliance_join"
+    },
+    {
+      "id": "241473fb7ecb8130",
+      "from_uri": "//bigquery.googleapis.com/projects/aegis-commerce-prod/datasets/commerce_audit_dw",
+      "to_uri": "//cloudkms.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/keyRings/risk-ring/cryptoKeys/compliance-bq-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "5ab0e06cdea36fee",
+      "from_uri": "//bigquery.googleapis.com/projects/aegis-risk-prod/datasets/risk_compliance_mart",
+      "to_uri": "//cloudkms.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/keyRings/risk-ring/cryptoKeys/compliance-bq-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "6ebeb25cf80e02b9",
+      "from_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-commerce-gateway",
+      "to_uri": "//artifactregistry.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/repositories/aegis-signed-containers",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "docker push"
+    },
+    {
+      "id": "28d27f6d9938794d",
+      "from_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-commerce-gateway",
+      "to_uri": "//iam.googleapis.com/projects/aegis-delivery-sec/serviceAccounts/cloudbuild-signer-sa@aegis-delivery-sec.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "8bf125e75912cef5",
+      "from_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-commerce-gateway",
+      "to_uri": "//storage.googleapis.com/aegis-build-attestations",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "write attestation"
+    },
+    {
+      "id": "f06e9ec02aa74e84",
+      "from_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-inventory-allocator",
+      "to_uri": "//artifactregistry.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/repositories/aegis-signed-containers",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "docker push"
+    },
+    {
+      "id": "a1627abb01bcfa96",
+      "from_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-inventory-allocator",
+      "to_uri": "//iam.googleapis.com/projects/aegis-delivery-sec/serviceAccounts/cloudbuild-signer-sa@aegis-delivery-sec.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "00186d82fa3e1b7c",
+      "from_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-inventory-allocator",
+      "to_uri": "//storage.googleapis.com/aegis-build-attestations",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "write attestation"
+    },
+    {
+      "id": "7998ca81b3ff9eaf",
+      "from_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-order-orchestrator",
+      "to_uri": "//artifactregistry.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/repositories/aegis-signed-containers",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "docker push"
+    },
+    {
+      "id": "6b0a8cf61505c810",
+      "from_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-order-orchestrator",
+      "to_uri": "//iam.googleapis.com/projects/aegis-delivery-sec/serviceAccounts/cloudbuild-signer-sa@aegis-delivery-sec.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "8883b76f6baf2afd",
+      "from_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-order-orchestrator",
+      "to_uri": "//storage.googleapis.com/aegis-build-attestations",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "write attestation"
+    },
+    {
+      "id": "841f4e2a014aa3c3",
+      "from_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-risk-policy-engine",
+      "to_uri": "//artifactregistry.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/repositories/aegis-signed-containers",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "docker push"
+    },
+    {
+      "id": "306b7814cb45a655",
+      "from_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-risk-policy-engine",
+      "to_uri": "//iam.googleapis.com/projects/aegis-delivery-sec/serviceAccounts/cloudbuild-signer-sa@aegis-delivery-sec.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "e1865d9a45516610",
+      "from_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-risk-policy-engine",
+      "to_uri": "//storage.googleapis.com/aegis-build-attestations",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "write attestation"
+    },
+    {
+      "id": "bddfbb53e117710b",
+      "from_uri": "//clouddeploy.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/deliveryPipelines/aegis-progressive-deploy",
+      "to_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/commerce-gateway-api",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "rollout_gke"
+    },
+    {
+      "id": "740f93d9f70f4143",
+      "from_uri": "//clouddeploy.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/deliveryPipelines/aegis-progressive-deploy",
+      "to_uri": "//iam.googleapis.com/projects/aegis-delivery-sec/serviceAccounts/clouddeploy-rollout-sa@aegis-delivery-sec.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "1581f6d5dda107c0",
+      "from_uri": "//clouddeploy.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/deliveryPipelines/aegis-progressive-deploy",
+      "to_uri": "//run.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/services/risk-policy-engine",
+      "kind": "CLOUDBUILD_STEP_REF",
+      "detail": "rollout_run"
+    },
+    {
+      "id": "a32e77c67e00e491",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/functions/tax-enrichment-fn",
+      "to_uri": "//iam.googleapis.com/projects/aegis-commerce-prod/serviceAccounts/tax-enrichment-sa@aegis-commerce-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "e65c97d468fb6ab5",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/functions/tax-enrichment-fn",
+      "to_uri": "//secretmanager.googleapis.com/projects/aegis-commerce-prod/secrets/tax-provider-api-token",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "4449114d1c4e5a5e",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/functions/tax-enrichment-fn",
+      "to_uri": "//vpcaccess.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/connectors/ew1-serverless-conn",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "8cd1e921027cece9",
+      "from_uri": "//compute.googleapis.com/projects/aegis-commerce-prod/global/forwardingRules/aegis-edge-waf-lb",
+      "to_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/commerce-gateway-api",
+      "kind": "K8S_NEG_BACKEND",
+      "detail": "neg_backend"
+    },
+    {
+      "id": "2c2078bc9d9b0537",
+      "from_uri": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc",
+      "to_uri": "//alloydb.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/clusters/risk-features-alloydb",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com"
+    },
+    {
+      "id": "02ecd49b9f3f8b86",
+      "from_uri": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc",
+      "to_uri": "//sqladmin.googleapis.com/projects/aegis-commerce-prod/instances/commerce-orders-sql",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com"
+    },
+    {
+      "id": "811332a80bfa85b5",
+      "from_uri": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west1/routers/ew1-nat-router",
+      "to_uri": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "cloud_nat"
+    },
+    {
+      "id": "ce7324887c861ec3",
+      "from_uri": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west4/routers/ew4-nat-router",
+      "to_uri": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "cloud_nat"
+    },
+    {
+      "id": "a25f8e97b666fe91",
+      "from_uri": "//compute.googleapis.com/projects/aegis-risk-prod/regions/europe-west4/forwardingRules/risk-internal-ilb",
+      "to_uri": "//run.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/services/risk-policy-engine",
+      "kind": "CONFIG_REF",
+      "detail": "ilb_backend"
+    },
+    {
+      "id": "cfc5da622ce2fe0a",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/commerce-gateway-api",
+      "to_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/inventory-allocator-svc",
+      "kind": "CONFIG_REF",
+      "detail": "grpc_inventory"
+    },
+    {
+      "id": "cf41cb495f14e463",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/commerce-gateway-api",
+      "to_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/order-orchestrator-svc",
+      "kind": "CONFIG_REF",
+      "detail": "grpc_orders"
+    },
+    {
+      "id": "52a6e330ea483fc4",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/commerce-gateway-api",
+      "to_uri": "//iam.googleapis.com/projects/aegis-commerce-prod/serviceAccounts/commerce-gateway-sa@aegis-commerce-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "k8s-wi:commerce/gw"
+    },
+    {
+      "id": "94788057e7c6cb72",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/commerce-gateway-api",
+      "to_uri": "//redis.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/shared-session-redis",
+      "kind": "CONFIG_REF",
+      "detail": "session_cache"
+    },
+    {
+      "id": "343e5eda8d439fad",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/inventory-allocator-svc",
+      "to_uri": "//iam.googleapis.com/projects/aegis-commerce-prod/serviceAccounts/inventory-allocator-sa@aegis-commerce-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "k8s-wi:commerce/inv"
+    },
+    {
+      "id": "a503a4b22f92045e",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/inventory-allocator-svc",
+      "to_uri": "//redis.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/shared-session-redis",
+      "kind": "CONFIG_REF",
+      "detail": "stock_cache"
+    },
+    {
+      "id": "3d8e33bb479eaa10",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/inventory-allocator-svc",
+      "to_uri": "//secretmanager.googleapis.com/projects/aegis-commerce-prod/secrets/commerce-db-credentials",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "5cb966c7021b6246",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/inventory-allocator-svc",
+      "to_uri": "//sqladmin.googleapis.com/projects/aegis-commerce-prod/instances/commerce-orders-sql",
+      "kind": "CONFIG_REF",
+      "detail": "sql_inventory"
+    },
+    {
+      "id": "381a68834771dd32",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/order-orchestrator-svc",
+      "to_uri": "//cloudfunctions.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/functions/tax-enrichment-fn",
+      "kind": "CONFIG_REF",
+      "detail": "http_tax"
+    },
+    {
+      "id": "fa225e5b45452ab2",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/order-orchestrator-svc",
+      "to_uri": "//compute.googleapis.com/projects/aegis-risk-prod/regions/europe-west4/forwardingRules/risk-internal-ilb",
+      "kind": "CONFIG_REF",
+      "detail": "grpc_risk_check"
+    },
+    {
+      "id": "cb3bff3ef2c3c23a",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/order-orchestrator-svc",
+      "to_uri": "//iam.googleapis.com/projects/aegis-commerce-prod/serviceAccounts/order-orchestrator-sa@aegis-commerce-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "k8s-wi:commerce/order"
+    },
+    {
+      "id": "c04024bc376acc1f",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/order-orchestrator-svc",
+      "to_uri": "//pubsub.googleapis.com/projects/aegis-commerce-prod/topics/domain-events-bus",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub_publish"
+    },
+    {
+      "id": "0e1e7b1ef461d22c",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/order-orchestrator-svc",
+      "to_uri": "//secretmanager.googleapis.com/projects/aegis-commerce-prod/secrets/commerce-db-credentials",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "74dbfe49861bdaa7",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/order-orchestrator-svc",
+      "to_uri": "//sqladmin.googleapis.com/projects/aegis-commerce-prod/instances/commerce-orders-sql",
+      "kind": "CONFIG_REF",
+      "detail": "sql_write"
+    },
+    {
+      "id": "09b86fc857cf6681",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/batch/cronjobs/pci-compliance-auditor",
+      "to_uri": "//bigquery.googleapis.com/projects/aegis-commerce-prod/datasets/commerce_audit_dw",
+      "kind": "CONFIG_REF",
+      "detail": "bq_export"
+    },
+    {
+      "id": "7af93fc1108dbc59",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/batch/cronjobs/pci-compliance-auditor",
+      "to_uri": "//sqladmin.googleapis.com/projects/aegis-commerce-prod/instances/commerce-orders-sql",
+      "kind": "CONFIG_REF",
+      "detail": "audit_read"
+    },
+    {
+      "id": "09d2b68fb15ac50b",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/networking.k8s.io/ingresses/commerce-gateway-ingress",
+      "to_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/commerce-gateway-api",
+      "kind": "K8S_INGRESS_BACKEND",
+      "detail": "ingress_route"
+    },
+    {
+      "id": "d4828c6135e7df53",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/commerce-gateway-api",
+      "to_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/commerce-gateway-api",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "selector"
+    },
+    {
+      "id": "86c78ab473647638",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/inventory-allocator-svc",
+      "to_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/inventory-allocator-svc",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "selector"
+    },
+    {
+      "id": "ec1dea77ec4a609d",
+      "from_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/order-orchestrator-svc",
+      "to_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/order-orchestrator-svc",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "selector"
+    },
+    {
+      "id": "0fbf3be99c5efd2d",
+      "from_uri": "//dns.googleapis.com/projects/aegis-net-host/managedZones/aegis-internal-dns",
+      "to_uri": "//compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "private_zone"
+    },
+    {
+      "id": "5571f207dea4ba0d",
+      "from_uri": "//external.internet/clients/global-enterprise-clients",
+      "to_uri": "//appengine.googleapis.com/projects/aegis-commerce-prod/services/aegis-admin-portal",
+      "kind": "CONFIG_REF",
+      "detail": "https:admin"
+    },
+    {
+      "id": "689c850c78559a9f",
+      "from_uri": "//external.internet/clients/global-enterprise-clients",
+      "to_uri": "//compute.googleapis.com/projects/aegis-commerce-prod/global/forwardingRules/aegis-edge-waf-lb",
+      "kind": "CONFIG_REF",
+      "detail": "https:443"
+    },
+    {
+      "id": "bfa15b2a73d6f334",
+      "from_uri": "//github.com/aegis-corp/enterprise-platform",
+      "to_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-commerce-gateway",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:main"
+    },
+    {
+      "id": "fd06d99e2562c7e0",
+      "from_uri": "//github.com/aegis-corp/enterprise-platform",
+      "to_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-inventory-allocator",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:main"
+    },
+    {
+      "id": "e3059c88a816294a",
+      "from_uri": "//github.com/aegis-corp/enterprise-platform",
+      "to_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-order-orchestrator",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:main"
+    },
+    {
+      "id": "9714caa9640452d2",
+      "from_uri": "//github.com/aegis-corp/enterprise-platform",
+      "to_uri": "//cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-risk-policy-engine",
+      "kind": "CLOUDBUILD_TRIGGER_REPO",
+      "detail": "push:main"
+    },
+    {
+      "id": "52c53090a299816f",
+      "from_uri": "//iam.googleapis.com/projects/aegis-commerce-prod/serviceAccounts/order-orchestrator-sa@aegis-commerce-prod.iam.gserviceaccount.com",
+      "to_uri": "//pubsub.googleapis.com/projects/aegis-commerce-prod/topics/domain-events-bus",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/pubsub.publisher"
+    },
+    {
+      "id": "6318ba6f757457e0",
+      "from_uri": "//iam.googleapis.com/projects/aegis-delivery-sec/serviceAccounts/cloudbuild-signer-sa@aegis-delivery-sec.iam.gserviceaccount.com",
+      "to_uri": "//artifactregistry.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/repositories/aegis-signed-containers",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/artifactregistry.writer"
+    },
+    {
+      "id": "65ad6fa620f13577",
+      "from_uri": "//iam.googleapis.com/projects/aegis-risk-prod/serviceAccounts/montecarlo-batch-sa@aegis-risk-prod.iam.gserviceaccount.com",
+      "to_uri": "//bigquery.googleapis.com/projects/aegis-risk-prod/datasets/risk_compliance_mart",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/bigquery.dataEditor"
+    },
+    {
+      "id": "8b69debb7c87c848",
+      "from_uri": "//iam.googleapis.com/projects/aegis-risk-prod/serviceAccounts/risk-policy-sa@aegis-risk-prod.iam.gserviceaccount.com",
+      "to_uri": "//alloydb.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/clusters/risk-features-alloydb",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/alloydb.client"
+    },
+    {
+      "id": "13cd228191764c7e",
+      "from_uri": "//logging.googleapis.com/projects/aegis-net-host/sinks/org-siem-audit-sink",
+      "to_uri": "//logging.googleapis.com/projects/aegis-net-host/locations/global/buckets/compliance-7yr-log-bucket",
+      "kind": "CONFIG_REF",
+      "detail": "audit_sink"
+    },
+    {
+      "id": "43838d3a305913cf",
+      "from_uri": "//monitoring.googleapis.com/projects/aegis-commerce-prod/alertPolicies/9505001",
+      "to_uri": "//container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/commerce-gateway-api",
+      "kind": "CONFIG_REF",
+      "detail": "slo_alert"
+    },
+    {
+      "id": "b30f885f3c47fc10",
+      "from_uri": "//monitoring.googleapis.com/projects/aegis-risk-prod/alertPolicies/9505002",
+      "to_uri": "//pubsub.googleapis.com/projects/aegis-commerce-prod/topics/domain-events-dlq",
+      "kind": "CONFIG_REF",
+      "detail": "dlq_alert"
+    },
+    {
+      "id": "d0dd4c3e6d68bd76",
+      "from_uri": "//pubsub.googleapis.com/projects/aegis-commerce-prod/subscriptions/domain-dlq-sub",
+      "to_uri": "//run.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/services/fraud-alert-dispatcher",
+      "kind": "CONFIG_REF",
+      "detail": "dlq_alert_push"
+    },
+    {
+      "id": "719cf6bc54d6e8d2",
+      "from_uri": "//pubsub.googleapis.com/projects/aegis-commerce-prod/subscriptions/risk-events-sub",
+      "to_uri": "//pubsub.googleapis.com/projects/aegis-commerce-prod/topics/domain-events-dlq",
+      "kind": "CONFIG_REF",
+      "detail": "dead_letter"
+    },
+    {
+      "id": "ce410a0a762e06fb",
+      "from_uri": "//pubsub.googleapis.com/projects/aegis-commerce-prod/subscriptions/risk-events-sub",
+      "to_uri": "//run.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/services/fraud-alert-dispatcher",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "7b7d56c9bc01c849",
+      "from_uri": "//pubsub.googleapis.com/projects/aegis-commerce-prod/topics/domain-events-bus",
+      "to_uri": "//pubsub.googleapis.com/projects/aegis-commerce-prod/subscriptions/risk-events-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "9e73df62a081e5b8",
+      "from_uri": "//pubsub.googleapis.com/projects/aegis-commerce-prod/topics/domain-events-dlq",
+      "to_uri": "//pubsub.googleapis.com/projects/aegis-commerce-prod/subscriptions/domain-dlq-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "8014da3af01db8e5",
+      "from_uri": "//run.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/services/fraud-alert-dispatcher",
+      "to_uri": "//bigquery.googleapis.com/projects/aegis-risk-prod/datasets/risk_compliance_mart",
+      "kind": "CONFIG_REF",
+      "detail": "bq_incident_log"
+    },
+    {
+      "id": "ee8e24cec9dbbd12",
+      "from_uri": "//run.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/services/fraud-alert-dispatcher",
+      "to_uri": "//iam.googleapis.com/projects/aegis-risk-prod/serviceAccounts/risk-policy-sa@aegis-risk-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "e570fcd8dbddf9de",
+      "from_uri": "//run.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/services/fraud-alert-dispatcher",
+      "to_uri": "//secretmanager.googleapis.com/projects/aegis-risk-prod/secrets/siem-webhook-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "2a18bdd498e17cfe",
+      "from_uri": "//run.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/services/risk-policy-engine",
+      "to_uri": "//aiplatform.googleapis.com/projects/aegis-risk-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "kind": "CONFIG_REF",
+      "detail": "vertex_narrative"
+    },
+    {
+      "id": "632acec3e14cbdf8",
+      "from_uri": "//run.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/services/risk-policy-engine",
+      "to_uri": "//alloydb.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/clusters/risk-features-alloydb",
+      "kind": "CONFIG_REF",
+      "detail": "alloydb_features"
+    },
+    {
+      "id": "e86f5093c48201db",
+      "from_uri": "//run.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/services/risk-policy-engine",
+      "to_uri": "//iam.googleapis.com/projects/aegis-risk-prod/serviceAccounts/risk-policy-sa@aegis-risk-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "5b8981a9e6323acd",
+      "from_uri": "//run.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/services/risk-policy-engine",
+      "to_uri": "//secretmanager.googleapis.com/projects/aegis-risk-prod/secrets/risk-model-signing-key",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "dc0e2b7c8b9047cb",
+      "from_uri": "//sqladmin.googleapis.com/projects/aegis-commerce-prod/instances/commerce-orders-sql",
+      "to_uri": "//cloudkms.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/keyRings/commerce-ring/cryptoKeys/commerce-sql-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "b14773f4f281a09e",
+      "from_uri": "//storage.googleapis.com/aegis-build-attestations",
+      "to_uri": "//cloudkms.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/keyRings/supplychain-ring/cryptoKeys/binary-authz-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "1b012b668db44a15",
+      "from_uri": "//vpcaccess.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/connectors/ew1-serverless-conn",
+      "to_uri": "//compute.googleapis.com/projects/aegis-net-host/regions/europe-west1/subnetworks/ew1-gke-commerce-subnet",
+      "kind": "CONFIG_REF",
+      "detail": "subnet"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "artifactregistry.googleapis.com/DockerImage": 184,
+    "bigquery.googleapis.com/Table": 40,
+    "cloudbuild.googleapis.com/Build": 240,
+    "compute.googleapis.com/BackendService": 4,
+    "compute.googleapis.com/Firewall": 44,
+    "compute.googleapis.com/Route": 18,
+    "compute.googleapis.com/SecurityPolicy": 3,
+    "container.googleapis.com/NodePool": 4,
+    "k8s.io/Pod": 68,
+    "run.googleapis.com/Revision": 22
+  },
+  "coverage_ledger": [
+    {
+      "scope": "organizations/940400001",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/940400001",
+      "source": "cai_iam",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/940400001",
+      "source": "cai_resources",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/940400001",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/940400001",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}

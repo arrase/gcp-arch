@@ -1,0 +1,877 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-26T00:00:00Z",
+  "scopes": [
+    "folders/444001"
+  ],
+  "hierarchy": {
+    "organizations": [
+      {
+        "org_id": "900100001",
+        "display_name": "Acme Enterprise"
+      }
+    ],
+    "folders": [
+      {
+        "folder_id": "444001",
+        "display_name": "prod-platform",
+        "parent": "organizations/900100001"
+      }
+    ],
+    "projects": [
+      {
+        "project_id": "core-db-prod",
+        "project_number": "3005001003",
+        "display_name": "Core DB Prod",
+        "parent": "folders/444001",
+        "shared_vpc_host_project": "net-hub-prod"
+      },
+      {
+        "project_id": "edge-app-prod",
+        "project_number": "3005001002",
+        "display_name": "Edge App Prod",
+        "parent": "folders/444001",
+        "shared_vpc_host_project": "net-hub-prod"
+      },
+      {
+        "project_id": "net-hub-prod",
+        "project_number": "3005001001",
+        "display_name": "Shared Net Hub Prod",
+        "parent": "folders/444001"
+      },
+      {
+        "project_id": "p300500abcdef12-tp",
+        "display_name": "Google PSA Tenant",
+        "is_psa_tenant": true
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//artifactregistry.googleapis.com/projects/edge-app-prod/locations/europe-west1/repositories/edge-images",
+      "asset_type": "artifactregistry.googleapis.com/Repository",
+      "project_id": "edge-app-prod",
+      "location": "europe-west1",
+      "display_name": "edge-images",
+      "attributes": {
+        "format": "DOCKER",
+        "mode": "STANDARD_REPOSITORY"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/core-db-prod/locations/europe-west1/keyRings/core-keyring/cryptoKeys/core-ledger-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "core-db-prod",
+      "location": "europe-west1",
+      "display_name": "core-ledger-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/edge-app-prod/locations/europe-west1/keyRings/edge-keyring/cryptoKeys/edge-tls-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "edge-app-prod",
+      "location": "europe-west1",
+      "display_name": "edge-tls-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/core-db-prod/regions/europe-west1/forwardingRules/core-internal-ilb",
+      "asset_type": "compute.googleapis.com/ForwardingRule",
+      "project_id": "core-db-prod",
+      "location": "europe-west1",
+      "display_name": "core-internal-ilb",
+      "parent_uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/subnetworks/app-private-subnet",
+      "attributes": {
+        "ip_address": "10.50.16.25",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "INTERNAL_MANAGED",
+        "port_range": "8443-8443",
+        "subnet": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/subnetworks/app-private-subnet",
+        "vpc": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/edge-app-prod/global/forwardingRules/edge-waf-glb",
+      "asset_type": "compute.googleapis.com/GlobalForwardingRule",
+      "project_id": "edge-app-prod",
+      "location": "global",
+      "display_name": "edge-waf-glb",
+      "attributes": {
+        "ingress_hosts": [
+          "portal.acme-corp.example.com"
+        ],
+        "ip_address": "34.120.55.10",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "EXTERNAL_MANAGED",
+        "port_range": "443-443",
+        "tls": true
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "net-hub-prod",
+      "location": "global",
+      "display_name": "shared-hub-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "GLOBAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/interconnectAttachments/hub-interconnect-ew1",
+      "asset_type": "compute.googleapis.com/InterconnectAttachment",
+      "project_id": "net-hub-prod",
+      "location": "europe-west1",
+      "display_name": "hub-interconnect-ew1",
+      "parent_uri": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+      "attributes": {
+        "bandwidth": "BPS_10G",
+        "type": "DEDICATED",
+        "vlan_tag": 1104
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/routers/hub-hybrid-cr",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "net-hub-prod",
+      "location": "europe-west1",
+      "display_name": "hub-hybrid-cr",
+      "parent_uri": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+      "attributes": {
+        "bgp_asn": 65010,
+        "nat_count": 0,
+        "vpc": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/routers/hub-nat-cr",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "net-hub-prod",
+      "location": "europe-west1",
+      "display_name": "hub-nat-cr",
+      "parent_uri": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+      "attributes": {
+        "bgp_asn": 64514,
+        "nat_count": 2,
+        "vpc": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/subnetworks/app-private-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "net-hub-prod",
+      "location": "europe-west1",
+      "display_name": "app-private-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+      "attributes": {
+        "cidr": "10.50.16.0/20",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/subnetworks/edge-dmz-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "net-hub-prod",
+      "location": "europe-west1",
+      "display_name": "edge-dmz-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+      "attributes": {
+        "cidr": "10.50.0.0/22",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/vpnGateways/hub-ha-vpn",
+      "asset_type": "compute.googleapis.com/VpnGateway",
+      "project_id": "net-hub-prod",
+      "location": "europe-west1",
+      "display_name": "hub-ha-vpn",
+      "parent_uri": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+      "attributes": {
+        "vpc": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/onprem-transit-peer/global/networks/onprem-transit-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "onprem-transit-peer",
+      "location": "global",
+      "display_name": "onprem-transit-vpc",
+      "is_external": true,
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "GLOBAL"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/edge-app-prod/locations/europe-west1-b/clusters/edge-gke-cluster",
+      "asset_type": "container.googleapis.com/Cluster",
+      "project_id": "edge-app-prod",
+      "location": "europe-west1-b",
+      "display_name": "edge-gke-cluster",
+      "parent_uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/subnetworks/app-private-subnet",
+      "attributes": {
+        "mode": "Standard",
+        "namespace_count": 6,
+        "node_pool_count": 2,
+        "private_nodes": true,
+        "release_channel": "REGULAR",
+        "subnet": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/subnetworks/app-private-subnet",
+        "vpc": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+        "workload_pool": "edge-app-prod.svc.id.goog"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/edge-app-prod/locations/europe-west1-b/clusters/edge-gke-cluster/k8s/namespaces/edge/apps/deployments/gateway-api",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "edge-app-prod",
+      "location": "europe-west1-b",
+      "display_name": "gateway-api",
+      "parent_uri": "//container.googleapis.com/projects/edge-app-prod/locations/europe-west1-b/clusters/edge-gke-cluster",
+      "attributes": {
+        "namespace": "edge",
+        "replicas": 3,
+        "service_account": "edge-gateway-sa@edge-app-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/edge-app-prod/locations/europe-west1-b/clusters/edge-gke-cluster/k8s/namespaces/edge/networking.k8s.io/ingresses/gateway-ingress",
+      "asset_type": "networking.k8s.io/Ingress",
+      "project_id": "edge-app-prod",
+      "location": "europe-west1-b",
+      "display_name": "gateway-ingress",
+      "parent_uri": "//container.googleapis.com/projects/edge-app-prod/locations/europe-west1-b/clusters/edge-gke-cluster",
+      "attributes": {
+        "ingress_class": "gce",
+        "ingress_hosts": [
+          "portal.acme-corp.example.com"
+        ],
+        "namespace": "edge"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/edge-app-prod/locations/europe-west1-b/clusters/edge-gke-cluster/k8s/namespaces/edge/services/gateway-api",
+      "asset_type": "k8s.io/Service",
+      "project_id": "edge-app-prod",
+      "location": "europe-west1-b",
+      "display_name": "gateway-api",
+      "parent_uri": "//container.googleapis.com/projects/edge-app-prod/locations/europe-west1-b/clusters/edge-gke-cluster",
+      "attributes": {
+        "namespace": "edge",
+        "ports": [
+          8080
+        ],
+        "service_type": "ClusterIP"
+      }
+    },
+    {
+      "uri": "//dns.googleapis.com/projects/net-hub-prod/managedZones/corp-private-dns",
+      "asset_type": "dns.googleapis.com/ManagedZone",
+      "project_id": "net-hub-prod",
+      "location": "global",
+      "display_name": "corp-private-dns",
+      "attributes": {
+        "dns_name": "corp.internal.",
+        "visibility": "private"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/core-db-prod/serviceAccounts/core-ledger-sa@core-db-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "core-db-prod",
+      "display_name": "core-ledger-sa@core-db-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "core-ledger-sa@core-db-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/edge-app-prod/serviceAccounts/edge-bff-sa@edge-app-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "edge-app-prod",
+      "display_name": "edge-bff-sa@edge-app-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "edge-bff-sa@edge-app-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/edge-app-prod/serviceAccounts/edge-gateway-sa@edge-app-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "edge-app-prod",
+      "display_name": "edge-gateway-sa@edge-app-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "edge-gateway-sa@edge-app-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/net-hub-prod/serviceAccounts/net-ops-sa@net-hub-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "net-hub-prod",
+      "display_name": "net-ops-sa@net-hub-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "net-ops-sa@net-hub-prod.iam.gserviceaccount.com"
+      },
+      "project_capabilities": [
+        "roles/viewer"
+      ]
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/net-hub-prod/sinks/hub-vpc-flow-sink",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "net-hub-prod",
+      "display_name": "hub-vpc-flow-sink"
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/core-db-prod/subscriptions/core-audit-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "core-db-prod",
+      "location": "global",
+      "display_name": "core-audit-sub",
+      "attributes": {
+        "ack_deadline_seconds": 30
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/core-db-prod/topics/core-ledger-events",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "core-db-prod",
+      "location": "global",
+      "display_name": "core-ledger-events",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/core-db-prod/locations/europe-west1/keyRings/core-keyring/cryptoKeys/core-ledger-cmek"
+      }
+    },
+    {
+      "uri": "//redis.googleapis.com/projects/core-db-prod/locations/europe-west1/instances/core-session-redis",
+      "asset_type": "redis.googleapis.com/Instance",
+      "project_id": "core-db-prod",
+      "location": "europe-west1",
+      "display_name": "core-session-redis",
+      "parent_uri": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/core-db-prod/locations/europe-west1/keyRings/core-keyring/cryptoKeys/core-ledger-cmek",
+        "memory_size_gb": 16,
+        "port": 6379,
+        "private_ip": "10.50.68.10",
+        "redis_version": "REDIS_7_2",
+        "tier": "STANDARD_HA",
+        "vpc": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/core-db-prod/locations/europe-west1/services/core-audit-worker",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "core-db-prod",
+      "location": "europe-west1",
+      "display_name": "core-audit-worker",
+      "parent_uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/subnetworks/app-private-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/core-db-prod/locations/europe-west1/keyRings/core-keyring/cryptoKeys/core-ledger-cmek",
+        "service_account": "core-ledger-sa@core-db-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/subnetworks/app-private-subnet",
+        "url": "https://core-audit-worker-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/core-db-prod/locations/europe-west1/services/core-ledger-api",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "core-db-prod",
+      "location": "europe-west1",
+      "display_name": "core-ledger-api",
+      "parent_uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/subnetworks/app-private-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/core-db-prod/locations/europe-west1/keyRings/core-keyring/cryptoKeys/core-ledger-cmek",
+        "service_account": "core-ledger-sa@core-db-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/subnetworks/app-private-subnet",
+        "url": "https://core-ledger-api-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/edge-app-prod/locations/europe-west1/services/edge-bff-run",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "edge-app-prod",
+      "location": "europe-west1",
+      "display_name": "edge-bff-run",
+      "parent_uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/subnetworks/edge-dmz-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/edge-app-prod/locations/europe-west1/keyRings/edge-keyring/cryptoKeys/edge-tls-cmek",
+        "service_account": "edge-bff-sa@edge-app-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/subnetworks/edge-dmz-subnet",
+        "url": "https://edge-bff-run-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/edge-app-prod/locations/europe-west1/connectors/edge-shared-conn"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/core-db-prod/secrets/core-ledger-db-pass",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "core-db-prod",
+      "display_name": "core-ledger-db-pass",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/core-db-prod/locations/europe-west1/keyRings/core-keyring/cryptoKeys/core-ledger-cmek",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/edge-app-prod/secrets/edge-jwt-signing-key",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "edge-app-prod",
+      "display_name": "edge-jwt-signing-key",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/edge-app-prod/locations/europe-west1/keyRings/edge-keyring/cryptoKeys/edge-tls-cmek",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//sqladmin.googleapis.com/projects/core-db-prod/instances/core-orders-sql",
+      "asset_type": "sqladmin.googleapis.com/Instance",
+      "project_id": "core-db-prod",
+      "location": "europe-west1",
+      "display_name": "core-orders-sql",
+      "parent_uri": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+      "attributes": {
+        "availability_type": "REGIONAL",
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/core-db-prod/locations/europe-west1/keyRings/core-keyring/cryptoKeys/core-ledger-cmek",
+        "private_ip": "10.50.64.5",
+        "psa_tenant_project": "p300500abcdef12-tp",
+        "public_ip_enabled": false,
+        "tier": "db-custom-8-32768",
+        "vpc": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/core-audit-archive",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "core-db-prod",
+      "location": "europe-west1",
+      "display_name": "core-audit-archive",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/core-db-prod/locations/europe-west1/keyRings/core-keyring/cryptoKeys/core-ledger-cmek",
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/edge-static-assets",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "edge-app-prod",
+      "location": "europe-west1",
+      "display_name": "edge-static-assets",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/edge-app-prod/locations/europe-west1/keyRings/edge-keyring/cryptoKeys/edge-tls-cmek",
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    },
+    {
+      "uri": "//vpcaccess.googleapis.com/projects/edge-app-prod/locations/europe-west1/connectors/edge-shared-conn",
+      "asset_type": "vpcaccess.googleapis.com/Connector",
+      "project_id": "edge-app-prod",
+      "location": "europe-west1",
+      "display_name": "edge-shared-conn",
+      "parent_uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/subnetworks/edge-dmz-subnet",
+      "attributes": {
+        "cidr": "10.50.32.0/28",
+        "machine_type": "e2-standard-4",
+        "subnet": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/subnetworks/edge-dmz-subnet",
+        "subnet_project": "net-hub-prod",
+        "vpc": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "c7ba0bd1b0e7fe64",
+      "from_uri": "//compute.googleapis.com/projects/core-db-prod/regions/europe-west1/forwardingRules/core-internal-ilb",
+      "to_uri": "//run.googleapis.com/projects/core-db-prod/locations/europe-west1/services/core-ledger-api",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "9f1244525e9aefc3",
+      "from_uri": "//compute.googleapis.com/projects/edge-app-prod/global/forwardingRules/edge-waf-glb",
+      "to_uri": "//container.googleapis.com/projects/edge-app-prod/locations/europe-west1-b/clusters/edge-gke-cluster/k8s/namespaces/edge/services/gateway-api",
+      "kind": "K8S_NEG_BACKEND",
+      "detail": "/* port:8080"
+    },
+    {
+      "id": "6d637b619043a75d",
+      "from_uri": "//compute.googleapis.com/projects/edge-app-prod/global/forwardingRules/edge-waf-glb",
+      "to_uri": "//run.googleapis.com/projects/edge-app-prod/locations/europe-west1/services/edge-bff-run",
+      "kind": "CONFIG_REF",
+      "detail": "backend_bff"
+    },
+    {
+      "id": "85b15d55348cc632",
+      "from_uri": "//compute.googleapis.com/projects/edge-app-prod/global/forwardingRules/edge-waf-glb",
+      "to_uri": "//storage.googleapis.com/edge-static-assets",
+      "kind": "CONFIG_REF",
+      "detail": "cdn_bucket"
+    },
+    {
+      "id": "e9d452e1d14e34a4",
+      "from_uri": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+      "to_uri": "//compute.googleapis.com/projects/onprem-transit-peer/global/networks/onprem-transit-vpc",
+      "kind": "VPC_PEERING",
+      "detail": "onprem-transit-peering"
+    },
+    {
+      "id": "eec7c8c11fe4ae32",
+      "from_uri": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+      "to_uri": "//redis.googleapis.com/projects/core-db-prod/locations/europe-west1/instances/core-session-redis",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com (p300500abcdef12-tp)"
+    },
+    {
+      "id": "33dea7656dc2ccdc",
+      "from_uri": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+      "to_uri": "//sqladmin.googleapis.com/projects/core-db-prod/instances/core-orders-sql",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com (p300500abcdef12-tp)"
+    },
+    {
+      "id": "c5bf153dd9c9475b",
+      "from_uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/interconnectAttachments/hub-interconnect-ew1",
+      "to_uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/routers/hub-hybrid-cr",
+      "kind": "CONFIG_REF",
+      "detail": "interconnect.router"
+    },
+    {
+      "id": "9de9180d953e6d11",
+      "from_uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/routers/hub-hybrid-cr",
+      "to_uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/vpnGateways/hub-ha-vpn",
+      "kind": "CONFIG_REF",
+      "detail": "vpn_tunnel"
+    },
+    {
+      "id": "f4d19bcd5a5f744f",
+      "from_uri": "//compute.googleapis.com/projects/net-hub-prod/regions/europe-west1/routers/hub-nat-cr",
+      "to_uri": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "nat_egress"
+    },
+    {
+      "id": "b1ba2b50205bf4e3",
+      "from_uri": "//container.googleapis.com/projects/edge-app-prod/locations/europe-west1-b/clusters/edge-gke-cluster/k8s/namespaces/edge/apps/deployments/gateway-api",
+      "to_uri": "//artifactregistry.googleapis.com/projects/edge-app-prod/locations/europe-west1/repositories/edge-images",
+      "kind": "CONFIG_REF",
+      "detail": "container_image"
+    },
+    {
+      "id": "d6e858c4dc4ccefe",
+      "from_uri": "//container.googleapis.com/projects/edge-app-prod/locations/europe-west1-b/clusters/edge-gke-cluster/k8s/namespaces/edge/apps/deployments/gateway-api",
+      "to_uri": "//compute.googleapis.com/projects/core-db-prod/regions/europe-west1/forwardingRules/core-internal-ilb",
+      "kind": "CONFIG_REF",
+      "detail": "10.50.16.25"
+    },
+    {
+      "id": "b05af6308158ee3f",
+      "from_uri": "//container.googleapis.com/projects/edge-app-prod/locations/europe-west1-b/clusters/edge-gke-cluster/k8s/namespaces/edge/apps/deployments/gateway-api",
+      "to_uri": "//iam.googleapis.com/projects/edge-app-prod/serviceAccounts/edge-gateway-sa@edge-app-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "ksa:edge/gateway-api"
+    },
+    {
+      "id": "6af1e973629420c3",
+      "from_uri": "//container.googleapis.com/projects/edge-app-prod/locations/europe-west1-b/clusters/edge-gke-cluster/k8s/namespaces/edge/networking.k8s.io/ingresses/gateway-ingress",
+      "to_uri": "//container.googleapis.com/projects/edge-app-prod/locations/europe-west1-b/clusters/edge-gke-cluster/k8s/namespaces/edge/services/gateway-api",
+      "kind": "K8S_INGRESS_BACKEND",
+      "detail": "portal.acme-corp.example.com/*"
+    },
+    {
+      "id": "b4d97a24969d40e8",
+      "from_uri": "//container.googleapis.com/projects/edge-app-prod/locations/europe-west1-b/clusters/edge-gke-cluster/k8s/namespaces/edge/services/gateway-api",
+      "to_uri": "//container.googleapis.com/projects/edge-app-prod/locations/europe-west1-b/clusters/edge-gke-cluster/k8s/namespaces/edge/apps/deployments/gateway-api",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "app=gateway-api"
+    },
+    {
+      "id": "fffd093a95fe46a4",
+      "from_uri": "//dns.googleapis.com/projects/net-hub-prod/managedZones/corp-private-dns",
+      "to_uri": "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "private_zone"
+    },
+    {
+      "id": "f9d873faa2fe1e2f",
+      "from_uri": "//iam.googleapis.com/projects/core-db-prod/serviceAccounts/core-ledger-sa@core-db-prod.iam.gserviceaccount.com",
+      "to_uri": "//pubsub.googleapis.com/projects/core-db-prod/topics/core-ledger-events",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/pubsub.publisher"
+    },
+    {
+      "id": "8cad0561e9522c91",
+      "from_uri": "//iam.googleapis.com/projects/core-db-prod/serviceAccounts/core-ledger-sa@core-db-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/core-db-prod/secrets/core-ledger-db-pass",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "4713ff342a87ecc1",
+      "from_uri": "//iam.googleapis.com/projects/core-db-prod/serviceAccounts/core-ledger-sa@core-db-prod.iam.gserviceaccount.com",
+      "to_uri": "//sqladmin.googleapis.com/projects/core-db-prod/instances/core-orders-sql",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudsql.client"
+    },
+    {
+      "id": "b89e8855349ed941",
+      "from_uri": "//iam.googleapis.com/projects/core-db-prod/serviceAccounts/core-ledger-sa@core-db-prod.iam.gserviceaccount.com",
+      "to_uri": "//storage.googleapis.com/core-audit-archive",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/storage.objectAdmin"
+    },
+    {
+      "id": "8a91ab3df54d07be",
+      "from_uri": "//iam.googleapis.com/projects/edge-app-prod/serviceAccounts/edge-bff-sa@edge-app-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/edge-app-prod/secrets/edge-jwt-signing-key",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "a8cb95c1f9996bd6",
+      "from_uri": "//iam.googleapis.com/projects/edge-app-prod/serviceAccounts/edge-gateway-sa@edge-app-prod.iam.gserviceaccount.com",
+      "to_uri": "//artifactregistry.googleapis.com/projects/edge-app-prod/locations/europe-west1/repositories/edge-images",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/artifactregistry.reader"
+    },
+    {
+      "id": "97b3b337e992c62c",
+      "from_uri": "//pubsub.googleapis.com/projects/core-db-prod/subscriptions/core-audit-sub",
+      "to_uri": "//run.googleapis.com/projects/core-db-prod/locations/europe-west1/services/core-audit-worker",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "76472be48f7606aa",
+      "from_uri": "//pubsub.googleapis.com/projects/core-db-prod/topics/core-ledger-events",
+      "to_uri": "//pubsub.googleapis.com/projects/core-db-prod/subscriptions/core-audit-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "907963e56d03e12d",
+      "from_uri": "//redis.googleapis.com/projects/core-db-prod/locations/europe-west1/instances/core-session-redis",
+      "to_uri": "//cloudkms.googleapis.com/projects/core-db-prod/locations/europe-west1/keyRings/core-keyring/cryptoKeys/core-ledger-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "f2723ad416d16ed4",
+      "from_uri": "//run.googleapis.com/projects/core-db-prod/locations/europe-west1/services/core-audit-worker",
+      "to_uri": "//iam.googleapis.com/projects/core-db-prod/serviceAccounts/core-ledger-sa@core-db-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "e3164b0174c392e9",
+      "from_uri": "//run.googleapis.com/projects/core-db-prod/locations/europe-west1/services/core-audit-worker",
+      "to_uri": "//storage.googleapis.com/core-audit-archive",
+      "kind": "CONFIG_REF",
+      "detail": "gs://core-audit-archive"
+    },
+    {
+      "id": "3e301b12adeace3f",
+      "from_uri": "//run.googleapis.com/projects/core-db-prod/locations/europe-west1/services/core-ledger-api",
+      "to_uri": "//iam.googleapis.com/projects/core-db-prod/serviceAccounts/core-ledger-sa@core-db-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "09ee57bf4b4ade6c",
+      "from_uri": "//run.googleapis.com/projects/core-db-prod/locations/europe-west1/services/core-ledger-api",
+      "to_uri": "//pubsub.googleapis.com/projects/core-db-prod/topics/core-ledger-events",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "a66d084e9c36de45",
+      "from_uri": "//run.googleapis.com/projects/core-db-prod/locations/europe-west1/services/core-ledger-api",
+      "to_uri": "//redis.googleapis.com/projects/core-db-prod/locations/europe-west1/instances/core-session-redis",
+      "kind": "CONFIG_REF",
+      "detail": "10.50.68.10"
+    },
+    {
+      "id": "d985a6c8121ab7fb",
+      "from_uri": "//run.googleapis.com/projects/core-db-prod/locations/europe-west1/services/core-ledger-api",
+      "to_uri": "//secretmanager.googleapis.com/projects/core-db-prod/secrets/core-ledger-db-pass",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "c5933ff2865d3d3a",
+      "from_uri": "//run.googleapis.com/projects/core-db-prod/locations/europe-west1/services/core-ledger-api",
+      "to_uri": "//sqladmin.googleapis.com/projects/core-db-prod/instances/core-orders-sql",
+      "kind": "CONFIG_REF",
+      "detail": "10.50.64.5"
+    },
+    {
+      "id": "4827c03562926746",
+      "from_uri": "//run.googleapis.com/projects/edge-app-prod/locations/europe-west1/services/edge-bff-run",
+      "to_uri": "//compute.googleapis.com/projects/core-db-prod/regions/europe-west1/forwardingRules/core-internal-ilb",
+      "kind": "CONFIG_REF",
+      "detail": "10.50.16.25"
+    },
+    {
+      "id": "070f5de65e2380a6",
+      "from_uri": "//run.googleapis.com/projects/edge-app-prod/locations/europe-west1/services/edge-bff-run",
+      "to_uri": "//iam.googleapis.com/projects/edge-app-prod/serviceAccounts/edge-bff-sa@edge-app-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "960dc03280f367ff",
+      "from_uri": "//run.googleapis.com/projects/edge-app-prod/locations/europe-west1/services/edge-bff-run",
+      "to_uri": "//secretmanager.googleapis.com/projects/edge-app-prod/secrets/edge-jwt-signing-key",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "684b3e3412994a82",
+      "from_uri": "//run.googleapis.com/projects/edge-app-prod/locations/europe-west1/services/edge-bff-run",
+      "to_uri": "//vpcaccess.googleapis.com/projects/edge-app-prod/locations/europe-west1/connectors/edge-shared-conn",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "0df6f1659f93659a",
+      "from_uri": "//sqladmin.googleapis.com/projects/core-db-prod/instances/core-orders-sql",
+      "to_uri": "//cloudkms.googleapis.com/projects/core-db-prod/locations/europe-west1/keyRings/core-keyring/cryptoKeys/core-ledger-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "f936ed635de482cb",
+      "from_uri": "//storage.googleapis.com/core-audit-archive",
+      "to_uri": "//cloudkms.googleapis.com/projects/core-db-prod/locations/europe-west1/keyRings/core-keyring/cryptoKeys/core-ledger-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "52805e2cd29341c9",
+      "from_uri": "//storage.googleapis.com/edge-static-assets",
+      "to_uri": "//cloudkms.googleapis.com/projects/edge-app-prod/locations/europe-west1/keyRings/edge-keyring/cryptoKeys/edge-tls-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "compute.googleapis.com/BackendService": 3,
+    "compute.googleapis.com/ExternalVpnGateway": 1,
+    "compute.googleapis.com/Firewall": 24,
+    "compute.googleapis.com/NetworkEndpointGroup": 2,
+    "compute.googleapis.com/Route": 18,
+    "compute.googleapis.com/SecurityPolicy": 4,
+    "compute.googleapis.com/TargetHttpsProxy": 1,
+    "compute.googleapis.com/UrlMap": 1,
+    "compute.googleapis.com/VpnTunnel": 2,
+    "container.googleapis.com/NodePool": 2,
+    "k8s.io/Pod": 18,
+    "run.googleapis.com/Revision": 12,
+    "servicenetworking.googleapis.com/Connection": 2
+  },
+  "out_of_scope_targets": [
+    {
+      "target_project_id": "onprem-transit-peer",
+      "synthetic_uri": "//compute.googleapis.com/projects/onprem-transit-peer/global/networks/onprem-transit-vpc",
+      "referenced_by_uris": [
+        "//compute.googleapis.com/projects/net-hub-prod/global/networks/shared-hub-vpc"
+      ],
+      "source_kind": "vpc_peering_cross_project"
+    }
+  ],
+  "coverage_ledger": [
+    {
+      "scope": "projects/core-db-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/core-db-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/core-db-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/core-db-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/core-db-prod",
+      "source": "monitoring",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/edge-app-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/edge-app-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/edge-app-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/edge-app-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/edge-app-prod",
+      "source": "monitoring",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/net-hub-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/net-hub-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/net-hub-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/net-hub-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/net-hub-prod",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}

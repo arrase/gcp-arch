@@ -1,0 +1,721 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-26T00:00:00Z",
+  "scopes": [
+    "projects/data-lakehouse-prod",
+    "projects/ml-serving-prod"
+  ],
+  "hierarchy": {
+    "projects": [
+      {
+        "project_id": "data-lakehouse-prod",
+        "project_number": "4007001001",
+        "display_name": "Data Lakehouse Prod"
+      },
+      {
+        "project_id": "ml-serving-prod",
+        "project_number": "4007001002",
+        "display_name": "ML Serving Prod"
+      },
+      {
+        "project_id": "p400700abcdef12-tp",
+        "display_name": "Google PSA Tenant",
+        "is_psa_tenant": true
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//aiplatform.googleapis.com/projects/ml-serving-prod/locations/europe-west1/endpoints/churn-predictor-v3",
+      "asset_type": "aiplatform.googleapis.com/Endpoint",
+      "project_id": "ml-serving-prod",
+      "location": "europe-west1",
+      "display_name": "churn-predictor-v3",
+      "parent_uri": "//compute.googleapis.com/projects/ml-serving-prod/global/networks/ml-serving-vpc",
+      "attributes": {
+        "deployed_model_count": 1,
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ml-serving-prod/locations/europe-west1/keyRings/ml-keyring/cryptoKeys/ml-model-cmek",
+        "vpc": "//compute.googleapis.com/projects/ml-serving-prod/global/networks/ml-serving-vpc"
+      }
+    },
+    {
+      "uri": "//aiplatform.googleapis.com/projects/ml-serving-prod/locations/europe-west1/featureOnlineStores/realtime-customer-fos",
+      "asset_type": "aiplatform.googleapis.com/FeatureOnlineStore",
+      "project_id": "ml-serving-prod",
+      "location": "europe-west1",
+      "display_name": "realtime-customer-fos",
+      "attributes": {
+        "state": "STABLE"
+      }
+    },
+    {
+      "uri": "//aiplatform.googleapis.com/projects/ml-serving-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "asset_type": "aiplatform.googleapis.com/PublisherModel",
+      "project_id": "ml-serving-prod",
+      "location": "global",
+      "display_name": "gemini-4-carbon",
+      "attributes": {
+        "invocations": 18420,
+        "model_id": "gemini-4-carbon",
+        "publisher": "google"
+      }
+    },
+    {
+      "uri": "//alloydb.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/clusters/oltp-inventory-alloydb",
+      "asset_type": "alloydb.googleapis.com/Cluster",
+      "project_id": "data-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "oltp-inventory-alloydb",
+      "parent_uri": "//compute.googleapis.com/projects/data-lakehouse-prod/global/networks/lakehouse-vpc",
+      "attributes": {
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lake-data-cmek",
+        "private_ip": "10.70.20.10",
+        "psa_tenant_project": "p400700abcdef12-tp",
+        "vpc": "//compute.googleapis.com/projects/data-lakehouse-prod/global/networks/lakehouse-vpc"
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/data-lakehouse-prod/datasets/curated_dw",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "data-lakehouse-prod",
+      "location": "EU",
+      "display_name": "curated_dw",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lake-data-cmek",
+        "location": "EU",
+        "routine_count": 3,
+        "table_count": 8
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/data-lakehouse-prod/datasets/raw_cdc",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "data-lakehouse-prod",
+      "location": "EU",
+      "display_name": "raw_cdc",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lake-data-cmek",
+        "location": "EU",
+        "table_count": 14
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/ml-serving-prod/datasets/ml_features",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "ml-serving-prod",
+      "location": "EU",
+      "display_name": "ml_features",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ml-serving-prod/locations/europe-west1/keyRings/ml-keyring/cryptoKeys/ml-model-cmek",
+        "location": "EU",
+        "model_count": 2,
+        "table_count": 5
+      }
+    },
+    {
+      "uri": "//bigqueryconnection.googleapis.com/projects/data-lakehouse-prod/locations/eu/connections/alloydb-fed-conn",
+      "asset_type": "bigqueryconnection.googleapis.com/Connection",
+      "project_id": "data-lakehouse-prod",
+      "location": "eu",
+      "display_name": "alloydb-fed-conn",
+      "attributes": {
+        "connection_type": "cloud_sql"
+      }
+    },
+    {
+      "uri": "//bigquerydatatransfer.googleapis.com/projects/ml-serving-prod/locations/eu/transferConfigs/hourly-feature-sync",
+      "asset_type": "bigquerydatatransfer.googleapis.com/TransferConfig",
+      "project_id": "ml-serving-prod",
+      "location": "eu",
+      "display_name": "hourly-feature-sync",
+      "attributes": {
+        "data_source_id": "scheduled_query",
+        "schedule": "every 1 hours"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lake-data-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "data-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "lake-data-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/ml-serving-prod/locations/europe-west1/keyRings/ml-keyring/cryptoKeys/ml-model-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "ml-serving-prod",
+      "location": "europe-west1",
+      "display_name": "ml-model-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/data-lakehouse-prod/global/networks/lakehouse-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "data-lakehouse-prod",
+      "location": "global",
+      "display_name": "lakehouse-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/data-lakehouse-prod/regions/europe-west1/routers/lakehouse-nat-router",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "data-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "lakehouse-nat-router",
+      "parent_uri": "//compute.googleapis.com/projects/data-lakehouse-prod/global/networks/lakehouse-vpc",
+      "attributes": {
+        "bgp_asn": 64520,
+        "nat_count": 1,
+        "vpc": "//compute.googleapis.com/projects/data-lakehouse-prod/global/networks/lakehouse-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/data-lakehouse-prod/regions/europe-west1/subnetworks/dataflow-workers-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "data-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "dataflow-workers-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/data-lakehouse-prod/global/networks/lakehouse-vpc",
+      "attributes": {
+        "cidr": "10.70.0.0/20",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/data-lakehouse-prod/global/networks/lakehouse-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ml-serving-prod/global/networks/ml-serving-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "ml-serving-prod",
+      "location": "global",
+      "display_name": "ml-serving-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ml-serving-prod/regions/europe-west1/subnetworks/ml-endpoint-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "ml-serving-prod",
+      "location": "europe-west1",
+      "display_name": "ml-endpoint-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/ml-serving-prod/global/networks/ml-serving-vpc",
+      "attributes": {
+        "cidr": "10.71.0.0/22",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/ml-serving-prod/global/networks/ml-serving-vpc"
+      }
+    },
+    {
+      "uri": "//dataflow.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/jobs/2026-11-26-cdc-lakehouse-stream",
+      "asset_type": "dataflow.googleapis.com/Job",
+      "project_id": "data-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "cdc-lakehouse-stream",
+      "parent_uri": "//compute.googleapis.com/projects/data-lakehouse-prod/regions/europe-west1/subnetworks/dataflow-workers-subnet",
+      "attributes": {
+        "job_type": "JOB_TYPE_STREAMING",
+        "service_account": "dataflow-etl-sa@data-lakehouse-prod.iam.gserviceaccount.com",
+        "state": "JOB_STATE_RUNNING",
+        "subnet": "//compute.googleapis.com/projects/data-lakehouse-prod/regions/europe-west1/subnetworks/dataflow-workers-subnet",
+        "vpc": "//compute.googleapis.com/projects/data-lakehouse-prod/global/networks/lakehouse-vpc"
+      }
+    },
+    {
+      "uri": "//datastream.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/streams/inventory-cdc-stream",
+      "asset_type": "datastream.googleapis.com/Stream",
+      "project_id": "data-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "inventory-cdc-stream",
+      "attributes": {
+        "state": "RUNNING"
+      }
+    },
+    {
+      "uri": "//datastream.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/streams/orders-cdc-stream",
+      "asset_type": "datastream.googleapis.com/Stream",
+      "project_id": "data-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "orders-cdc-stream",
+      "attributes": {
+        "state": "RUNNING"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/data-lakehouse-prod/serviceAccounts/bigquery-elt-sa@data-lakehouse-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "data-lakehouse-prod",
+      "display_name": "bigquery-elt-sa@data-lakehouse-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "bigquery-elt-sa@data-lakehouse-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/data-lakehouse-prod/serviceAccounts/dataflow-etl-sa@data-lakehouse-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "data-lakehouse-prod",
+      "display_name": "dataflow-etl-sa@data-lakehouse-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "dataflow-etl-sa@data-lakehouse-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/data-lakehouse-prod/serviceAccounts/datastream-cdc-sa@data-lakehouse-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "data-lakehouse-prod",
+      "display_name": "datastream-cdc-sa@data-lakehouse-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "datastream-cdc-sa@data-lakehouse-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/ml-serving-prod/serviceAccounts/vertex-serving-sa@ml-serving-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "ml-serving-prod",
+      "display_name": "vertex-serving-sa@ml-serving-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "vertex-serving-sa@ml-serving-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/data-lakehouse-prod/sinks/lakehouse-lineage-sink",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "data-lakehouse-prod",
+      "display_name": "lakehouse-lineage-sink"
+    },
+    {
+      "uri": "//monitoring.googleapis.com/projects/ml-serving-prod/alertPolicies/9045678904",
+      "asset_type": "monitoring.googleapis.com/AlertPolicy",
+      "project_id": "ml-serving-prod",
+      "display_name": "vertex-latency-slo-alert",
+      "attributes": {
+        "enabled": true
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/data-lakehouse-prod/subscriptions/dataflow-cdc-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "data-lakehouse-prod",
+      "location": "global",
+      "display_name": "dataflow-cdc-sub",
+      "attributes": {
+        "ack_deadline_seconds": 60
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/data-lakehouse-prod/topics/cdc-change-events",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "data-lakehouse-prod",
+      "location": "global",
+      "display_name": "cdc-change-events",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lake-data-cmek"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ml-serving-prod/locations/europe-west1/services/ml-inference-gateway",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ml-serving-prod",
+      "location": "europe-west1",
+      "display_name": "ml-inference-gateway",
+      "parent_uri": "//compute.googleapis.com/projects/ml-serving-prod/regions/europe-west1/subnetworks/ml-endpoint-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ml-serving-prod/locations/europe-west1/keyRings/ml-keyring/cryptoKeys/ml-model-cmek",
+        "service_account": "vertex-serving-sa@ml-serving-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ml-serving-prod/regions/europe-west1/subnetworks/ml-endpoint-subnet",
+        "url": "https://ml-inference-gateway-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ml-serving-prod/global/networks/ml-serving-vpc"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/data-lakehouse-prod/secrets/cdc-replication-user",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "data-lakehouse-prod",
+      "display_name": "cdc-replication-user",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lake-data-cmek",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/ml-serving-prod/secrets/ml-feature-api-token",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "ml-serving-prod",
+      "display_name": "ml-feature-api-token",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ml-serving-prod/locations/europe-west1/keyRings/ml-keyring/cryptoKeys/ml-model-cmek",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//sqladmin.googleapis.com/projects/data-lakehouse-prod/instances/oltp-orders-sql",
+      "asset_type": "sqladmin.googleapis.com/Instance",
+      "project_id": "data-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "oltp-orders-sql",
+      "parent_uri": "//compute.googleapis.com/projects/data-lakehouse-prod/global/networks/lakehouse-vpc",
+      "attributes": {
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lake-data-cmek",
+        "private_ip": "10.70.16.5",
+        "psa_tenant_project": "p400700abcdef12-tp",
+        "tier": "db-custom-4-15360",
+        "vpc": "//compute.googleapis.com/projects/data-lakehouse-prod/global/networks/lakehouse-vpc"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/lakehouse-cdc-landing",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "data-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "lakehouse-cdc-landing",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lake-data-cmek",
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "89d1cc22356def3d",
+      "from_uri": "//aiplatform.googleapis.com/projects/ml-serving-prod/locations/europe-west1/endpoints/churn-predictor-v3",
+      "to_uri": "//cloudkms.googleapis.com/projects/ml-serving-prod/locations/europe-west1/keyRings/ml-keyring/cryptoKeys/ml-model-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "f2161dcdf4545283",
+      "from_uri": "//alloydb.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/clusters/oltp-inventory-alloydb",
+      "to_uri": "//cloudkms.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lake-data-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "014a98aa73b49469",
+      "from_uri": "//alloydb.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/clusters/oltp-inventory-alloydb",
+      "to_uri": "//datastream.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/streams/inventory-cdc-stream",
+      "kind": "CONFIG_REF",
+      "detail": "datastream.cdc:10.70.20.10"
+    },
+    {
+      "id": "86132f93059cc1dc",
+      "from_uri": "//bigquery.googleapis.com/projects/data-lakehouse-prod/datasets/curated_dw",
+      "to_uri": "//bigquery.googleapis.com/projects/ml-serving-prod/datasets/ml_features",
+      "kind": "BQ_LINEAGE",
+      "detail": "sql_elt"
+    },
+    {
+      "id": "a2f8ca32e2208ad0",
+      "from_uri": "//bigquery.googleapis.com/projects/data-lakehouse-prod/datasets/raw_cdc",
+      "to_uri": "//bigquery.googleapis.com/projects/data-lakehouse-prod/datasets/curated_dw",
+      "kind": "BQ_LINEAGE",
+      "detail": "sql_elt"
+    },
+    {
+      "id": "bd9c49c9e837f861",
+      "from_uri": "//bigquery.googleapis.com/projects/data-lakehouse-prod/datasets/raw_cdc",
+      "to_uri": "//cloudkms.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lake-data-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "59dde103bcf5c013",
+      "from_uri": "//bigquery.googleapis.com/projects/ml-serving-prod/datasets/ml_features",
+      "to_uri": "//aiplatform.googleapis.com/projects/ml-serving-prod/locations/europe-west1/endpoints/churn-predictor-v3",
+      "kind": "CONFIG_REF",
+      "detail": "training_export"
+    },
+    {
+      "id": "c3039eae775c5c28",
+      "from_uri": "//bigquery.googleapis.com/projects/ml-serving-prod/datasets/ml_features",
+      "to_uri": "//aiplatform.googleapis.com/projects/ml-serving-prod/locations/europe-west1/featureOnlineStores/realtime-customer-fos",
+      "kind": "CONFIG_REF",
+      "detail": "feature_sync"
+    },
+    {
+      "id": "30072e0192a4d3d7",
+      "from_uri": "//bigquery.googleapis.com/projects/ml-serving-prod/datasets/ml_features",
+      "to_uri": "//cloudkms.googleapis.com/projects/ml-serving-prod/locations/europe-west1/keyRings/ml-keyring/cryptoKeys/ml-model-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "f4928c20e89dd571",
+      "from_uri": "//bigqueryconnection.googleapis.com/projects/data-lakehouse-prod/locations/eu/connections/alloydb-fed-conn",
+      "to_uri": "//alloydb.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/clusters/oltp-inventory-alloydb",
+      "kind": "CONFIG_REF",
+      "detail": "cloud_sql_fed"
+    },
+    {
+      "id": "36c641be39750d91",
+      "from_uri": "//bigquerydatatransfer.googleapis.com/projects/ml-serving-prod/locations/eu/transferConfigs/hourly-feature-sync",
+      "to_uri": "//bigquery.googleapis.com/projects/ml-serving-prod/datasets/ml_features",
+      "kind": "CONFIG_REF",
+      "detail": "scheduled_query"
+    },
+    {
+      "id": "f0a61495ee935fdb",
+      "from_uri": "//compute.googleapis.com/projects/data-lakehouse-prod/global/networks/lakehouse-vpc",
+      "to_uri": "//alloydb.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/clusters/oltp-inventory-alloydb",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com (p400700abcdef12-tp)"
+    },
+    {
+      "id": "4d84a41997b097f3",
+      "from_uri": "//compute.googleapis.com/projects/data-lakehouse-prod/global/networks/lakehouse-vpc",
+      "to_uri": "//compute.googleapis.com/projects/ml-serving-prod/global/networks/ml-serving-vpc",
+      "kind": "VPC_PEERING",
+      "detail": "lakehouse-ml-peering"
+    },
+    {
+      "id": "6f3c0fa67981de8a",
+      "from_uri": "//compute.googleapis.com/projects/data-lakehouse-prod/global/networks/lakehouse-vpc",
+      "to_uri": "//sqladmin.googleapis.com/projects/data-lakehouse-prod/instances/oltp-orders-sql",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com (p400700abcdef12-tp)"
+    },
+    {
+      "id": "fdeccc04591b9235",
+      "from_uri": "//dataflow.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/jobs/2026-11-26-cdc-lakehouse-stream",
+      "to_uri": "//bigquery.googleapis.com/projects/data-lakehouse-prod/datasets/raw_cdc",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "e4e7f64673cf84b9",
+      "from_uri": "//dataflow.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/jobs/2026-11-26-cdc-lakehouse-stream",
+      "to_uri": "//iam.googleapis.com/projects/data-lakehouse-prod/serviceAccounts/dataflow-etl-sa@data-lakehouse-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "ce80d74370cdc8b2",
+      "from_uri": "//dataflow.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/jobs/2026-11-26-cdc-lakehouse-stream",
+      "to_uri": "//storage.googleapis.com/lakehouse-cdc-landing",
+      "kind": "CONFIG_REF",
+      "detail": "gs://lakehouse-cdc-landing"
+    },
+    {
+      "id": "182db8e70da4c420",
+      "from_uri": "//datastream.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/streams/inventory-cdc-stream",
+      "to_uri": "//bigquery.googleapis.com/projects/data-lakehouse-prod/datasets/raw_cdc",
+      "kind": "CONFIG_REF",
+      "detail": "datastream.bigquery"
+    },
+    {
+      "id": "412691808733b019",
+      "from_uri": "//datastream.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/streams/orders-cdc-stream",
+      "to_uri": "//iam.googleapis.com/projects/data-lakehouse-prod/serviceAccounts/datastream-cdc-sa@data-lakehouse-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "44a47457e1085a95",
+      "from_uri": "//datastream.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/streams/orders-cdc-stream",
+      "to_uri": "//secretmanager.googleapis.com/projects/data-lakehouse-prod/secrets/cdc-replication-user",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "ad4891c7ae278ab4",
+      "from_uri": "//datastream.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/streams/orders-cdc-stream",
+      "to_uri": "//storage.googleapis.com/lakehouse-cdc-landing",
+      "kind": "CONFIG_REF",
+      "detail": "datastream.gcs"
+    },
+    {
+      "id": "9677356b6d3daf67",
+      "from_uri": "//iam.googleapis.com/projects/data-lakehouse-prod/serviceAccounts/bigquery-elt-sa@data-lakehouse-prod.iam.gserviceaccount.com",
+      "to_uri": "//bigquery.googleapis.com/projects/data-lakehouse-prod/datasets/curated_dw",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/bigquery.dataEditor"
+    },
+    {
+      "id": "2a694ba6e0186c52",
+      "from_uri": "//iam.googleapis.com/projects/data-lakehouse-prod/serviceAccounts/dataflow-etl-sa@data-lakehouse-prod.iam.gserviceaccount.com",
+      "to_uri": "//bigquery.googleapis.com/projects/data-lakehouse-prod/datasets/raw_cdc",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/bigquery.dataEditor"
+    },
+    {
+      "id": "a422c3b73b02f1d0",
+      "from_uri": "//iam.googleapis.com/projects/data-lakehouse-prod/serviceAccounts/dataflow-etl-sa@data-lakehouse-prod.iam.gserviceaccount.com",
+      "to_uri": "//storage.googleapis.com/lakehouse-cdc-landing",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/storage.objectViewer"
+    },
+    {
+      "id": "164c559b1797d37c",
+      "from_uri": "//iam.googleapis.com/projects/data-lakehouse-prod/serviceAccounts/datastream-cdc-sa@data-lakehouse-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/data-lakehouse-prod/secrets/cdc-replication-user",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "036c6407cb3f71fa",
+      "from_uri": "//iam.googleapis.com/projects/ml-serving-prod/serviceAccounts/vertex-serving-sa@ml-serving-prod.iam.gserviceaccount.com",
+      "to_uri": "//aiplatform.googleapis.com/projects/ml-serving-prod/locations/europe-west1/endpoints/churn-predictor-v3",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/aiplatform.user"
+    },
+    {
+      "id": "28db9887238ab7f6",
+      "from_uri": "//iam.googleapis.com/projects/ml-serving-prod/serviceAccounts/vertex-serving-sa@ml-serving-prod.iam.gserviceaccount.com",
+      "to_uri": "//aiplatform.googleapis.com/projects/ml-serving-prod/locations/europe-west1/featureOnlineStores/realtime-customer-fos",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/aiplatform.featurestoreUser"
+    },
+    {
+      "id": "b3b34bf63ff4800e",
+      "from_uri": "//pubsub.googleapis.com/projects/data-lakehouse-prod/subscriptions/dataflow-cdc-sub",
+      "to_uri": "//dataflow.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/jobs/2026-11-26-cdc-lakehouse-stream",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.pull"
+    },
+    {
+      "id": "b2f1d56dcfa937a8",
+      "from_uri": "//pubsub.googleapis.com/projects/data-lakehouse-prod/topics/cdc-change-events",
+      "to_uri": "//pubsub.googleapis.com/projects/data-lakehouse-prod/subscriptions/dataflow-cdc-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "9c5d304a8ba13d61",
+      "from_uri": "//run.googleapis.com/projects/ml-serving-prod/locations/europe-west1/services/ml-inference-gateway",
+      "to_uri": "//aiplatform.googleapis.com/projects/ml-serving-prod/locations/europe-west1/endpoints/churn-predictor-v3",
+      "kind": "CONFIG_REF",
+      "detail": "predict"
+    },
+    {
+      "id": "f0dd1bf7d0a8360f",
+      "from_uri": "//run.googleapis.com/projects/ml-serving-prod/locations/europe-west1/services/ml-inference-gateway",
+      "to_uri": "//aiplatform.googleapis.com/projects/ml-serving-prod/locations/europe-west1/featureOnlineStores/realtime-customer-fos",
+      "kind": "CONFIG_REF",
+      "detail": "feature_lookup"
+    },
+    {
+      "id": "fd52ed85af3b1de2",
+      "from_uri": "//run.googleapis.com/projects/ml-serving-prod/locations/europe-west1/services/ml-inference-gateway",
+      "to_uri": "//aiplatform.googleapis.com/projects/ml-serving-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "kind": "MONITORING_TRAFFIC",
+      "detail": "invocations:18420",
+      "heuristic": true
+    },
+    {
+      "id": "d5d8fe1a4a7a1d0f",
+      "from_uri": "//run.googleapis.com/projects/ml-serving-prod/locations/europe-west1/services/ml-inference-gateway",
+      "to_uri": "//iam.googleapis.com/projects/ml-serving-prod/serviceAccounts/vertex-serving-sa@ml-serving-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "49387aedc195abe9",
+      "from_uri": "//run.googleapis.com/projects/ml-serving-prod/locations/europe-west1/services/ml-inference-gateway",
+      "to_uri": "//secretmanager.googleapis.com/projects/ml-serving-prod/secrets/ml-feature-api-token",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "200127c7b0119ab8",
+      "from_uri": "//sqladmin.googleapis.com/projects/data-lakehouse-prod/instances/oltp-orders-sql",
+      "to_uri": "//cloudkms.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lake-data-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "9b7d92e459d9cd2f",
+      "from_uri": "//sqladmin.googleapis.com/projects/data-lakehouse-prod/instances/oltp-orders-sql",
+      "to_uri": "//datastream.googleapis.com/projects/data-lakehouse-prod/locations/europe-west1/streams/orders-cdc-stream",
+      "kind": "CONFIG_REF",
+      "detail": "datastream.cdc:10.70.16.5"
+    },
+    {
+      "id": "e7f55c8be05bec5b",
+      "from_uri": "//storage.googleapis.com/lakehouse-cdc-landing",
+      "to_uri": "//pubsub.googleapis.com/projects/data-lakehouse-prod/topics/cdc-change-events",
+      "kind": "CONFIG_REF",
+      "detail": "gcs.notification"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "aiplatform.googleapis.com/FeatureView": 2,
+    "aiplatform.googleapis.com/Model": 3,
+    "alloydb.googleapis.com/Instance": 2,
+    "bigquery.googleapis.com/Model": 2,
+    "bigquery.googleapis.com/Routine": 3,
+    "bigquery.googleapis.com/Table": 27,
+    "compute.googleapis.com/Firewall": 14,
+    "compute.googleapis.com/Route": 10,
+    "datastream.googleapis.com/ConnectionProfile": 4,
+    "datastream.googleapis.com/PrivateConnection": 1,
+    "run.googleapis.com/Revision": 6
+  },
+  "coverage_ledger": [
+    {
+      "scope": "projects/data-lakehouse-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/data-lakehouse-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/data-lakehouse-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/data-lakehouse-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/data-lakehouse-prod",
+      "source": "monitoring",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ml-serving-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ml-serving-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ml-serving-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ml-serving-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ml-serving-prod",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}

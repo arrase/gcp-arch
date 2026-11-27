@@ -1,0 +1,2602 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-26T00:00:00Z",
+  "scopes": [
+    "folders/444050"
+  ],
+  "hierarchy": {
+    "organizations": [
+      {
+        "org_id": "900500001",
+        "display_name": "Enterprise Scale Org"
+      }
+    ],
+    "folders": [
+      {
+        "folder_id": "444050",
+        "display_name": "ent-core-prod",
+        "parent": "organizations/900500001"
+      }
+    ],
+    "projects": [
+      {
+        "project_id": "ent-core-fulfillment-runtime-prod",
+        "project_number": "5009001003",
+        "display_name": "Ent Fulfillment Runtime",
+        "parent": "folders/444050",
+        "shared_vpc_host_project": "ent-core-shared-net-prod"
+      },
+      {
+        "project_id": "ent-core-payments-runtime-prod",
+        "project_number": "5009001002",
+        "display_name": "Ent Payments Runtime",
+        "parent": "folders/444050",
+        "shared_vpc_host_project": "ent-core-shared-net-prod"
+      },
+      {
+        "project_id": "ent-core-shared-net-prod",
+        "project_number": "5009001001",
+        "display_name": "Ent Core Shared Net",
+        "parent": "folders/444050"
+      },
+      {
+        "project_id": "p500900abcdef12-tp",
+        "display_name": "Google PSA Tenant",
+        "is_psa_tenant": true
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "asset_type": "alloydb.googleapis.com/Cluster",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-inventory-alloydb-01",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+      "attributes": {
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+        "private_ip": "10.90.68.10",
+        "psa_tenant_project": "p500900abcdef12-tp",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01"
+      }
+    },
+    {
+      "uri": "//artifactregistry.googleapis.com/projects/ent-core-shared-net-prod/locations/europe-west1/repositories/enterprise-core-platform-docker-images",
+      "asset_type": "artifactregistry.googleapis.com/Repository",
+      "project_id": "ent-core-shared-net-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-core-platform-docker-images",
+      "attributes": {
+        "format": "DOCKER",
+        "mode": "STANDARD_REPOSITORY"
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/ent-core-fulfillment-runtime-prod/datasets/enterprise_commerce_executive_datamart",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "EU",
+      "display_name": "enterprise_commerce_executive_datamart",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+        "location": "EU",
+        "table_count": 18
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/ent-core-payments-runtime-prod/datasets/enterprise_commerce_raw_events_warehouse",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "EU",
+      "display_name": "enterprise_commerce_raw_events_warehouse",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-archive-cmek-key",
+        "location": "EU",
+        "table_count": 32
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-primary-cmek-key",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-archive-cmek-key",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-archive-cmek-key",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-primary-cmek-key",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/ent-core-shared-net-prod/locations/europe-west1/keyRings/ent-hub-ring/cryptoKeys/enterprise-shared-bus-pubsub-cmek-key",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "ent-core-shared-net-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-shared-bus-pubsub-cmek-key",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ent-core-fulfillment-runtime-prod/global/forwardingRules/enterprise-fulfillment-external-https-gateway-fr",
+      "asset_type": "compute.googleapis.com/GlobalForwardingRule",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "global",
+      "display_name": "enterprise-fulfillment-external-https-gateway-fr",
+      "attributes": {
+        "ip_address": "34.120.90.20",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "EXTERNAL_MANAGED",
+        "port_range": "443-443",
+        "tls": true
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ent-core-payments-runtime-prod/global/forwardingRules/enterprise-payments-external-https-gateway-fr-01",
+      "asset_type": "compute.googleapis.com/GlobalForwardingRule",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "global",
+      "display_name": "enterprise-payments-external-https-gateway-fr-01",
+      "attributes": {
+        "ip_address": "34.120.90.10",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "EXTERNAL_MANAGED",
+        "port_range": "443-443",
+        "tls": true
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "ent-core-shared-net-prod",
+      "location": "global",
+      "display_name": "enterprise-core-shared-services-hub-vpc-production-01",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "GLOBAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/routers/enterprise-fulfillment-cloud-nat-egress-router-ew1",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "ent-core-shared-net-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-cloud-nat-egress-router-ew1",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+      "attributes": {
+        "bgp_asn": 65201,
+        "nat_count": 2,
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/routers/enterprise-payments-cloud-nat-egress-router-ew1",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "ent-core-shared-net-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-cloud-nat-egress-router-ew1",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+      "attributes": {
+        "bgp_asn": 65200,
+        "nat_count": 2,
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "ent-core-shared-net-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-workloads-private-subnet-ew1",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+      "attributes": {
+        "cidr": "10.90.16.0/20",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "ent-core-shared-net-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-microservices-private-subnet-ew1",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+      "attributes": {
+        "cidr": "10.90.0.0/20",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01",
+      "asset_type": "container.googleapis.com/Cluster",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-gke-autopilot-cluster-01",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+      "attributes": {
+        "mode": "Autopilot",
+        "private_nodes": true,
+        "release_channel": "REGULAR",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "workload_pool": "ent-core-fulfillment-runtime-prod.svc.id.goog"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-asn-edi-translator-daemon-worker",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-asn-edi-translator-daemon-worker",
+      "parent_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01",
+      "attributes": {
+        "namespace": "fulfillment",
+        "replicas": 2,
+        "service_account": "ent-ful-k8s-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-crossdock-consolidation-optimizer",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-crossdock-consolidation-optimizer",
+      "parent_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01",
+      "attributes": {
+        "namespace": "fulfillment",
+        "replicas": 2,
+        "service_account": "ent-ful-k8s-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-cycle-count-discrepancy-auditor",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-cycle-count-discrepancy-auditor",
+      "parent_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01",
+      "attributes": {
+        "namespace": "fulfillment",
+        "replicas": 2,
+        "service_account": "ent-ful-k8s-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-dock-door-scheduling-coordinator",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-dock-door-scheduling-coordinator",
+      "parent_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01",
+      "attributes": {
+        "namespace": "fulfillment",
+        "replicas": 2,
+        "service_account": "ent-ful-k8s-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-packout-station-label-printer-svc",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-packout-station-label-printer-svc",
+      "parent_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01",
+      "attributes": {
+        "namespace": "fulfillment",
+        "replicas": 2,
+        "service_account": "ent-ful-k8s-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-wave-picking-scheduler-deployment",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-wave-picking-scheduler-deployment",
+      "parent_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01",
+      "attributes": {
+        "namespace": "fulfillment",
+        "replicas": 2,
+        "service_account": "ent-ful-k8s-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/networking.k8s.io/ingresses/enterprise-fulfillment-internal-gateway-ingress",
+      "asset_type": "networking.k8s.io/Ingress",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-internal-gateway-ingress",
+      "parent_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01",
+      "attributes": {
+        "ingress_class": "gce-internal",
+        "namespace": "fulfillment"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/services/enterprise-fulfillment-router-clusterip-service",
+      "asset_type": "k8s.io/Service",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-router-clusterip-service",
+      "parent_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01",
+      "attributes": {
+        "namespace": "fulfillment",
+        "ports": [
+          8080
+        ],
+        "service_type": "ClusterIP"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/services/enterprise-fulfillment-workers-clusterip-svc",
+      "asset_type": "k8s.io/Service",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-workers-clusterip-svc",
+      "parent_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01",
+      "attributes": {
+        "namespace": "fulfillment",
+        "ports": [
+          9090
+        ],
+        "service_type": "ClusterIP"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-core-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "display_name": "ent-ful-core-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "ent-ful-core-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-k8s-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "display_name": "ent-ful-k8s-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "ent-ful-k8s-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-ship-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "display_name": "ent-ful-ship-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "ent-ful-ship-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-core-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "ent-core-payments-runtime-prod",
+      "display_name": "ent-pay-core-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "ent-pay-core-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-ledger-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "ent-core-payments-runtime-prod",
+      "display_name": "ent-pay-ledger-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "ent-pay-ledger-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-risk-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "ent-core-payments-runtime-prod",
+      "display_name": "ent-pay-risk-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "ent-pay-risk-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/ent-core-fulfillment-runtime-prod/sinks/enterprise-fulfillment-audit-telemetry-sink",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "display_name": "enterprise-fulfillment-audit-telemetry-sink"
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/ent-core-payments-runtime-prod/sinks/enterprise-payments-audit-telemetry-log-sink",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "ent-core-payments-runtime-prod",
+      "display_name": "enterprise-payments-audit-telemetry-log-sink"
+    },
+    {
+      "uri": "//monitoring.googleapis.com/projects/ent-core-payments-runtime-prod/alertPolicies/9051000001",
+      "asset_type": "monitoring.googleapis.com/AlertPolicy",
+      "project_id": "ent-core-payments-runtime-prod",
+      "display_name": "enterprise-payments-high-fanin-saturation-alert",
+      "attributes": {
+        "enabled": true
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/ent-core-fulfillment-runtime-prod/subscriptions/enterprise-fulfillment-picking-consumer-sub-03",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "global",
+      "display_name": "enterprise-fulfillment-picking-consumer-sub-03",
+      "attributes": {
+        "ack_deadline_seconds": 60
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/ent-core-fulfillment-runtime-prod/subscriptions/enterprise-fulfillment-shipping-consumer-sub-4",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "global",
+      "display_name": "enterprise-fulfillment-shipping-consumer-sub-4",
+      "attributes": {
+        "ack_deadline_seconds": 60
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/subscriptions/enterprise-payments-reconcile-consumer-sub-02",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "global",
+      "display_name": "enterprise-payments-reconcile-consumer-sub-02",
+      "attributes": {
+        "ack_deadline_seconds": 60
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/subscriptions/enterprise-payments-settlement-consumer-sub-01",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "global",
+      "display_name": "enterprise-payments-settlement-consumer-sub-01",
+      "attributes": {
+        "ack_deadline_seconds": 60
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "global",
+      "display_name": "enterprise-domain-events-canonical-bus-v2",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-shared-net-prod/locations/europe-west1/keyRings/ent-hub-ring/cryptoKeys/enterprise-shared-bus-pubsub-cmek-key"
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-dead-letter-queue",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "global",
+      "display_name": "enterprise-domain-events-dead-letter-queue",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-shared-net-prod/locations/europe-west1/keyRings/ent-hub-ring/cryptoKeys/enterprise-shared-bus-pubsub-cmek-key"
+      }
+    },
+    {
+      "uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "asset_type": "redis.googleapis.com/Cluster",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-shared-idempotency-redis-cluster",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+      "attributes": {
+        "node_type": "REDIS_HIGHMEM_MEDIUM",
+        "shard_count": 6,
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-backorder-substitution-resolver-01",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-backorder-substitution-resolver-01",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+        "service_account": "ent-ful-ship-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+        "url": "https://enterprise-fulfillment-backorder-substitution-resolver-01-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-carrier-rate-shopping-calculator",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-carrier-rate-shopping-calculator",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+        "service_account": "ent-ful-core-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+        "url": "https://enterprise-fulfillment-carrier-rate-shopping-calculator-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-coldchain-sla-monitoring-adapter",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-coldchain-sla-monitoring-adapter",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+        "service_account": "ent-ful-ship-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+        "url": "https://enterprise-fulfillment-coldchain-sla-monitoring-adapter-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-customs-manifest-declaration-svc",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-customs-manifest-declaration-svc",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+        "service_account": "ent-ful-core-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+        "url": "https://enterprise-fulfillment-customs-manifest-declaration-svc-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-order-allocation-routing-engine",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-order-allocation-routing-engine",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+        "service_account": "ent-ful-core-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+        "url": "https://enterprise-fulfillment-order-allocation-routing-engine-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-parcel-tracking-telemetry-ingest",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-parcel-tracking-telemetry-ingest",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+        "service_account": "ent-ful-ship-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+        "url": "https://enterprise-fulfillment-parcel-tracking-telemetry-ingest-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-returns-merchandise-auth-service",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-returns-merchandise-auth-service",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+        "service_account": "ent-ful-core-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+        "url": "https://enterprise-fulfillment-returns-merchandise-auth-service-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-warehouse-inventory-reconciler-v2",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-warehouse-inventory-reconciler-v2",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+        "service_account": "ent-ful-ship-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+        "url": "https://enterprise-fulfillment-warehouse-inventory-reconciler-v2-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-checkout-payment-authorization-orchestrator-v2",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-checkout-payment-authorization-orchestrator-v2",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+        "service_account": "ent-pay-core-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+        "url": "https://enterprise-checkout-payment-authorization-orchestrator-v2-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-card-tokenization-vault-gateway-svc",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-card-tokenization-vault-gateway-svc",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+        "service_account": "ent-pay-risk-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+        "url": "https://enterprise-payments-card-tokenization-vault-gateway-svc-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-chargeback-dispute-workflow-handler",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-chargeback-dispute-workflow-handler",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+        "service_account": "ent-pay-risk-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+        "url": "https://enterprise-payments-chargeback-dispute-workflow-handler-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-fx-currency-conversion-quoting-engine",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-fx-currency-conversion-quoting-engine",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+        "service_account": "ent-pay-ledger-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+        "url": "https://enterprise-payments-fx-currency-conversion-quoting-engine-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-ledger-double-entry-posting-worker-01",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-ledger-double-entry-posting-worker-01",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+        "service_account": "ent-pay-risk-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+        "url": "https://enterprise-payments-ledger-double-entry-posting-worker-01-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-merchant-payout-disbursement-service",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-merchant-payout-disbursement-service",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+        "service_account": "ent-pay-core-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+        "url": "https://enterprise-payments-merchant-payout-disbursement-service-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-real-time-fraud-velocity-evaluator",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-real-time-fraud-velocity-evaluator",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+        "service_account": "ent-pay-ledger-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+        "url": "https://enterprise-payments-real-time-fraud-velocity-evaluator-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-sepa-instant-clearing-adapter-service",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-sepa-instant-clearing-adapter-service",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+        "service_account": "ent-pay-core-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+        "url": "https://enterprise-payments-sepa-instant-clearing-adapter-service-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-three-ds-challenge-verification-api",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-three-ds-challenge-verification-api",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+        "service_account": "ent-pay-ledger-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+        "url": "https://enterprise-payments-three-ds-challenge-verification-api-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-webhook-signature-dispatcher-service",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-webhook-signature-dispatcher-service",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+        "service_account": "ent-pay-core-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+        "url": "https://enterprise-payments-webhook-signature-dispatcher-service-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/ent-core-fulfillment-runtime-prod/secrets/enterprise-fulfillment-carrier-webhook-secret",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "display_name": "enterprise-fulfillment-carrier-webhook-secret",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/ent-core-fulfillment-runtime-prod/secrets/enterprise-fulfillment-erp-sync-oauth-secret",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "display_name": "enterprise-fulfillment-erp-sync-oauth-secret",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/ent-core-payments-runtime-prod/secrets/enterprise-payments-fraud-model-api-token",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "ent-core-payments-runtime-prod",
+      "display_name": "enterprise-payments-fraud-model-api-token",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/ent-core-payments-runtime-prod/secrets/enterprise-payments-ledger-db-credentials",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "ent-core-payments-runtime-prod",
+      "display_name": "enterprise-payments-ledger-db-credentials",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/ent-core-payments-runtime-prod/secrets/enterprise-payments-psp-gateway-api-secret",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "ent-core-payments-runtime-prod",
+      "display_name": "enterprise-payments-psp-gateway-api-secret",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "asset_type": "sqladmin.googleapis.com/Instance",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-ledger-postgres-primary",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+      "attributes": {
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+        "private_ip": "10.90.64.5",
+        "psa_tenant_project": "p500900abcdef12-tp",
+        "tier": "db-custom-16-65536",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/enterprise-fulfillment-shipping-labels-artifacts-eu",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-shipping-labels-artifacts-eu",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/enterprise-payments-settlement-statements-archive-eu",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-settlement-statements-archive-eu",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-archive-cmek-key",
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/enterprise-shared-compliance-immutable-audit-vault",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "ent-core-shared-net-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-shared-compliance-immutable-audit-vault",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ent-core-shared-net-prod/locations/europe-west1/keyRings/ent-hub-ring/cryptoKeys/enterprise-shared-bus-pubsub-cmek-key",
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    },
+    {
+      "uri": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main",
+      "asset_type": "vpcaccess.googleapis.com/Connector",
+      "project_id": "ent-core-fulfillment-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-fulfillment-vpc-connector-ew1-main",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+      "attributes": {
+        "cidr": "10.90.32.16/28",
+        "machine_type": "e2-standard-4",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-fulfillment-workloads-private-subnet-ew1",
+        "subnet_project": "ent-core-shared-net-prod",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01"
+      }
+    },
+    {
+      "uri": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary",
+      "asset_type": "vpcaccess.googleapis.com/Connector",
+      "project_id": "ent-core-payments-runtime-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-payments-vpc-connector-ew1-primary",
+      "parent_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+      "attributes": {
+        "cidr": "10.90.32.0/28",
+        "machine_type": "e2-standard-4",
+        "subnet": "//compute.googleapis.com/projects/ent-core-shared-net-prod/regions/europe-west1/subnetworks/enterprise-payments-microservices-private-subnet-ew1",
+        "subnet_project": "ent-core-shared-net-prod",
+        "vpc": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "580f1ed782cb9fa6",
+      "from_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "to_uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "ee0a475966ace6d5",
+      "from_uri": "//bigquery.googleapis.com/projects/ent-core-fulfillment-runtime-prod/datasets/enterprise_commerce_executive_datamart",
+      "to_uri": "//cloudkms.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/keyRings/ent-ful-ring/cryptoKeys/enterprise-fulfillment-primary-cmek-key",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "1c49aa9201db4842",
+      "from_uri": "//bigquery.googleapis.com/projects/ent-core-payments-runtime-prod/datasets/enterprise_commerce_raw_events_warehouse",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-fulfillment-runtime-prod/datasets/enterprise_commerce_executive_datamart",
+      "kind": "BQ_LINEAGE",
+      "detail": "sql_elt"
+    },
+    {
+      "id": "d8f6e2539eaad0bc",
+      "from_uri": "//bigquery.googleapis.com/projects/ent-core-payments-runtime-prod/datasets/enterprise_commerce_raw_events_warehouse",
+      "to_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-archive-cmek-key",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "d882d05281ee7b02",
+      "from_uri": "//compute.googleapis.com/projects/ent-core-fulfillment-runtime-prod/global/forwardingRules/enterprise-fulfillment-external-https-gateway-fr",
+      "to_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-carrier-rate-shopping-calculator",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "0b839c9208de6279",
+      "from_uri": "//compute.googleapis.com/projects/ent-core-fulfillment-runtime-prod/global/forwardingRules/enterprise-fulfillment-external-https-gateway-fr",
+      "to_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-order-allocation-routing-engine",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "c32328842f03d9db",
+      "from_uri": "//compute.googleapis.com/projects/ent-core-fulfillment-runtime-prod/global/forwardingRules/enterprise-fulfillment-external-https-gateway-fr",
+      "to_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-parcel-tracking-telemetry-ingest",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "51e488d8cc4a209b",
+      "from_uri": "//compute.googleapis.com/projects/ent-core-fulfillment-runtime-prod/global/forwardingRules/enterprise-fulfillment-external-https-gateway-fr",
+      "to_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-warehouse-inventory-reconciler-v2",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "2131bb9d78e42ca4",
+      "from_uri": "//compute.googleapis.com/projects/ent-core-payments-runtime-prod/global/forwardingRules/enterprise-payments-external-https-gateway-fr-01",
+      "to_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-checkout-payment-authorization-orchestrator-v2",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "2726da305322acb2",
+      "from_uri": "//compute.googleapis.com/projects/ent-core-payments-runtime-prod/global/forwardingRules/enterprise-payments-external-https-gateway-fr-01",
+      "to_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-card-tokenization-vault-gateway-svc",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "a8c1110942d5ce33",
+      "from_uri": "//compute.googleapis.com/projects/ent-core-payments-runtime-prod/global/forwardingRules/enterprise-payments-external-https-gateway-fr-01",
+      "to_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-chargeback-dispute-workflow-handler",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "e1c3dc8afe9c0a82",
+      "from_uri": "//compute.googleapis.com/projects/ent-core-payments-runtime-prod/global/forwardingRules/enterprise-payments-external-https-gateway-fr-01",
+      "to_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-sepa-instant-clearing-adapter-service",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "998cbafc726744a2",
+      "from_uri": "//compute.googleapis.com/projects/ent-core-payments-runtime-prod/global/forwardingRules/enterprise-payments-external-https-gateway-fr-01",
+      "to_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-three-ds-challenge-verification-api",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "5a7dffad97f6dbfd",
+      "from_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com (p500900abcdef12-tp)"
+    },
+    {
+      "id": "d22c319bc2bd4f3f",
+      "from_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+      "to_uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com (p500900abcdef12-tp)"
+    },
+    {
+      "id": "a1f7b929e5a5f3b1",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-asn-edi-translator-daemon-worker",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.68.10"
+    },
+    {
+      "id": "a6b337f326d63a2b",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-asn-edi-translator-daemon-worker",
+      "to_uri": "//artifactregistry.googleapis.com/projects/ent-core-shared-net-prod/locations/europe-west1/repositories/enterprise-core-platform-docker-images",
+      "kind": "CONFIG_REF",
+      "detail": "container_image"
+    },
+    {
+      "id": "c8b6a525eb2f8a19",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-asn-edi-translator-daemon-worker",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-k8s-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "ksa:fulfillment/enterprise-fulfillme"
+    },
+    {
+      "id": "731319478182c25a",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-asn-edi-translator-daemon-worker",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "dbfda7e9ddfad085",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-asn-edi-translator-daemon-worker",
+      "to_uri": "//storage.googleapis.com/enterprise-shared-compliance-immutable-audit-vault",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-shared-compliance-immutable-audit-vault"
+    },
+    {
+      "id": "d180dff9b50c8e91",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-crossdock-consolidation-optimizer",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.68.10"
+    },
+    {
+      "id": "7e9d0c5dab2dac24",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-crossdock-consolidation-optimizer",
+      "to_uri": "//artifactregistry.googleapis.com/projects/ent-core-shared-net-prod/locations/europe-west1/repositories/enterprise-core-platform-docker-images",
+      "kind": "CONFIG_REF",
+      "detail": "container_image"
+    },
+    {
+      "id": "e47adae8bf2103e8",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-crossdock-consolidation-optimizer",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-k8s-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "ksa:fulfillment/enterprise-fulfillme"
+    },
+    {
+      "id": "e7724e3c5e0d3e89",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-crossdock-consolidation-optimizer",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "6ca50ef8854e7f71",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-crossdock-consolidation-optimizer",
+      "to_uri": "//storage.googleapis.com/enterprise-shared-compliance-immutable-audit-vault",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-shared-compliance-immutable-audit-vault"
+    },
+    {
+      "id": "3a44d12e8c471a7f",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-cycle-count-discrepancy-auditor",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.68.10"
+    },
+    {
+      "id": "0d692edcf3655d34",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-cycle-count-discrepancy-auditor",
+      "to_uri": "//artifactregistry.googleapis.com/projects/ent-core-shared-net-prod/locations/europe-west1/repositories/enterprise-core-platform-docker-images",
+      "kind": "CONFIG_REF",
+      "detail": "container_image"
+    },
+    {
+      "id": "f256fd261000d0b1",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-cycle-count-discrepancy-auditor",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-k8s-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "ksa:fulfillment/enterprise-fulfillme"
+    },
+    {
+      "id": "fd99bb0e43f2590a",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-cycle-count-discrepancy-auditor",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "3c704de0794e02cc",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-cycle-count-discrepancy-auditor",
+      "to_uri": "//storage.googleapis.com/enterprise-shared-compliance-immutable-audit-vault",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-shared-compliance-immutable-audit-vault"
+    },
+    {
+      "id": "0035807ba20489f5",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-dock-door-scheduling-coordinator",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.68.10"
+    },
+    {
+      "id": "e37a8c9a4b5335ce",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-dock-door-scheduling-coordinator",
+      "to_uri": "//artifactregistry.googleapis.com/projects/ent-core-shared-net-prod/locations/europe-west1/repositories/enterprise-core-platform-docker-images",
+      "kind": "CONFIG_REF",
+      "detail": "container_image"
+    },
+    {
+      "id": "465987c2f65820c2",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-dock-door-scheduling-coordinator",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-k8s-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "ksa:fulfillment/enterprise-fulfillme"
+    },
+    {
+      "id": "7a42a0535990e04c",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-dock-door-scheduling-coordinator",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "183de92e2a82961a",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-dock-door-scheduling-coordinator",
+      "to_uri": "//storage.googleapis.com/enterprise-shared-compliance-immutable-audit-vault",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-shared-compliance-immutable-audit-vault"
+    },
+    {
+      "id": "77d240e7426dd34b",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-packout-station-label-printer-svc",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.68.10"
+    },
+    {
+      "id": "f424c7d202cced2b",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-packout-station-label-printer-svc",
+      "to_uri": "//artifactregistry.googleapis.com/projects/ent-core-shared-net-prod/locations/europe-west1/repositories/enterprise-core-platform-docker-images",
+      "kind": "CONFIG_REF",
+      "detail": "container_image"
+    },
+    {
+      "id": "38942ee891bcc1e7",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-packout-station-label-printer-svc",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-k8s-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "ksa:fulfillment/enterprise-fulfillme"
+    },
+    {
+      "id": "b5f1bfc5bc818874",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-packout-station-label-printer-svc",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "3d1dbc232b76097a",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-packout-station-label-printer-svc",
+      "to_uri": "//storage.googleapis.com/enterprise-shared-compliance-immutable-audit-vault",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-shared-compliance-immutable-audit-vault"
+    },
+    {
+      "id": "8bd80680d20cc8b9",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-wave-picking-scheduler-deployment",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.68.10"
+    },
+    {
+      "id": "91be4ed6cbbf284e",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-wave-picking-scheduler-deployment",
+      "to_uri": "//artifactregistry.googleapis.com/projects/ent-core-shared-net-prod/locations/europe-west1/repositories/enterprise-core-platform-docker-images",
+      "kind": "CONFIG_REF",
+      "detail": "container_image"
+    },
+    {
+      "id": "8ed2fb67b4903f47",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-wave-picking-scheduler-deployment",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-k8s-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "ksa:fulfillment/enterprise-fulfillme"
+    },
+    {
+      "id": "d437346ba5aa3b16",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-wave-picking-scheduler-deployment",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "5e431078701c3e3a",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-wave-picking-scheduler-deployment",
+      "to_uri": "//storage.googleapis.com/enterprise-shared-compliance-immutable-audit-vault",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-shared-compliance-immutable-audit-vault"
+    },
+    {
+      "id": "fc9a3a58c5809ed6",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/networking.k8s.io/ingresses/enterprise-fulfillment-internal-gateway-ingress",
+      "to_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/services/enterprise-fulfillment-router-clusterip-service",
+      "kind": "K8S_INGRESS_BACKEND",
+      "detail": "fulfillment.internal/*"
+    },
+    {
+      "id": "e2eb41e2469cf830",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/services/enterprise-fulfillment-router-clusterip-service",
+      "to_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-dock-door-scheduling-coordinator",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "app=enterprise-fulfillment-d"
+    },
+    {
+      "id": "355e84c14c998a3d",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/services/enterprise-fulfillment-router-clusterip-service",
+      "to_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-packout-station-label-printer-svc",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "app=enterprise-fulfillment-p"
+    },
+    {
+      "id": "514690ad46349c24",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/services/enterprise-fulfillment-router-clusterip-service",
+      "to_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-wave-picking-scheduler-deployment",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "app=enterprise-fulfillment-w"
+    },
+    {
+      "id": "483a98f502b1e5a4",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/services/enterprise-fulfillment-workers-clusterip-svc",
+      "to_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-asn-edi-translator-daemon-worker",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "app=enterprise-fulfillment-a"
+    },
+    {
+      "id": "bf6b02e9c224c0c5",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/services/enterprise-fulfillment-workers-clusterip-svc",
+      "to_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-crossdock-consolidation-optimizer",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "app=enterprise-fulfillment-c"
+    },
+    {
+      "id": "72e108b2e14b3a44",
+      "from_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/services/enterprise-fulfillment-workers-clusterip-svc",
+      "to_uri": "//container.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-gke-autopilot-cluster-01/k8s/namespaces/fulfillment/apps/deployments/enterprise-fulfillment-cycle-count-discrepancy-auditor",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "app=enterprise-fulfillment-c"
+    },
+    {
+      "id": "498c88e6c4738719",
+      "from_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-core-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/alloydb.client"
+    },
+    {
+      "id": "6085ef4810edb51f",
+      "from_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-ship-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/alloydb.client"
+    },
+    {
+      "id": "1244097ee4199a34",
+      "from_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-core-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/pubsub.publisher"
+    },
+    {
+      "id": "0cdc3207bb2fd8f8",
+      "from_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-core-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "to_uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudsql.client"
+    },
+    {
+      "id": "67d12ddb42f003b9",
+      "from_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-ledger-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/pubsub.publisher"
+    },
+    {
+      "id": "d00ce3fb03bb5ecb",
+      "from_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-ledger-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "to_uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudsql.client"
+    },
+    {
+      "id": "e973267083ef8d78",
+      "from_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-risk-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/pubsub.publisher"
+    },
+    {
+      "id": "54814366dac22a8e",
+      "from_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-risk-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "to_uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudsql.client"
+    },
+    {
+      "id": "a6e3f898bff324b0",
+      "from_uri": "//pubsub.googleapis.com/projects/ent-core-fulfillment-runtime-prod/subscriptions/enterprise-fulfillment-picking-consumer-sub-03",
+      "to_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-customs-manifest-declaration-svc",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "4a7f4d42231dc647",
+      "from_uri": "//pubsub.googleapis.com/projects/ent-core-fulfillment-runtime-prod/subscriptions/enterprise-fulfillment-picking-consumer-sub-03",
+      "to_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-returns-merchandise-auth-service",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "29963294d7038802",
+      "from_uri": "//pubsub.googleapis.com/projects/ent-core-fulfillment-runtime-prod/subscriptions/enterprise-fulfillment-shipping-consumer-sub-4",
+      "to_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-backorder-substitution-resolver-01",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "16f8a0547d44558f",
+      "from_uri": "//pubsub.googleapis.com/projects/ent-core-fulfillment-runtime-prod/subscriptions/enterprise-fulfillment-shipping-consumer-sub-4",
+      "to_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-coldchain-sla-monitoring-adapter",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "d0c2495824ee2aea",
+      "from_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/subscriptions/enterprise-payments-reconcile-consumer-sub-02",
+      "to_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-fx-currency-conversion-quoting-engine",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "0448d5d25b90ac5e",
+      "from_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/subscriptions/enterprise-payments-reconcile-consumer-sub-02",
+      "to_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-ledger-double-entry-posting-worker-01",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "4ba42623aed16d3b",
+      "from_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/subscriptions/enterprise-payments-reconcile-consumer-sub-02",
+      "to_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-webhook-signature-dispatcher-service",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "4650cf852cf26100",
+      "from_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/subscriptions/enterprise-payments-settlement-consumer-sub-01",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-dead-letter-queue",
+      "kind": "CONFIG_REF",
+      "detail": "dead_letter"
+    },
+    {
+      "id": "e7aa1a3c123a0eb3",
+      "from_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/subscriptions/enterprise-payments-settlement-consumer-sub-01",
+      "to_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-merchant-payout-disbursement-service",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "18b5bc04bc0d97e3",
+      "from_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/subscriptions/enterprise-payments-settlement-consumer-sub-01",
+      "to_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-real-time-fraud-velocity-evaluator",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "957f54d74169c3fd",
+      "from_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "to_uri": "//cloudkms.googleapis.com/projects/ent-core-shared-net-prod/locations/europe-west1/keyRings/ent-hub-ring/cryptoKeys/enterprise-shared-bus-pubsub-cmek-key",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "35e44445d318e029",
+      "from_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-fulfillment-runtime-prod/subscriptions/enterprise-fulfillment-picking-consumer-sub-03",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "e1738335099820e3",
+      "from_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-fulfillment-runtime-prod/subscriptions/enterprise-fulfillment-shipping-consumer-sub-4",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "7ffe483cd92ba315",
+      "from_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/subscriptions/enterprise-payments-reconcile-consumer-sub-02",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "cf264f82354c1ac7",
+      "from_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/subscriptions/enterprise-payments-settlement-consumer-sub-01",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "a407caabf24b917c",
+      "from_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "to_uri": "//compute.googleapis.com/projects/ent-core-shared-net-prod/global/networks/enterprise-core-shared-services-hub-vpc-production-01",
+      "kind": "CONFIG_REF",
+      "detail": "psc_network"
+    },
+    {
+      "id": "2402d292e7f2af76",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-backorder-substitution-resolver-01",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.68.10"
+    },
+    {
+      "id": "6beb6b2da36403af",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-backorder-substitution-resolver-01",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-fulfillment-runtime-prod/datasets/enterprise_commerce_executive_datamart",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.read"
+    },
+    {
+      "id": "6f01152a83d559e2",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-backorder-substitution-resolver-01",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-ship-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "256341773a2c9ecd",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-backorder-substitution-resolver-01",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "0d9586a8ad94d63b",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-backorder-substitution-resolver-01",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "f9d112f7393ee3bf",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-backorder-substitution-resolver-01",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-fulfillment-runtime-prod/secrets/enterprise-fulfillment-erp-sync-oauth-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "054c83a70f6267ca",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-backorder-substitution-resolver-01",
+      "to_uri": "//storage.googleapis.com/enterprise-fulfillment-shipping-labels-artifacts-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-fulfillment-shipping-labels-artifacts-eu"
+    },
+    {
+      "id": "8a92fe6e9ad4bff8",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-backorder-substitution-resolver-01",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "2890edcafd327c2c",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-carrier-rate-shopping-calculator",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.68.10"
+    },
+    {
+      "id": "83fde24fe9481344",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-carrier-rate-shopping-calculator",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-fulfillment-runtime-prod/datasets/enterprise_commerce_executive_datamart",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.read"
+    },
+    {
+      "id": "3152ef4b47f2b323",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-carrier-rate-shopping-calculator",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-core-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "554f59310d4288ff",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-carrier-rate-shopping-calculator",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "8840e90c4fe674cb",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-carrier-rate-shopping-calculator",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "46e9f87eb7086944",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-carrier-rate-shopping-calculator",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-fulfillment-runtime-prod/secrets/enterprise-fulfillment-carrier-webhook-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "925f4522d35ed67e",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-carrier-rate-shopping-calculator",
+      "to_uri": "//storage.googleapis.com/enterprise-fulfillment-shipping-labels-artifacts-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-fulfillment-shipping-labels-artifacts-eu"
+    },
+    {
+      "id": "4c9305fe1896a7c2",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-carrier-rate-shopping-calculator",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "d2d1324c42489893",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-coldchain-sla-monitoring-adapter",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.68.10"
+    },
+    {
+      "id": "b5f75c1010d07c6c",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-coldchain-sla-monitoring-adapter",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-fulfillment-runtime-prod/datasets/enterprise_commerce_executive_datamart",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.read"
+    },
+    {
+      "id": "a4ec394e848a8e01",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-coldchain-sla-monitoring-adapter",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-ship-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "7a4ff9982f8fcdfe",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-coldchain-sla-monitoring-adapter",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "def95ce57710e3ae",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-coldchain-sla-monitoring-adapter",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "d9c3d53228540f8a",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-coldchain-sla-monitoring-adapter",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-fulfillment-runtime-prod/secrets/enterprise-fulfillment-erp-sync-oauth-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "0bcbe50fbdbc3330",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-coldchain-sla-monitoring-adapter",
+      "to_uri": "//storage.googleapis.com/enterprise-fulfillment-shipping-labels-artifacts-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-fulfillment-shipping-labels-artifacts-eu"
+    },
+    {
+      "id": "7c60d3f66d06c464",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-coldchain-sla-monitoring-adapter",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "0eb4ca6b32b2db0c",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-customs-manifest-declaration-svc",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.68.10"
+    },
+    {
+      "id": "a47f27a761eb08af",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-customs-manifest-declaration-svc",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-fulfillment-runtime-prod/datasets/enterprise_commerce_executive_datamart",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.read"
+    },
+    {
+      "id": "4f622ed0dfd6b862",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-customs-manifest-declaration-svc",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-core-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "d733d2dbcf65b230",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-customs-manifest-declaration-svc",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "0eebd408eb133445",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-customs-manifest-declaration-svc",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "715b45255a86f9b9",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-customs-manifest-declaration-svc",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-fulfillment-runtime-prod/secrets/enterprise-fulfillment-carrier-webhook-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "2f3baaec55990acb",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-customs-manifest-declaration-svc",
+      "to_uri": "//storage.googleapis.com/enterprise-fulfillment-shipping-labels-artifacts-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-fulfillment-shipping-labels-artifacts-eu"
+    },
+    {
+      "id": "4c49bd677185d527",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-customs-manifest-declaration-svc",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "c6020ac4f2a556e1",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-order-allocation-routing-engine",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.68.10"
+    },
+    {
+      "id": "0fa664a947ae3862",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-order-allocation-routing-engine",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-fulfillment-runtime-prod/datasets/enterprise_commerce_executive_datamart",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.read"
+    },
+    {
+      "id": "a6cd6a41ac9e7d03",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-order-allocation-routing-engine",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-core-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "53ffb638488e8719",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-order-allocation-routing-engine",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "79a120d59422f579",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-order-allocation-routing-engine",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "8251d26002ed6b30",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-order-allocation-routing-engine",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-fulfillment-runtime-prod/secrets/enterprise-fulfillment-carrier-webhook-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "f5c02927c9a73584",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-order-allocation-routing-engine",
+      "to_uri": "//storage.googleapis.com/enterprise-fulfillment-shipping-labels-artifacts-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-fulfillment-shipping-labels-artifacts-eu"
+    },
+    {
+      "id": "b3b01e6c14e33af1",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-order-allocation-routing-engine",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "ad8c8f943d4b9eb3",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-parcel-tracking-telemetry-ingest",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.68.10"
+    },
+    {
+      "id": "6754907ec85dcbd5",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-parcel-tracking-telemetry-ingest",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-fulfillment-runtime-prod/datasets/enterprise_commerce_executive_datamart",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.read"
+    },
+    {
+      "id": "48e7ffac94a94401",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-parcel-tracking-telemetry-ingest",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-ship-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "da22d7e54609128e",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-parcel-tracking-telemetry-ingest",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "cdf0138decd02923",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-parcel-tracking-telemetry-ingest",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "a565342090584447",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-parcel-tracking-telemetry-ingest",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-fulfillment-runtime-prod/secrets/enterprise-fulfillment-erp-sync-oauth-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "c4ef4018527b3e1c",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-parcel-tracking-telemetry-ingest",
+      "to_uri": "//storage.googleapis.com/enterprise-fulfillment-shipping-labels-artifacts-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-fulfillment-shipping-labels-artifacts-eu"
+    },
+    {
+      "id": "51c60e0791e5fb1f",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-parcel-tracking-telemetry-ingest",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "1f47dc9de34e9a14",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-returns-merchandise-auth-service",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.68.10"
+    },
+    {
+      "id": "09cccd7cf6441eb8",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-returns-merchandise-auth-service",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-fulfillment-runtime-prod/datasets/enterprise_commerce_executive_datamart",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.read"
+    },
+    {
+      "id": "c21a57d2cd7af709",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-returns-merchandise-auth-service",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-core-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "7b38513bb196513c",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-returns-merchandise-auth-service",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "8488ccf4d2e2eeb3",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-returns-merchandise-auth-service",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "c9117620952259d4",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-returns-merchandise-auth-service",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-fulfillment-runtime-prod/secrets/enterprise-fulfillment-carrier-webhook-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "32794ef37b235b40",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-returns-merchandise-auth-service",
+      "to_uri": "//storage.googleapis.com/enterprise-fulfillment-shipping-labels-artifacts-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-fulfillment-shipping-labels-artifacts-eu"
+    },
+    {
+      "id": "184365c3cfa055c1",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-returns-merchandise-auth-service",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "6c22d50a249a940d",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-warehouse-inventory-reconciler-v2",
+      "to_uri": "//alloydb.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/clusters/enterprise-fulfillment-inventory-alloydb-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.68.10"
+    },
+    {
+      "id": "33aec3fee6da30da",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-warehouse-inventory-reconciler-v2",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-fulfillment-runtime-prod/datasets/enterprise_commerce_executive_datamart",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.read"
+    },
+    {
+      "id": "26b3fa9d74978a0b",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-warehouse-inventory-reconciler-v2",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-fulfillment-runtime-prod/serviceAccounts/ent-ful-ship-sa@ent-core-fulfillment-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "c9a0fbb35b9eea1c",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-warehouse-inventory-reconciler-v2",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "b68dfa4e6e82dd3f",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-warehouse-inventory-reconciler-v2",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "8f4bd4f5dfa55acd",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-warehouse-inventory-reconciler-v2",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-fulfillment-runtime-prod/secrets/enterprise-fulfillment-erp-sync-oauth-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "ccd7b5cb8b32f808",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-warehouse-inventory-reconciler-v2",
+      "to_uri": "//storage.googleapis.com/enterprise-fulfillment-shipping-labels-artifacts-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-fulfillment-shipping-labels-artifacts-eu"
+    },
+    {
+      "id": "eed9c75fc146afd3",
+      "from_uri": "//run.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/services/enterprise-fulfillment-warehouse-inventory-reconciler-v2",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-fulfillment-runtime-prod/locations/europe-west1/connectors/enterprise-fulfillment-vpc-connector-ew1-main",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "b215f22b728c5b1e",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-checkout-payment-authorization-orchestrator-v2",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-payments-runtime-prod/datasets/enterprise_commerce_raw_events_warehouse",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "00cd6779ac70dd5d",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-checkout-payment-authorization-orchestrator-v2",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-core-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "86e74e03d2955426",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-checkout-payment-authorization-orchestrator-v2",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "ccce5f4606a15678",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-checkout-payment-authorization-orchestrator-v2",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "9efa6336a0f351a3",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-checkout-payment-authorization-orchestrator-v2",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-payments-runtime-prod/secrets/enterprise-payments-psp-gateway-api-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "d1ab2221fde8df86",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-checkout-payment-authorization-orchestrator-v2",
+      "to_uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.64.5"
+    },
+    {
+      "id": "67fc1d15d1ad52a2",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-checkout-payment-authorization-orchestrator-v2",
+      "to_uri": "//storage.googleapis.com/enterprise-payments-settlement-statements-archive-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-payments-settlement-statements-archive-eu"
+    },
+    {
+      "id": "9846bc94ded6ae4b",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-checkout-payment-authorization-orchestrator-v2",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "c0f5973cad64edad",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-card-tokenization-vault-gateway-svc",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-payments-runtime-prod/datasets/enterprise_commerce_raw_events_warehouse",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "d5009cc562c6d1d3",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-card-tokenization-vault-gateway-svc",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-risk-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "b48dfc01fc1a5143",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-card-tokenization-vault-gateway-svc",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "7b2a73bb99430f9f",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-card-tokenization-vault-gateway-svc",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "b81053dceea1d474",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-card-tokenization-vault-gateway-svc",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-payments-runtime-prod/secrets/enterprise-payments-ledger-db-credentials",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "b54be3fefd6ed026",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-card-tokenization-vault-gateway-svc",
+      "to_uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.64.5"
+    },
+    {
+      "id": "3d7e235a172a4f2e",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-card-tokenization-vault-gateway-svc",
+      "to_uri": "//storage.googleapis.com/enterprise-payments-settlement-statements-archive-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-payments-settlement-statements-archive-eu"
+    },
+    {
+      "id": "f360b74c54e35540",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-card-tokenization-vault-gateway-svc",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "0f5c3be3218bb0a6",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-chargeback-dispute-workflow-handler",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-payments-runtime-prod/datasets/enterprise_commerce_raw_events_warehouse",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "611ff299c1f4a993",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-chargeback-dispute-workflow-handler",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-risk-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "84bcc02ceaadffef",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-chargeback-dispute-workflow-handler",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "9c69687ad7d9f788",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-chargeback-dispute-workflow-handler",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "17e9bf37eab9ce64",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-chargeback-dispute-workflow-handler",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-payments-runtime-prod/secrets/enterprise-payments-ledger-db-credentials",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "62cc1b9d4b0a4cc1",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-chargeback-dispute-workflow-handler",
+      "to_uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.64.5"
+    },
+    {
+      "id": "8bc1300e92942587",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-chargeback-dispute-workflow-handler",
+      "to_uri": "//storage.googleapis.com/enterprise-payments-settlement-statements-archive-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-payments-settlement-statements-archive-eu"
+    },
+    {
+      "id": "396e2df7cbd03b75",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-chargeback-dispute-workflow-handler",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "ed56df7a4c74b0df",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-fx-currency-conversion-quoting-engine",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-payments-runtime-prod/datasets/enterprise_commerce_raw_events_warehouse",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "c597c286bd883b18",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-fx-currency-conversion-quoting-engine",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-ledger-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "d5f57b2d295d7bb7",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-fx-currency-conversion-quoting-engine",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "30a77aff8c5a4cad",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-fx-currency-conversion-quoting-engine",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "aea15b31528bbfb3",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-fx-currency-conversion-quoting-engine",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-payments-runtime-prod/secrets/enterprise-payments-fraud-model-api-token",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "1d2b4bd47261ea4d",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-fx-currency-conversion-quoting-engine",
+      "to_uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.64.5"
+    },
+    {
+      "id": "d1e96690fff38517",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-fx-currency-conversion-quoting-engine",
+      "to_uri": "//storage.googleapis.com/enterprise-payments-settlement-statements-archive-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-payments-settlement-statements-archive-eu"
+    },
+    {
+      "id": "9892e909116b4e47",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-fx-currency-conversion-quoting-engine",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "03fc702c0d9445bf",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-ledger-double-entry-posting-worker-01",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-payments-runtime-prod/datasets/enterprise_commerce_raw_events_warehouse",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "b749e3a11475597c",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-ledger-double-entry-posting-worker-01",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-risk-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "77515ca42693ad4b",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-ledger-double-entry-posting-worker-01",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "9a0256656ff4e767",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-ledger-double-entry-posting-worker-01",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "760b5a95d3af4035",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-ledger-double-entry-posting-worker-01",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-payments-runtime-prod/secrets/enterprise-payments-ledger-db-credentials",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "cbbe9a4bf2d9396c",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-ledger-double-entry-posting-worker-01",
+      "to_uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.64.5"
+    },
+    {
+      "id": "9a4b141313aecf6c",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-ledger-double-entry-posting-worker-01",
+      "to_uri": "//storage.googleapis.com/enterprise-payments-settlement-statements-archive-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-payments-settlement-statements-archive-eu"
+    },
+    {
+      "id": "23de7a85ded97e2b",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-ledger-double-entry-posting-worker-01",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "f61887e2d74b9bb8",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-merchant-payout-disbursement-service",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-payments-runtime-prod/datasets/enterprise_commerce_raw_events_warehouse",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "318f20961ab9e992",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-merchant-payout-disbursement-service",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-core-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "c543e051e21a7b60",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-merchant-payout-disbursement-service",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "03781d1701fab558",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-merchant-payout-disbursement-service",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "68eccfe875d746d4",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-merchant-payout-disbursement-service",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-payments-runtime-prod/secrets/enterprise-payments-psp-gateway-api-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "a2f6d19e25e7898e",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-merchant-payout-disbursement-service",
+      "to_uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.64.5"
+    },
+    {
+      "id": "1a46234eec935f06",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-merchant-payout-disbursement-service",
+      "to_uri": "//storage.googleapis.com/enterprise-payments-settlement-statements-archive-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-payments-settlement-statements-archive-eu"
+    },
+    {
+      "id": "d9599ab42ddefd99",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-merchant-payout-disbursement-service",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "7fd7fe34fb16e000",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-real-time-fraud-velocity-evaluator",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-payments-runtime-prod/datasets/enterprise_commerce_raw_events_warehouse",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "a2583eea52146af9",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-real-time-fraud-velocity-evaluator",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-ledger-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "59c3ee80507163ac",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-real-time-fraud-velocity-evaluator",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "e431e254299d76d3",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-real-time-fraud-velocity-evaluator",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "239e57e0f8442424",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-real-time-fraud-velocity-evaluator",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-payments-runtime-prod/secrets/enterprise-payments-fraud-model-api-token",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "210f74e398a57d62",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-real-time-fraud-velocity-evaluator",
+      "to_uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.64.5"
+    },
+    {
+      "id": "f8f77cd5720de60f",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-real-time-fraud-velocity-evaluator",
+      "to_uri": "//storage.googleapis.com/enterprise-payments-settlement-statements-archive-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-payments-settlement-statements-archive-eu"
+    },
+    {
+      "id": "673abfdca865e685",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-real-time-fraud-velocity-evaluator",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "3bc81ac4c9e0c87b",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-sepa-instant-clearing-adapter-service",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-payments-runtime-prod/datasets/enterprise_commerce_raw_events_warehouse",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "8919ebe8d46bfa7e",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-sepa-instant-clearing-adapter-service",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-core-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "80ce8a230d855afe",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-sepa-instant-clearing-adapter-service",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "13f96e9019a5177a",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-sepa-instant-clearing-adapter-service",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "923d935c42657bb8",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-sepa-instant-clearing-adapter-service",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-payments-runtime-prod/secrets/enterprise-payments-psp-gateway-api-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "3311dd528f31d72d",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-sepa-instant-clearing-adapter-service",
+      "to_uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.64.5"
+    },
+    {
+      "id": "1de404d70d84821d",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-sepa-instant-clearing-adapter-service",
+      "to_uri": "//storage.googleapis.com/enterprise-payments-settlement-statements-archive-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-payments-settlement-statements-archive-eu"
+    },
+    {
+      "id": "686fc112129b6ad4",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-sepa-instant-clearing-adapter-service",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "ad13d8feda785fab",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-three-ds-challenge-verification-api",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-payments-runtime-prod/datasets/enterprise_commerce_raw_events_warehouse",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "27a653c31983ea25",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-three-ds-challenge-verification-api",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-ledger-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "582debad48e017a4",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-three-ds-challenge-verification-api",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "31a522a94bb0ff0d",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-three-ds-challenge-verification-api",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "7756b4c007b0d89d",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-three-ds-challenge-verification-api",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-payments-runtime-prod/secrets/enterprise-payments-fraud-model-api-token",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "61f5b2f83d21d31c",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-three-ds-challenge-verification-api",
+      "to_uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.64.5"
+    },
+    {
+      "id": "9ed6d22a4e49d73e",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-three-ds-challenge-verification-api",
+      "to_uri": "//storage.googleapis.com/enterprise-payments-settlement-statements-archive-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-payments-settlement-statements-archive-eu"
+    },
+    {
+      "id": "5be93397fdad17f0",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-three-ds-challenge-verification-api",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "a75c67b010c75f7c",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-webhook-signature-dispatcher-service",
+      "to_uri": "//bigquery.googleapis.com/projects/ent-core-payments-runtime-prod/datasets/enterprise_commerce_raw_events_warehouse",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "dcb9d3f1230469e1",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-webhook-signature-dispatcher-service",
+      "to_uri": "//iam.googleapis.com/projects/ent-core-payments-runtime-prod/serviceAccounts/ent-pay-core-sa@ent-core-payments-runtime-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "5cbba650584d8990",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-webhook-signature-dispatcher-service",
+      "to_uri": "//pubsub.googleapis.com/projects/ent-core-payments-runtime-prod/topics/enterprise-domain-events-canonical-bus-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "5b19667c53fab250",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-webhook-signature-dispatcher-service",
+      "to_uri": "//redis.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/clusters/enterprise-shared-idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "redis_psc"
+    },
+    {
+      "id": "0f104a4baf27433b",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-webhook-signature-dispatcher-service",
+      "to_uri": "//secretmanager.googleapis.com/projects/ent-core-payments-runtime-prod/secrets/enterprise-payments-psp-gateway-api-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "17918c015f00b190",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-webhook-signature-dispatcher-service",
+      "to_uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "kind": "CONFIG_REF",
+      "detail": "10.90.64.5"
+    },
+    {
+      "id": "171d8e7e2ca39dee",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-webhook-signature-dispatcher-service",
+      "to_uri": "//storage.googleapis.com/enterprise-payments-settlement-statements-archive-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://enterprise-payments-settlement-statements-archive-eu"
+    },
+    {
+      "id": "df69845f8ba817d6",
+      "from_uri": "//run.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/services/enterprise-payments-webhook-signature-dispatcher-service",
+      "to_uri": "//vpcaccess.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/connectors/enterprise-payments-vpc-connector-ew1-primary",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "3accf42062322876",
+      "from_uri": "//sqladmin.googleapis.com/projects/ent-core-payments-runtime-prod/instances/enterprise-payments-ledger-postgres-primary",
+      "to_uri": "//cloudkms.googleapis.com/projects/ent-core-payments-runtime-prod/locations/europe-west1/keyRings/ent-pay-ring/cryptoKeys/enterprise-payments-primary-cmek-key",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "alloydb.googleapis.com/Instance": 2,
+    "artifactregistry.googleapis.com/DockerImage": 310,
+    "compute.googleapis.com/BackendService": 11,
+    "compute.googleapis.com/Firewall": 42,
+    "compute.googleapis.com/NetworkEndpointGroup": 11,
+    "compute.googleapis.com/Route": 36,
+    "compute.googleapis.com/SecurityPolicy": 5,
+    "container.googleapis.com/NodePool": 2,
+    "k8s.io/Pod": 48,
+    "run.googleapis.com/Revision": 94,
+    "servicenetworking.googleapis.com/Connection": 2
+  },
+  "coverage_ledger": [
+    {
+      "scope": "projects/ent-core-fulfillment-runtime-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ent-core-fulfillment-runtime-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ent-core-fulfillment-runtime-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ent-core-fulfillment-runtime-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ent-core-fulfillment-runtime-prod",
+      "source": "monitoring",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ent-core-payments-runtime-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ent-core-payments-runtime-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ent-core-payments-runtime-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ent-core-payments-runtime-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ent-core-payments-runtime-prod",
+      "source": "monitoring",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ent-core-shared-net-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ent-core-shared-net-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ent-core-shared-net-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ent-core-shared-net-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ent-core-shared-net-prod",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}

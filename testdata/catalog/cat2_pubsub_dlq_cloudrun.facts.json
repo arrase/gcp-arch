@@ -1,0 +1,455 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-26T00:00:00Z",
+  "scopes": [
+    "projects/orders-async-prod"
+  ],
+  "hierarchy": {
+    "projects": [
+      {
+        "project_id": "orders-async-prod",
+        "project_number": "200300300301",
+        "display_name": "Orders Async Prod"
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//cloudfunctions.googleapis.com/projects/orders-async-prod/locations/europe-west1/functions/orders-dlq-replay-fn",
+      "asset_type": "cloudfunctions.googleapis.com/CloudFunction",
+      "project_id": "orders-async-prod",
+      "location": "europe-west1",
+      "display_name": "orders-dlq-replay-fn",
+      "parent_uri": "//compute.googleapis.com/projects/orders-async-prod/regions/europe-west1/subnetworks/orders-subnet",
+      "attributes": {
+        "entry_point": "ReplayDLQ",
+        "ingress": "ALLOW_INTERNAL_ONLY",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/orders-async-prod/locations/europe-west1/keyRings/orders-keyring/cryptoKeys/orders-queue-cmek",
+        "runtime": "go122",
+        "service_account": "orders-replay-sa@orders-async-prod.iam.gserviceaccount.com",
+        "url": "https://europe-west1-orders-async-prod.cloudfunctions.net/orders-dlq-replay-fn"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/orders-async-prod/locations/europe-west1/keyRings/orders-keyring/cryptoKeys/orders-queue-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "orders-async-prod",
+      "location": "europe-west1",
+      "display_name": "orders-queue-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudscheduler.googleapis.com/projects/orders-async-prod/locations/europe-west1/jobs/orders-reconcile-tick",
+      "asset_type": "cloudscheduler.googleapis.com/Job",
+      "project_id": "orders-async-prod",
+      "location": "europe-west1",
+      "display_name": "orders-reconcile-tick",
+      "attributes": {
+        "schedule": "*/5 * * * *",
+        "service_account": "orders-scheduler-sa@orders-async-prod.iam.gserviceaccount.com",
+        "state": "ENABLED"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/orders-async-prod/global/networks/orders-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "orders-async-prod",
+      "location": "global",
+      "display_name": "orders-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/orders-async-prod/regions/europe-west1/subnetworks/orders-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "orders-async-prod",
+      "location": "europe-west1",
+      "display_name": "orders-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/orders-async-prod/global/networks/orders-vpc",
+      "attributes": {
+        "cidr": "10.40.0.0/24",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/orders-async-prod/global/networks/orders-vpc"
+      }
+    },
+    {
+      "uri": "//firestore.googleapis.com/projects/orders-async-prod/databases/(default)",
+      "asset_type": "firestore.googleapis.com/Database",
+      "project_id": "orders-async-prod",
+      "location": "europe-west1",
+      "display_name": "orders-state-firestore",
+      "attributes": {
+        "concurrency_mode": "OPTIMISTIC",
+        "database_type": "FIRESTORE_NATIVE",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/orders-async-prod/locations/europe-west1/keyRings/orders-keyring/cryptoKeys/orders-queue-cmek"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/orders-async-prod/serviceAccounts/orders-ingest-sa@orders-async-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "orders-async-prod",
+      "display_name": "orders-ingest-sa@orders-async-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "orders-ingest-sa@orders-async-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/orders-async-prod/serviceAccounts/orders-replay-sa@orders-async-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "orders-async-prod",
+      "display_name": "orders-replay-sa@orders-async-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "orders-replay-sa@orders-async-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/orders-async-prod/serviceAccounts/orders-scheduler-sa@orders-async-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "orders-async-prod",
+      "display_name": "orders-scheduler-sa@orders-async-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "orders-scheduler-sa@orders-async-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/orders-async-prod/serviceAccounts/orders-worker-sa@orders-async-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "orders-async-prod",
+      "display_name": "orders-worker-sa@orders-async-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "orders-worker-sa@orders-async-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/orders-async-prod/sinks/orders-dlq-audit-sink",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "orders-async-prod",
+      "display_name": "orders-dlq-audit-sink"
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/orders-async-prod/subscriptions/orders-dlq-replay-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "orders-async-prod",
+      "location": "global",
+      "display_name": "orders-dlq-replay-sub",
+      "attributes": {
+        "ack_deadline_seconds": 120,
+        "push_endpoint": "https://europe-west1-orders-async-prod.cloudfunctions.net/orders-dlq-replay-fn"
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/orders-async-prod/subscriptions/orders-worker-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "orders-async-prod",
+      "location": "global",
+      "display_name": "orders-worker-sub",
+      "attributes": {
+        "ack_deadline_seconds": 60,
+        "push_endpoint": "https://orders-worker-svc-abc123-ew.a.run.app"
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/orders-async-prod/topics/orders-events-dlq",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "orders-async-prod",
+      "location": "global",
+      "display_name": "orders-events-dlq",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/orders-async-prod/locations/europe-west1/keyRings/orders-keyring/cryptoKeys/orders-queue-cmek"
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/orders-async-prod/topics/orders-events-topic",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "orders-async-prod",
+      "location": "global",
+      "display_name": "orders-events-topic",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/orders-async-prod/locations/europe-west1/keyRings/orders-keyring/cryptoKeys/orders-queue-cmek"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/orders-async-prod/locations/europe-west1/services/orders-ingest-api",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "orders-async-prod",
+      "location": "europe-west1",
+      "display_name": "orders-ingest-api",
+      "parent_uri": "//compute.googleapis.com/projects/orders-async-prod/regions/europe-west1/subnetworks/orders-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/orders-async-prod/locations/europe-west1/keyRings/orders-keyring/cryptoKeys/orders-queue-cmek",
+        "service_account": "orders-ingest-sa@orders-async-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/orders-async-prod/regions/europe-west1/subnetworks/orders-subnet",
+        "url": "https://orders-ingest-api-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/orders-async-prod/global/networks/orders-vpc"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/orders-async-prod/locations/europe-west1/services/orders-worker-svc",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "orders-async-prod",
+      "location": "europe-west1",
+      "display_name": "orders-worker-svc",
+      "parent_uri": "//compute.googleapis.com/projects/orders-async-prod/regions/europe-west1/subnetworks/orders-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/orders-async-prod/locations/europe-west1/keyRings/orders-keyring/cryptoKeys/orders-queue-cmek",
+        "service_account": "orders-worker-sa@orders-async-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/orders-async-prod/regions/europe-west1/subnetworks/orders-subnet",
+        "url": "https://orders-worker-svc-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/orders-async-prod/global/networks/orders-vpc"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/orders-async-prod/secrets/orders-partner-api-key",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "orders-async-prod",
+      "display_name": "orders-partner-api-key",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/orders-async-prod/locations/europe-west1/keyRings/orders-keyring/cryptoKeys/orders-queue-cmek",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/orders-async-prod/secrets/orders-webhook-hmac",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "orders-async-prod",
+      "display_name": "orders-webhook-hmac",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/orders-async-prod/locations/europe-west1/keyRings/orders-keyring/cryptoKeys/orders-queue-cmek",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/orders-dlq-archive",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "orders-async-prod",
+      "location": "europe-west1",
+      "display_name": "orders-dlq-archive",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/orders-async-prod/locations/europe-west1/keyRings/orders-keyring/cryptoKeys/orders-queue-cmek",
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "ac1c7a5ce7900582",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/orders-async-prod/locations/europe-west1/functions/orders-dlq-replay-fn",
+      "to_uri": "//iam.googleapis.com/projects/orders-async-prod/serviceAccounts/orders-replay-sa@orders-async-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "65bafce196adeb56",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/orders-async-prod/locations/europe-west1/functions/orders-dlq-replay-fn",
+      "to_uri": "//pubsub.googleapis.com/projects/orders-async-prod/topics/orders-events-topic",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "8983a489efd25a9e",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/orders-async-prod/locations/europe-west1/functions/orders-dlq-replay-fn",
+      "to_uri": "//storage.googleapis.com/orders-dlq-archive",
+      "kind": "CONFIG_REF",
+      "detail": "gs://orders-dlq-archive"
+    },
+    {
+      "id": "eb3665fe023b7d55",
+      "from_uri": "//cloudscheduler.googleapis.com/projects/orders-async-prod/locations/europe-west1/jobs/orders-reconcile-tick",
+      "to_uri": "//iam.googleapis.com/projects/orders-async-prod/serviceAccounts/orders-scheduler-sa@orders-async-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "fda10500fd7e44f7",
+      "from_uri": "//cloudscheduler.googleapis.com/projects/orders-async-prod/locations/europe-west1/jobs/orders-reconcile-tick",
+      "to_uri": "//pubsub.googleapis.com/projects/orders-async-prod/topics/orders-events-topic",
+      "kind": "CONFIG_REF",
+      "detail": "scheduler.pubsub"
+    },
+    {
+      "id": "2da16a361a970075",
+      "from_uri": "//firestore.googleapis.com/projects/orders-async-prod/databases/(default)",
+      "to_uri": "//cloudkms.googleapis.com/projects/orders-async-prod/locations/europe-west1/keyRings/orders-keyring/cryptoKeys/orders-queue-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "7a959f1c004704b3",
+      "from_uri": "//iam.googleapis.com/projects/orders-async-prod/serviceAccounts/orders-ingest-sa@orders-async-prod.iam.gserviceaccount.com",
+      "to_uri": "//pubsub.googleapis.com/projects/orders-async-prod/topics/orders-events-topic",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/pubsub.publisher"
+    },
+    {
+      "id": "8875d4297a3eb81a",
+      "from_uri": "//iam.googleapis.com/projects/orders-async-prod/serviceAccounts/orders-ingest-sa@orders-async-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/orders-async-prod/secrets/orders-webhook-hmac",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "b8cb26703cfbb21a",
+      "from_uri": "//iam.googleapis.com/projects/orders-async-prod/serviceAccounts/orders-replay-sa@orders-async-prod.iam.gserviceaccount.com",
+      "to_uri": "//pubsub.googleapis.com/projects/orders-async-prod/topics/orders-events-topic",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/pubsub.publisher"
+    },
+    {
+      "id": "cba355c99023b6dd",
+      "from_uri": "//iam.googleapis.com/projects/orders-async-prod/serviceAccounts/orders-replay-sa@orders-async-prod.iam.gserviceaccount.com",
+      "to_uri": "//storage.googleapis.com/orders-dlq-archive",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/storage.objectCreator"
+    },
+    {
+      "id": "70b8344ccfd602a8",
+      "from_uri": "//iam.googleapis.com/projects/orders-async-prod/serviceAccounts/orders-worker-sa@orders-async-prod.iam.gserviceaccount.com",
+      "to_uri": "//firestore.googleapis.com/projects/orders-async-prod/databases/(default)",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/datastore.user"
+    },
+    {
+      "id": "317a9f4dfdb81036",
+      "from_uri": "//iam.googleapis.com/projects/orders-async-prod/serviceAccounts/orders-worker-sa@orders-async-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/orders-async-prod/secrets/orders-partner-api-key",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "c8c7086a19b7d3e2",
+      "from_uri": "//pubsub.googleapis.com/projects/orders-async-prod/subscriptions/orders-dlq-replay-sub",
+      "to_uri": "//cloudfunctions.googleapis.com/projects/orders-async-prod/locations/europe-west1/functions/orders-dlq-replay-fn",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "a7403f5e300e2933",
+      "from_uri": "//pubsub.googleapis.com/projects/orders-async-prod/subscriptions/orders-worker-sub",
+      "to_uri": "//pubsub.googleapis.com/projects/orders-async-prod/topics/orders-events-dlq",
+      "kind": "CONFIG_REF",
+      "detail": "dead_letter"
+    },
+    {
+      "id": "5246cccec3baedd1",
+      "from_uri": "//pubsub.googleapis.com/projects/orders-async-prod/subscriptions/orders-worker-sub",
+      "to_uri": "//run.googleapis.com/projects/orders-async-prod/locations/europe-west1/services/orders-worker-svc",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "e205947f181faf41",
+      "from_uri": "//pubsub.googleapis.com/projects/orders-async-prod/topics/orders-events-dlq",
+      "to_uri": "//cloudkms.googleapis.com/projects/orders-async-prod/locations/europe-west1/keyRings/orders-keyring/cryptoKeys/orders-queue-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "a94180782243f9af",
+      "from_uri": "//pubsub.googleapis.com/projects/orders-async-prod/topics/orders-events-dlq",
+      "to_uri": "//pubsub.googleapis.com/projects/orders-async-prod/subscriptions/orders-dlq-replay-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "9a51510ef6dd889d",
+      "from_uri": "//pubsub.googleapis.com/projects/orders-async-prod/topics/orders-events-topic",
+      "to_uri": "//cloudkms.googleapis.com/projects/orders-async-prod/locations/europe-west1/keyRings/orders-keyring/cryptoKeys/orders-queue-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "50d9d27d4e3b85c6",
+      "from_uri": "//pubsub.googleapis.com/projects/orders-async-prod/topics/orders-events-topic",
+      "to_uri": "//pubsub.googleapis.com/projects/orders-async-prod/subscriptions/orders-worker-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "430ed9f759120fa6",
+      "from_uri": "//run.googleapis.com/projects/orders-async-prod/locations/europe-west1/services/orders-ingest-api",
+      "to_uri": "//iam.googleapis.com/projects/orders-async-prod/serviceAccounts/orders-ingest-sa@orders-async-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "5683d27b86d0902a",
+      "from_uri": "//run.googleapis.com/projects/orders-async-prod/locations/europe-west1/services/orders-ingest-api",
+      "to_uri": "//pubsub.googleapis.com/projects/orders-async-prod/topics/orders-events-topic",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "ef8aea9dab6c2c13",
+      "from_uri": "//run.googleapis.com/projects/orders-async-prod/locations/europe-west1/services/orders-ingest-api",
+      "to_uri": "//secretmanager.googleapis.com/projects/orders-async-prod/secrets/orders-webhook-hmac",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "8a4eda8013616c29",
+      "from_uri": "//run.googleapis.com/projects/orders-async-prod/locations/europe-west1/services/orders-worker-svc",
+      "to_uri": "//firestore.googleapis.com/projects/orders-async-prod/databases/(default)",
+      "kind": "CONFIG_REF",
+      "detail": "firestore"
+    },
+    {
+      "id": "03e09b9ffaee381d",
+      "from_uri": "//run.googleapis.com/projects/orders-async-prod/locations/europe-west1/services/orders-worker-svc",
+      "to_uri": "//iam.googleapis.com/projects/orders-async-prod/serviceAccounts/orders-worker-sa@orders-async-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "861266751f43d782",
+      "from_uri": "//run.googleapis.com/projects/orders-async-prod/locations/europe-west1/services/orders-worker-svc",
+      "to_uri": "//secretmanager.googleapis.com/projects/orders-async-prod/secrets/orders-partner-api-key",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "compute.googleapis.com/Firewall": 6,
+    "compute.googleapis.com/Route": 4,
+    "logging.googleapis.com/LogBucket": 2,
+    "run.googleapis.com/Revision": 18
+  },
+  "coverage_ledger": [
+    {
+      "scope": "projects/orders-async-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/orders-async-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/orders-async-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/orders-async-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/orders-async-prod",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}

@@ -6,10 +6,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"slices"
 
-	"github.com/arrase/gcp-arch/internal/ioutil"
+	"github.com/arrase/gcp-arch/internal/atomicfile"
 )
 
 // FactsSchemaVersion is the current schema version for facts.json files.
@@ -159,55 +160,94 @@ func WriteFacts(path string, f *FactsFile) error {
 	if f == nil {
 		return fmt.Errorf("facts file must not be nil")
 	}
+	if f.SchemaVersion != "" && f.SchemaVersion != FactsSchemaVersion {
+		return fmt.Errorf("unsupported facts schema_version %q (want %q)", f.SchemaVersion, FactsSchemaVersion)
+	}
 	out := normalizedFactsCopy(f)
-	if out.SchemaVersion == "" {
-		out.SchemaVersion = FactsSchemaVersion
-	} else if out.SchemaVersion != FactsSchemaVersion {
-		return fmt.Errorf("unsupported facts schema_version %q (want %q)", out.SchemaVersion, FactsSchemaVersion)
-	}
-
-	data, err := json.MarshalIndent(out, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal facts file: %w", err)
-	}
-	data = append(data, '\n')
-	return ioutil.WriteFileAtomic(path, data, 0o600, 0o700)
+	return atomicfile.WriteFunc(path, 0o600, 0o700, func(w io.Writer) error {
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(out); err != nil {
+			return fmt.Errorf("marshal facts file: %w", err)
+		}
+		return nil
+	})
 }
 
 func normalizedFactsCopy(f *FactsFile) FactsFile {
 	out := FactsFile{
 		SchemaVersion:            f.SchemaVersion,
 		ReadTime:                 f.ReadTime,
-		Scopes:                   nonNilSortedStrings(f.Scopes),
+		Scopes:                   cloneNonNilSlice(f.Scopes),
 		SuppressedPlumbingCounts: f.SuppressedPlumbingCounts,
+		Hierarchy: Hierarchy{
+			Organizations: slices.Clone(f.Hierarchy.Organizations),
+			Folders:       slices.Clone(f.Hierarchy.Folders),
+			Projects:      cloneNonNilSlice(f.Hierarchy.Projects),
+		},
+		Resources:      cloneNonNilSlice(f.Resources),
+		Edges:          cloneNonNilSlice(f.Edges),
+		CoverageLedger: cloneNonNilSlice(f.CoverageLedger),
 	}
-	if out.SuppressedPlumbingCounts == nil {
-		out.SuppressedPlumbingCounts = map[string]int{}
+	for i := range out.Resources {
+		if len(out.Resources[i].ProjectCapabilities) > 0 {
+			out.Resources[i].ProjectCapabilities = slices.Clone(out.Resources[i].ProjectCapabilities)
+		}
+	}
+	if len(f.OutOfScopeTargets) > 0 {
+		out.OutOfScopeTargets = make([]OutOfScopeHint, len(f.OutOfScopeTargets))
+		for i, h := range f.OutOfScopeTargets {
+			h.ReferencedByURIs = cloneNonNilSlice(h.ReferencedByURIs)
+			out.OutOfScopeTargets[i] = h
+		}
+	}
+	normalizeFactsInPlace(&out)
+	return out
+}
+
+func normalizeFactsInPlace(f *FactsFile) {
+	if f.SchemaVersion == "" {
+		f.SchemaVersion = FactsSchemaVersion
+	}
+	if f.Scopes == nil {
+		f.Scopes = []string{}
+	}
+	slices.Sort(f.Scopes)
+
+	if f.SuppressedPlumbingCounts == nil {
+		f.SuppressedPlumbingCounts = map[string]int{}
 	}
 
-	if len(f.Hierarchy.Organizations) > 0 {
-		orgs := slices.Clone(f.Hierarchy.Organizations)
-		slices.SortFunc(orgs, func(a, b OrgNode) int {
+	normalizeHierarchyInPlace(&f.Hierarchy)
+	normalizeResourcesAndEdgesInPlace(f)
+	normalizeHintsAndLedgerInPlace(f)
+}
+
+func normalizeHierarchyInPlace(h *Hierarchy) {
+	if len(h.Organizations) > 0 {
+		slices.SortFunc(h.Organizations, func(a, b OrgNode) int {
 			return cmp.Or(cmp.Compare(a.OrgID, b.OrgID), cmp.Compare(a.DisplayName, b.DisplayName))
 		})
-		out.Hierarchy.Organizations = orgs
+	} else {
+		h.Organizations = nil
 	}
 
-	if len(f.Hierarchy.Folders) > 0 {
-		folders := slices.Clone(f.Hierarchy.Folders)
-		slices.SortFunc(folders, func(a, b FolderNode) int {
+	if len(h.Folders) > 0 {
+		slices.SortFunc(h.Folders, func(a, b FolderNode) int {
 			return cmp.Or(
 				cmp.Compare(a.FolderID, b.FolderID),
 				cmp.Compare(a.Parent, b.Parent),
 				cmp.Compare(a.DisplayName, b.DisplayName),
 			)
 		})
-		out.Hierarchy.Folders = folders
+	} else {
+		h.Folders = nil
 	}
 
-	projects := make([]ProjectNode, len(f.Hierarchy.Projects))
-	copy(projects, f.Hierarchy.Projects)
-	slices.SortFunc(projects, func(a, b ProjectNode) int {
+	if h.Projects == nil {
+		h.Projects = []ProjectNode{}
+	}
+	slices.SortFunc(h.Projects, func(a, b ProjectNode) int {
 		return cmp.Or(
 			cmp.Compare(a.ProjectID, b.ProjectID),
 			cmp.Compare(a.ProjectNumber, b.ProjectNumber),
@@ -215,35 +255,35 @@ func normalizedFactsCopy(f *FactsFile) FactsFile {
 			cmp.Compare(a.DisplayName, b.DisplayName),
 		)
 	})
-	out.Hierarchy.Projects = projects
+}
 
-	resources := make([]FactResource, len(f.Resources))
-	for i, r := range f.Resources {
-		rc := r
-		if len(r.ProjectCapabilities) > 0 {
-			rc.ProjectCapabilities = slices.Clone(r.ProjectCapabilities)
-			slices.Sort(rc.ProjectCapabilities)
-		}
-		resources[i] = rc
+func normalizeResourcesAndEdgesInPlace(f *FactsFile) {
+	if f.Resources == nil {
+		f.Resources = []FactResource{}
 	}
-	slices.SortFunc(resources, func(a, b FactResource) int {
+	for i := range f.Resources {
+		if len(f.Resources[i].ProjectCapabilities) > 0 {
+			slices.Sort(f.Resources[i].ProjectCapabilities)
+		}
+	}
+	slices.SortFunc(f.Resources, func(a, b FactResource) int {
 		return cmp.Or(
 			cmp.Compare(a.URI, b.URI),
 			cmp.Compare(a.AssetType, b.AssetType),
 			cmp.Compare(a.ProjectID, b.ProjectID),
 		)
 	})
-	out.Resources = resources
 
-	edges := make([]FactEdge, len(f.Edges))
-	for i, e := range f.Edges {
-		ec := e
-		if ec.ID == "" {
-			ec.ID = EdgeID(ec.Kind, ec.FromURI, ec.ToURI, ec.Detail)
-		}
-		edges[i] = ec
+	if f.Edges == nil {
+		f.Edges = []FactEdge{}
 	}
-	slices.SortFunc(edges, func(a, b FactEdge) int {
+	for i := range f.Edges {
+		if f.Edges[i].ID == "" {
+			e := &f.Edges[i]
+			e.ID = EdgeID(e.Kind, e.FromURI, e.ToURI, e.Detail)
+		}
+	}
+	slices.SortFunc(f.Edges, func(a, b FactEdge) int {
 		return cmp.Or(
 			cmp.Compare(a.FromURI, b.FromURI),
 			cmp.Compare(a.ToURI, b.ToURI),
@@ -252,28 +292,31 @@ func normalizedFactsCopy(f *FactsFile) FactsFile {
 			cmp.Compare(a.ID, b.ID),
 		)
 	})
-	out.Edges = edges
+}
 
+func normalizeHintsAndLedgerInPlace(f *FactsFile) {
 	if len(f.OutOfScopeTargets) > 0 {
-		hints := make([]OutOfScopeHint, len(f.OutOfScopeTargets))
-		for i, h := range f.OutOfScopeTargets {
-			hc := h
-			hc.ReferencedByURIs = nonNilSortedStrings(h.ReferencedByURIs)
-			hints[i] = hc
+		for i := range f.OutOfScopeTargets {
+			if f.OutOfScopeTargets[i].ReferencedByURIs == nil {
+				f.OutOfScopeTargets[i].ReferencedByURIs = []string{}
+			}
+			slices.Sort(f.OutOfScopeTargets[i].ReferencedByURIs)
 		}
-		slices.SortFunc(hints, func(a, b OutOfScopeHint) int {
+		slices.SortFunc(f.OutOfScopeTargets, func(a, b OutOfScopeHint) int {
 			return cmp.Or(
 				cmp.Compare(a.TargetProjectID, b.TargetProjectID),
 				cmp.Compare(a.SourceKind, b.SourceKind),
 				cmp.Compare(a.SyntheticURI, b.SyntheticURI),
 			)
 		})
-		out.OutOfScopeTargets = hints
+	} else {
+		f.OutOfScopeTargets = nil
 	}
 
-	ledger := make([]CoverageEntry, len(f.CoverageLedger))
-	copy(ledger, f.CoverageLedger)
-	slices.SortFunc(ledger, func(a, b CoverageEntry) int {
+	if f.CoverageLedger == nil {
+		f.CoverageLedger = []CoverageEntry{}
+	}
+	slices.SortFunc(f.CoverageLedger, func(a, b CoverageEntry) int {
 		return cmp.Or(
 			cmp.Compare(a.Scope, b.Scope),
 			cmp.Compare(a.Source, b.Source),
@@ -281,14 +324,10 @@ func normalizedFactsCopy(f *FactsFile) FactsFile {
 			cmp.Compare(a.Detail, b.Detail),
 		)
 	})
-	out.CoverageLedger = ledger
-
-	return out
 }
 
-func nonNilSortedStrings(in []string) []string {
-	out := make([]string, len(in))
+func cloneNonNilSlice[T any](in []T) []T {
+	out := make([]T, len(in))
 	copy(out, in)
-	slices.Sort(out)
 	return out
 }

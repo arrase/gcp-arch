@@ -1,0 +1,915 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-27T00:00:00Z",
+  "scopes": [
+    "folders/540300"
+  ],
+  "hierarchy": {
+    "organizations": [
+      {
+        "org_id": "930300001",
+        "display_name": "Lumina AI Systems"
+      }
+    ],
+    "folders": [
+      {
+        "folder_id": "540300",
+        "display_name": "genai-prod",
+        "parent": "organizations/930300001"
+      }
+    ],
+    "projects": [
+      {
+        "project_id": "lumina-agents-prod",
+        "project_number": "5403001002",
+        "display_name": "Lumina Agents Prod",
+        "parent": "folders/540300",
+        "shared_vpc_host_project": "lumina-edge-net"
+      },
+      {
+        "project_id": "lumina-edge-net",
+        "project_number": "5403001001",
+        "display_name": "Lumina Edge Net",
+        "parent": "folders/540300"
+      },
+      {
+        "project_id": "lumina-knowledge-prod",
+        "project_number": "5403001003",
+        "display_name": "Lumina Knowledge Prod",
+        "parent": "folders/540300",
+        "shared_vpc_host_project": "lumina-edge-net"
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//aiplatform.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/indexEndpoints/embeddings-vector-idx",
+      "asset_type": "aiplatform.googleapis.com/IndexEndpoint",
+      "project_id": "lumina-agents-prod",
+      "location": "europe-west1",
+      "display_name": "embeddings-vector-idx",
+      "parent_uri": "//compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc",
+      "attributes": {
+        "deployed_index_count": 2,
+        "vpc": "//compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc"
+      }
+    },
+    {
+      "uri": "//aiplatform.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/reasoningEngines/enterprise-rag-agent",
+      "asset_type": "aiplatform.googleapis.com/ReasoningEngine",
+      "project_id": "lumina-agents-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-rag-agent",
+      "attributes": {
+        "service_account": "reasoning-engine-sa@lumina-agents-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//aiplatform.googleapis.com/projects/lumina-agents-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "asset_type": "aiplatform.googleapis.com/PublisherModel",
+      "project_id": "lumina-agents-prod",
+      "location": "global",
+      "display_name": "gemini-4-carbon",
+      "attributes": {
+        "invocations": 148500,
+        "model_id": "gemini-4-carbon",
+        "publisher": "google"
+      }
+    },
+    {
+      "uri": "//apigateway.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/gateways/agents-api-gateway",
+      "asset_type": "apigateway.googleapis.com/Gateway",
+      "project_id": "lumina-agents-prod",
+      "location": "europe-west1",
+      "display_name": "agents-api-gateway",
+      "attributes": {
+        "state": "ACTIVE"
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/lumina-agents-prod/datasets/agent_eval_telemetry",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "lumina-agents-prod",
+      "location": "EU",
+      "display_name": "agent_eval_telemetry",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/keyRings/ai-keyring/cryptoKeys/ai-agent-cmek",
+        "location": "EU",
+        "table_count": 6
+      }
+    },
+    {
+      "uri": "//cloudfunctions.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/functions/doc-chunk-embed-fn",
+      "asset_type": "cloudfunctions.googleapis.com/CloudFunction",
+      "project_id": "lumina-knowledge-prod",
+      "location": "europe-west1",
+      "display_name": "doc-chunk-embed-fn",
+      "parent_uri": "//compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/subnetworks/knowledge-etl-subnet",
+      "attributes": {
+        "ingress": "ALLOW_INTERNAL_ONLY",
+        "runtime": "python312",
+        "service_account": "doc-embedder-sa@lumina-knowledge-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//cloudfunctions.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/functions/doc-dlq-replay-fn",
+      "asset_type": "cloudfunctions.googleapis.com/CloudFunction",
+      "project_id": "lumina-knowledge-prod",
+      "location": "europe-west1",
+      "display_name": "doc-dlq-replay-fn",
+      "parent_uri": "//compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/subnetworks/knowledge-etl-subnet",
+      "attributes": {
+        "ingress": "ALLOW_INTERNAL_ONLY",
+        "runtime": "python312",
+        "service_account": "doc-dlq-replay-sa@lumina-knowledge-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/keyRings/ai-keyring/cryptoKeys/ai-agent-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "lumina-agents-prod",
+      "location": "europe-west1",
+      "display_name": "ai-agent-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/keyRings/know-keyring/cryptoKeys/docs-corpus-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "lumina-knowledge-prod",
+      "location": "europe-west1",
+      "display_name": "docs-corpus-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudscheduler.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/jobs/nightly-reindex-cron",
+      "asset_type": "cloudscheduler.googleapis.com/Job",
+      "project_id": "lumina-knowledge-prod",
+      "location": "europe-west1",
+      "display_name": "nightly-reindex-cron",
+      "attributes": {
+        "schedule": "0 3 * * *"
+      }
+    },
+    {
+      "uri": "//cloudtasks.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/queues/doc-ocr-retry-tasks",
+      "asset_type": "cloudtasks.googleapis.com/Queue",
+      "project_id": "lumina-knowledge-prod",
+      "location": "europe-west1",
+      "display_name": "doc-ocr-retry-tasks",
+      "attributes": {
+        "state": "RUNNING"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/lumina-agents-prod/global/forwardingRules/agents-global-https-lb",
+      "asset_type": "compute.googleapis.com/GlobalForwardingRule",
+      "project_id": "lumina-agents-prod",
+      "location": "global",
+      "display_name": "agents-global-https-lb",
+      "attributes": {
+        "ingress_hosts": [
+          "agents.lumina.example.com"
+        ],
+        "ip_address": "203.0.113.120",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "EXTERNAL_MANAGED",
+        "port_range": "443-443",
+        "tls": true
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "lumina-edge-net",
+      "location": "global",
+      "display_name": "lumina-shared-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "GLOBAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/routers/lumina-nat-router",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "lumina-edge-net",
+      "location": "europe-west1",
+      "display_name": "lumina-nat-router",
+      "parent_uri": "//compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc",
+      "attributes": {
+        "nat_count": 1,
+        "vpc": "//compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/subnetworks/agents-runtime-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "lumina-edge-net",
+      "location": "europe-west1",
+      "display_name": "agents-runtime-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc",
+      "attributes": {
+        "cidr": "10.80.0.0/22",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/subnetworks/knowledge-etl-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "lumina-edge-net",
+      "location": "europe-west1",
+      "display_name": "knowledge-etl-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc",
+      "attributes": {
+        "cidr": "10.80.16.0/22",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc"
+      }
+    },
+    {
+      "uri": "//dialogflow.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/agents/support-dialogflow-cx",
+      "asset_type": "dialogflow.googleapis.com/Agent",
+      "project_id": "lumina-agents-prod",
+      "location": "europe-west1",
+      "display_name": "support-dialogflow-cx",
+      "attributes": {
+        "default_language": "en"
+      }
+    },
+    {
+      "uri": "//discoveryengine.googleapis.com/projects/lumina-agents-prod/locations/global/dataStores/enterprise-docs-datastore",
+      "asset_type": "discoveryengine.googleapis.com/DataStore",
+      "project_id": "lumina-agents-prod",
+      "location": "global",
+      "display_name": "enterprise-docs-datastore",
+      "attributes": {
+        "content_config": "CONTENT_REQUIRED"
+      }
+    },
+    {
+      "uri": "//discoveryengine.googleapis.com/projects/lumina-agents-prod/locations/global/engines/enterprise-search-engine",
+      "asset_type": "discoveryengine.googleapis.com/Engine",
+      "project_id": "lumina-agents-prod",
+      "location": "global",
+      "display_name": "enterprise-search-engine",
+      "attributes": {
+        "solution_type": "SOLUTION_TYPE_SEARCH"
+      }
+    },
+    {
+      "uri": "//documentai.googleapis.com/projects/lumina-knowledge-prod/locations/eu/processors/contracts-docai-ocr",
+      "asset_type": "documentai.googleapis.com/Processor",
+      "project_id": "lumina-knowledge-prod",
+      "location": "eu",
+      "display_name": "contracts-docai-ocr",
+      "attributes": {
+        "type": "FORM_PARSER_PROCESSOR"
+      }
+    },
+    {
+      "uri": "//eventarc.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/triggers/doc-upload-eventarc",
+      "asset_type": "eventarc.googleapis.com/Trigger",
+      "project_id": "lumina-knowledge-prod",
+      "location": "europe-west1",
+      "display_name": "doc-upload-eventarc",
+      "attributes": {
+        "event_type": "google.cloud.storage.object.v1.finalized",
+        "service_account": "doc-workflow-sa@lumina-knowledge-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//external.internet/clients/enterprise-portal-users",
+      "asset_type": "external.internet/ClientGroup",
+      "project_id": "external",
+      "location": "global",
+      "display_name": "enterprise-portal-users",
+      "is_external": true
+    },
+    {
+      "uri": "//firestore.googleapis.com/projects/lumina-agents-prod/databases/(default)",
+      "asset_type": "firestore.googleapis.com/Database",
+      "project_id": "lumina-agents-prod",
+      "location": "europe-west1",
+      "display_name": "agent-memory-firestore",
+      "attributes": {
+        "database_type": "FIRESTORE_NATIVE"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/lumina-agents-prod/serviceAccounts/agent-orchestrator-sa@lumina-agents-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "lumina-agents-prod",
+      "display_name": "agent-orchestrator-sa@lumina-agents-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "agent-orchestrator-sa@lumina-agents-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/lumina-agents-prod/serviceAccounts/mcp-tool-gateway-sa@lumina-agents-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "lumina-agents-prod",
+      "display_name": "mcp-tool-gateway-sa@lumina-agents-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "mcp-tool-gateway-sa@lumina-agents-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/lumina-agents-prod/serviceAccounts/reasoning-engine-sa@lumina-agents-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "lumina-agents-prod",
+      "display_name": "reasoning-engine-sa@lumina-agents-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "reasoning-engine-sa@lumina-agents-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/lumina-knowledge-prod/serviceAccounts/doc-dlq-replay-sa@lumina-knowledge-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "lumina-knowledge-prod",
+      "display_name": "doc-dlq-replay-sa@lumina-knowledge-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "doc-dlq-replay-sa@lumina-knowledge-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/lumina-knowledge-prod/serviceAccounts/doc-embedder-sa@lumina-knowledge-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "lumina-knowledge-prod",
+      "display_name": "doc-embedder-sa@lumina-knowledge-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "doc-embedder-sa@lumina-knowledge-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/lumina-knowledge-prod/serviceAccounts/doc-workflow-sa@lumina-knowledge-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "lumina-knowledge-prod",
+      "display_name": "doc-workflow-sa@lumina-knowledge-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "doc-workflow-sa@lumina-knowledge-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/lumina-agents-prod/sinks/agent-prompts-audit-sink",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "lumina-agents-prod",
+      "location": "global",
+      "display_name": "agent-prompts-audit-sink"
+    },
+    {
+      "uri": "//monitoring.googleapis.com/projects/lumina-agents-prod/alertPolicies/9404001",
+      "asset_type": "monitoring.googleapis.com/AlertPolicy",
+      "project_id": "lumina-agents-prod",
+      "location": "global",
+      "display_name": "agent-hallucination-slo-alert",
+      "attributes": {
+        "enabled": true
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/lumina-knowledge-prod/subscriptions/doc-dlq-replay-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "lumina-knowledge-prod",
+      "location": "global",
+      "display_name": "doc-dlq-replay-sub"
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/lumina-knowledge-prod/subscriptions/doc-index-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "lumina-knowledge-prod",
+      "location": "global",
+      "display_name": "doc-index-sub"
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/lumina-knowledge-prod/topics/doc-embed-dlq",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "lumina-knowledge-prod",
+      "location": "global",
+      "display_name": "doc-embed-dlq"
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/lumina-knowledge-prod/topics/doc-embed-events",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "lumina-knowledge-prod",
+      "location": "global",
+      "display_name": "doc-embed-events"
+    },
+    {
+      "uri": "//redis.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/instances/semantic-cache-redis",
+      "asset_type": "redis.googleapis.com/Instance",
+      "project_id": "lumina-agents-prod",
+      "location": "europe-west1",
+      "display_name": "semantic-cache-redis",
+      "parent_uri": "//compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc",
+      "attributes": {
+        "redis_version": "REDIS_7_2",
+        "vpc": "//compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/agent-orchestrator-api",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "lumina-agents-prod",
+      "location": "europe-west1",
+      "display_name": "agent-orchestrator-api",
+      "parent_uri": "//compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/subnetworks/agents-runtime-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "service_account": "agent-orchestrator-sa@lumina-agents-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/subnetworks/agents-runtime-subnet",
+        "vpc": "//compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/mcp-tool-gateway",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "lumina-agents-prod",
+      "location": "europe-west1",
+      "display_name": "mcp-tool-gateway",
+      "parent_uri": "//compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/subnetworks/agents-runtime-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_ONLY",
+        "service_account": "mcp-tool-gateway-sa@lumina-agents-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/subnetworks/agents-runtime-subnet",
+        "vpc": "//compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/lumina-agents-prod/secrets/dialogflow-webhook-hmac",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "lumina-agents-prod",
+      "display_name": "dialogflow-webhook-hmac",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/lumina-agents-prod/secrets/mcp-tool-oauth-token",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "lumina-agents-prod",
+      "display_name": "mcp-tool-oauth-token",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/lumina-knowledge-prod/secrets/doc-pipeline-signing-key",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "lumina-knowledge-prod",
+      "display_name": "doc-pipeline-signing-key",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/lumina-parsed-chunks",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "lumina-knowledge-prod",
+      "location": "EU",
+      "display_name": "lumina-parsed-chunks",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/keyRings/know-keyring/cryptoKeys/docs-corpus-cmek",
+        "storage_class": "STANDARD"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/lumina-raw-enterprise-docs",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "lumina-knowledge-prod",
+      "location": "EU",
+      "display_name": "lumina-raw-enterprise-docs",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/keyRings/know-keyring/cryptoKeys/docs-corpus-cmek",
+        "storage_class": "STANDARD"
+      }
+    },
+    {
+      "uri": "//vpcaccess.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/connectors/agents-vpc-connector",
+      "asset_type": "vpcaccess.googleapis.com/Connector",
+      "project_id": "lumina-agents-prod",
+      "location": "europe-west1",
+      "display_name": "agents-vpc-connector",
+      "parent_uri": "//compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/subnetworks/agents-runtime-subnet",
+      "attributes": {
+        "subnet": "//compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/subnetworks/agents-runtime-subnet",
+        "vpc": "//compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc"
+      }
+    },
+    {
+      "uri": "//workflows.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/workflows/doc-ingestion-workflow",
+      "asset_type": "workflows.googleapis.com/Workflow",
+      "project_id": "lumina-knowledge-prod",
+      "location": "europe-west1",
+      "display_name": "doc-ingestion-workflow",
+      "attributes": {
+        "service_account": "doc-workflow-sa@lumina-knowledge-prod.iam.gserviceaccount.com",
+        "state": "ACTIVE"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "83d837085affce90",
+      "from_uri": "//aiplatform.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/reasoningEngines/enterprise-rag-agent",
+      "to_uri": "//aiplatform.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/indexEndpoints/embeddings-vector-idx",
+      "kind": "CONFIG_REF",
+      "detail": "vector_knn"
+    },
+    {
+      "id": "6ecebc51cf5d091b",
+      "from_uri": "//aiplatform.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/reasoningEngines/enterprise-rag-agent",
+      "to_uri": "//aiplatform.googleapis.com/projects/lumina-agents-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "kind": "CONFIG_REF",
+      "detail": "vertex_generate"
+    },
+    {
+      "id": "59c185c20b15c92b",
+      "from_uri": "//aiplatform.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/reasoningEngines/enterprise-rag-agent",
+      "to_uri": "//discoveryengine.googleapis.com/projects/lumina-agents-prod/locations/global/engines/enterprise-search-engine",
+      "kind": "CONFIG_REF",
+      "detail": "grounded_search"
+    },
+    {
+      "id": "c337b983605b7a0e",
+      "from_uri": "//aiplatform.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/reasoningEngines/enterprise-rag-agent",
+      "to_uri": "//firestore.googleapis.com/projects/lumina-agents-prod/databases/(default)",
+      "kind": "CONFIG_REF",
+      "detail": "agent_state"
+    },
+    {
+      "id": "8f8c56b8a79d1b5a",
+      "from_uri": "//aiplatform.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/reasoningEngines/enterprise-rag-agent",
+      "to_uri": "//iam.googleapis.com/projects/lumina-agents-prod/serviceAccounts/reasoning-engine-sa@lumina-agents-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "c898ad814f6fe2ad",
+      "from_uri": "//aiplatform.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/reasoningEngines/enterprise-rag-agent",
+      "to_uri": "//run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/mcp-tool-gateway",
+      "kind": "CONFIG_REF",
+      "detail": "mcp_tool_call"
+    },
+    {
+      "id": "2a3d311ae38b14f9",
+      "from_uri": "//apigateway.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/gateways/agents-api-gateway",
+      "to_uri": "//dialogflow.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/agents/support-dialogflow-cx",
+      "kind": "CONFIG_REF",
+      "detail": "cx_chat"
+    },
+    {
+      "id": "873fa56ac3ae8006",
+      "from_uri": "//apigateway.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/gateways/agents-api-gateway",
+      "to_uri": "//run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/agent-orchestrator-api",
+      "kind": "CONFIG_REF",
+      "detail": "https_agent_api"
+    },
+    {
+      "id": "8496c701118b7be1",
+      "from_uri": "//bigquery.googleapis.com/projects/lumina-agents-prod/datasets/agent_eval_telemetry",
+      "to_uri": "//cloudkms.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/keyRings/ai-keyring/cryptoKeys/ai-agent-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "13abc313925cdb4c",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/functions/doc-chunk-embed-fn",
+      "to_uri": "//iam.googleapis.com/projects/lumina-knowledge-prod/serviceAccounts/doc-embedder-sa@lumina-knowledge-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "9c9358061808e2df",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/functions/doc-chunk-embed-fn",
+      "to_uri": "//pubsub.googleapis.com/projects/lumina-knowledge-prod/topics/doc-embed-events",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub_publish"
+    },
+    {
+      "id": "ccbb2b142d38e6bf",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/functions/doc-chunk-embed-fn",
+      "to_uri": "//secretmanager.googleapis.com/projects/lumina-knowledge-prod/secrets/doc-pipeline-signing-key",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "343b123e1bb100c3",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/functions/doc-chunk-embed-fn",
+      "to_uri": "//storage.googleapis.com/lumina-parsed-chunks",
+      "kind": "CONFIG_REF",
+      "detail": "read_chunks"
+    },
+    {
+      "id": "00f53668c6ca3903",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/functions/doc-dlq-replay-fn",
+      "to_uri": "//iam.googleapis.com/projects/lumina-knowledge-prod/serviceAccounts/doc-dlq-replay-sa@lumina-knowledge-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "90a51b304928fe6a",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/functions/doc-dlq-replay-fn",
+      "to_uri": "//pubsub.googleapis.com/projects/lumina-knowledge-prod/topics/doc-embed-events",
+      "kind": "CONFIG_REF",
+      "detail": "republish_retry"
+    },
+    {
+      "id": "e8c4356bb2c66562",
+      "from_uri": "//cloudscheduler.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/jobs/nightly-reindex-cron",
+      "to_uri": "//workflows.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/workflows/doc-ingestion-workflow",
+      "kind": "CONFIG_REF",
+      "detail": "scheduled_reindex"
+    },
+    {
+      "id": "a4e7630ebbf905b8",
+      "from_uri": "//cloudtasks.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/queues/doc-ocr-retry-tasks",
+      "to_uri": "//cloudfunctions.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/functions/doc-chunk-embed-fn",
+      "kind": "CONFIG_REF",
+      "detail": "retry_dispatch"
+    },
+    {
+      "id": "33df8e2b0c69dd29",
+      "from_uri": "//compute.googleapis.com/projects/lumina-agents-prod/global/forwardingRules/agents-global-https-lb",
+      "to_uri": "//apigateway.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/gateways/agents-api-gateway",
+      "kind": "CONFIG_REF",
+      "detail": "https:agents"
+    },
+    {
+      "id": "abeefa8c58a0b158",
+      "from_uri": "//compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/routers/lumina-nat-router",
+      "to_uri": "//compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "cloud_nat"
+    },
+    {
+      "id": "8edcb88f2d613709",
+      "from_uri": "//dialogflow.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/agents/support-dialogflow-cx",
+      "to_uri": "//run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/agent-orchestrator-api",
+      "kind": "CONFIG_REF",
+      "detail": "fulfillment_webhook"
+    },
+    {
+      "id": "889a5fd15c7dcce3",
+      "from_uri": "//dialogflow.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/agents/support-dialogflow-cx",
+      "to_uri": "//secretmanager.googleapis.com/projects/lumina-agents-prod/secrets/dialogflow-webhook-hmac",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "fc4e0e9c5bef2536",
+      "from_uri": "//discoveryengine.googleapis.com/projects/lumina-agents-prod/locations/global/engines/enterprise-search-engine",
+      "to_uri": "//discoveryengine.googleapis.com/projects/lumina-agents-prod/locations/global/dataStores/enterprise-docs-datastore",
+      "kind": "CONFIG_REF",
+      "detail": "search_datastore"
+    },
+    {
+      "id": "917a01c304c8b3eb",
+      "from_uri": "//documentai.googleapis.com/projects/lumina-knowledge-prod/locations/eu/processors/contracts-docai-ocr",
+      "to_uri": "//storage.googleapis.com/lumina-parsed-chunks",
+      "kind": "CONFIG_REF",
+      "detail": "ocr_output"
+    },
+    {
+      "id": "67336af985c85c86",
+      "from_uri": "//eventarc.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/triggers/doc-upload-eventarc",
+      "to_uri": "//workflows.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/workflows/doc-ingestion-workflow",
+      "kind": "CONFIG_REF",
+      "detail": "eventarc.destination"
+    },
+    {
+      "id": "b73942dd535a561f",
+      "from_uri": "//external.internet/clients/enterprise-portal-users",
+      "to_uri": "//compute.googleapis.com/projects/lumina-agents-prod/global/forwardingRules/agents-global-https-lb",
+      "kind": "CONFIG_REF",
+      "detail": "https:443"
+    },
+    {
+      "id": "8f994224fbfefab4",
+      "from_uri": "//iam.googleapis.com/projects/lumina-agents-prod/serviceAccounts/reasoning-engine-sa@lumina-agents-prod.iam.gserviceaccount.com",
+      "to_uri": "//discoveryengine.googleapis.com/projects/lumina-agents-prod/locations/global/dataStores/enterprise-docs-datastore",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/discoveryengine.viewer"
+    },
+    {
+      "id": "a277e9ebed5a0962",
+      "from_uri": "//iam.googleapis.com/projects/lumina-knowledge-prod/serviceAccounts/doc-embedder-sa@lumina-knowledge-prod.iam.gserviceaccount.com",
+      "to_uri": "//storage.googleapis.com/lumina-parsed-chunks",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/storage.objectAdmin"
+    },
+    {
+      "id": "06de34de711895c3",
+      "from_uri": "//logging.googleapis.com/projects/lumina-agents-prod/sinks/agent-prompts-audit-sink",
+      "to_uri": "//bigquery.googleapis.com/projects/lumina-agents-prod/datasets/agent_eval_telemetry",
+      "kind": "CONFIG_REF",
+      "detail": "audit_sink"
+    },
+    {
+      "id": "3f122263a601b2f8",
+      "from_uri": "//monitoring.googleapis.com/projects/lumina-agents-prod/alertPolicies/9404001",
+      "to_uri": "//run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/agent-orchestrator-api",
+      "kind": "CONFIG_REF",
+      "detail": "slo_alert"
+    },
+    {
+      "id": "a7eb7834ff4bf40c",
+      "from_uri": "//pubsub.googleapis.com/projects/lumina-knowledge-prod/subscriptions/doc-dlq-replay-sub",
+      "to_uri": "//cloudfunctions.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/functions/doc-dlq-replay-fn",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "6b7bb4ef723f8cce",
+      "from_uri": "//pubsub.googleapis.com/projects/lumina-knowledge-prod/subscriptions/doc-index-sub",
+      "to_uri": "//aiplatform.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/indexEndpoints/embeddings-vector-idx",
+      "kind": "CONFIG_REF",
+      "detail": "upsert_vectors"
+    },
+    {
+      "id": "64a7f51c9575ddaa",
+      "from_uri": "//pubsub.googleapis.com/projects/lumina-knowledge-prod/subscriptions/doc-index-sub",
+      "to_uri": "//discoveryengine.googleapis.com/projects/lumina-agents-prod/locations/global/dataStores/enterprise-docs-datastore",
+      "kind": "CONFIG_REF",
+      "detail": "index_docs"
+    },
+    {
+      "id": "bfbbe7ced249106d",
+      "from_uri": "//pubsub.googleapis.com/projects/lumina-knowledge-prod/subscriptions/doc-index-sub",
+      "to_uri": "//pubsub.googleapis.com/projects/lumina-knowledge-prod/topics/doc-embed-dlq",
+      "kind": "CONFIG_REF",
+      "detail": "dead_letter"
+    },
+    {
+      "id": "099a3a15a62f7e04",
+      "from_uri": "//pubsub.googleapis.com/projects/lumina-knowledge-prod/topics/doc-embed-dlq",
+      "to_uri": "//pubsub.googleapis.com/projects/lumina-knowledge-prod/subscriptions/doc-dlq-replay-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "c1cc358c04790bf7",
+      "from_uri": "//pubsub.googleapis.com/projects/lumina-knowledge-prod/topics/doc-embed-events",
+      "to_uri": "//pubsub.googleapis.com/projects/lumina-knowledge-prod/subscriptions/doc-index-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "5cfecdbf818f94f1",
+      "from_uri": "//run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/agent-orchestrator-api",
+      "to_uri": "//aiplatform.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/reasoningEngines/enterprise-rag-agent",
+      "kind": "CONFIG_REF",
+      "detail": "vertex_agent_run"
+    },
+    {
+      "id": "6b741cf72d579514",
+      "from_uri": "//run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/agent-orchestrator-api",
+      "to_uri": "//bigquery.googleapis.com/projects/lumina-agents-prod/datasets/agent_eval_telemetry",
+      "kind": "CONFIG_REF",
+      "detail": "log_eval"
+    },
+    {
+      "id": "5df50862318a7f19",
+      "from_uri": "//run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/agent-orchestrator-api",
+      "to_uri": "//iam.googleapis.com/projects/lumina-agents-prod/serviceAccounts/agent-orchestrator-sa@lumina-agents-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "3cfc92dffeafec10",
+      "from_uri": "//run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/agent-orchestrator-api",
+      "to_uri": "//redis.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/instances/semantic-cache-redis",
+      "kind": "CONFIG_REF",
+      "detail": "semantic_cache"
+    },
+    {
+      "id": "0ee867c666c68a9c",
+      "from_uri": "//run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/agent-orchestrator-api",
+      "to_uri": "//vpcaccess.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/connectors/agents-vpc-connector",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "57a83665b745e8f5",
+      "from_uri": "//run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/mcp-tool-gateway",
+      "to_uri": "//bigquery.googleapis.com/projects/lumina-agents-prod/datasets/agent_eval_telemetry",
+      "kind": "CONFIG_REF",
+      "detail": "tool_audit"
+    },
+    {
+      "id": "0ce73b542c91a7e6",
+      "from_uri": "//run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/mcp-tool-gateway",
+      "to_uri": "//iam.googleapis.com/projects/lumina-agents-prod/serviceAccounts/mcp-tool-gateway-sa@lumina-agents-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "e9137ac3f3f6b095",
+      "from_uri": "//run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/mcp-tool-gateway",
+      "to_uri": "//secretmanager.googleapis.com/projects/lumina-agents-prod/secrets/mcp-tool-oauth-token",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "f838c5f9a8062d0b",
+      "from_uri": "//run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/mcp-tool-gateway",
+      "to_uri": "//vpcaccess.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/connectors/agents-vpc-connector",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "a0b2ea8b2c91ab41",
+      "from_uri": "//storage.googleapis.com/lumina-parsed-chunks",
+      "to_uri": "//cloudkms.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/keyRings/know-keyring/cryptoKeys/docs-corpus-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "8c5e602b97bf36a8",
+      "from_uri": "//storage.googleapis.com/lumina-raw-enterprise-docs",
+      "to_uri": "//cloudkms.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/keyRings/know-keyring/cryptoKeys/docs-corpus-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "458dbe58b601f6fd",
+      "from_uri": "//storage.googleapis.com/lumina-raw-enterprise-docs",
+      "to_uri": "//eventarc.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/triggers/doc-upload-eventarc",
+      "kind": "CONFIG_REF",
+      "detail": "eventarc.bucket"
+    },
+    {
+      "id": "9fe00f11c01fb1cd",
+      "from_uri": "//vpcaccess.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/connectors/agents-vpc-connector",
+      "to_uri": "//compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/subnetworks/agents-runtime-subnet",
+      "kind": "CONFIG_REF",
+      "detail": "subnet"
+    },
+    {
+      "id": "7e39e2f0db39b1e6",
+      "from_uri": "//workflows.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/workflows/doc-ingestion-workflow",
+      "to_uri": "//cloudtasks.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/queues/doc-ocr-retry-tasks",
+      "kind": "CONFIG_REF",
+      "detail": "enqueue_retry"
+    },
+    {
+      "id": "33aa0ebc65d7528e",
+      "from_uri": "//workflows.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/workflows/doc-ingestion-workflow",
+      "to_uri": "//documentai.googleapis.com/projects/lumina-knowledge-prod/locations/eu/processors/contracts-docai-ocr",
+      "kind": "CONFIG_REF",
+      "detail": "ocr_extract"
+    },
+    {
+      "id": "58886aff574cbc41",
+      "from_uri": "//workflows.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/workflows/doc-ingestion-workflow",
+      "to_uri": "//iam.googleapis.com/projects/lumina-knowledge-prod/serviceAccounts/doc-workflow-sa@lumina-knowledge-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "apigateway.googleapis.com/ApiConfig": 2,
+    "compute.googleapis.com/BackendService": 2,
+    "compute.googleapis.com/Firewall": 18,
+    "compute.googleapis.com/Route": 10,
+    "compute.googleapis.com/SecurityPolicy": 2,
+    "documentai.googleapis.com/ProcessorVersion": 3,
+    "run.googleapis.com/Revision": 14
+  },
+  "coverage_ledger": [
+    {
+      "scope": "folders/540300",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "folders/540300",
+      "source": "cai_iam",
+      "state": "OK"
+    },
+    {
+      "scope": "folders/540300",
+      "source": "cai_resources",
+      "state": "OK"
+    },
+    {
+      "scope": "folders/540300",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "folders/540300",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}

@@ -12,23 +12,6 @@ var (
 	gcpZoneRe            = regexp.MustCompile(`^[a-z]+-[a-z]+\d+-[a-z][a-z0-9]*$`)
 )
 
-// BuildProjectIndex maps discovered project numbers to canonical project IDs and overlays
-// explicit user-supplied --project-alias overrides.
-func BuildProjectIndex(projects []ProjectNode, aliases map[string]string) map[string]string {
-	idx := make(map[string]string, len(projects)+len(aliases))
-	for _, p := range projects {
-		if p.ProjectNumber != "" && p.ProjectID != "" {
-			idx[p.ProjectNumber] = p.ProjectID
-		}
-	}
-	for num, id := range aliases {
-		if num != "" && id != "" {
-			idx[num] = id
-		}
-	}
-	return idx
-}
-
 // CanonicalizeAIP122 normalizes GCP resource selfLinks, full URLs, gs:// URIs, //service/... URIs,
 // and relative projects/... resource names into canonical AIP-122 format (//<service>/...)
 // while replacing known project numbers (or aliases) with their canonical project IDs.

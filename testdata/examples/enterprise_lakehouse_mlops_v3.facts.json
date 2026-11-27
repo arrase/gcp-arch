@@ -1,0 +1,1091 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-27T00:00:00Z",
+  "scopes": [
+    "organizations/920200001"
+  ],
+  "hierarchy": {
+    "organizations": [
+      {
+        "org_id": "920200001",
+        "display_name": "Stratos Analytics Corp"
+      }
+    ],
+    "folders": [
+      {
+        "folder_id": "530201",
+        "display_name": "data-ingestion-lakehouse",
+        "parent": "organizations/920200001"
+      },
+      {
+        "folder_id": "530202",
+        "display_name": "mlops-bi-serving",
+        "parent": "organizations/920200001"
+      }
+    ],
+    "projects": [
+      {
+        "project_id": "p920200abcdef12-tp",
+        "display_name": "Google PSA Tenant",
+        "is_psa_tenant": true
+      },
+      {
+        "project_id": "stratos-ingest-prod",
+        "project_number": "5302001001",
+        "display_name": "Stratos Ingest Prod",
+        "parent": "folders/530201"
+      },
+      {
+        "project_id": "stratos-lakehouse-prod",
+        "project_number": "5302001002",
+        "display_name": "Stratos Lakehouse Prod",
+        "parent": "folders/530201"
+      },
+      {
+        "project_id": "stratos-mlops-prod",
+        "project_number": "5302001003",
+        "display_name": "Stratos MLOps Prod",
+        "parent": "folders/530202"
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/endpoints/churn-predictor-v4",
+      "asset_type": "aiplatform.googleapis.com/Endpoint",
+      "project_id": "stratos-mlops-prod",
+      "location": "europe-west1",
+      "display_name": "churn-predictor-v4",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc",
+      "attributes": {
+        "deployed_model_count": 2,
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/keyRings/ml-keyring/cryptoKeys/vertex-model-cmek",
+        "vpc": "//compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc"
+      }
+    },
+    {
+      "uri": "//aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/featureOnlineStores/realtime-customer-fos",
+      "asset_type": "aiplatform.googleapis.com/FeatureOnlineStore",
+      "project_id": "stratos-mlops-prod",
+      "location": "europe-west1",
+      "display_name": "realtime-customer-fos",
+      "attributes": {
+        "state": "STABLE"
+      }
+    },
+    {
+      "uri": "//aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "asset_type": "aiplatform.googleapis.com/PublisherModel",
+      "project_id": "stratos-mlops-prod",
+      "location": "global",
+      "display_name": "gemini-4-carbon",
+      "attributes": {
+        "invocations": 31800,
+        "model_id": "gemini-4-carbon",
+        "publisher": "google"
+      }
+    },
+    {
+      "uri": "//alloydb.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/clusters/oltp-inventory-alloydb",
+      "asset_type": "alloydb.googleapis.com/Cluster",
+      "project_id": "stratos-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "oltp-inventory-alloydb",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc",
+      "attributes": {
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/keyRings/ingest-keyring/cryptoKeys/ingest-cdc-cmek",
+        "private_ip": "10.70.20.10",
+        "psa_tenant_project": "p920200abcdef12-tp",
+        "vpc": "//compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc"
+      }
+    },
+    {
+      "uri": "//artifactregistry.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/repositories/ml-models-registry",
+      "asset_type": "artifactregistry.googleapis.com/Repository",
+      "project_id": "stratos-mlops-prod",
+      "location": "europe-west1",
+      "display_name": "ml-models-registry",
+      "attributes": {
+        "format": "DOCKER",
+        "mode": "STANDARD_REPOSITORY"
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/curated_enterprise_dw",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "stratos-lakehouse-prod",
+      "location": "EU",
+      "display_name": "curated_enterprise_dw",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lakehouse-data-cmek",
+        "location": "EU",
+        "table_count": 18
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/raw_cdc",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "stratos-lakehouse-prod",
+      "location": "EU",
+      "display_name": "raw_cdc",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lakehouse-data-cmek",
+        "location": "EU",
+        "table_count": 24
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/stratos-mlops-prod/datasets/ml_feature_mart",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "stratos-mlops-prod",
+      "location": "EU",
+      "display_name": "ml_feature_mart",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/keyRings/ml-keyring/cryptoKeys/vertex-model-cmek",
+        "location": "EU",
+        "table_count": 9
+      }
+    },
+    {
+      "uri": "//bigqueryconnection.googleapis.com/projects/stratos-lakehouse-prod/locations/eu/connections/alloydb-fed-bqconn",
+      "asset_type": "bigqueryconnection.googleapis.com/Connection",
+      "project_id": "stratos-lakehouse-prod",
+      "location": "eu",
+      "display_name": "alloydb-fed-bqconn",
+      "attributes": {
+        "connection_type": "cloud_sql"
+      }
+    },
+    {
+      "uri": "//bigquerydatatransfer.googleapis.com/projects/stratos-mlops-prod/locations/eu/transferConfigs/hourly-feature-transfer",
+      "asset_type": "bigquerydatatransfer.googleapis.com/TransferConfig",
+      "project_id": "stratos-mlops-prod",
+      "location": "eu",
+      "display_name": "hourly-feature-transfer",
+      "attributes": {
+        "data_source_id": "scheduled_query",
+        "schedule": "every 1 hours"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/keyRings/ingest-keyring/cryptoKeys/ingest-cdc-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "stratos-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "ingest-cdc-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lakehouse-data-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "stratos-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "lakehouse-data-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/keyRings/ml-keyring/cryptoKeys/vertex-model-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "stratos-mlops-prod",
+      "location": "europe-west1",
+      "display_name": "vertex-model-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudscheduler.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/jobs/nightly-retrain-tick",
+      "asset_type": "cloudscheduler.googleapis.com/Job",
+      "project_id": "stratos-mlops-prod",
+      "location": "europe-west1",
+      "display_name": "nightly-retrain-tick",
+      "attributes": {
+        "schedule": "0 2 * * *"
+      }
+    },
+    {
+      "uri": "//composer.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/environments/enterprise-airflow",
+      "asset_type": "composer.googleapis.com/Environment",
+      "project_id": "stratos-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-airflow",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-lakehouse-prod/regions/europe-west1/subnetworks/dataflow-dataproc-subnet",
+      "attributes": {
+        "image_version": "composer-2.9.0-airflow-2.9.3",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lakehouse-data-cmek",
+        "service_account": "composer-orch-sa@stratos-lakehouse-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/stratos-lakehouse-prod/regions/europe-west1/subnetworks/dataflow-dataproc-subnet",
+        "vpc": "//compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "stratos-ingest-prod",
+      "location": "global",
+      "display_name": "ingest-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/stratos-ingest-prod/regions/europe-west1/subnetworks/ingest-kafka-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "stratos-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "ingest-kafka-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc",
+      "attributes": {
+        "cidr": "10.70.0.0/22",
+        "vpc": "//compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "stratos-lakehouse-prod",
+      "location": "global",
+      "display_name": "lakehouse-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/stratos-lakehouse-prod/regions/europe-west1/routers/lakehouse-nat-router",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "stratos-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "lakehouse-nat-router",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc",
+      "attributes": {
+        "nat_count": 1,
+        "vpc": "//compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/stratos-lakehouse-prod/regions/europe-west1/subnetworks/dataflow-dataproc-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "stratos-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "dataflow-dataproc-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc",
+      "attributes": {
+        "cidr": "10.71.0.0/20",
+        "vpc": "//compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/stratos-mlops-prod/global/forwardingRules/ml-serving-https-lb",
+      "asset_type": "compute.googleapis.com/GlobalForwardingRule",
+      "project_id": "stratos-mlops-prod",
+      "location": "global",
+      "display_name": "ml-serving-https-lb",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc",
+      "attributes": {
+        "ip_address": "203.0.113.150",
+        "load_balancing_scheme": "EXTERNAL_MANAGED",
+        "port_range": "443-443",
+        "vpc": "//compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "stratos-mlops-prod",
+      "location": "global",
+      "display_name": "mlops-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/stratos-mlops-prod/regions/europe-west1/routers/mlops-nat-router",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "stratos-mlops-prod",
+      "location": "europe-west1",
+      "display_name": "mlops-nat-router",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc",
+      "attributes": {
+        "nat_count": 1,
+        "vpc": "//compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/stratos-mlops-prod/regions/europe-west1/subnetworks/ml-serving-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "stratos-mlops-prod",
+      "location": "europe-west1",
+      "display_name": "ml-serving-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc",
+      "attributes": {
+        "cidr": "10.72.0.0/22",
+        "vpc": "//compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc"
+      }
+    },
+    {
+      "uri": "//dataflow.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/jobs/cdc-lakehouse-dataflow",
+      "asset_type": "dataflow.googleapis.com/Job",
+      "project_id": "stratos-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "cdc-lakehouse-dataflow",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-lakehouse-prod/regions/europe-west1/subnetworks/dataflow-dataproc-subnet",
+      "attributes": {
+        "job_type": "JOB_TYPE_STREAMING",
+        "service_account": "dataflow-etl-sa@stratos-lakehouse-prod.iam.gserviceaccount.com",
+        "state": "JOB_STATE_RUNNING",
+        "subnet": "//compute.googleapis.com/projects/stratos-lakehouse-prod/regions/europe-west1/subnetworks/dataflow-dataproc-subnet",
+        "vpc": "//compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc"
+      }
+    },
+    {
+      "uri": "//dataform.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/repositories/warehouse-dataform-repo",
+      "asset_type": "dataform.googleapis.com/Repository",
+      "project_id": "stratos-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "warehouse-dataform-repo",
+      "attributes": {
+        "git_remote": "github.com/stratos/sql-models"
+      }
+    },
+    {
+      "uri": "//datafusion.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/instances/erp-datafusion-etl",
+      "asset_type": "datafusion.googleapis.com/Instance",
+      "project_id": "stratos-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "erp-datafusion-etl",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-ingest-prod/regions/europe-west1/subnetworks/ingest-kafka-subnet",
+      "attributes": {
+        "edition": "ENTERPRISE",
+        "subnet": "//compute.googleapis.com/projects/stratos-ingest-prod/regions/europe-west1/subnetworks/ingest-kafka-subnet",
+        "vpc": "//compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc"
+      }
+    },
+    {
+      "uri": "//dataplex.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/lakes/enterprise-dataplex-lake",
+      "asset_type": "dataplex.googleapis.com/Lake",
+      "project_id": "stratos-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "enterprise-dataplex-lake",
+      "attributes": {
+        "state": "ACTIVE"
+      }
+    },
+    {
+      "uri": "//dataproc.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/batches/silver-spark-batch",
+      "asset_type": "dataproc.googleapis.com/Batch",
+      "project_id": "stratos-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "silver-spark-batch",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-lakehouse-prod/regions/europe-west1/subnetworks/dataflow-dataproc-subnet",
+      "attributes": {
+        "service_account": "dataproc-spark-sa@stratos-lakehouse-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/stratos-lakehouse-prod/regions/europe-west1/subnetworks/dataflow-dataproc-subnet",
+        "vpc": "//compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc"
+      }
+    },
+    {
+      "uri": "//datastream.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/streams/inventory-cdc-stream",
+      "asset_type": "datastream.googleapis.com/Stream",
+      "project_id": "stratos-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "inventory-cdc-stream",
+      "attributes": {
+        "state": "RUNNING"
+      }
+    },
+    {
+      "uri": "//datastream.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/streams/orders-cdc-stream",
+      "asset_type": "datastream.googleapis.com/Stream",
+      "project_id": "stratos-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "orders-cdc-stream",
+      "attributes": {
+        "state": "RUNNING"
+      }
+    },
+    {
+      "uri": "//external.internet/clients/ml-partner-apps",
+      "asset_type": "external.internet/ClientGroup",
+      "project_id": "external",
+      "location": "global",
+      "display_name": "ml-partner-apps",
+      "is_external": true
+    },
+    {
+      "uri": "//external.internet/clients/partner-erp-feeds",
+      "asset_type": "external.internet/ClientGroup",
+      "project_id": "external",
+      "location": "global",
+      "display_name": "partner-erp-feeds",
+      "is_external": true
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/stratos-ingest-prod/serviceAccounts/datastream-cdc-sa@stratos-ingest-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "stratos-ingest-prod",
+      "display_name": "datastream-cdc-sa@stratos-ingest-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "datastream-cdc-sa@stratos-ingest-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/stratos-lakehouse-prod/serviceAccounts/composer-orch-sa@stratos-lakehouse-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "stratos-lakehouse-prod",
+      "display_name": "composer-orch-sa@stratos-lakehouse-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "composer-orch-sa@stratos-lakehouse-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/stratos-lakehouse-prod/serviceAccounts/dataflow-etl-sa@stratos-lakehouse-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "stratos-lakehouse-prod",
+      "display_name": "dataflow-etl-sa@stratos-lakehouse-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "dataflow-etl-sa@stratos-lakehouse-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/stratos-lakehouse-prod/serviceAccounts/dataproc-spark-sa@stratos-lakehouse-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "stratos-lakehouse-prod",
+      "display_name": "dataproc-spark-sa@stratos-lakehouse-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "dataproc-spark-sa@stratos-lakehouse-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/stratos-mlops-prod/serviceAccounts/ml-gateway-sa@stratos-mlops-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "stratos-mlops-prod",
+      "display_name": "ml-gateway-sa@stratos-mlops-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "ml-gateway-sa@stratos-mlops-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/stratos-mlops-prod/serviceAccounts/vertex-serving-sa@stratos-mlops-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "stratos-mlops-prod",
+      "display_name": "vertex-serving-sa@stratos-mlops-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "vertex-serving-sa@stratos-mlops-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/stratos-lakehouse-prod/sinks/lakehouse-lineage-sink",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "stratos-lakehouse-prod",
+      "location": "global",
+      "display_name": "lakehouse-lineage-sink"
+    },
+    {
+      "uri": "//looker.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/instances/executive-looker-bi",
+      "asset_type": "looker.googleapis.com/Instance",
+      "project_id": "stratos-mlops-prod",
+      "location": "europe-west1",
+      "display_name": "executive-looker-bi",
+      "attributes": {
+        "edition": "CORE_ENTERPRISE"
+      }
+    },
+    {
+      "uri": "//managedkafka.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/clusters/telemetry-managed-kafka",
+      "asset_type": "managedkafka.googleapis.com/Cluster",
+      "project_id": "stratos-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "telemetry-managed-kafka",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-ingest-prod/regions/europe-west1/subnetworks/ingest-kafka-subnet",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/keyRings/ingest-keyring/cryptoKeys/ingest-cdc-cmek",
+        "subnet": "//compute.googleapis.com/projects/stratos-ingest-prod/regions/europe-west1/subnetworks/ingest-kafka-subnet",
+        "vpc": "//compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc"
+      }
+    },
+    {
+      "uri": "//metastore.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/services/lakehouse-hive-metastore",
+      "asset_type": "metastore.googleapis.com/Service",
+      "project_id": "stratos-lakehouse-prod",
+      "location": "europe-west1",
+      "display_name": "lakehouse-hive-metastore",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc",
+      "attributes": {
+        "tier": "ENTERPRISE",
+        "vpc": "//compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc"
+      }
+    },
+    {
+      "uri": "//monitoring.googleapis.com/projects/stratos-mlops-prod/alertPolicies/9303001",
+      "asset_type": "monitoring.googleapis.com/AlertPolicy",
+      "project_id": "stratos-mlops-prod",
+      "location": "global",
+      "display_name": "ml-drift-alert-policy",
+      "attributes": {
+        "enabled": true
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/stratos-ingest-prod/subscriptions/dataflow-cdc-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "stratos-ingest-prod",
+      "location": "global",
+      "display_name": "dataflow-cdc-sub"
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/stratos-ingest-prod/topics/cdc-change-events",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "stratos-ingest-prod",
+      "location": "global",
+      "display_name": "cdc-change-events"
+    },
+    {
+      "uri": "//run.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/services/ml-inference-gateway",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "stratos-mlops-prod",
+      "location": "europe-west1",
+      "display_name": "ml-inference-gateway",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-mlops-prod/regions/europe-west1/subnetworks/ml-serving-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "service_account": "ml-gateway-sa@stratos-mlops-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/stratos-mlops-prod/regions/europe-west1/subnetworks/ml-serving-subnet",
+        "vpc": "//compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/stratos-ingest-prod/secrets/cdc-replication-user",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "stratos-ingest-prod",
+      "display_name": "cdc-replication-user",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/stratos-mlops-prod/secrets/ml-feature-api-token",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "stratos-mlops-prod",
+      "display_name": "ml-feature-api-token",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//sqladmin.googleapis.com/projects/stratos-ingest-prod/instances/oltp-orders-cloudsql",
+      "asset_type": "sqladmin.googleapis.com/Instance",
+      "project_id": "stratos-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "oltp-orders-cloudsql",
+      "parent_uri": "//compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc",
+      "attributes": {
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/keyRings/ingest-keyring/cryptoKeys/ingest-cdc-cmek",
+        "private_ip": "10.70.20.5",
+        "psa_tenant_project": "p920200abcdef12-tp",
+        "vpc": "//compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/stratos-bronze-landing",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "stratos-ingest-prod",
+      "location": "EU",
+      "display_name": "stratos-bronze-landing",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/keyRings/ingest-keyring/cryptoKeys/ingest-cdc-cmek",
+        "storage_class": "STANDARD"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/stratos-gold-exports",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "stratos-lakehouse-prod",
+      "location": "EU",
+      "display_name": "stratos-gold-exports",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lakehouse-data-cmek",
+        "storage_class": "STANDARD"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "409ef5942eff812e",
+      "from_uri": "//aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/endpoints/churn-predictor-v4",
+      "to_uri": "//cloudkms.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/keyRings/ml-keyring/cryptoKeys/vertex-model-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "55367f6dcce8a9d9",
+      "from_uri": "//aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/endpoints/churn-predictor-v4",
+      "to_uri": "//iam.googleapis.com/projects/stratos-mlops-prod/serviceAccounts/vertex-serving-sa@stratos-mlops-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "8b69da1998b135c2",
+      "from_uri": "//alloydb.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/clusters/oltp-inventory-alloydb",
+      "to_uri": "//cloudkms.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/keyRings/ingest-keyring/cryptoKeys/ingest-cdc-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "f9c082bd9600730a",
+      "from_uri": "//alloydb.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/clusters/oltp-inventory-alloydb",
+      "to_uri": "//datastream.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/streams/inventory-cdc-stream",
+      "kind": "CONFIG_REF",
+      "detail": "datastream_cdc"
+    },
+    {
+      "id": "25931af3d46e5a74",
+      "from_uri": "//artifactregistry.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/repositories/ml-models-registry",
+      "to_uri": "//aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/endpoints/churn-predictor-v4",
+      "kind": "CONFIG_REF",
+      "detail": "model_container"
+    },
+    {
+      "id": "e88c7781daee24e9",
+      "from_uri": "//bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/curated_enterprise_dw",
+      "to_uri": "//bigquery.googleapis.com/projects/stratos-mlops-prod/datasets/ml_feature_mart",
+      "kind": "BQ_LINEAGE",
+      "detail": "feature_sql"
+    },
+    {
+      "id": "196f54b4cba6c945",
+      "from_uri": "//bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/curated_enterprise_dw",
+      "to_uri": "//cloudkms.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lakehouse-data-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "59792c198df6b07d",
+      "from_uri": "//bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/curated_enterprise_dw",
+      "to_uri": "//looker.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/instances/executive-looker-bi",
+      "kind": "CONFIG_REF",
+      "detail": "bq_read_api"
+    },
+    {
+      "id": "8f336cf0d0dbba12",
+      "from_uri": "//bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/raw_cdc",
+      "to_uri": "//bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/curated_enterprise_dw",
+      "kind": "BQ_LINEAGE",
+      "detail": "sql_transform"
+    },
+    {
+      "id": "9ee3aa91b565c63e",
+      "from_uri": "//bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/raw_cdc",
+      "to_uri": "//cloudkms.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lakehouse-data-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "af69a184e6328358",
+      "from_uri": "//bigquery.googleapis.com/projects/stratos-mlops-prod/datasets/ml_feature_mart",
+      "to_uri": "//aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/endpoints/churn-predictor-v4",
+      "kind": "CONFIG_REF",
+      "detail": "train_eval"
+    },
+    {
+      "id": "f0ef7faeacdf0844",
+      "from_uri": "//bigquery.googleapis.com/projects/stratos-mlops-prod/datasets/ml_feature_mart",
+      "to_uri": "//aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/featureOnlineStores/realtime-customer-fos",
+      "kind": "CONFIG_REF",
+      "detail": "feature_sync"
+    },
+    {
+      "id": "0c478e38f1372e84",
+      "from_uri": "//bigqueryconnection.googleapis.com/projects/stratos-lakehouse-prod/locations/eu/connections/alloydb-fed-bqconn",
+      "to_uri": "//alloydb.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/clusters/oltp-inventory-alloydb",
+      "kind": "CONFIG_REF",
+      "detail": "federated_sql"
+    },
+    {
+      "id": "225e6f456c5943e8",
+      "from_uri": "//bigqueryconnection.googleapis.com/projects/stratos-lakehouse-prod/locations/eu/connections/alloydb-fed-bqconn",
+      "to_uri": "//bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/curated_enterprise_dw",
+      "kind": "CONFIG_REF",
+      "detail": "federated_join"
+    },
+    {
+      "id": "7fd651a0eb370569",
+      "from_uri": "//bigquerydatatransfer.googleapis.com/projects/stratos-mlops-prod/locations/eu/transferConfigs/hourly-feature-transfer",
+      "to_uri": "//bigquery.googleapis.com/projects/stratos-mlops-prod/datasets/ml_feature_mart",
+      "kind": "CONFIG_REF",
+      "detail": "scheduled_sync"
+    },
+    {
+      "id": "cc13c983dbd10df6",
+      "from_uri": "//cloudscheduler.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/jobs/nightly-retrain-tick",
+      "to_uri": "//composer.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/environments/enterprise-airflow",
+      "kind": "CONFIG_REF",
+      "detail": "trigger_dag"
+    },
+    {
+      "id": "0e634771c4b1d54f",
+      "from_uri": "//composer.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/environments/enterprise-airflow",
+      "to_uri": "//dataform.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/repositories/warehouse-dataform-repo",
+      "kind": "CONFIG_REF",
+      "detail": "airflow_trigger"
+    },
+    {
+      "id": "cbdb62df7ae78b56",
+      "from_uri": "//composer.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/environments/enterprise-airflow",
+      "to_uri": "//dataproc.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/batches/silver-spark-batch",
+      "kind": "CONFIG_REF",
+      "detail": "airflow_trigger"
+    },
+    {
+      "id": "84c0394cdfad107e",
+      "from_uri": "//composer.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/environments/enterprise-airflow",
+      "to_uri": "//iam.googleapis.com/projects/stratos-lakehouse-prod/serviceAccounts/composer-orch-sa@stratos-lakehouse-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "4a47a82b443e043b",
+      "from_uri": "//compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc",
+      "to_uri": "//alloydb.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/clusters/oltp-inventory-alloydb",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com"
+    },
+    {
+      "id": "5ae108524c5bcadd",
+      "from_uri": "//compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc",
+      "to_uri": "//compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc",
+      "kind": "VPC_PEERING",
+      "detail": "ingest-to-lakehouse"
+    },
+    {
+      "id": "a5ead31462151c8b",
+      "from_uri": "//compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc",
+      "to_uri": "//sqladmin.googleapis.com/projects/stratos-ingest-prod/instances/oltp-orders-cloudsql",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com"
+    },
+    {
+      "id": "1928ad3d079d1b7b",
+      "from_uri": "//compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc",
+      "to_uri": "//compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc",
+      "kind": "VPC_PEERING",
+      "detail": "lakehouse-to-mlops"
+    },
+    {
+      "id": "a51613574c1a79a4",
+      "from_uri": "//compute.googleapis.com/projects/stratos-lakehouse-prod/regions/europe-west1/routers/lakehouse-nat-router",
+      "to_uri": "//compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "cloud_nat"
+    },
+    {
+      "id": "1dc06567ae91066e",
+      "from_uri": "//compute.googleapis.com/projects/stratos-mlops-prod/global/forwardingRules/ml-serving-https-lb",
+      "to_uri": "//run.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/services/ml-inference-gateway",
+      "kind": "CONFIG_REF",
+      "detail": "lb_serverless_neg"
+    },
+    {
+      "id": "469e2b7540287641",
+      "from_uri": "//compute.googleapis.com/projects/stratos-mlops-prod/regions/europe-west1/routers/mlops-nat-router",
+      "to_uri": "//compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "cloud_nat"
+    },
+    {
+      "id": "56291977c8054b26",
+      "from_uri": "//dataflow.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/jobs/cdc-lakehouse-dataflow",
+      "to_uri": "//bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/raw_cdc",
+      "kind": "CONFIG_REF",
+      "detail": "bq_stream_write"
+    },
+    {
+      "id": "5eb2caadd1b3798c",
+      "from_uri": "//dataflow.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/jobs/cdc-lakehouse-dataflow",
+      "to_uri": "//iam.googleapis.com/projects/stratos-lakehouse-prod/serviceAccounts/dataflow-etl-sa@stratos-lakehouse-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "2a0ec3b152e14766",
+      "from_uri": "//dataform.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/repositories/warehouse-dataform-repo",
+      "to_uri": "//bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/curated_enterprise_dw",
+      "kind": "CONFIG_REF",
+      "detail": "sqlx_compile"
+    },
+    {
+      "id": "28c312393a1bb389",
+      "from_uri": "//datafusion.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/instances/erp-datafusion-etl",
+      "to_uri": "//storage.googleapis.com/stratos-bronze-landing",
+      "kind": "CONFIG_REF",
+      "detail": "gcs_bronze_write"
+    },
+    {
+      "id": "f4a045b188d63897",
+      "from_uri": "//dataplex.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/lakes/enterprise-dataplex-lake",
+      "to_uri": "//storage.googleapis.com/stratos-bronze-landing",
+      "kind": "CONFIG_REF",
+      "detail": "govern_zone"
+    },
+    {
+      "id": "75b933375b7165ec",
+      "from_uri": "//dataplex.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/lakes/enterprise-dataplex-lake",
+      "to_uri": "//storage.googleapis.com/stratos-gold-exports",
+      "kind": "CONFIG_REF",
+      "detail": "govern_zone"
+    },
+    {
+      "id": "224f97b8eb411f20",
+      "from_uri": "//dataproc.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/batches/silver-spark-batch",
+      "to_uri": "//bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/raw_cdc",
+      "kind": "CONFIG_REF",
+      "detail": "bq_load"
+    },
+    {
+      "id": "10fe2f8fe67614c2",
+      "from_uri": "//dataproc.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/batches/silver-spark-batch",
+      "to_uri": "//iam.googleapis.com/projects/stratos-lakehouse-prod/serviceAccounts/dataproc-spark-sa@stratos-lakehouse-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "635322eea1a13e71",
+      "from_uri": "//dataproc.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/batches/silver-spark-batch",
+      "to_uri": "//metastore.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/services/lakehouse-hive-metastore",
+      "kind": "CONFIG_REF",
+      "detail": "hive_catalog"
+    },
+    {
+      "id": "252ec3b68f5c0357",
+      "from_uri": "//dataproc.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/batches/silver-spark-batch",
+      "to_uri": "//storage.googleapis.com/stratos-gold-exports",
+      "kind": "CONFIG_REF",
+      "detail": "parquet_export"
+    },
+    {
+      "id": "811d3023496274e7",
+      "from_uri": "//datastream.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/streams/inventory-cdc-stream",
+      "to_uri": "//iam.googleapis.com/projects/stratos-ingest-prod/serviceAccounts/datastream-cdc-sa@stratos-ingest-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "8ff104555a4e81fc",
+      "from_uri": "//datastream.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/streams/inventory-cdc-stream",
+      "to_uri": "//storage.googleapis.com/stratos-bronze-landing",
+      "kind": "CONFIG_REF",
+      "detail": "datastream_sink"
+    },
+    {
+      "id": "cec25fb0b042fec8",
+      "from_uri": "//datastream.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/streams/orders-cdc-stream",
+      "to_uri": "//iam.googleapis.com/projects/stratos-ingest-prod/serviceAccounts/datastream-cdc-sa@stratos-ingest-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "2eb637e4eddf5748",
+      "from_uri": "//datastream.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/streams/orders-cdc-stream",
+      "to_uri": "//pubsub.googleapis.com/projects/stratos-ingest-prod/topics/cdc-change-events",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub_publish"
+    },
+    {
+      "id": "26c834947f8e177c",
+      "from_uri": "//datastream.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/streams/orders-cdc-stream",
+      "to_uri": "//secretmanager.googleapis.com/projects/stratos-ingest-prod/secrets/cdc-replication-user",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "a6c370601fe120d3",
+      "from_uri": "//datastream.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/streams/orders-cdc-stream",
+      "to_uri": "//storage.googleapis.com/stratos-bronze-landing",
+      "kind": "CONFIG_REF",
+      "detail": "datastream_sink"
+    },
+    {
+      "id": "dd6671aa335002c7",
+      "from_uri": "//external.internet/clients/ml-partner-apps",
+      "to_uri": "//compute.googleapis.com/projects/stratos-mlops-prod/global/forwardingRules/ml-serving-https-lb",
+      "kind": "CONFIG_REF",
+      "detail": "https_443"
+    },
+    {
+      "id": "3d43b6ad035f0277",
+      "from_uri": "//external.internet/clients/partner-erp-feeds",
+      "to_uri": "//datafusion.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/instances/erp-datafusion-etl",
+      "kind": "CONFIG_REF",
+      "detail": "batch_erp_ingest"
+    },
+    {
+      "id": "bfd6aafafda3c0a5",
+      "from_uri": "//external.internet/clients/partner-erp-feeds",
+      "to_uri": "//managedkafka.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/clusters/telemetry-managed-kafka",
+      "kind": "CONFIG_REF",
+      "detail": "kafka_ingest"
+    },
+    {
+      "id": "d5bb7e2c9c4e8122",
+      "from_uri": "//iam.googleapis.com/projects/stratos-lakehouse-prod/serviceAccounts/dataflow-etl-sa@stratos-lakehouse-prod.iam.gserviceaccount.com",
+      "to_uri": "//bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/raw_cdc",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/bigquery.dataEditor"
+    },
+    {
+      "id": "056577e4d0d5da49",
+      "from_uri": "//iam.googleapis.com/projects/stratos-mlops-prod/serviceAccounts/vertex-serving-sa@stratos-mlops-prod.iam.gserviceaccount.com",
+      "to_uri": "//bigquery.googleapis.com/projects/stratos-mlops-prod/datasets/ml_feature_mart",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/bigquery.dataViewer"
+    },
+    {
+      "id": "63e1792258816e46",
+      "from_uri": "//logging.googleapis.com/projects/stratos-lakehouse-prod/sinks/lakehouse-lineage-sink",
+      "to_uri": "//storage.googleapis.com/stratos-bronze-landing",
+      "kind": "CONFIG_REF",
+      "detail": "audit_sink"
+    },
+    {
+      "id": "8d1b9180e7fc182a",
+      "from_uri": "//managedkafka.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/clusters/telemetry-managed-kafka",
+      "to_uri": "//cloudkms.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/keyRings/ingest-keyring/cryptoKeys/ingest-cdc-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "88ae70106bf01479",
+      "from_uri": "//managedkafka.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/clusters/telemetry-managed-kafka",
+      "to_uri": "//dataflow.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/jobs/cdc-lakehouse-dataflow",
+      "kind": "CONFIG_REF",
+      "detail": "kafka_consume"
+    },
+    {
+      "id": "af7ccc09af37fe5f",
+      "from_uri": "//monitoring.googleapis.com/projects/stratos-mlops-prod/alertPolicies/9303001",
+      "to_uri": "//aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/endpoints/churn-predictor-v4",
+      "kind": "CONFIG_REF",
+      "detail": "slo_alert"
+    },
+    {
+      "id": "9d2a320228aeb3ab",
+      "from_uri": "//pubsub.googleapis.com/projects/stratos-ingest-prod/subscriptions/dataflow-cdc-sub",
+      "to_uri": "//dataflow.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/jobs/cdc-lakehouse-dataflow",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.pull"
+    },
+    {
+      "id": "114d6a12aeecdf13",
+      "from_uri": "//pubsub.googleapis.com/projects/stratos-ingest-prod/topics/cdc-change-events",
+      "to_uri": "//pubsub.googleapis.com/projects/stratos-ingest-prod/subscriptions/dataflow-cdc-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "6a0c928c49fe31bc",
+      "from_uri": "//run.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/services/ml-inference-gateway",
+      "to_uri": "//aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/endpoints/churn-predictor-v4",
+      "kind": "CONFIG_REF",
+      "detail": "vertex_predict"
+    },
+    {
+      "id": "78d1f28f3eb566cd",
+      "from_uri": "//run.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/services/ml-inference-gateway",
+      "to_uri": "//aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/featureOnlineStores/realtime-customer-fos",
+      "kind": "CONFIG_REF",
+      "detail": "online_lookup"
+    },
+    {
+      "id": "d3c6ca50fd15c07d",
+      "from_uri": "//run.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/services/ml-inference-gateway",
+      "to_uri": "//aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "kind": "CONFIG_REF",
+      "detail": "vertex_summarize"
+    },
+    {
+      "id": "068741d32803981b",
+      "from_uri": "//run.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/services/ml-inference-gateway",
+      "to_uri": "//iam.googleapis.com/projects/stratos-mlops-prod/serviceAccounts/ml-gateway-sa@stratos-mlops-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "e1f1bf8a28224cc4",
+      "from_uri": "//run.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/services/ml-inference-gateway",
+      "to_uri": "//secretmanager.googleapis.com/projects/stratos-mlops-prod/secrets/ml-feature-api-token",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "1c86bbe2a1282c39",
+      "from_uri": "//sqladmin.googleapis.com/projects/stratos-ingest-prod/instances/oltp-orders-cloudsql",
+      "to_uri": "//cloudkms.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/keyRings/ingest-keyring/cryptoKeys/ingest-cdc-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "5b31ca9743dc86d7",
+      "from_uri": "//sqladmin.googleapis.com/projects/stratos-ingest-prod/instances/oltp-orders-cloudsql",
+      "to_uri": "//datastream.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/streams/orders-cdc-stream",
+      "kind": "CONFIG_REF",
+      "detail": "datastream_cdc"
+    },
+    {
+      "id": "2b6fba8d20064a97",
+      "from_uri": "//storage.googleapis.com/stratos-bronze-landing",
+      "to_uri": "//dataproc.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/batches/silver-spark-batch",
+      "kind": "CONFIG_REF",
+      "detail": "spark_read"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "aiplatform.googleapis.com/Model": 6,
+    "bigquery.googleapis.com/Table": 51,
+    "compute.googleapis.com/Firewall": 24,
+    "compute.googleapis.com/Route": 16,
+    "dataform.googleapis.com/WorkflowInvocation": 42,
+    "dataplex.googleapis.com/Asset": 8,
+    "datastream.googleapis.com/ConnectionProfile": 4
+  },
+  "coverage_ledger": [
+    {
+      "scope": "organizations/920200001",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/920200001",
+      "source": "cai_iam",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/920200001",
+      "source": "cai_resources",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/920200001",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/920200001",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}

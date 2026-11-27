@@ -1,8 +1,10 @@
 package extract
 
 import (
+	"cmp"
 	"encoding/json"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
@@ -12,6 +14,11 @@ type k8sObjKey struct {
 	clusterURI string
 	namespace  string
 	name       string
+}
+
+type k8sNamespaceKey struct {
+	clusterURI string
+	namespace  string
 }
 
 type k8sWorkloadMeta struct {
@@ -128,14 +135,10 @@ func (g *gkeState) indexK8sConfigMap(clusterURI, ns, name string, data *structpb
 	}
 	key := k8sObjKey{clusterURI: clusterURI, namespace: ns, name: name}
 	for _, r := range envRefs {
-		s := g.configMapEnvRefs[key]
-		appendUnique(&s, r)
-		g.configMapEnvRefs[key] = s
+		appendUniqueMap(g.configMapEnvRefs, key, r)
 	}
 	for _, r := range secRefs {
-		s := g.configMapSecRefs[key]
-		appendUnique(&s, r)
-		g.configMapSecRefs[key] = s
+		appendUniqueMap(g.configMapSecRefs, key, r)
 	}
 }
 
@@ -183,7 +186,7 @@ func (g *gkeState) indexK8sService(uri, clusterURI, ns, name, projID string, dat
 			}
 		}
 	}
-	sort.Strings(lbIPs)
+	slices.Sort(lbIPs)
 
 	g.services[uri] = &k8sServiceMeta{
 		uri:        uri,
@@ -230,9 +233,9 @@ func (g *gkeState) indexK8sIngress(uri, clusterURI, ns, projID string, data *str
 		}
 	}
 
-	sort.Strings(im.hosts)
-	sort.Strings(im.paths)
-	sort.Strings(im.forwardingRuleNames)
+	slices.Sort(im.hosts)
+	slices.Sort(im.paths)
+	slices.Sort(im.forwardingRuleNames)
 	g.ingresses[uri] = im
 }
 
@@ -350,9 +353,7 @@ func (g *gkeState) rekey(projIdx map[string]string) {
 	for cURI, urls := range g.clusterIGURLs {
 		canonC := CanonicalizeAIP122(cURI, projIdx)
 		for _, u := range urls {
-			list := rekeyIG[canonC]
-			appendUnique(&list, CanonicalizeAIP122WithService(u, svcCompute, projIdx))
-			rekeyIG[canonC] = list
+			appendUniqueMap(rekeyIG, canonC, CanonicalizeAIP122WithService(u, svcCompute, projIdx))
 		}
 	}
 	g.clusterIGURLs = rekeyIG
@@ -364,7 +365,7 @@ type gkeNEGTarget struct {
 }
 
 func (st *extractState) resolveGKE() {
-	wlURIs := sortedMapKeys(st.gke.workloads)
+	wlURIs := slices.Sorted(maps.Keys(st.gke.workloads))
 	st.resolveGKEWorkloads(wlURIs)
 	svcByObjKey, negTargetsByProj, lbIPToSvcs := st.resolveGKEServices(wlURIs)
 	ingressesBySvc, ingressesByFRName := st.resolveGKEIngresses(svcByObjKey)
@@ -402,10 +403,7 @@ func (st *extractState) resolveGKEWorkloadIdentity(uri string, w *k8sWorkloadMet
 		return
 	}
 	gsaURI := st.serviceAccountURI(gsaEmail, asset.projectID)
-	if asset.attrs == nil {
-		asset.attrs = make(map[string]any)
-	}
-	asset.attrs["service_account"] = gsaEmail
+	asset.setAttr("service_account", gsaEmail)
 	st.referencedURIs[gsaURI] = true
 
 	if st.assetsByURI[gsaURI] != nil {
@@ -429,11 +427,18 @@ func (st *extractState) resolveGKEServices(wlURIs []string) (
 	map[string][]string,
 ) {
 	g := st.gke
+	wlByNS := make(map[k8sNamespaceKey][]*k8sWorkloadMeta)
+	for _, wURI := range wlURIs {
+		w := g.workloads[wURI]
+		k := k8sNamespaceKey{clusterURI: w.clusterURI, namespace: w.namespace}
+		wlByNS[k] = append(wlByNS[k], w)
+	}
+
 	svcByObjKey := make(map[k8sObjKey]*k8sServiceMeta, len(g.services))
 	negTargetsByProj := make(map[string][]gkeNEGTarget)
 	lbIPToSvcs := make(map[string][]string)
 
-	for _, uri := range sortedMapKeys(g.services) {
+	for _, uri := range slices.Sorted(maps.Keys(g.services)) {
 		svc := g.services[uri]
 		svcByObjKey[k8sObjKey{clusterURI: svc.clusterURI, namespace: svc.namespace, name: svc.name}] = svc
 
@@ -444,39 +449,29 @@ func (st *extractState) resolveGKEServices(wlURIs []string) (
 			k := svc.projectID + "|" + negName
 			negTargetsByProj[k] = append(negTargetsByProj[k], gkeNEGTarget{svcURI: uri, port: port})
 		}
-		st.matchServiceSelectorWorkloads(uri, svc, wlURIs)
+		st.matchServiceSelectorWorkloads(uri, svc, wlByNS[k8sNamespaceKey{clusterURI: svc.clusterURI, namespace: svc.namespace}])
 	}
 	return svcByObjKey, negTargetsByProj, lbIPToSvcs
 }
 
 func (st *extractState) recordServiceLBIPs(uri string, svc *k8sServiceMeta, lbIPToSvcs map[string][]string) {
 	if a := st.assetsByURI[uri]; a != nil {
-		if a.attrs == nil {
-			a.attrs = make(map[string]any)
-		}
-		a.attrs["load_balancer_ips"] = svc.lbIPs
+		a.setAttr("load_balancer_ips", svc.lbIPs)
 	}
 	for _, ip := range svc.lbIPs {
-		k := svc.projectID + "|" + ip
-		list := lbIPToSvcs[k]
-		appendUnique(&list, uri)
-		lbIPToSvcs[k] = list
+		appendUniqueMap(lbIPToSvcs, svc.projectID+"|"+ip, uri)
 	}
 }
 
-func (st *extractState) matchServiceSelectorWorkloads(uri string, svc *k8sServiceMeta, wlURIs []string) {
+func (st *extractState) matchServiceSelectorWorkloads(uri string, svc *k8sServiceMeta, workloads []*k8sWorkloadMeta) {
 	// GUARD: require non-empty selector so headless/ExternalName Services never match every workload!
-	if len(svc.selector) == 0 {
+	if len(svc.selector) == 0 || len(workloads) == 0 {
 		return
 	}
 	detail := formatSelector(svc.selector)
-	for _, wURI := range wlURIs {
-		w := st.gke.workloads[wURI]
-		if w.clusterURI != svc.clusterURI || w.namespace != svc.namespace {
-			continue
-		}
+	for _, w := range workloads {
 		if labelsMatchSelector(svc.selector, w.podLabels) {
-			st.addEdge(uri, wURI, EdgeK8sServiceSelector, detail)
+			st.addEdge(uri, w.uri, EdgeK8sServiceSelector, detail)
 		}
 	}
 }
@@ -487,7 +482,7 @@ func (st *extractState) resolveGKEIngresses(svcByObjKey map[k8sObjKey]*k8sServic
 ) {
 	ingressesBySvc := make(map[string][]*k8sIngressMeta)
 	ingressesByFRName := make(map[string][]*k8sIngressMeta)
-	for _, ingURI := range sortedMapKeys(st.gke.ingresses) {
+	for _, ingURI := range slices.Sorted(maps.Keys(st.gke.ingresses)) {
 		im := st.gke.ingresses[ingURI]
 		attachIngressAttrs(st.assetsByURI[ingURI], im.hosts, im.paths)
 		for _, frName := range im.forwardingRuleNames {
@@ -514,14 +509,11 @@ func attachIngressAttrs(a *ingestedAsset, hosts, paths []string) {
 	if a == nil || (len(hosts) == 0 && len(paths) == 0) {
 		return
 	}
-	if a.attrs == nil {
-		a.attrs = make(map[string]any)
-	}
 	if len(hosts) > 0 {
-		a.attrs["ingress_hosts"] = hosts
+		a.setAttr("ingress_hosts", hosts)
 	}
 	if len(paths) > 0 {
-		a.attrs["ingress_paths"] = paths
+		a.setAttr("ingress_paths", paths)
 	}
 }
 
@@ -546,10 +538,7 @@ func (st *extractState) resolveSingleForwardingRule(
 ) {
 	tr := st.traceForwardingRule(a)
 	if tr.tls {
-		if a.attrs == nil {
-			a.attrs = make(map[string]any)
-		}
-		a.attrs["tls"] = true
+		a.setAttr("tls", true)
 	}
 
 	var hosts, paths []string
@@ -564,8 +553,8 @@ func (st *extractState) resolveSingleForwardingRule(
 	st.linkForwardingRuleL4IP(a, lbIPToSvcs, linkedSvcs)
 	collectForwardingRuleIngresses(a, ingressesByFRName, ingressesBySvc, linkedSvcs, &hosts, &paths)
 
-	sort.Strings(hosts)
-	sort.Strings(paths)
+	slices.Sort(hosts)
+	slices.Sort(paths)
 	attachIngressAttrs(a, hosts, paths)
 }
 
@@ -595,11 +584,8 @@ func (st *extractState) linkForwardingRuleNEGGroup(
 		return
 	}
 	st.gkeResolvedNEGs[a.uri+"|"+grpURI] = true
-	sort.Slice(matches, func(i, j int) bool {
-		if matches[i].svcURI != matches[j].svcURI {
-			return matches[i].svcURI < matches[j].svcURI
-		}
-		return matches[i].port < matches[j].port
+	slices.SortFunc(matches, func(a, b gkeNEGTarget) int {
+		return cmp.Or(cmp.Compare(a.svcURI, b.svcURI), cmp.Compare(a.port, b.port))
 	})
 	for _, m := range matches {
 		linkedSvcs[m.svcURI] = true
@@ -637,7 +623,7 @@ func collectForwardingRuleIngresses(
 	for _, im := range ingressesByFRName[a.projectID+"|"+shortResourceName(a.uri)] {
 		collect(im)
 	}
-	for _, svcURI := range sortedMapKeys(linkedSvcs) {
+	for _, svcURI := range slices.Sorted(maps.Keys(linkedSvcs)) {
 		for _, im := range ingressesBySvc[svcURI] {
 			collect(im)
 		}
@@ -657,7 +643,7 @@ func labelsMatchSelector(selector, labels map[string]string) bool {
 }
 
 func formatSelector(selector map[string]string) string {
-	keys := sortedMapKeys(selector)
+	keys := slices.Sorted(maps.Keys(selector))
 	parts := make([]string, 0, len(keys))
 	for _, k := range keys {
 		parts = append(parts, k+"="+selector[k])
@@ -677,13 +663,4 @@ func formatNEGDetail(paths []string, port string) string {
 		return "neg"
 	}
 	return strings.Join(parts, " ")
-}
-
-func sortedMapKeys[V any](m map[string]V) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }

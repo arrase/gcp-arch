@@ -10,7 +10,7 @@ hide:
   </div>
   <h1>GCP Arch</h1>
   <p class="hero-subtitle">
-    A standalone static Go binary (<code>CGO_ENABLED=0</code>) that extracts read-only multi-project Google Cloud metadata, synthesizes evidence-backed multi-view architectures with Gemini 4 on Vertex AI, and renders offline vector PDF reports, high-DPI 3x PNG images, and self-contained HTML dossiers.
+    A standalone static Go binary (<code>CGO_ENABLED=0</code>) that extracts read-only multi-project Google Cloud metadata, synthesizes evidence-backed multi-view architectures with Gemini 4 on Vertex AI, and renders offline 1:1 per-view vector PDF reports, adaptive up to 2.0x Retina PNG images, and self-contained HTML dossiers.
   </p>
   <div class="hero-badges">
     <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26%2B-00ADD8.svg?logo=go&amp;logoColor=white" alt="Go 1.26+"></a>
@@ -49,29 +49,29 @@ hide:
   <div class="feature-card">
     <div>
       <i class="fa-solid fa-wand-magic-sparkles feature-icon" aria-hidden="true"></i>
-      <h3>Closed-World Gemini 4 Synthesis</h3>
-      <p>Two-pass structured Vertex AI synthesis over short-ID-interned facts (<code>&le; 500</code> active resources) enforces 100% resource accounting, stateful datastore homogeneity, and directed-walk provenance on every <code>VERIFIED</code> edge.</p>
+      <h3>Deterministic Skeleton + Gemini 4 Annotation</h3>
+      <p>Builds a deterministic GCP containment skeleton in Go (<code>&le; 500</code> active resources) and enriches it via a single bounded Vertex AI Gemini 4 SDK call—enforcing 100% resource/edge conservation and directed-walk provenance on every <code>VERIFIED</code> edge.</p>
     </div>
   </div>
   <div class="feature-card">
     <div>
       <i class="fa-solid fa-arrows-rotate feature-icon" aria-hidden="true"></i>
       <h3>Deterministic View 0 &amp; Day-2 Drift</h3>
-      <p>Projects <code>view_0_system_index</code> deterministically in Go and reconciles Day-2 infrastructure drift in place—preserving curated titles, <code>notes</code>, and <code>rejected_edges</code> with a <code>0</code>-LLM fast path in <code>&lt; 100 ms</code> when unchanged.</p>
+      <p>Constructs <code>view_0_system_index</code> deterministically in Go and reconciles Day-2 infrastructure drift in place—preserving curated titles, subtitles, and <code>notes</code> with a <code>0</code>-LLM fast path in <code>&lt; 5 ms</code> when unchanged.</p>
     </div>
   </div>
   <div class="feature-card">
     <div>
       <i class="fa-solid fa-file-pdf feature-icon" aria-hidden="true"></i>
-      <h3>Offline PDF, 3x PNG &amp; HTML Dossiers</h3>
-      <p>Compiles Git-tracked <code>architecture.yaml</code> completely offline with zero network calls and zero <code>facts.json</code> dependency, using embedded <code>Inter</code> and <code>JetBrains Mono</code> fonts and 85 inline SVG icons.</p>
+      <h3>Offline PDF, Retina PNG &amp; HTML Dossiers</h3>
+      <p>Compiles Git-tracked <code>architecture.yaml</code> completely offline with zero network calls and zero <code>facts.json</code> dependency, using embedded <code>Inter</code> and <code>JetBrains Mono</code> fonts, 85 inline SVG icons, and 1:1 per-view vector PDF pagination.</p>
     </div>
   </div>
   <div class="feature-card">
     <div>
       <i class="fa-solid fa-diagram-project feature-icon" aria-hidden="true"></i>
-      <h3>Zero-Collision Orthogonal Router</h3>
-      <p>Fixed-width <code>1040px</code> CSS Grid archetypes (<code>landscape_matrix</code>, <code>stage_pipeline</code>, <code>hub_spoke</code>) paired with an in-page orthogonal corridor router, jump-arc bridges, bus spines, and strict collision gates.</p>
+      <h3>Zero-Collision A* Router &amp; Streaming PNG Audit</h3>
+      <p>Nested Flexbox containers (<code>layered_flow</code>) paired with a DOM-measured Hanan-grid A* orthogonal router, jump-arc bridges, strict collision checks, and streaming scanline PNG pixel verification (<code>&lt; 1 MB</code> Go RAM).</p>
     </div>
   </div>
   <div class="feature-card">
@@ -124,10 +124,10 @@ Build a zero-dependency static binary from source (requires **Go 1.26+**) or dow
 2. **Read-Only Target IAM & Separate Vertex AI Project**:
    - Target scopes need `roles/cloudasset.viewer` (plus recommended read-only roles for Monitoring, BigQuery, Dataflow, and Folder names).
    - Synthesis bills to a separate `--vertex-project` with `roles/aiplatform.user`. See [Security, IAM & Preflight](security_iam.md) for the exact permission matrix.
-3. **Local Chrome or Chromium** *(for `render` PDF/PNG export & CLI collision verification)*:
-   - Auto-discovered via `--chrome-path`, `CHROME_PATH`, `config.yaml`, `PATH`, or standard Linux/macOS install locations ([`internal/render/cdp.go`](https://github.com/arrase/gcp-arch/blob/main/internal/render/cdp.go)).
+3. **Local Chrome or Chromium** *(for `render` PDF/PNG export & CLI collision/pixel verification)*:
+   - Auto-discovered via `--chrome-path`, `CHROME_PATH`, `config.yaml`, `PATH`, or standard Linux/macOS install locations ([`internal/render/chrome.go`](https://github.com/arrase/gcp-arch/blob/main/internal/render/chrome.go)).
    - Runs in an isolated ephemeral `--user-data-dir` with `--headless=new` and `--disable-background-networking`.
-   - `--format html` alone works even without Chrome/Chromium when `--chrome-path` is unset and auto-discovery finds no binary (writing a self-contained HTML dossier with a warning that CLI collision verification was skipped); passing an explicit nonexistent `--chrome-path` still fails fast with exit code `1` ([`cmd/gcp-arch/render.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/render.go#L137-L139)).
+   - `--format html` alone works even without Chrome/Chromium when `--chrome-path` is unset and auto-discovery finds no binary (writing a self-contained HTML dossier with a warning that CLI collision verification was skipped); passing an explicit nonexistent `--chrome-path` still fails fast with exit code `1` ([`cmd/gcp-arch/render.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/render.go#L153-L155)).
 
 ---
 
@@ -137,29 +137,29 @@ Build a zero-dependency static binary from source (requires **Go 1.26+**) or dow
 
 ```bash
 # 1. Verify read-only target IAM + zero-token Vertex AI model availability
-gcp-arch preflight --projects acme-cicd --vertex-project consultant-ai-sandbox
+gcp-arch preflight --projects acme-cicd --vertex-project my-vertex-project
 
 # 2. Stage 1: Extract sanitized v3 structural & runtime facts (0600, gitignored)
 gcp-arch extract --projects acme-cicd -o facts.json
 
 # 3. Stage 2: Synthesize Git-tracked multi-view architecture.yaml via Gemini 4
-gcp-arch synthesize facts.json --vertex-project consultant-ai-sandbox -o architecture.yaml
+gcp-arch synthesize facts.json --vertex-project my-vertex-project -o architecture.yaml
 
 # 4. Validate offline structure + 100% resource coverage & directed-walk provenance
 gcp-arch validate architecture.yaml --facts facts.json
 
-# 5. Stage 3: Render offline vector PDF, 3x PNGs, and self-contained HTML dossier
+# 5. Stage 3: Render offline 1:1 vector PDF, adaptive up to 2.0x PNGs, and standalone HTML
 gcp-arch render architecture.yaml --format pdf,png,html -o out/
 ```
 
 !!! tip "Day-2 Drift Reconciliation"
-    After teams curate component titles, add `notes`, or tombstone noisy edges in `rejected_edges` inside Git, keep `architecture.yaml` synchronized without losing human edits:
+    After teams curate component/view titles, subtitles, or `notes` inside Git, keep `architecture.yaml` synchronized without losing human edits:
     ```bash
     gcp-arch extract --projects acme-cicd -o facts.json
-    gcp-arch synthesize facts.json --reconcile architecture.yaml --vertex-project consultant-ai-sandbox
+    gcp-arch synthesize facts.json --reconcile architecture.yaml --vertex-project my-vertex-project
     gcp-arch render architecture.yaml -o out/
     ```
-    When no resources or unsettled structural inter-component edges changed (ignoring `heuristic: true` monitoring fluctuations) — or on deletion-only deltas — `--reconcile` finishes with **`0` Vertex AI calls** without needing `--vertex-project`. On the unchanged fast path (`< 100 ms`), it also runs `refreshEdgeProvenance` (downgrading or restoring transient `VERIFIED` edges in `0` LLM calls) and writes updated YAML only if the canonical bytes changed ([`internal/synth/pipeline.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/pipeline.go#L805-L833), [`internal/synth/finalize.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/finalize.go#L30-L64), [`cmd/gcp-arch/synthesize.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go#L204-L216)).
+    When all active resource URIs and conserved functional/transversal edges match (ignoring transient `heuristic: true` monitoring fluctuations), `--reconcile` finishes on the zero-delta fast path in **`< 5 ms` with `0` Vertex AI calls** without needing `--vertex-project`, running `refreshEdgeProvenance` in place and leaving `architecture.yaml` untouched when canonical bytes are unchanged ([`internal/synth/reconcile.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/reconcile.go#L75-L106), [`cmd/gcp-arch/synthesize.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go#L205-L234)).
 
 ---
 
@@ -167,25 +167,35 @@ gcp-arch render architecture.yaml --format pdf,png,html -o out/
 
 | Capability | Manual Diagramming / Raw Resource Dumps | `gcp-arch` |
 | :--- | :--- | :--- |
-| **Signal vs. Noise** | Raw CAI/Terraform exports dump hundreds of routes, health checks, revisions, and default plumbing onto an unreadable canvas. | **Deterministic plumbing folding** collapses Load Balancer chains, Cloud Build runs, K8s plumbing, and 1:1 IAM/Secret resources before synthesis. |
-| **Hallucination Risk** | Free-form LLM diagram prompts invent services, drop resources, and fabricate connections without proof. | **Closed-world verification** enforces 100% resource accounting and dual-BFS directed-walk provenance on every `VERIFIED` edge. |
-| **Page Readability** | Massive wall-of-boxes graphs fail to print on A4 landscape or paste cleanly into Google Docs. | **Multi-view semantic partitioning** caps detail views at `1..12` blocks across three fixed-width `1040px` archetypes plus a deterministic `View 0` system map. |
-| **Connector Routing** | Force-directed/layered auto-layouts overlap labels, clip through cards, and stack parallel lines. | **Orthogonal corridor router** deconflicts ports, allocates lanes, draws halo jump-arcs, and fails fast (exit `2`) if any collision remains. |
-| **Day-2 Maintenance** | Re-generating diagrams wipes out human titles, annotations, and architectural grouping decisions. | **Incremental `--reconcile`** freezes existing view IDs, archetypes, curated titles, `notes`, and `rejected_edges`, patching only real drift. |
+| **Signal vs. Noise** | Raw CAI/Terraform exports dump hundreds of routes, health checks, revisions, and default plumbing onto an unreadable canvas. | **Deterministic plumbing folding & transversal separation** collapses LB chains, Cloud Build runs, K8s plumbing, and separates IAM/KMS/Secrets/Observability into governance panels. |
+| **Hallucination Risk** | Free-form LLM diagram prompts invent services, drop resources, and fabricate connections without proof. | **Deterministic skeleton + conservation gate** locks containment, cohorts, and URIs in Go, enforcing 100% resource/edge conservation and directed-walk provenance on every `VERIFIED` edge. |
+| **Page Readability** | Massive wall-of-boxes graphs fail to print on A4 landscape or paste cleanly into Google Docs. | **Multi-view semantic partitioning** renders `View 0` plus stage-partitioned detail views with 1:1 per-view vector PDF pagination and adaptive up to `2.0x` Retina PNGs (`8,192px` / `28M` px cap). |
+| **Connector Routing** | Force-directed/layered auto-layouts overlap labels, clip through cards, and stack parallel lines. | **Hanan-grid A* orthogonal router + streaming PNG audit** deconflicts ports, draws halo jump-arcs, verifies pixel & geometry invariants (`< 1 MB` RAM), and fails fast (exit `2`) on any violation. |
+| **Day-2 Maintenance** | Re-generating diagrams wipes out human titles, annotations, and architectural grouping decisions. | **Incremental `--reconcile`** takes a `0`-LLM fast path when unchanged and preserves curated component/view titles, subtitles, and `notes` across delta runs. |
 | **CI & Offline Portability** | Diagram rendering requires live cloud access, external CDNs, or SaaS editors. | **100% offline `validate` & `render`** operate solely on Git-tracked `architecture.yaml` with embedded fonts, icons, and strict CSP. |
 
 ---
 
 ## Visual Output Gallery
 
-Both reference bundles in [`examples/`](https://github.com/arrase/gcp-arch/tree/main/examples) are validated and rendered completely offline from their synthetic `architecture.yaml` manifests:
+All **6** reference bundles in [`examples/`](https://github.com/arrase/gcp-arch/tree/main/examples) span **49 Google Cloud APIs** and **75 unique asset types**, validated against their paired `v3` facts fixtures (`conservation=PASS`, `view0=1.00`) and rendered completely offline:
 
-| Platform CI/CD — System Index Map (`View 0`) | Retail Cloud-Native — System Index Map (`View 0`) |
+| Platform CI/CD (`View 0`) | Retail Cloud-Native (`View 0`) |
 | :---: | :---: |
-| ![Platform CI/CD System Index Map](assets/img/platform-cicd/00-view_0_system_index.png) | ![Retail Cloud-Native System Index Map](assets/img/retail-cloud-native/00-view_0_system_index.png) |
-| *`acme-cicd` → out-of-scope `acme-dev` / `acme-prod` across 4 views (`stage_pipeline`, `landscape_matrix`, `hub_spoke`)* | *4-project retail, Shared VPC, PSA/PSC & streaming AI platform across 4 views with 5-column compact mode* |
+| ![Platform CI/CD System Architecture Overview](assets/img/platform-cicd/00-view_0_system_index.png) | ![Retail Cloud-Native System Architecture Overview](assets/img/retail-cloud-native/00-view_0_system_index.png) |
+| *`acme-cicd` → `acme-dev` / `acme-prod` · 17 components (5 Cloud Build cohorts, GKE, PSA Cloud SQL) across 3 views* | *Shared VPC Host + 3 service projects · Cloud Run, AlloyDB/Redis PSA, Dataflow, BigQuery, Vertex AI & Looker across 3 views* |
 
-Explore all 8 high-DPI `3x` view diagrams in the [Examples & Visual Gallery](examples.md).
+| FinTech Global Payments (`View 0`) | Enterprise Lakehouse & MLOps (`View 0`) |
+| :---: | :---: |
+| ![FinTech Global Payments System Architecture Overview](assets/img/fintech-global-payments/00-view_0_system_index.png) | ![Enterprise Lakehouse & MLOps System Architecture Overview](assets/img/enterprise-lakehouse-mlops/00-view_0_system_index.png) |
+| *2 folders, 5 projects · NCC Hub (Interconnect/HA VPN), PSC Fabrics, Private GKE, Spanner, AlloyDB, Bigtable & Filestore across 4 views* | *2 folders, 3 peered VPCs · Managed Kafka, Data Fusion, Datastream, Composer, Dataflow, Dataproc, Dataform, Dataplex, BigQuery, Vertex AI & Looker across 4 views* |
+
+| Agentic AI & Document Platform (`View 0`) | Enterprise Zero-Trust Mesh (`View 0`) |
+| :---: | :---: |
+| ![Agentic AI & Document Platform System Architecture Overview](assets/img/agentic-ai-document-platform/00-view_0_system_index.png) | ![Enterprise Zero-Trust Mesh System Architecture Overview](assets/img/enterprise-zero-trust-mesh/00-view_0_system_index.png) |
+| *Shared VPC Host + 2 service projects · Vertex Reasoning Engine, Vector Search, Discovery Engine, Dialogflow CX, Document AI OCR & Eventarc across 3 views* | *2 folders, 4 projects, 2 regions · Zero-Trust Shared VPC, Cloud Deploy, GKE, App Engine, Cloud Batch, Cloud Run, AlloyDB/SQL PSA & Gemini across 3 views* |
+
+Explore all **20** high-DPI Retina view diagrams in the [Examples & Visual Gallery](examples.md).
 
 ---
 
@@ -195,19 +205,19 @@ Explore all 8 high-DPI `3x` view diagrams in the [Examples & Visual Gallery](exa
 flowchart LR
     GCP["Target GCP Scopes\n(Org / Folder / Projects)"] -->|"read-only OAuth\nCAI, IAM, GKE, Monitoring, BQ, Dataflow"| Extract["Stage 1: extract"]
     Extract -->|"0600 gitignored"| Facts["facts.json (v3)"]
-    Facts -->|"<= 500 active resources\nshort-ID interning"| Synth["Stage 2: synthesize"]
-    Vertex["Vertex AI Gemini 4\n(--vertex-project)"] <-->|"Pass 1 + Pass 2\nor --reconcile delta"| Synth
-    Synth -->|"View 0 in Go\nValidateWithFacts"| Manifest["architecture.yaml (v1)\nGit-tracked"]
+    Facts -->|"<= 500 active resources\ndeterministic skeleton"| Synth["Stage 2: synthesize"]
+    Vertex["Vertex AI Gemini 4\n(--vertex-project, google.golang.org/genai)"] <-->|"Single bounded call\nor --reconcile delta"| Synth
+    Synth -->|"Conservation gate\nValidateWithFacts"| Manifest["architecture.yaml (v1)\nGit-tracked"]
     Manifest -->|"offline, zero network"| Validate["validate"]
     Manifest -->|"offline, embedded fonts & icons"| Render["Stage 3: render\n(Headless Chrome + router.js)"]
-    Render --> Deliverables["architecture.pdf\nviews/*.png (3x)\narchitecture.html"]
+    Render --> Deliverables["architecture.pdf (1:1)\nviews/*.png (<= 2.0x)\narchitecture.html"]
 ```
 
 1. **Preflight (`gcp-arch preflight` — [`cmd/gcp-arch/preflight.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/preflight.go)):** Probes read-only target permissions (`cloudasset`, folder display names, `monitoring`, `bigquery`, `dataflow`) and runs zero-token Vertex AI IAM & model availability checks with copy-pasteable `gcloud` remediations.
 2. **Stage 1 — Extract (`gcp-arch extract` — [`cmd/gcp-arch/extract.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/extract.go), [`internal/extract/`](https://github.com/arrase/gcp-arch/tree/main/internal/extract)):** Streams `ReadTime`-pinned CAI resources and scoped IAM policies, folds noisy sub-resources, resolves GKE/Cloud Build/network relationships, runs concurrent 7-day enrichers, and scrubs secrets into a deterministic `v3` `facts.json`.
-3. **Stage 2 — Synthesize (`gcp-arch synthesize` — [`cmd/gcp-arch/synthesize.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go), [`internal/synth/`](https://github.com/arrase/gcp-arch/tree/main/internal/synth)):** Interns URIs and edges into compact handles (`r_0001`, `e_0001`), runs two-pass Gemini 4 structured synthesis (or Day-2 `--reconcile`), deterministically projects `View 0` (`view_0_system_index`), and validates 100% coverage + directed-walk provenance.
-4. **Validate (`gcp-arch validate` — [`cmd/gcp-arch/validate.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go), [`internal/manifest/`](https://github.com/arrase/gcp-arch/tree/main/internal/manifest)):** Enforces strict `KnownFields(true)` YAML decoding and structural rules offline in Git PR CI, or full resource accounting & directed-walk provenance with `--facts`.
-5. **Stage 3 — Render (`gcp-arch render` — [`cmd/gcp-arch/render.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/render.go), [`internal/render/`](https://github.com/arrase/gcp-arch/tree/main/internal/render), [`internal/icons/`](https://github.com/arrase/gcp-arch/tree/main/internal/icons)):** Compiles a strict-CSP self-contained HTML document with embedded `Inter`/`JetBrains Mono` fonts and 85 SVG icons, runs the orthogonal corridor router with zero-collision verification inside isolated headless Chrome, and exports vector A4 landscape `.pdf`, `3x` `.png`s (`3120px` nominal), and pre-routed `.html`.
+3. **Stage 2 — Synthesize (`gcp-arch synthesize` — [`cmd/gcp-arch/synthesize.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go), [`internal/synth/`](https://github.com/arrase/gcp-arch/tree/main/internal/synth)):** Builds a deterministic containment skeleton in Go, enriches it with a single bounded Vertex AI Gemini 4 call (`google.golang.org/genai` with `cloud.google.com/go/auth`), assembles `View 0` plus stage-partitioned detail views, and validates 100% resource/edge conservation and directed-walk provenance.
+4. **Validate (`gcp-arch validate` — [`cmd/gcp-arch/validate.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go), [`internal/manifest/`](https://github.com/arrase/gcp-arch/tree/main/internal/manifest)):** Enforces strict `KnownFields(true)` YAML decoding and structural rules offline in Git PR CI, or full resource accounting, conservation, and directed-walk provenance with `--facts`.
+5. **Stage 3 — Render (`gcp-arch render` — [`cmd/gcp-arch/render.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/render.go), [`internal/render/`](https://github.com/arrase/gcp-arch/tree/main/internal/render), [`internal/icons/`](https://github.com/arrase/gcp-arch/tree/main/internal/icons)):** Compiles a strict-CSP self-contained HTML document with embedded `Inter`/`JetBrains Mono` fonts and 85 SVG icons, runs the Hanan-grid A* orthogonal router with zero-collision and streaming PNG pixel verification (`< 1 MB` Go RAM) inside isolated headless Chrome, and exports 1:1 per-view vector `.pdf`, adaptive up to `2.0x` Retina `.png`s (`8,192px` max dim / `28M` px cap), pre-routed `.html`, and opt-in `geometry_report.json` (`--geometry-report`).
 
 ---
 
@@ -232,16 +242,15 @@ Validate human edits to `architecture.yaml` in pull requests with zero GCP crede
 gcp-arch validate architecture.yaml --json
 ```
 
-### 3. Tune Vertex AI Reasoning Effort & Concurrency
+### 3. Tune Vertex AI Reasoning Effort
 
-Control Pass-2 parallel view synthesis and Gemini 4 reasoning effort:
+Control Gemini 4 reasoning effort on Vertex AI:
 
 ```bash
 gcp-arch synthesize facts.json \
-  --vertex-project consultant-ai-sandbox \
+  --vertex-project my-vertex-project \
   --model gemini-4-carbon \
   --thinking-level high \
-  --concurrency 4 \
   -o architecture.yaml
 ```
 
@@ -257,21 +266,21 @@ gcp-arch render architecture.yaml --format html -o out/
 
 ## CLI Commands & Exit Codes
 
-Root CLI entrypoint, config loader, and atomic I/O live in [`cmd/gcp-arch/main.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/main.go), [`cmd/gcp-arch/config.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/config.go), and [`internal/ioutil/`](https://github.com/arrase/gcp-arch/tree/main/internal/ioutil).
+Root CLI entrypoint, config loader, and atomic I/O live in [`cmd/gcp-arch/main.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/main.go), [`cmd/gcp-arch/config.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/config.go), and [`internal/atomicfile/`](https://github.com/arrase/gcp-arch/tree/main/internal/atomicfile).
 
 | Command | Network / Auth Required | Primary Output |
 | :--- | :--- | :--- |
 | `gcp-arch preflight` | Target `read-only` + optional `--vertex-project` | Human table or `--json` `PreflightReport` |
 | `gcp-arch extract` | Target `cloud-platform.read-only` | `facts.json` (`v3`, `0600` atomic write) |
-| `gcp-arch synthesize <facts.json>` | `--vertex-project` (`cloud-platform`; optional on 0-LLM Day-2 paths) | `architecture.yaml` (`v1`, `0644` atomic write) |
+| `gcp-arch synthesize <facts.json>` | `--vertex-project` (`cloud-platform`; optional on 0-LLM Day-2 fast path) | `architecture.yaml` (`v1`, `0644` atomic write) |
 | `gcp-arch validate <architecture.yaml>` | **Offline** (zero network) | Validation status or `--json` `ValidationReport` |
-| `gcp-arch render <architecture.yaml>` | **Offline** (local Chrome/Chromium for `pdf`/`png`) | `architecture.pdf`, `views/*.png` (`3x`), `architecture.html` |
+| `gcp-arch render <architecture.yaml>` | **Offline** (local Chrome/Chromium for `pdf`/`png`) | `architecture.pdf` (1:1), `views/*.png` (`<= 2.0x`), `architecture.html`, opt-in `geometry_report.json` |
 
 | Exit Code | Meaning |
 | :--- | :--- |
 | `0` | Success. |
 | `1` | Runtime or external I/O failure: ADC/auth or quota project error, Vertex AI RPC error, missing input file, or missing Chrome/Chromium binary (for `pdf`/`png` or explicit missing `--chrome-path`). |
-| `2` | Usage, config, schema, scale, validation, or layout failure: invalid flags/config, `> 500` active resources (`ScaleLimitError`), invalid YAML/unknown keys, `validate` violation (`ValidationError`), or unresolved overlap during `render` (`LayoutCollisionError`). |
+| `2` | Usage, config, schema, scale, validation, or layout/geometry failure: invalid flags/config, `> 500` active resources (`ScaleLimitError`), invalid YAML/unknown keys, `validate` violation (`ValidationError`), unresolved overlap during `render` (`LayoutCollisionError`), or PNG pixel/geometry/conservation failure (`GeometryReportError`). |
 
 <div class="section-header">
   <h2>Documentation</h2>
@@ -316,7 +325,7 @@ Root CLI entrypoint, config loader, and atomic I/O live in [`cmd/gcp-arch/main.g
         <span class="card-badge">Read →</span>
       </div>
       <h3>Stage 2 — Gemini 4 Synthesis</h3>
-      <p>500-resource guardrail, short-ID interning, two-pass Vertex AI prompts &amp; schemas, deterministic <code>View 0</code> projection, and Day-2 <code>--reconcile</code>.</p>
+      <p>500-resource guardrail, deterministic containment skeleton, single bounded Vertex AI Gemini 4 SDK call, conservation gate, and Day-2 <code>--reconcile</code>.</p>
     </div>
   </a>
   <a href="rendering/" class="feature-card">
@@ -326,7 +335,7 @@ Root CLI entrypoint, config loader, and atomic I/O live in [`cmd/gcp-arch/main.g
         <span class="card-badge">Read →</span>
       </div>
       <h3>Stage 3 — Offline Rendering</h3>
-      <p>1040px CSS Grid archetypes, barycenter ordering, orthogonal corridor router, halo jump-arcs, collision checks, <code>chromedp</code>, and 85 embedded icons.</p>
+      <p>Nested Flexbox containers, Hanan-grid A* router, halo jump-arcs, <code>chromedp</code> 1:1 PDF &amp; adaptive <code>2.0x</code> PNGs, streaming pixel checks, and 85 embedded icons.</p>
     </div>
   </a>
   <a href="manifest_schema/" class="feature-card">
@@ -346,7 +355,7 @@ Root CLI entrypoint, config loader, and atomic I/O live in [`cmd/gcp-arch/main.g
         <span class="card-badge">Read →</span>
       </div>
       <h3>Examples &amp; Visual Gallery</h3>
-      <p>Walkthrough of the <code>platform-cicd</code> and <code>retail-cloud-native</code> reference bundles with all 8 rendered <code>3x</code> view PNGs and offline commands.</p>
+      <p>Walkthrough of all 6 complex GCP reference bundles across 49 APIs with all 20 rendered Retina view PNGs and offline commands.</p>
     </div>
   </a>
   <a href="architecture/" class="feature-card">

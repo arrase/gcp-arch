@@ -1,0 +1,783 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-26T00:00:00Z",
+  "scopes": [
+    "organizations/900200001"
+  ],
+  "hierarchy": {
+    "organizations": [
+      {
+        "org_id": "900200001",
+        "display_name": "Global FinTech Org"
+      }
+    ],
+    "folders": [
+      {
+        "folder_id": "444010",
+        "display_name": "network-backbone",
+        "parent": "organizations/900200001"
+      },
+      {
+        "folder_id": "444020",
+        "display_name": "business-apps",
+        "parent": "organizations/900200001"
+      }
+    ],
+    "projects": [
+      {
+        "project_id": "ncc-hub-net",
+        "project_number": "3006001001",
+        "display_name": "NCC Hub Net",
+        "parent": "folders/444010"
+      },
+      {
+        "project_id": "ops-shared",
+        "project_number": "3006001002",
+        "display_name": "Ops Shared",
+        "parent": "folders/444010"
+      },
+      {
+        "project_id": "p300600abcdef12-tp",
+        "display_name": "Google PSA Tenant",
+        "is_psa_tenant": true
+      },
+      {
+        "project_id": "spoke-pay",
+        "project_number": "3006001004",
+        "display_name": "Spoke Pay",
+        "parent": "folders/444020"
+      },
+      {
+        "project_id": "spoke-web",
+        "project_number": "3006001003",
+        "display_name": "Spoke Web",
+        "parent": "folders/444020"
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//alloydb.googleapis.com/projects/spoke-pay/locations/europe-west1/clusters/pay-settlement-alloydb",
+      "asset_type": "alloydb.googleapis.com/Cluster",
+      "project_id": "spoke-pay",
+      "location": "europe-west1",
+      "display_name": "pay-settlement-alloydb",
+      "parent_uri": "//compute.googleapis.com/projects/spoke-pay/global/networks/spoke-pay-vpc",
+      "attributes": {
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/spoke-pay/locations/europe-west1/keyRings/pay-keyring/cryptoKeys/pay-vault-cmek",
+        "private_ip": "10.62.16.10",
+        "psa_tenant_project": "p300600abcdef12-tp",
+        "vpc": "//compute.googleapis.com/projects/spoke-pay/global/networks/spoke-pay-vpc"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/ops-shared/locations/europe-west1/keyRings/ops-keyring/cryptoKeys/ops-backup-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "ops-shared",
+      "location": "europe-west1",
+      "display_name": "ops-backup-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/spoke-pay/locations/europe-west1/keyRings/pay-keyring/cryptoKeys/pay-vault-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "spoke-pay",
+      "location": "europe-west1",
+      "display_name": "pay-vault-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ncc-hub-net/global/networks/ncc-transit-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "ncc-hub-net",
+      "location": "global",
+      "display_name": "ncc-transit-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "GLOBAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ncc-hub-net/regions/europe-west1/interconnectAttachments/ncc-dc-interconnect",
+      "asset_type": "compute.googleapis.com/InterconnectAttachment",
+      "project_id": "ncc-hub-net",
+      "location": "europe-west1",
+      "display_name": "ncc-dc-interconnect",
+      "parent_uri": "//compute.googleapis.com/projects/ncc-hub-net/global/networks/ncc-transit-vpc",
+      "attributes": {
+        "bandwidth": "BPS_5G",
+        "type": "PARTNER",
+        "vlan_tag": 2208
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ncc-hub-net/regions/europe-west1/routers/ncc-bgp-router",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "ncc-hub-net",
+      "location": "europe-west1",
+      "display_name": "ncc-bgp-router",
+      "parent_uri": "//compute.googleapis.com/projects/ncc-hub-net/global/networks/ncc-transit-vpc",
+      "attributes": {
+        "bgp_asn": 65100,
+        "nat_count": 1,
+        "vpc": "//compute.googleapis.com/projects/ncc-hub-net/global/networks/ncc-transit-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ncc-hub-net/regions/europe-west1/subnetworks/ncc-transit-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "ncc-hub-net",
+      "location": "europe-west1",
+      "display_name": "ncc-transit-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/ncc-hub-net/global/networks/ncc-transit-vpc",
+      "attributes": {
+        "cidr": "10.60.0.0/24",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/ncc-hub-net/global/networks/ncc-transit-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ncc-hub-net/regions/europe-west1/vpnGateways/ncc-branch-vpn",
+      "asset_type": "compute.googleapis.com/VpnGateway",
+      "project_id": "ncc-hub-net",
+      "location": "europe-west1",
+      "display_name": "ncc-branch-vpn",
+      "parent_uri": "//compute.googleapis.com/projects/ncc-hub-net/global/networks/ncc-transit-vpc",
+      "attributes": {
+        "vpc": "//compute.googleapis.com/projects/ncc-hub-net/global/networks/ncc-transit-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ops-shared/global/networks/ops-shared-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "ops-shared",
+      "location": "global",
+      "display_name": "ops-shared-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ops-shared/regions/europe-west1/subnetworks/ops-mgmt-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "ops-shared",
+      "location": "europe-west1",
+      "display_name": "ops-mgmt-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/ops-shared/global/networks/ops-shared-vpc",
+      "attributes": {
+        "cidr": "10.63.0.0/24",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/ops-shared/global/networks/ops-shared-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ops-shared/zones/europe-west1-c/instances/ops-jumpbox-vm",
+      "asset_type": "compute.googleapis.com/Instance",
+      "project_id": "ops-shared",
+      "location": "europe-west1-c",
+      "display_name": "ops-jumpbox-vm",
+      "parent_uri": "//compute.googleapis.com/projects/ops-shared/regions/europe-west1/subnetworks/ops-mgmt-subnet",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ops-shared/locations/europe-west1/keyRings/ops-keyring/cryptoKeys/ops-backup-cmek",
+        "machine_type": "e2-medium",
+        "private_ip": "10.63.0.10",
+        "service_account": "ops-bastion-sa@ops-shared.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ops-shared/regions/europe-west1/subnetworks/ops-mgmt-subnet",
+        "vpc": "//compute.googleapis.com/projects/ops-shared/global/networks/ops-shared-vpc",
+        "zone": "europe-west1-c"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/spoke-pay/global/networks/spoke-pay-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "spoke-pay",
+      "location": "global",
+      "display_name": "spoke-pay-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/spoke-pay/regions/europe-west1/forwardingRules/pay-core-ilb",
+      "asset_type": "compute.googleapis.com/ForwardingRule",
+      "project_id": "spoke-pay",
+      "location": "europe-west1",
+      "display_name": "pay-core-ilb",
+      "parent_uri": "//compute.googleapis.com/projects/spoke-pay/regions/europe-west1/subnetworks/spoke-pay-subnet",
+      "attributes": {
+        "ip_address": "10.62.0.20",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "INTERNAL",
+        "port_range": "8080-8080",
+        "subnet": "//compute.googleapis.com/projects/spoke-pay/regions/europe-west1/subnetworks/spoke-pay-subnet",
+        "vpc": "//compute.googleapis.com/projects/spoke-pay/global/networks/spoke-pay-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/spoke-pay/regions/europe-west1/serviceAttachments/pay-psc-attachment",
+      "asset_type": "compute.googleapis.com/ServiceAttachment",
+      "project_id": "spoke-pay",
+      "location": "europe-west1",
+      "display_name": "pay-psc-attachment",
+      "parent_uri": "//compute.googleapis.com/projects/spoke-pay/regions/europe-west1/subnetworks/spoke-pay-subnet",
+      "attributes": {
+        "connection_preference": "ACCEPT_MANUAL",
+        "enable_proxy_protocol": true
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/spoke-pay/regions/europe-west1/subnetworks/spoke-pay-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "spoke-pay",
+      "location": "europe-west1",
+      "display_name": "spoke-pay-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/spoke-pay/global/networks/spoke-pay-vpc",
+      "attributes": {
+        "cidr": "10.62.0.0/22",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/spoke-pay/global/networks/spoke-pay-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/spoke-pay/zones/europe-west1-c/instanceGroupManagers/pay-engine-mig",
+      "asset_type": "compute.googleapis.com/InstanceGroupManager",
+      "project_id": "spoke-pay",
+      "location": "europe-west1-c",
+      "display_name": "pay-engine-mig",
+      "parent_uri": "//compute.googleapis.com/projects/spoke-pay/regions/europe-west1/subnetworks/spoke-pay-subnet",
+      "attributes": {
+        "base_instance_name": "pay-engine",
+        "target_size": 6
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/spoke-web/global/forwardingRules/spoke-web-glb",
+      "asset_type": "compute.googleapis.com/GlobalForwardingRule",
+      "project_id": "spoke-web",
+      "location": "global",
+      "display_name": "spoke-web-glb",
+      "attributes": {
+        "ip_address": "34.117.44.8",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "EXTERNAL_MANAGED",
+        "port_range": "443-443",
+        "tls": true
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/spoke-web/global/networks/spoke-web-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "spoke-web",
+      "location": "global",
+      "display_name": "spoke-web-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/spoke-web/regions/europe-west1/forwardingRules/web-to-pay-psc-ep",
+      "asset_type": "compute.googleapis.com/ForwardingRule",
+      "project_id": "spoke-web",
+      "location": "europe-west1",
+      "display_name": "web-to-pay-psc-ep",
+      "parent_uri": "//compute.googleapis.com/projects/spoke-web/regions/europe-west1/subnetworks/spoke-web-subnet",
+      "attributes": {
+        "ip_address": "10.61.0.50",
+        "load_balancing_scheme": "",
+        "subnet": "//compute.googleapis.com/projects/spoke-web/regions/europe-west1/subnetworks/spoke-web-subnet",
+        "vpc": "//compute.googleapis.com/projects/spoke-web/global/networks/spoke-web-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/spoke-web/regions/europe-west1/routers/spoke-web-nat",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "spoke-web",
+      "location": "europe-west1",
+      "display_name": "spoke-web-nat",
+      "parent_uri": "//compute.googleapis.com/projects/spoke-web/global/networks/spoke-web-vpc",
+      "attributes": {
+        "bgp_asn": 65101,
+        "nat_count": 1,
+        "vpc": "//compute.googleapis.com/projects/spoke-web/global/networks/spoke-web-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/spoke-web/regions/europe-west1/subnetworks/spoke-web-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "spoke-web",
+      "location": "europe-west1",
+      "display_name": "spoke-web-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/spoke-web/global/networks/spoke-web-vpc",
+      "attributes": {
+        "cidr": "10.61.0.0/22",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/spoke-web/global/networks/spoke-web-vpc"
+      }
+    },
+    {
+      "uri": "//dns.googleapis.com/projects/ops-shared/managedZones/shared-corp-dns",
+      "asset_type": "dns.googleapis.com/ManagedZone",
+      "project_id": "ops-shared",
+      "location": "global",
+      "display_name": "shared-corp-dns",
+      "attributes": {
+        "dns_name": "shared.internal.",
+        "visibility": "private"
+      }
+    },
+    {
+      "uri": "//file.googleapis.com/projects/spoke-pay/locations/europe-west1-c/instances/pay-clearing-files",
+      "asset_type": "file.googleapis.com/Instance",
+      "project_id": "spoke-pay",
+      "location": "europe-west1-c",
+      "display_name": "pay-clearing-files",
+      "parent_uri": "//compute.googleapis.com/projects/spoke-pay/global/networks/spoke-pay-vpc",
+      "attributes": {
+        "tier": "HIGH_SCALE_SSD",
+        "vpc": "//compute.googleapis.com/projects/spoke-pay/global/networks/spoke-pay-vpc"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/ncc-hub-net/serviceAccounts/ncc-net-sa@ncc-hub-net.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "ncc-hub-net",
+      "display_name": "ncc-net-sa@ncc-hub-net.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "ncc-net-sa@ncc-hub-net.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/ops-shared/serviceAccounts/ops-bastion-sa@ops-shared.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "ops-shared",
+      "display_name": "ops-bastion-sa@ops-shared.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "ops-bastion-sa@ops-shared.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/spoke-pay/serviceAccounts/pay-processor-sa@spoke-pay.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "spoke-pay",
+      "display_name": "pay-processor-sa@spoke-pay.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "pay-processor-sa@spoke-pay.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/spoke-web/serviceAccounts/web-portal-sa@spoke-web.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "spoke-web",
+      "display_name": "web-portal-sa@spoke-web.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "web-portal-sa@spoke-web.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/ops-shared/sinks/ops-central-audit-sink",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "ops-shared",
+      "display_name": "ops-central-audit-sink"
+    },
+    {
+      "uri": "//monitoring.googleapis.com/projects/ops-shared/alertPolicies/9034567803",
+      "asset_type": "monitoring.googleapis.com/AlertPolicy",
+      "project_id": "ops-shared",
+      "display_name": "pay-psc-latency-alert",
+      "attributes": {
+        "enabled": true
+      }
+    },
+    {
+      "uri": "//networkconnectivity.googleapis.com/projects/ncc-hub-net/locations/global/hubs/enterprise-ncc-hub",
+      "asset_type": "networkconnectivity.googleapis.com/Hub",
+      "project_id": "ncc-hub-net",
+      "location": "global",
+      "display_name": "enterprise-ncc-hub",
+      "attributes": {
+        "spoke_count": 3
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/spoke-pay/subscriptions/pay-settlement-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "spoke-pay",
+      "location": "global",
+      "display_name": "pay-settlement-sub",
+      "attributes": {
+        "ack_deadline_seconds": 60
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/spoke-pay/topics/pay-settlement-events",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "spoke-pay",
+      "location": "global",
+      "display_name": "pay-settlement-events",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/spoke-pay/locations/europe-west1/keyRings/pay-keyring/cryptoKeys/pay-vault-cmek"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/spoke-pay/locations/europe-west1/services/pay-processor-run",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "spoke-pay",
+      "location": "europe-west1",
+      "display_name": "pay-processor-run",
+      "parent_uri": "//compute.googleapis.com/projects/spoke-pay/regions/europe-west1/subnetworks/spoke-pay-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/spoke-pay/locations/europe-west1/keyRings/pay-keyring/cryptoKeys/pay-vault-cmek",
+        "service_account": "pay-processor-sa@spoke-pay.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/spoke-pay/regions/europe-west1/subnetworks/spoke-pay-subnet",
+        "url": "https://pay-processor-run-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/spoke-pay/global/networks/spoke-pay-vpc"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/spoke-web/locations/europe-west1/services/web-portal-run",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "spoke-web",
+      "location": "europe-west1",
+      "display_name": "web-portal-run",
+      "parent_uri": "//compute.googleapis.com/projects/spoke-web/regions/europe-west1/subnetworks/spoke-web-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "service_account": "web-portal-sa@spoke-web.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/spoke-web/regions/europe-west1/subnetworks/spoke-web-subnet",
+        "url": "https://web-portal-run-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/spoke-web/global/networks/spoke-web-vpc"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/spoke-pay/secrets/pay-hsm-token",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "spoke-pay",
+      "display_name": "pay-hsm-token",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/spoke-pay/locations/europe-west1/keyRings/pay-keyring/cryptoKeys/pay-vault-cmek",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/spoke-web/secrets/web-oauth-client",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "spoke-web",
+      "display_name": "web-oauth-client",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/ops-shared-audit-bucket",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "ops-shared",
+      "location": "europe-west1",
+      "display_name": "ops-shared-audit-bucket",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ops-shared/locations/europe-west1/keyRings/ops-keyring/cryptoKeys/ops-backup-cmek",
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "1fcf83c85dc37d39",
+      "from_uri": "//alloydb.googleapis.com/projects/spoke-pay/locations/europe-west1/clusters/pay-settlement-alloydb",
+      "to_uri": "//cloudkms.googleapis.com/projects/spoke-pay/locations/europe-west1/keyRings/pay-keyring/cryptoKeys/pay-vault-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "3c3d9343d0536a2c",
+      "from_uri": "//compute.googleapis.com/projects/ncc-hub-net/regions/europe-west1/interconnectAttachments/ncc-dc-interconnect",
+      "to_uri": "//compute.googleapis.com/projects/ncc-hub-net/regions/europe-west1/routers/ncc-bgp-router",
+      "kind": "CONFIG_REF",
+      "detail": "interconnect.router"
+    },
+    {
+      "id": "4bf0a48d344f49e4",
+      "from_uri": "//compute.googleapis.com/projects/ncc-hub-net/regions/europe-west1/routers/ncc-bgp-router",
+      "to_uri": "//compute.googleapis.com/projects/ncc-hub-net/regions/europe-west1/vpnGateways/ncc-branch-vpn",
+      "kind": "CONFIG_REF",
+      "detail": "vpn_tunnel"
+    },
+    {
+      "id": "13970c7019b40ece",
+      "from_uri": "//compute.googleapis.com/projects/ops-shared/zones/europe-west1-c/instances/ops-jumpbox-vm",
+      "to_uri": "//compute.googleapis.com/projects/ncc-hub-net/global/networks/ncc-transit-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "mgmt_transit"
+    },
+    {
+      "id": "26c553072dd2644b",
+      "from_uri": "//compute.googleapis.com/projects/ops-shared/zones/europe-west1-c/instances/ops-jumpbox-vm",
+      "to_uri": "//iam.googleapis.com/projects/ops-shared/serviceAccounts/ops-bastion-sa@ops-shared.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "d1c4a0ccecd0a2d8",
+      "from_uri": "//compute.googleapis.com/projects/spoke-pay/global/networks/spoke-pay-vpc",
+      "to_uri": "//alloydb.googleapis.com/projects/spoke-pay/locations/europe-west1/clusters/pay-settlement-alloydb",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com (p300600abcdef12-tp)"
+    },
+    {
+      "id": "9f4515202181be38",
+      "from_uri": "//compute.googleapis.com/projects/spoke-pay/regions/europe-west1/forwardingRules/pay-core-ilb",
+      "to_uri": "//compute.googleapis.com/projects/spoke-pay/zones/europe-west1-c/instanceGroupManagers/pay-engine-mig",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "dea82f4a2ab2ea24",
+      "from_uri": "//compute.googleapis.com/projects/spoke-pay/regions/europe-west1/serviceAttachments/pay-psc-attachment",
+      "to_uri": "//compute.googleapis.com/projects/spoke-pay/regions/europe-west1/forwardingRules/pay-core-ilb",
+      "kind": "CONFIG_REF",
+      "detail": "psc.target"
+    },
+    {
+      "id": "fc0917a83503ea1e",
+      "from_uri": "//compute.googleapis.com/projects/spoke-pay/zones/europe-west1-c/instanceGroupManagers/pay-engine-mig",
+      "to_uri": "//alloydb.googleapis.com/projects/spoke-pay/locations/europe-west1/clusters/pay-settlement-alloydb",
+      "kind": "CONFIG_REF",
+      "detail": "10.62.16.10"
+    },
+    {
+      "id": "e1a4f8c41023f493",
+      "from_uri": "//compute.googleapis.com/projects/spoke-pay/zones/europe-west1-c/instanceGroupManagers/pay-engine-mig",
+      "to_uri": "//run.googleapis.com/projects/spoke-pay/locations/europe-west1/services/pay-processor-run",
+      "kind": "CONFIG_REF",
+      "detail": "internal_rpc"
+    },
+    {
+      "id": "cb153654fe8457cd",
+      "from_uri": "//compute.googleapis.com/projects/spoke-web/global/forwardingRules/spoke-web-glb",
+      "to_uri": "//run.googleapis.com/projects/spoke-web/locations/europe-west1/services/web-portal-run",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "32e5ab63a71e84a1",
+      "from_uri": "//compute.googleapis.com/projects/spoke-web/regions/europe-west1/forwardingRules/web-to-pay-psc-ep",
+      "to_uri": "//compute.googleapis.com/projects/spoke-pay/regions/europe-west1/serviceAttachments/pay-psc-attachment",
+      "kind": "CONFIG_REF",
+      "detail": "psc.consumer"
+    },
+    {
+      "id": "705a246758598ae8",
+      "from_uri": "//compute.googleapis.com/projects/spoke-web/regions/europe-west1/routers/spoke-web-nat",
+      "to_uri": "//compute.googleapis.com/projects/spoke-web/global/networks/spoke-web-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "nat_egress"
+    },
+    {
+      "id": "207cebf8210dd82a",
+      "from_uri": "//dns.googleapis.com/projects/ops-shared/managedZones/shared-corp-dns",
+      "to_uri": "//compute.googleapis.com/projects/ncc-hub-net/global/networks/ncc-transit-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "private_zone"
+    },
+    {
+      "id": "9c0f5d0f0207d99a",
+      "from_uri": "//iam.googleapis.com/projects/ncc-hub-net/serviceAccounts/ncc-net-sa@ncc-hub-net.iam.gserviceaccount.com",
+      "to_uri": "//networkconnectivity.googleapis.com/projects/ncc-hub-net/locations/global/hubs/enterprise-ncc-hub",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/networkconnectivity.hubAdmin"
+    },
+    {
+      "id": "68936c74a4fe6775",
+      "from_uri": "//iam.googleapis.com/projects/spoke-pay/serviceAccounts/pay-processor-sa@spoke-pay.iam.gserviceaccount.com",
+      "to_uri": "//alloydb.googleapis.com/projects/spoke-pay/locations/europe-west1/clusters/pay-settlement-alloydb",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/alloydb.client"
+    },
+    {
+      "id": "3ce19b59b76a5a49",
+      "from_uri": "//iam.googleapis.com/projects/spoke-pay/serviceAccounts/pay-processor-sa@spoke-pay.iam.gserviceaccount.com",
+      "to_uri": "//pubsub.googleapis.com/projects/spoke-pay/topics/pay-settlement-events",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/pubsub.publisher"
+    },
+    {
+      "id": "63609c4debbb9c49",
+      "from_uri": "//iam.googleapis.com/projects/spoke-pay/serviceAccounts/pay-processor-sa@spoke-pay.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/spoke-pay/secrets/pay-hsm-token",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "a4ae7b43d3e2785a",
+      "from_uri": "//iam.googleapis.com/projects/spoke-web/serviceAccounts/web-portal-sa@spoke-web.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/spoke-web/secrets/web-oauth-client",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "f2bb626f9a4617e1",
+      "from_uri": "//networkconnectivity.googleapis.com/projects/ncc-hub-net/locations/global/hubs/enterprise-ncc-hub",
+      "to_uri": "//compute.googleapis.com/projects/ncc-hub-net/regions/europe-west1/interconnectAttachments/ncc-dc-interconnect",
+      "kind": "CONFIG_REF",
+      "detail": "ncc_spoke"
+    },
+    {
+      "id": "8bf9f176b4938fe1",
+      "from_uri": "//networkconnectivity.googleapis.com/projects/ncc-hub-net/locations/global/hubs/enterprise-ncc-hub",
+      "to_uri": "//compute.googleapis.com/projects/ncc-hub-net/regions/europe-west1/vpnGateways/ncc-branch-vpn",
+      "kind": "CONFIG_REF",
+      "detail": "ncc_spoke"
+    },
+    {
+      "id": "4cdacef8f9815a8a",
+      "from_uri": "//networkconnectivity.googleapis.com/projects/ncc-hub-net/locations/global/hubs/enterprise-ncc-hub",
+      "to_uri": "//compute.googleapis.com/projects/ops-shared/global/networks/ops-shared-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "ncc_spoke"
+    },
+    {
+      "id": "003b460af15fe681",
+      "from_uri": "//networkconnectivity.googleapis.com/projects/ncc-hub-net/locations/global/hubs/enterprise-ncc-hub",
+      "to_uri": "//compute.googleapis.com/projects/spoke-pay/global/networks/spoke-pay-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "ncc_spoke"
+    },
+    {
+      "id": "879b6adb420e1634",
+      "from_uri": "//networkconnectivity.googleapis.com/projects/ncc-hub-net/locations/global/hubs/enterprise-ncc-hub",
+      "to_uri": "//compute.googleapis.com/projects/spoke-web/global/networks/spoke-web-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "ncc_spoke"
+    },
+    {
+      "id": "ab7ed9a8781c7623",
+      "from_uri": "//pubsub.googleapis.com/projects/spoke-pay/subscriptions/pay-settlement-sub",
+      "to_uri": "//storage.googleapis.com/ops-shared-audit-bucket",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.gcs_sink"
+    },
+    {
+      "id": "996fb597cc319e6c",
+      "from_uri": "//pubsub.googleapis.com/projects/spoke-pay/topics/pay-settlement-events",
+      "to_uri": "//pubsub.googleapis.com/projects/spoke-pay/subscriptions/pay-settlement-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "333c68826b7f0a1d",
+      "from_uri": "//run.googleapis.com/projects/spoke-pay/locations/europe-west1/services/pay-processor-run",
+      "to_uri": "//alloydb.googleapis.com/projects/spoke-pay/locations/europe-west1/clusters/pay-settlement-alloydb",
+      "kind": "CONFIG_REF",
+      "detail": "10.62.16.10"
+    },
+    {
+      "id": "8ea6d88b818c5f32",
+      "from_uri": "//run.googleapis.com/projects/spoke-pay/locations/europe-west1/services/pay-processor-run",
+      "to_uri": "//file.googleapis.com/projects/spoke-pay/locations/europe-west1-c/instances/pay-clearing-files",
+      "kind": "CONFIG_REF",
+      "detail": "nfs_mount"
+    },
+    {
+      "id": "3e9bfcbfb6db6232",
+      "from_uri": "//run.googleapis.com/projects/spoke-pay/locations/europe-west1/services/pay-processor-run",
+      "to_uri": "//iam.googleapis.com/projects/spoke-pay/serviceAccounts/pay-processor-sa@spoke-pay.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "ed62335efb7945f2",
+      "from_uri": "//run.googleapis.com/projects/spoke-pay/locations/europe-west1/services/pay-processor-run",
+      "to_uri": "//pubsub.googleapis.com/projects/spoke-pay/topics/pay-settlement-events",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "de688596a9792f46",
+      "from_uri": "//run.googleapis.com/projects/spoke-pay/locations/europe-west1/services/pay-processor-run",
+      "to_uri": "//secretmanager.googleapis.com/projects/spoke-pay/secrets/pay-hsm-token",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "7cc96c4ba84db262",
+      "from_uri": "//run.googleapis.com/projects/spoke-web/locations/europe-west1/services/web-portal-run",
+      "to_uri": "//compute.googleapis.com/projects/spoke-web/regions/europe-west1/forwardingRules/web-to-pay-psc-ep",
+      "kind": "CONFIG_REF",
+      "detail": "psc_egress"
+    },
+    {
+      "id": "c4a635984cf833a7",
+      "from_uri": "//run.googleapis.com/projects/spoke-web/locations/europe-west1/services/web-portal-run",
+      "to_uri": "//iam.googleapis.com/projects/spoke-web/serviceAccounts/web-portal-sa@spoke-web.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "f56fc15daa73c9f3",
+      "from_uri": "//run.googleapis.com/projects/spoke-web/locations/europe-west1/services/web-portal-run",
+      "to_uri": "//secretmanager.googleapis.com/projects/spoke-web/secrets/web-oauth-client",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "b45d59d6c2fd2668",
+      "from_uri": "//storage.googleapis.com/ops-shared-audit-bucket",
+      "to_uri": "//cloudkms.googleapis.com/projects/ops-shared/locations/europe-west1/keyRings/ops-keyring/cryptoKeys/ops-backup-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "alloydb.googleapis.com/Instance": 2,
+    "compute.googleapis.com/BackendService": 2,
+    "compute.googleapis.com/ExternalVpnGateway": 1,
+    "compute.googleapis.com/Firewall": 32,
+    "compute.googleapis.com/Route": 28,
+    "compute.googleapis.com/SecurityPolicy": 3,
+    "compute.googleapis.com/VpnTunnel": 2,
+    "networkconnectivity.googleapis.com/Spoke": 3,
+    "run.googleapis.com/Revision": 9,
+    "servicenetworking.googleapis.com/Connection": 1
+  },
+  "coverage_ledger": [
+    {
+      "scope": "organizations/900200001",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/900200001",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/900200001",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/900200001",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/900200001",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}

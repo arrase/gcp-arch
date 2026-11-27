@@ -1,0 +1,1607 @@
+schema_version: v1
+metadata:
+  generated_at: "2026-11-27T19:19:20Z"
+  scopes:
+    - folders/540300
+components:
+  - id: n_external_enterprise_portal_users
+    title: enterprise-portal-users
+    subtitle: External enterprise portal end users
+    icon_key: external_client
+    component_kind: EXTERNAL_CALLER
+    project_id: external
+    backed_by:
+      - uri: //external.internet/clients/enterprise-portal-users
+        asset_type: external.internet/ClientGroup
+        project_id: external
+    members:
+      - enterprise-portal-users
+    badges:
+      - kind: exposure
+        label: EXTERNAL
+  - id: n_lumina_agents_prod_agent_eval_telemetry
+    title: agent_eval_telemetry
+    subtitle: BigQuery agent evaluation and audit dataset
+    icon_key: bigquery
+    component_kind: DATASTORE
+    project_id: lumina-agents-prod
+    service_project_id: lumina-agents-prod
+    topo_rank: 7
+    sub_rank: 24
+    backed_by:
+      - uri: //bigquery.googleapis.com/projects/lumina-agents-prod/datasets/agent_eval_telemetry
+        asset_type: bigquery.googleapis.com/Dataset
+        project_id: lumina-agents-prod
+    members:
+      - agent_eval_telemetry
+    badges:
+      - kind: kms
+        label: 'KMS: ai-agent-cmek'
+      - kind: log
+        label: 'Obs: agent-prompts-audit-sink'
+      - kind: project
+        label: lumina-agents-prod
+    inline_meta:
+      - label: Location
+        value: EU
+  - id: n_lumina_agents_prod_agent_memory_firestore
+    title: agent-memory-firestore
+    subtitle: Firestore session and agent state store
+    icon_key: firestore
+    component_kind: DATASTORE
+    project_id: lumina-agents-prod
+    service_project_id: lumina-agents-prod
+    topo_rank: 6
+    sub_rank: 18
+    backed_by:
+      - uri: //firestore.googleapis.com/projects/lumina-agents-prod/databases/(default)
+        asset_type: firestore.googleapis.com/Database
+        project_id: lumina-agents-prod
+    members:
+      - agent-memory-firestore
+    badges:
+      - kind: project
+        label: lumina-agents-prod
+  - id: n_lumina_agents_prod_agent_orchestrator_api
+    title: agent-orchestrator-api
+    subtitle: Private Cloud Run agent orchestrator API
+    icon_key: cloud_run
+    component_kind: WORKLOAD
+    project_id: lumina-agents-prod
+    service_project_id: lumina-agents-prod
+    topo_rank: 4
+    sub_rank: 13
+    backed_by:
+      - uri: //run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/agent-orchestrator-api
+        asset_type: run.googleapis.com/Service
+        project_id: lumina-agents-prod
+    members:
+      - agent-orchestrator-api
+    badges:
+      - kind: log
+        label: 'Obs: agent-hallucination-slo-alert'
+      - kind: project
+        label: lumina-agents-prod
+      - kind: sa
+        label: 'SA: agent-orchestrator-sa'
+      - kind: vpc_conn
+        label: 'VPC-Conn: agents-vpc-connector'
+    inline_meta:
+      - label: Ingress
+        value: INTERNAL_LOAD_BALANCER
+  - id: n_lumina_agents_prod_agents_api_gateway
+    title: agents-api-gateway
+    subtitle: Private API Gateway for agent endpoints
+    icon_key: api_gateway
+    component_kind: INGRESS
+    project_id: lumina-agents-prod
+    service_project_id: lumina-agents-prod
+    topo_rank: 2
+    sub_rank: 4
+    backed_by:
+      - uri: //apigateway.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/gateways/agents-api-gateway
+        asset_type: apigateway.googleapis.com/Gateway
+        project_id: lumina-agents-prod
+    members:
+      - agents-api-gateway
+    badges:
+      - kind: project
+        label: lumina-agents-prod
+  - id: n_lumina_agents_prod_agents_global_https_lb
+    title: agents-global-https-lb
+    subtitle: Public Global HTTPS Load Balancer
+    icon_key: cloud_load_balancing
+    component_kind: INGRESS
+    project_id: lumina-agents-prod
+    service_project_id: lumina-agents-prod
+    topo_rank: 1
+    sub_rank: 3
+    backed_by:
+      - uri: //compute.googleapis.com/projects/lumina-agents-prod/global/forwardingRules/agents-global-https-lb
+        asset_type: compute.googleapis.com/GlobalForwardingRule
+        project_id: lumina-agents-prod
+    members:
+      - agents-global-https-lb
+    badges:
+      - kind: exposure
+        label: PUBLIC
+      - kind: project
+        label: lumina-agents-prod
+    inline_meta:
+      - label: VIP
+        value: 203.0.113.120:443-443
+      - label: Scheme
+        value: EXTERNAL_MANAGED
+  - id: n_lumina_agents_prod_embeddings_vector_idx
+    title: embeddings-vector-idx
+    subtitle: Vertex AI Vector Search index endpoint
+    icon_key: vertex_vector_search
+    component_kind: DATASTORE
+    project_id: lumina-agents-prod
+    service_project_id: lumina-agents-prod
+    topo_rank: 6
+    sub_rank: 21
+    backed_by:
+      - uri: //aiplatform.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/indexEndpoints/embeddings-vector-idx
+        asset_type: aiplatform.googleapis.com/IndexEndpoint
+        project_id: lumina-agents-prod
+    members:
+      - embeddings-vector-idx
+    badges:
+      - kind: project
+        label: lumina-agents-prod
+  - id: n_lumina_agents_prod_enterprise_docs_datastore
+    title: enterprise-docs-datastore
+    subtitle: Discovery Engine enterprise docs datastore
+    icon_key: vertex_search
+    component_kind: DATASTORE
+    project_id: lumina-agents-prod
+    service_project_id: lumina-agents-prod
+    topo_rank: 7
+    sub_rank: 23
+    backed_by:
+      - uri: //discoveryengine.googleapis.com/projects/lumina-agents-prod/locations/global/dataStores/enterprise-docs-datastore
+        asset_type: discoveryengine.googleapis.com/DataStore
+        project_id: lumina-agents-prod
+    members:
+      - enterprise-docs-datastore
+    badges:
+      - kind: project
+        label: lumina-agents-prod
+      - kind: sa
+        label: 'SA: reasoning-engine-sa'
+  - id: n_lumina_agents_prod_enterprise_rag_agent
+    title: enterprise-rag-agent
+    subtitle: Vertex AI Reasoning Engine RAG agent
+    icon_key: vertex_agent_engine
+    component_kind: WORKLOAD
+    project_id: lumina-agents-prod
+    service_project_id: lumina-agents-prod
+    topo_rank: 5
+    sub_rank: 14
+    backed_by:
+      - uri: //aiplatform.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/reasoningEngines/enterprise-rag-agent
+        asset_type: aiplatform.googleapis.com/ReasoningEngine
+        project_id: lumina-agents-prod
+    members:
+      - enterprise-rag-agent
+    badges:
+      - kind: project
+        label: lumina-agents-prod
+      - kind: sa
+        label: 'SA: reasoning-engine-sa'
+  - id: n_lumina_agents_prod_enterprise_search_engine
+    title: enterprise-search-engine
+    subtitle: Vertex AI Search grounded discovery engine
+    icon_key: vertex_search
+    component_kind: WORKLOAD
+    project_id: lumina-agents-prod
+    service_project_id: lumina-agents-prod
+    topo_rank: 6
+    sub_rank: 20
+    backed_by:
+      - uri: //discoveryengine.googleapis.com/projects/lumina-agents-prod/locations/global/engines/enterprise-search-engine
+        asset_type: discoveryengine.googleapis.com/Engine
+        project_id: lumina-agents-prod
+    members:
+      - enterprise-search-engine
+    badges:
+      - kind: project
+        label: lumina-agents-prod
+  - id: n_lumina_agents_prod_gemini_4_carbon
+    title: gemini-4-carbon
+    subtitle: Vertex AI Gemini publisher foundation model
+    icon_key: foundation_model
+    component_kind: DATASTORE
+    project_id: lumina-agents-prod
+    service_project_id: lumina-agents-prod
+    topo_rank: 6
+    sub_rank: 19
+    backed_by:
+      - uri: //aiplatform.googleapis.com/projects/lumina-agents-prod/locations/global/publishers/google/models/gemini-4-carbon
+        asset_type: aiplatform.googleapis.com/PublisherModel
+        project_id: lumina-agents-prod
+    members:
+      - gemini-4-carbon
+    badges:
+      - kind: project
+        label: lumina-agents-prod
+  - id: n_lumina_agents_prod_mcp_tool_gateway
+    title: mcp-tool-gateway
+    subtitle: Private Cloud Run MCP tool execution gateway
+    icon_key: cloud_run
+    component_kind: WORKLOAD
+    project_id: lumina-agents-prod
+    service_project_id: lumina-agents-prod
+    topo_rank: 6
+    sub_rank: 22
+    backed_by:
+      - uri: //run.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/services/mcp-tool-gateway
+        asset_type: run.googleapis.com/Service
+        project_id: lumina-agents-prod
+    members:
+      - mcp-tool-gateway
+    badges:
+      - kind: project
+        label: lumina-agents-prod
+      - kind: sa
+        label: 'SA: mcp-tool-gateway-sa'
+      - kind: secret
+        label: 'Secret: mcp-tool-oauth-token'
+      - kind: vpc_conn
+        label: 'VPC-Conn: agents-vpc-connector'
+    inline_meta:
+      - label: Ingress
+        value: INTERNAL_ONLY
+  - id: n_lumina_agents_prod_semantic_cache_redis
+    title: semantic-cache-redis
+    subtitle: Memorystore Redis semantic query cache
+    icon_key: memorystore
+    component_kind: DATASTORE
+    project_id: lumina-agents-prod
+    service_project_id: lumina-agents-prod
+    topo_rank: 5
+    sub_rank: 16
+    backed_by:
+      - uri: //redis.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/instances/semantic-cache-redis
+        asset_type: redis.googleapis.com/Instance
+        project_id: lumina-agents-prod
+    members:
+      - semantic-cache-redis
+    badges:
+      - kind: project
+        label: lumina-agents-prod
+    inline_meta:
+      - label: Redis
+        value: REDIS_7_2
+  - id: n_lumina_agents_prod_support_dialogflow_cx
+    title: support-dialogflow-cx
+    subtitle: Dialogflow CX conversational support agent
+    icon_key: dialogflow
+    component_kind: WORKLOAD
+    project_id: lumina-agents-prod
+    service_project_id: lumina-agents-prod
+    topo_rank: 3
+    sub_rank: 7
+    backed_by:
+      - uri: //dialogflow.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/agents/support-dialogflow-cx
+        asset_type: dialogflow.googleapis.com/Agent
+        project_id: lumina-agents-prod
+    members:
+      - support-dialogflow-cx
+    badges:
+      - kind: project
+        label: lumina-agents-prod
+      - kind: secret
+        label: 'Secret: dialogflow-webhook-hmac'
+  - id: n_lumina_knowledge_prod_contracts_docai_ocr
+    title: contracts-docai-ocr
+    subtitle: Document AI contract OCR processor
+    icon_key: document_ai
+    component_kind: PIPELINE
+    project_id: lumina-knowledge-prod
+    service_project_id: lumina-knowledge-prod
+    topo_rank: 4
+    sub_rank: 11
+    backed_by:
+      - uri: //documentai.googleapis.com/projects/lumina-knowledge-prod/locations/eu/processors/contracts-docai-ocr
+        asset_type: documentai.googleapis.com/Processor
+        project_id: lumina-knowledge-prod
+    members:
+      - contracts-docai-ocr
+    badges:
+      - kind: project
+        label: lumina-knowledge-prod
+  - id: n_lumina_knowledge_prod_doc_chunk_embed_fn
+    title: doc-chunk-embed-fn
+    subtitle: Cloud Function chunking and embedding ETL
+    icon_key: cloud_functions
+    component_kind: WORKLOAD
+    project_id: lumina-knowledge-prod
+    service_project_id: lumina-knowledge-prod
+    topo_rank: 2
+    sub_rank: 6
+    backed_by:
+      - uri: //cloudfunctions.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/functions/doc-chunk-embed-fn
+        asset_type: cloudfunctions.googleapis.com/CloudFunction
+        project_id: lumina-knowledge-prod
+    members:
+      - doc-chunk-embed-fn
+    badges:
+      - kind: project
+        label: lumina-knowledge-prod
+      - kind: sa
+        label: 'SA: doc-embedder-sa'
+      - kind: secret
+        label: 'Secret: doc-pipeline-signing-key'
+    inline_meta:
+      - label: Runtime
+        value: python312
+  - id: n_lumina_knowledge_prod_doc_dlq_replay_fn
+    title: doc-dlq-replay-fn
+    subtitle: Cloud Function dead-letter replay worker
+    icon_key: cloud_functions
+    component_kind: WORKLOAD
+    project_id: lumina-knowledge-prod
+    service_project_id: lumina-knowledge-prod
+    topo_rank: 5
+    sub_rank: 17
+    backed_by:
+      - uri: //cloudfunctions.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/functions/doc-dlq-replay-fn
+        asset_type: cloudfunctions.googleapis.com/CloudFunction
+        project_id: lumina-knowledge-prod
+    members:
+      - doc-dlq-replay-fn
+    badges:
+      - kind: project
+        label: lumina-knowledge-prod
+      - kind: sa
+        label: 'SA: doc-dlq-replay-sa'
+    inline_meta:
+      - label: Runtime
+        value: python312
+  - id: n_lumina_knowledge_prod_doc_embed_dlq
+    title: doc-embed-dlq
+    subtitle: Pub/Sub dead-letter topic for embeddings
+    icon_key: pubsub
+    component_kind: MESSAGING
+    project_id: lumina-knowledge-prod
+    service_project_id: lumina-knowledge-prod
+    topo_rank: 4
+    sub_rank: 12
+    backed_by:
+      - uri: //pubsub.googleapis.com/projects/lumina-knowledge-prod/subscriptions/doc-dlq-replay-sub
+        asset_type: pubsub.googleapis.com/Subscription
+        project_id: lumina-knowledge-prod
+      - uri: //pubsub.googleapis.com/projects/lumina-knowledge-prod/topics/doc-embed-dlq
+        asset_type: pubsub.googleapis.com/Topic
+        project_id: lumina-knowledge-prod
+    members:
+      - doc-dlq-replay-sub
+      - doc-embed-dlq
+    badges:
+      - kind: project
+        label: lumina-knowledge-prod
+      - kind: sub
+        label: 'sub: doc-dlq-replay-sub'
+    folded_edge_ids:
+      - 099a3a15a62f7e04
+    inline_meta:
+      - label: Subscriptions
+        value: "1"
+  - id: n_lumina_knowledge_prod_doc_embed_events
+    title: doc-embed-events
+    subtitle: Pub/Sub document embedding event topic
+    icon_key: pubsub
+    component_kind: MESSAGING
+    project_id: lumina-knowledge-prod
+    service_project_id: lumina-knowledge-prod
+    topo_rank: 3
+    sub_rank: 10
+    backed_by:
+      - uri: //pubsub.googleapis.com/projects/lumina-knowledge-prod/subscriptions/doc-index-sub
+        asset_type: pubsub.googleapis.com/Subscription
+        project_id: lumina-knowledge-prod
+      - uri: //pubsub.googleapis.com/projects/lumina-knowledge-prod/topics/doc-embed-events
+        asset_type: pubsub.googleapis.com/Topic
+        project_id: lumina-knowledge-prod
+    members:
+      - doc-embed-events
+      - doc-index-sub
+    badges:
+      - kind: project
+        label: lumina-knowledge-prod
+      - kind: sub
+        label: 'sub: doc-index-sub'
+    folded_edge_ids:
+      - c1cc358c04790bf7
+    inline_meta:
+      - label: Subscriptions
+        value: "1"
+  - id: n_lumina_knowledge_prod_doc_ingestion_workflow
+    title: doc-ingestion-workflow
+    subtitle: Cloud Workflows document ingestion pipeline
+    icon_key: workflows
+    component_kind: PIPELINE
+    project_id: lumina-knowledge-prod
+    service_project_id: lumina-knowledge-prod
+    topo_rank: 3
+    sub_rank: 8
+    backed_by:
+      - uri: //workflows.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/workflows/doc-ingestion-workflow
+        asset_type: workflows.googleapis.com/Workflow
+        project_id: lumina-knowledge-prod
+    members:
+      - doc-ingestion-workflow
+    badges:
+      - kind: project
+        label: lumina-knowledge-prod
+      - kind: sa
+        label: 'SA: doc-workflow-sa'
+  - id: n_lumina_knowledge_prod_doc_ocr_retry_tasks
+    title: doc-ocr-retry-tasks
+    subtitle: Cloud Tasks OCR and chunking retry queue
+    icon_key: cloud_tasks
+    component_kind: MESSAGING
+    project_id: lumina-knowledge-prod
+    service_project_id: lumina-knowledge-prod
+    topo_rank: 3
+    sub_rank: 9
+    backed_by:
+      - uri: //cloudtasks.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/queues/doc-ocr-retry-tasks
+        asset_type: cloudtasks.googleapis.com/Queue
+        project_id: lumina-knowledge-prod
+    members:
+      - doc-ocr-retry-tasks
+    badges:
+      - kind: project
+        label: lumina-knowledge-prod
+  - id: n_lumina_knowledge_prod_doc_upload_eventarc
+    title: doc-upload-eventarc
+    subtitle: Eventarc GCS document upload trigger
+    icon_key: eventarc
+    component_kind: MESSAGING
+    project_id: lumina-knowledge-prod
+    service_project_id: lumina-knowledge-prod
+    topo_rank: 2
+    sub_rank: 5
+    backed_by:
+      - uri: //eventarc.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/triggers/doc-upload-eventarc
+        asset_type: eventarc.googleapis.com/Trigger
+        project_id: lumina-knowledge-prod
+    members:
+      - doc-upload-eventarc
+    badges:
+      - kind: project
+        label: lumina-knowledge-prod
+      - kind: sa
+        label: 'SA: doc-workflow-sa'
+  - id: n_lumina_knowledge_prod_lumina_parsed_chunks
+    title: lumina-parsed-chunks
+    subtitle: Private GCS bucket for parsed OCR chunks
+    icon_key: cloud_storage
+    component_kind: DATASTORE
+    project_id: lumina-knowledge-prod
+    service_project_id: lumina-knowledge-prod
+    topo_rank: 5
+    sub_rank: 15
+    backed_by:
+      - uri: //storage.googleapis.com/lumina-parsed-chunks
+        asset_type: storage.googleapis.com/Bucket
+        project_id: lumina-knowledge-prod
+    members:
+      - lumina-parsed-chunks
+    badges:
+      - kind: kms
+        label: 'KMS: docs-corpus-cmek'
+      - kind: project
+        label: lumina-knowledge-prod
+      - kind: sa
+        label: 'SA: doc-embedder-sa'
+    inline_meta:
+      - label: Class
+        value: STANDARD
+  - id: n_lumina_knowledge_prod_lumina_raw_enterprise_docs
+    title: lumina-raw-enterprise-docs
+    subtitle: Private GCS raw enterprise document landing
+    icon_key: cloud_storage
+    component_kind: DATASTORE
+    project_id: lumina-knowledge-prod
+    service_project_id: lumina-knowledge-prod
+    topo_rank: 1
+    sub_rank: 1
+    backed_by:
+      - uri: //storage.googleapis.com/lumina-raw-enterprise-docs
+        asset_type: storage.googleapis.com/Bucket
+        project_id: lumina-knowledge-prod
+    members:
+      - lumina-raw-enterprise-docs
+    badges:
+      - kind: kms
+        label: 'KMS: docs-corpus-cmek'
+      - kind: project
+        label: lumina-knowledge-prod
+    inline_meta:
+      - label: Class
+        value: STANDARD
+  - id: n_lumina_knowledge_prod_nightly_reindex_cron
+    title: nightly-reindex-cron
+    subtitle: Cloud Scheduler nightly reindex job
+    icon_key: cloud_scheduler
+    component_kind: PIPELINE
+    project_id: lumina-knowledge-prod
+    service_project_id: lumina-knowledge-prod
+    topo_rank: 1
+    sub_rank: 2
+    backed_by:
+      - uri: //cloudscheduler.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/jobs/nightly-reindex-cron
+        asset_type: cloudscheduler.googleapis.com/Job
+        project_id: lumina-knowledge-prod
+    members:
+      - nightly-reindex-cron
+    badges:
+      - kind: project
+        label: lumina-knowledge-prod
+containers:
+  - id: ext_sources
+    title: External Callers & Sources
+    kind: EXTERNAL_ZONE
+    exposure: EXTERNAL
+    order_hint: -100
+  - id: folder_540300
+    title: 'Folder: genai-prod'
+    subtitle: folders/540300
+    kind: FOLDER
+    parent_container_id: org_930300001
+    order_hint: 20
+  - id: org_930300001
+    title: 'Org: Lumina AI Systems'
+    subtitle: organizations/930300001
+    kind: ORG
+    order_hint: 10
+  - id: proj_lumina_agents_prod
+    title: Lumina Agents Prod (lumina-agents-prod)
+    kind: PROJECT
+    parent_container_id: folder_540300
+    badges:
+      - Shared VPC Service Project
+    order_hint: 30
+  - id: proj_lumina_edge_net
+    title: Lumina Edge Net (lumina-edge-net)
+    kind: PROJECT
+    parent_container_id: folder_540300
+    badges:
+      - Shared VPC Host
+    order_hint: 30
+  - id: proj_lumina_knowledge_prod
+    title: Lumina Knowledge Prod (lumina-knowledge-prod)
+    kind: PROJECT
+    parent_container_id: folder_540300
+    badges:
+      - Shared VPC Service Project
+    order_hint: 30
+  - id: reg_vpc_lumina_edge_net_lumina_shared_vpc_europe_west1
+    title: 'Region: europe-west1'
+    kind: REGION
+    parent_container_id: vpc_lumina_edge_net_lumina_shared_vpc
+    order_hint: 50
+  - id: sub_lumina_edge_net_europe_west1_agents_runtime_subnet
+    title: 'Subnet: agents-runtime-subnet'
+    subtitle: 10.80.0.0/22
+    kind: SUBNET
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_lumina_edge_net_lumina_shared_vpc_europe_west1
+    badges:
+      - PRIVATE
+    order_hint: 62
+    folded_edge_ids:
+      - 9fe00f11c01fb1cd
+    backed_by:
+      - uri: //compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/subnetworks/agents-runtime-subnet
+        asset_type: compute.googleapis.com/Subnetwork
+        project_id: lumina-edge-net
+  - id: sub_lumina_edge_net_europe_west1_knowledge_etl_subnet
+    title: 'Subnet: knowledge-etl-subnet'
+    subtitle: 10.80.16.0/22
+    kind: SUBNET
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_lumina_edge_net_lumina_shared_vpc_europe_west1
+    badges:
+      - PRIVATE
+    order_hint: 62
+    backed_by:
+      - uri: //compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/subnetworks/knowledge-etl-subnet
+        asset_type: compute.googleapis.com/Subnetwork
+        project_id: lumina-edge-net
+  - id: vpc_lumina_edge_net_lumina_shared_vpc
+    title: 'VPC: lumina-shared-vpc'
+    subtitle: 'Host: lumina-edge-net'
+    kind: VPC
+    parent_container_id: proj_lumina_edge_net
+    badges:
+      - 'NAT: lumina-nat-router'
+      - Shared VPC (2 svc projects)
+    order_hint: 40
+    folded_edge_ids:
+      - abeefa8c58a0b158
+    backed_by:
+      - uri: //compute.googleapis.com/projects/lumina-edge-net/global/networks/lumina-shared-vpc
+        asset_type: compute.googleapis.com/Network
+        project_id: lumina-edge-net
+  - id: zone_exposure_zone_private_proj_lumina_agents_prod
+    title: Managed Services & Messaging
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: proj_lumina_agents_prod
+    order_hint: 80
+  - id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+    title: Managed Services & Messaging
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: proj_lumina_knowledge_prod
+    order_hint: 80
+  - id: zone_exposure_zone_private_reg_vpc_lumina_edge_net_lumina_shared_vpc_europe_west1
+    title: Private VPC Services
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_lumina_edge_net_lumina_shared_vpc_europe_west1
+    order_hint: 72
+  - id: zone_exposure_zone_private_sub_lumina_edge_net_europe_west1_agents_runtime_subnet
+    title: Private Workloads
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: sub_lumina_edge_net_europe_west1_agents_runtime_subnet
+    order_hint: 64
+  - id: zone_exposure_zone_private_sub_lumina_edge_net_europe_west1_knowledge_etl_subnet
+    title: Private Workloads
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: sub_lumina_edge_net_europe_west1_knowledge_etl_subnet
+    order_hint: 64
+  - id: zone_exposure_zone_public_vpc_lumina_edge_net_lumina_shared_vpc_external_managed
+    title: Public Edge Ingress
+    subtitle: EXTERNAL_MANAGED
+    kind: EXPOSURE_ZONE
+    exposure: PUBLIC
+    parent_container_id: vpc_lumina_edge_net_lumina_shared_vpc
+    order_hint: 45
+transversal_items:
+  - id: tr_lumina_agents_prod_serviceaccount_agent_orchestrator_sa_lumin
+    category: IAM_SA
+    asset_type: iam.googleapis.com/ServiceAccount
+    display_name: agent-orchestrator-sa@lumina-agents-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
+    project_id: lumina-agents-prod
+    owner_container_id: proj_lumina_agents_prod
+    attached_node_ids:
+      - n_lumina_agents_prod_agent_orchestrator_api
+    backed_by:
+      - uri: //iam.googleapis.com/projects/lumina-agents-prod/serviceAccounts/agent-orchestrator-sa@lumina-agents-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: lumina-agents-prod
+    backed_edge_ids:
+      - 5df50862318a7f19
+  - id: tr_lumina_agents_prod_serviceaccount_mcp_tool_gateway_sa_lumina
+    category: IAM_SA
+    asset_type: iam.googleapis.com/ServiceAccount
+    display_name: mcp-tool-gateway-sa@lumina-agents-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
+    project_id: lumina-agents-prod
+    owner_container_id: proj_lumina_agents_prod
+    attached_node_ids:
+      - n_lumina_agents_prod_mcp_tool_gateway
+    backed_by:
+      - uri: //iam.googleapis.com/projects/lumina-agents-prod/serviceAccounts/mcp-tool-gateway-sa@lumina-agents-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: lumina-agents-prod
+    backed_edge_ids:
+      - 0ce73b542c91a7e6
+  - id: tr_lumina_agents_prod_serviceaccount_reasoning_engine_sa_lumina
+    category: IAM_SA
+    asset_type: iam.googleapis.com/ServiceAccount
+    display_name: reasoning-engine-sa@lumina-agents-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
+    project_id: lumina-agents-prod
+    owner_container_id: proj_lumina_agents_prod
+    attached_node_ids:
+      - n_lumina_agents_prod_enterprise_docs_datastore
+      - n_lumina_agents_prod_enterprise_rag_agent
+    backed_by:
+      - uri: //iam.googleapis.com/projects/lumina-agents-prod/serviceAccounts/reasoning-engine-sa@lumina-agents-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: lumina-agents-prod
+    backed_edge_ids:
+      - 8f8c56b8a79d1b5a
+      - 8f994224fbfefab4
+    roles:
+      - roles/discoveryengine.viewer
+  - id: tr_lumina_knowledge_prod_serviceaccount_doc_dlq_replay_sa_lumina
+    category: IAM_SA
+    asset_type: iam.googleapis.com/ServiceAccount
+    display_name: doc-dlq-replay-sa@lumina-knowledge-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
+    project_id: lumina-knowledge-prod
+    owner_container_id: proj_lumina_knowledge_prod
+    attached_node_ids:
+      - n_lumina_knowledge_prod_doc_dlq_replay_fn
+    backed_by:
+      - uri: //iam.googleapis.com/projects/lumina-knowledge-prod/serviceAccounts/doc-dlq-replay-sa@lumina-knowledge-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: lumina-knowledge-prod
+    backed_edge_ids:
+      - 00f53668c6ca3903
+  - id: tr_lumina_knowledge_prod_serviceaccount_doc_embedder_sa_lumina_k
+    category: IAM_SA
+    asset_type: iam.googleapis.com/ServiceAccount
+    display_name: doc-embedder-sa@lumina-knowledge-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
+    project_id: lumina-knowledge-prod
+    owner_container_id: proj_lumina_knowledge_prod
+    attached_node_ids:
+      - n_lumina_knowledge_prod_doc_chunk_embed_fn
+      - n_lumina_knowledge_prod_lumina_parsed_chunks
+    backed_by:
+      - uri: //iam.googleapis.com/projects/lumina-knowledge-prod/serviceAccounts/doc-embedder-sa@lumina-knowledge-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: lumina-knowledge-prod
+    backed_edge_ids:
+      - 13abc313925cdb4c
+      - a277e9ebed5a0962
+    roles:
+      - roles/storage.objectAdmin
+  - id: tr_lumina_knowledge_prod_serviceaccount_doc_workflow_sa_lumina_k
+    category: IAM_SA
+    asset_type: iam.googleapis.com/ServiceAccount
+    display_name: doc-workflow-sa@lumina-knowledge-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
+    project_id: lumina-knowledge-prod
+    owner_container_id: proj_lumina_knowledge_prod
+    attached_node_ids:
+      - n_lumina_knowledge_prod_doc_ingestion_workflow
+    backed_by:
+      - uri: //iam.googleapis.com/projects/lumina-knowledge-prod/serviceAccounts/doc-workflow-sa@lumina-knowledge-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: lumina-knowledge-prod
+    backed_edge_ids:
+      - 58886aff574cbc41
+  - id: tr_lumina_agents_prod_cryptokey_ai_agent_cmek
+    category: KMS
+    asset_type: cloudkms.googleapis.com/CryptoKey
+    display_name: ai-agent-cmek
+    detail: europe-west1 | ENCRYPT_DECRYPT
+    project_id: lumina-agents-prod
+    owner_container_id: proj_lumina_agents_prod
+    attached_node_ids:
+      - n_lumina_agents_prod_agent_eval_telemetry
+    backed_by:
+      - uri: //cloudkms.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/keyRings/ai-keyring/cryptoKeys/ai-agent-cmek
+        asset_type: cloudkms.googleapis.com/CryptoKey
+        project_id: lumina-agents-prod
+    backed_edge_ids:
+      - 8496c701118b7be1
+  - id: tr_lumina_knowledge_prod_cryptokey_docs_corpus_cmek
+    category: KMS
+    asset_type: cloudkms.googleapis.com/CryptoKey
+    display_name: docs-corpus-cmek
+    detail: europe-west1 | ENCRYPT_DECRYPT
+    project_id: lumina-knowledge-prod
+    owner_container_id: proj_lumina_knowledge_prod
+    attached_node_ids:
+      - n_lumina_knowledge_prod_lumina_parsed_chunks
+      - n_lumina_knowledge_prod_lumina_raw_enterprise_docs
+    backed_by:
+      - uri: //cloudkms.googleapis.com/projects/lumina-knowledge-prod/locations/europe-west1/keyRings/know-keyring/cryptoKeys/docs-corpus-cmek
+        asset_type: cloudkms.googleapis.com/CryptoKey
+        project_id: lumina-knowledge-prod
+    backed_edge_ids:
+      - 8c5e602b97bf36a8
+      - a0b2ea8b2c91ab41
+  - id: tr_lumina_edge_net_router_lumina_nat_router
+    category: NAT_ROUTER
+    asset_type: compute.googleapis.com/Router
+    display_name: lumina-nat-router
+    detail: europe-west1
+    project_id: lumina-edge-net
+    owner_container_id: vpc_lumina_edge_net_lumina_shared_vpc
+    backed_by:
+      - uri: //compute.googleapis.com/projects/lumina-edge-net/regions/europe-west1/routers/lumina-nat-router
+        asset_type: compute.googleapis.com/Router
+        project_id: lumina-edge-net
+    backed_edge_ids:
+      - abeefa8c58a0b158
+  - id: tr_lumina_agents_prod_alertpolicy_agent_hallucination_slo_alert
+    category: OBSERVABILITY
+    asset_type: monitoring.googleapis.com/AlertPolicy
+    display_name: agent-hallucination-slo-alert
+    detail: global
+    project_id: lumina-agents-prod
+    owner_container_id: proj_lumina_agents_prod
+    attached_node_ids:
+      - n_lumina_agents_prod_agent_orchestrator_api
+    backed_by:
+      - uri: //monitoring.googleapis.com/projects/lumina-agents-prod/alertPolicies/9404001
+        asset_type: monitoring.googleapis.com/AlertPolicy
+        project_id: lumina-agents-prod
+    backed_edge_ids:
+      - 3f122263a601b2f8
+  - id: tr_lumina_agents_prod_logsink_agent_prompts_audit_sink
+    category: OBSERVABILITY
+    asset_type: logging.googleapis.com/LogSink
+    display_name: agent-prompts-audit-sink
+    detail: global
+    project_id: lumina-agents-prod
+    owner_container_id: proj_lumina_agents_prod
+    attached_node_ids:
+      - n_lumina_agents_prod_agent_eval_telemetry
+    backed_by:
+      - uri: //logging.googleapis.com/projects/lumina-agents-prod/sinks/agent-prompts-audit-sink
+        asset_type: logging.googleapis.com/LogSink
+        project_id: lumina-agents-prod
+    backed_edge_ids:
+      - 06de34de711895c3
+  - id: tr_lumina_agents_prod_secret_dialogflow_webhook_hmac
+    category: SECRET
+    asset_type: secretmanager.googleapis.com/Secret
+    display_name: dialogflow-webhook-hmac
+    detail: automatic
+    project_id: lumina-agents-prod
+    owner_container_id: proj_lumina_agents_prod
+    attached_node_ids:
+      - n_lumina_agents_prod_support_dialogflow_cx
+    backed_by:
+      - uri: //secretmanager.googleapis.com/projects/lumina-agents-prod/secrets/dialogflow-webhook-hmac
+        asset_type: secretmanager.googleapis.com/Secret
+        project_id: lumina-agents-prod
+    backed_edge_ids:
+      - 889a5fd15c7dcce3
+  - id: tr_lumina_agents_prod_secret_mcp_tool_oauth_token
+    category: SECRET
+    asset_type: secretmanager.googleapis.com/Secret
+    display_name: mcp-tool-oauth-token
+    detail: automatic
+    project_id: lumina-agents-prod
+    owner_container_id: proj_lumina_agents_prod
+    attached_node_ids:
+      - n_lumina_agents_prod_mcp_tool_gateway
+    backed_by:
+      - uri: //secretmanager.googleapis.com/projects/lumina-agents-prod/secrets/mcp-tool-oauth-token
+        asset_type: secretmanager.googleapis.com/Secret
+        project_id: lumina-agents-prod
+    backed_edge_ids:
+      - e9137ac3f3f6b095
+  - id: tr_lumina_knowledge_prod_secret_doc_pipeline_signing_key
+    category: SECRET
+    asset_type: secretmanager.googleapis.com/Secret
+    display_name: doc-pipeline-signing-key
+    detail: automatic
+    project_id: lumina-knowledge-prod
+    owner_container_id: proj_lumina_knowledge_prod
+    attached_node_ids:
+      - n_lumina_knowledge_prod_doc_chunk_embed_fn
+    backed_by:
+      - uri: //secretmanager.googleapis.com/projects/lumina-knowledge-prod/secrets/doc-pipeline-signing-key
+        asset_type: secretmanager.googleapis.com/Secret
+        project_id: lumina-knowledge-prod
+    backed_edge_ids:
+      - ccbb2b142d38e6bf
+  - id: tr_lumina_agents_prod_connector_agents_vpc_connector
+    category: VPC_ACCESS
+    asset_type: vpcaccess.googleapis.com/Connector
+    display_name: agents-vpc-connector
+    detail: europe-west1
+    project_id: lumina-agents-prod
+    owner_container_id: sub_lumina_edge_net_europe_west1_agents_runtime_subnet
+    attached_node_ids:
+      - n_lumina_agents_prod_agent_orchestrator_api
+      - n_lumina_agents_prod_mcp_tool_gateway
+    backed_by:
+      - uri: //vpcaccess.googleapis.com/projects/lumina-agents-prod/locations/europe-west1/connectors/agents-vpc-connector
+        asset_type: vpcaccess.googleapis.com/Connector
+        project_id: lumina-agents-prod
+    backed_edge_ids:
+      - 0ee867c666c68a9c
+      - 9fe00f11c01fb1cd
+      - f838c5f9a8062d0b
+structural_edges:
+  - edge_id: 099a3a15a62f7e04
+    kind: CONFIG_REF
+    from_uri: //pubsub.googleapis.com/projects/lumina-knowledge-prod/topics/doc-embed-dlq
+    to_uri: //pubsub.googleapis.com/projects/lumina-knowledge-prod/subscriptions/doc-dlq-replay-sub
+    reason: 1to1_plumbing_fold
+    target_id: n_lumina_knowledge_prod_doc_embed_dlq
+  - edge_id: c1cc358c04790bf7
+    kind: CONFIG_REF
+    from_uri: //pubsub.googleapis.com/projects/lumina-knowledge-prod/topics/doc-embed-events
+    to_uri: //pubsub.googleapis.com/projects/lumina-knowledge-prod/subscriptions/doc-index-sub
+    reason: 1to1_plumbing_fold
+    target_id: n_lumina_knowledge_prod_doc_embed_events
+suppressed_plumbing_counts:
+  apigateway.googleapis.com/ApiConfig: 2
+  compute.googleapis.com/BackendService: 2
+  compute.googleapis.com/Firewall: 18
+  compute.googleapis.com/Route: 10
+  compute.googleapis.com/SecurityPolicy: 2
+  documentai.googleapis.com/ProcessorVersion: 3
+  run.googleapis.com/Revision: 14
+views:
+  - id: view_0_system_index
+    title: System Architecture Overview
+    subtitle: 25 components · 29 flows · 15 governance items
+    focus_summary: Enterprise RAG conversational agent platform combining Dialogflow CX, Vertex AI Reasoning Engine, and event-driven Document AI ingestion pipelines.
+    include_transversal_panel: true
+    archetype: layered_flow
+    accent_mode: RUNTIME
+    container_ids:
+      - ext_sources
+      - folder_540300
+      - org_930300001
+      - proj_lumina_agents_prod
+      - proj_lumina_edge_net
+      - proj_lumina_knowledge_prod
+      - reg_vpc_lumina_edge_net_lumina_shared_vpc_europe_west1
+      - sub_lumina_edge_net_europe_west1_agents_runtime_subnet
+      - sub_lumina_edge_net_europe_west1_knowledge_etl_subnet
+      - vpc_lumina_edge_net_lumina_shared_vpc
+      - zone_exposure_zone_private_proj_lumina_agents_prod
+      - zone_exposure_zone_private_proj_lumina_knowledge_prod
+      - zone_exposure_zone_private_reg_vpc_lumina_edge_net_lumina_shared_vpc_europe_west1
+      - zone_exposure_zone_private_sub_lumina_edge_net_europe_west1_agents_runtime_subnet
+      - zone_exposure_zone_private_sub_lumina_edge_net_europe_west1_knowledge_etl_subnet
+      - zone_exposure_zone_public_vpc_lumina_edge_net_lumina_shared_vpc_external_managed
+    placements:
+      - component_id: n_external_enterprise_portal_users
+        container_id: ext_sources
+        column: 0
+      - component_id: n_lumina_knowledge_prod_lumina_raw_enterprise_docs
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 1
+      - component_id: n_lumina_knowledge_prod_nightly_reindex_cron
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 1
+      - component_id: n_lumina_agents_prod_agents_global_https_lb
+        container_id: zone_exposure_zone_public_vpc_lumina_edge_net_lumina_shared_vpc_external_managed
+        column: 1
+      - component_id: n_lumina_agents_prod_agents_api_gateway
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 2
+      - component_id: n_lumina_knowledge_prod_doc_upload_eventarc
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 2
+      - component_id: n_lumina_knowledge_prod_doc_chunk_embed_fn
+        container_id: zone_exposure_zone_private_sub_lumina_edge_net_europe_west1_knowledge_etl_subnet
+        column: 2
+      - component_id: n_lumina_agents_prod_support_dialogflow_cx
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 3
+      - component_id: n_lumina_knowledge_prod_doc_ingestion_workflow
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 3
+      - component_id: n_lumina_knowledge_prod_doc_ocr_retry_tasks
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 3
+      - component_id: n_lumina_knowledge_prod_doc_embed_events
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 3
+      - component_id: n_lumina_knowledge_prod_contracts_docai_ocr
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 4
+      - component_id: n_lumina_knowledge_prod_doc_embed_dlq
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 4
+      - component_id: n_lumina_agents_prod_agent_orchestrator_api
+        container_id: zone_exposure_zone_private_sub_lumina_edge_net_europe_west1_agents_runtime_subnet
+        column: 4
+      - component_id: n_lumina_agents_prod_enterprise_rag_agent
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 5
+      - component_id: n_lumina_knowledge_prod_lumina_parsed_chunks
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 5
+      - component_id: n_lumina_agents_prod_semantic_cache_redis
+        container_id: zone_exposure_zone_private_reg_vpc_lumina_edge_net_lumina_shared_vpc_europe_west1
+        column: 5
+      - component_id: n_lumina_knowledge_prod_doc_dlq_replay_fn
+        container_id: zone_exposure_zone_private_sub_lumina_edge_net_europe_west1_knowledge_etl_subnet
+        column: 5
+      - component_id: n_lumina_agents_prod_agent_memory_firestore
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 6
+      - component_id: n_lumina_agents_prod_gemini_4_carbon
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 6
+      - component_id: n_lumina_agents_prod_enterprise_search_engine
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 6
+      - component_id: n_lumina_agents_prod_embeddings_vector_idx
+        container_id: zone_exposure_zone_private_reg_vpc_lumina_edge_net_lumina_shared_vpc_europe_west1
+        column: 6
+      - component_id: n_lumina_agents_prod_mcp_tool_gateway
+        container_id: zone_exposure_zone_private_sub_lumina_edge_net_europe_west1_agents_runtime_subnet
+        column: 6
+      - component_id: n_lumina_agents_prod_enterprise_docs_datastore
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 7
+      - component_id: n_lumina_agents_prod_agent_eval_telemetry
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 7
+    edges:
+      - from: n_external_enterprise_portal_users
+        to: n_lumina_agents_prod_agents_global_https_lb
+        verb: HTTPS :443
+        flow_kind: RUNTIME
+        semantic_tag: ingress
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - b73942dd535a561f
+      - from: n_lumina_agents_prod_agent_orchestrator_api
+        to: n_lumina_agents_prod_agent_eval_telemetry
+        verb: Logs eval
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 6b741cf72d579514
+      - from: n_lumina_agents_prod_agent_orchestrator_api
+        to: n_lumina_agents_prod_enterprise_rag_agent
+        verb: Invokes agent
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 5cfecdbf818f94f1
+      - from: n_lumina_agents_prod_agent_orchestrator_api
+        to: n_lumina_agents_prod_semantic_cache_redis
+        verb: Caches query
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 3cfc92dffeafec10
+      - from: n_lumina_agents_prod_agents_api_gateway
+        to: n_lumina_agents_prod_agent_orchestrator_api
+        verb: Routes HTTPS
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 873fa56ac3ae8006
+      - from: n_lumina_agents_prod_agents_api_gateway
+        to: n_lumina_agents_prod_support_dialogflow_cx
+        verb: Routes chat
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 2a3d311ae38b14f9
+      - from: n_lumina_agents_prod_agents_global_https_lb
+        to: n_lumina_agents_prod_agents_api_gateway
+        verb: Forwards :443
+        flow_kind: RUNTIME
+        semantic_tag: ingress
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 33df8e2b0c69dd29
+      - from: n_lumina_agents_prod_enterprise_rag_agent
+        to: n_lumina_agents_prod_agent_memory_firestore
+        verb: Reads/writes
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - c337b983605b7a0e
+      - from: n_lumina_agents_prod_enterprise_rag_agent
+        to: n_lumina_agents_prod_embeddings_vector_idx
+        verb: Vector KNN
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 83d837085affce90
+      - from: n_lumina_agents_prod_enterprise_rag_agent
+        to: n_lumina_agents_prod_enterprise_search_engine
+        verb: Grounds query
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 59c185c20b15c92b
+      - from: n_lumina_agents_prod_enterprise_rag_agent
+        to: n_lumina_agents_prod_gemini_4_carbon
+        verb: Generates LLM
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 6ecebc51cf5d091b
+      - from: n_lumina_agents_prod_enterprise_rag_agent
+        to: n_lumina_agents_prod_mcp_tool_gateway
+        verb: Calls MCP
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - c898ad814f6fe2ad
+      - from: n_lumina_agents_prod_enterprise_search_engine
+        to: n_lumina_agents_prod_enterprise_docs_datastore
+        verb: Queries docs
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - fc4e0e9c5bef2536
+      - from: n_lumina_agents_prod_mcp_tool_gateway
+        to: n_lumina_agents_prod_agent_eval_telemetry
+        verb: Logs audit
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 57a83665b745e8f5
+      - from: n_lumina_agents_prod_support_dialogflow_cx
+        to: n_lumina_agents_prod_agent_orchestrator_api
+        verb: Webhook call
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 8edcb88f2d613709
+      - from: n_lumina_knowledge_prod_contracts_docai_ocr
+        to: n_lumina_knowledge_prod_lumina_parsed_chunks
+        verb: Writes chunks
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 917a01c304c8b3eb
+      - from: n_lumina_knowledge_prod_doc_chunk_embed_fn
+        to: n_lumina_knowledge_prod_doc_embed_events
+        verb: Publishes
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 9c9358061808e2df
+      - from: n_lumina_knowledge_prod_doc_chunk_embed_fn
+        to: n_lumina_knowledge_prod_lumina_parsed_chunks
+        verb: Reads chunks
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 343b123e1bb100c3
+      - from: n_lumina_knowledge_prod_doc_dlq_replay_fn
+        to: n_lumina_knowledge_prod_doc_embed_events
+        verb: Republishes
+        flow_kind: RUNTIME
+        semantic_tag: retry
+        is_retry_or_dlq: true
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 90a51b304928fe6a
+      - from: n_lumina_knowledge_prod_doc_embed_dlq
+        to: n_lumina_knowledge_prod_doc_dlq_replay_fn
+        verb: Pushes DLQ
+        flow_kind: RUNTIME
+        semantic_tag: dlq
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - a7eb7834ff4bf40c
+      - from: n_lumina_knowledge_prod_doc_embed_events
+        to: n_lumina_agents_prod_embeddings_vector_idx
+        verb: Upserts index
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 6b7bb4ef723f8cce
+      - from: n_lumina_knowledge_prod_doc_embed_events
+        to: n_lumina_agents_prod_enterprise_docs_datastore
+        verb: Indexes docs
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 64a7f51c9575ddaa
+      - from: n_lumina_knowledge_prod_doc_embed_events
+        to: n_lumina_knowledge_prod_doc_embed_dlq
+        verb: Dead-letter
+        flow_kind: RUNTIME
+        semantic_tag: dlq
+        is_retry_or_dlq: true
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - bfbbe7ced249106d
+      - from: n_lumina_knowledge_prod_doc_ingestion_workflow
+        to: n_lumina_knowledge_prod_contracts_docai_ocr
+        verb: Extracts OCR
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 33aa0ebc65d7528e
+      - from: n_lumina_knowledge_prod_doc_ingestion_workflow
+        to: n_lumina_knowledge_prod_doc_ocr_retry_tasks
+        verb: Enqueues task
+        flow_kind: RUNTIME
+        semantic_tag: retry
+        is_retry_or_dlq: true
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 7e39e2f0db39b1e6
+      - from: n_lumina_knowledge_prod_doc_ocr_retry_tasks
+        to: n_lumina_knowledge_prod_doc_chunk_embed_fn
+        verb: Retry push
+        flow_kind: RUNTIME
+        semantic_tag: retry
+        is_retry_or_dlq: true
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - a4e7630ebbf905b8
+      - from: n_lumina_knowledge_prod_doc_upload_eventarc
+        to: n_lumina_knowledge_prod_doc_ingestion_workflow
+        verb: Invokes flow
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 67336af985c85c86
+      - from: n_lumina_knowledge_prod_lumina_raw_enterprise_docs
+        to: n_lumina_knowledge_prod_doc_upload_eventarc
+        verb: Emits upload
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 458dbe58b601f6fd
+      - from: n_lumina_knowledge_prod_nightly_reindex_cron
+        to: n_lumina_knowledge_prod_doc_ingestion_workflow
+        verb: Triggers cron
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - e8c4356bb2c66562
+  - id: view_1
+    title: Edge Ingress & Ingestion Triggers
+    subtitle: HTTPS API entrypoints, document landing, and ETL triggers
+    focus_summary: External user traffic enters via Global HTTPS Load Balancing and API Gateway alongside scheduled and Eventarc-triggered document ingestion.
+    include_transversal_panel: true
+    archetype: layered_flow
+    accent_mode: RUNTIME
+    container_ids:
+      - ext_sources
+      - folder_540300
+      - org_930300001
+      - proj_lumina_agents_prod
+      - proj_lumina_edge_net
+      - proj_lumina_knowledge_prod
+      - reg_vpc_lumina_edge_net_lumina_shared_vpc_europe_west1
+      - sub_lumina_edge_net_europe_west1_knowledge_etl_subnet
+      - vpc_lumina_edge_net_lumina_shared_vpc
+      - zone_exposure_zone_private_proj_lumina_agents_prod
+      - zone_exposure_zone_private_proj_lumina_knowledge_prod
+      - zone_exposure_zone_private_sub_lumina_edge_net_europe_west1_knowledge_etl_subnet
+      - zone_exposure_zone_public_vpc_lumina_edge_net_lumina_shared_vpc_external_managed
+    placements:
+      - component_id: n_external_enterprise_portal_users
+        container_id: ext_sources
+        column: 0
+      - component_id: n_lumina_knowledge_prod_lumina_raw_enterprise_docs
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 1
+      - component_id: n_lumina_knowledge_prod_nightly_reindex_cron
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 1
+        off_page_refs:
+          - target_view_id: view_2
+            label: doc-ingestion-workflow (view_2)
+            direction: OUT
+      - component_id: n_lumina_agents_prod_agents_global_https_lb
+        container_id: zone_exposure_zone_public_vpc_lumina_edge_net_lumina_shared_vpc_external_managed
+        column: 1
+      - component_id: n_lumina_agents_prod_agents_api_gateway
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 2
+        off_page_refs:
+          - target_view_id: view_2
+            label: agent-orchestrator-api (+1 in view_2)
+            direction: OUT
+      - component_id: n_lumina_knowledge_prod_doc_upload_eventarc
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 2
+        off_page_refs:
+          - target_view_id: view_2
+            label: doc-ingestion-workflow (view_2)
+            direction: OUT
+      - component_id: n_lumina_knowledge_prod_doc_chunk_embed_fn
+        container_id: zone_exposure_zone_private_sub_lumina_edge_net_europe_west1_knowledge_etl_subnet
+        column: 2
+        off_page_refs:
+          - target_view_id: view_2
+            label: doc-ocr-retry-tasks (view_2)
+            direction: IN
+          - target_view_id: view_2
+            label: doc-embed-events (+1 in view_2)
+            direction: OUT
+    edges:
+      - from: n_external_enterprise_portal_users
+        to: n_lumina_agents_prod_agents_global_https_lb
+        verb: HTTPS :443
+        flow_kind: RUNTIME
+        semantic_tag: ingress
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - b73942dd535a561f
+      - from: n_lumina_agents_prod_agents_global_https_lb
+        to: n_lumina_agents_prod_agents_api_gateway
+        verb: Forwards :443
+        flow_kind: RUNTIME
+        semantic_tag: ingress
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 33df8e2b0c69dd29
+      - from: n_lumina_knowledge_prod_lumina_raw_enterprise_docs
+        to: n_lumina_knowledge_prod_doc_upload_eventarc
+        verb: Emits upload
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 458dbe58b601f6fd
+  - id: view_2
+    title: RAG Agents, Document Pipelines & Datastores
+    subtitle: Agent orchestration, OCR workflows, AI models, and storage
+    focus_summary: Downstream Cloud Workflows, Document AI, and Pub/Sub index enterprise knowledge for Vertex AI Reasoning Engine, Gemini, and MCP tools.
+    include_transversal_panel: true
+    archetype: layered_flow
+    accent_mode: RUNTIME
+    container_ids:
+      - folder_540300
+      - org_930300001
+      - proj_lumina_agents_prod
+      - proj_lumina_edge_net
+      - proj_lumina_knowledge_prod
+      - reg_vpc_lumina_edge_net_lumina_shared_vpc_europe_west1
+      - sub_lumina_edge_net_europe_west1_agents_runtime_subnet
+      - sub_lumina_edge_net_europe_west1_knowledge_etl_subnet
+      - vpc_lumina_edge_net_lumina_shared_vpc
+      - zone_exposure_zone_private_proj_lumina_agents_prod
+      - zone_exposure_zone_private_proj_lumina_knowledge_prod
+      - zone_exposure_zone_private_reg_vpc_lumina_edge_net_lumina_shared_vpc_europe_west1
+      - zone_exposure_zone_private_sub_lumina_edge_net_europe_west1_agents_runtime_subnet
+      - zone_exposure_zone_private_sub_lumina_edge_net_europe_west1_knowledge_etl_subnet
+    placements:
+      - component_id: n_lumina_agents_prod_support_dialogflow_cx
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 3
+        off_page_refs:
+          - target_view_id: view_1
+            label: agents-api-gateway (view_1)
+            direction: IN
+      - component_id: n_lumina_knowledge_prod_doc_ingestion_workflow
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 3
+        off_page_refs:
+          - target_view_id: view_1
+            label: doc-upload-eventarc (+1 in view_1)
+            direction: IN
+      - component_id: n_lumina_knowledge_prod_doc_ocr_retry_tasks
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 3
+        off_page_refs:
+          - target_view_id: view_1
+            label: doc-chunk-embed-fn (view_1)
+            direction: OUT
+      - component_id: n_lumina_knowledge_prod_doc_embed_events
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 3
+        off_page_refs:
+          - target_view_id: view_1
+            label: doc-chunk-embed-fn (view_1)
+            direction: IN
+      - component_id: n_lumina_knowledge_prod_contracts_docai_ocr
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 4
+      - component_id: n_lumina_knowledge_prod_doc_embed_dlq
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 4
+      - component_id: n_lumina_agents_prod_agent_orchestrator_api
+        container_id: zone_exposure_zone_private_sub_lumina_edge_net_europe_west1_agents_runtime_subnet
+        column: 4
+        off_page_refs:
+          - target_view_id: view_1
+            label: agents-api-gateway (view_1)
+            direction: IN
+      - component_id: n_lumina_agents_prod_enterprise_rag_agent
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 5
+      - component_id: n_lumina_knowledge_prod_lumina_parsed_chunks
+        container_id: zone_exposure_zone_private_proj_lumina_knowledge_prod
+        column: 5
+        off_page_refs:
+          - target_view_id: view_1
+            label: doc-chunk-embed-fn (view_1)
+            direction: IN
+      - component_id: n_lumina_agents_prod_semantic_cache_redis
+        container_id: zone_exposure_zone_private_reg_vpc_lumina_edge_net_lumina_shared_vpc_europe_west1
+        column: 5
+      - component_id: n_lumina_knowledge_prod_doc_dlq_replay_fn
+        container_id: zone_exposure_zone_private_sub_lumina_edge_net_europe_west1_knowledge_etl_subnet
+        column: 5
+      - component_id: n_lumina_agents_prod_agent_memory_firestore
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 6
+      - component_id: n_lumina_agents_prod_gemini_4_carbon
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 6
+      - component_id: n_lumina_agents_prod_enterprise_search_engine
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 6
+      - component_id: n_lumina_agents_prod_embeddings_vector_idx
+        container_id: zone_exposure_zone_private_reg_vpc_lumina_edge_net_lumina_shared_vpc_europe_west1
+        column: 6
+      - component_id: n_lumina_agents_prod_mcp_tool_gateway
+        container_id: zone_exposure_zone_private_sub_lumina_edge_net_europe_west1_agents_runtime_subnet
+        column: 6
+      - component_id: n_lumina_agents_prod_enterprise_docs_datastore
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 7
+      - component_id: n_lumina_agents_prod_agent_eval_telemetry
+        container_id: zone_exposure_zone_private_proj_lumina_agents_prod
+        column: 7
+    edges:
+      - from: n_lumina_agents_prod_agent_orchestrator_api
+        to: n_lumina_agents_prod_agent_eval_telemetry
+        verb: Logs eval
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 6b741cf72d579514
+      - from: n_lumina_agents_prod_agent_orchestrator_api
+        to: n_lumina_agents_prod_enterprise_rag_agent
+        verb: Invokes agent
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 5cfecdbf818f94f1
+      - from: n_lumina_agents_prod_agent_orchestrator_api
+        to: n_lumina_agents_prod_semantic_cache_redis
+        verb: Caches query
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 3cfc92dffeafec10
+      - from: n_lumina_agents_prod_enterprise_rag_agent
+        to: n_lumina_agents_prod_agent_memory_firestore
+        verb: Reads/writes
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - c337b983605b7a0e
+      - from: n_lumina_agents_prod_enterprise_rag_agent
+        to: n_lumina_agents_prod_embeddings_vector_idx
+        verb: Vector KNN
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 83d837085affce90
+      - from: n_lumina_agents_prod_enterprise_rag_agent
+        to: n_lumina_agents_prod_enterprise_search_engine
+        verb: Grounds query
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 59c185c20b15c92b
+      - from: n_lumina_agents_prod_enterprise_rag_agent
+        to: n_lumina_agents_prod_gemini_4_carbon
+        verb: Generates LLM
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 6ecebc51cf5d091b
+      - from: n_lumina_agents_prod_enterprise_rag_agent
+        to: n_lumina_agents_prod_mcp_tool_gateway
+        verb: Calls MCP
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - c898ad814f6fe2ad
+      - from: n_lumina_agents_prod_enterprise_search_engine
+        to: n_lumina_agents_prod_enterprise_docs_datastore
+        verb: Queries docs
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - fc4e0e9c5bef2536
+      - from: n_lumina_agents_prod_mcp_tool_gateway
+        to: n_lumina_agents_prod_agent_eval_telemetry
+        verb: Logs audit
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 57a83665b745e8f5
+      - from: n_lumina_agents_prod_support_dialogflow_cx
+        to: n_lumina_agents_prod_agent_orchestrator_api
+        verb: Webhook call
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 8edcb88f2d613709
+      - from: n_lumina_knowledge_prod_contracts_docai_ocr
+        to: n_lumina_knowledge_prod_lumina_parsed_chunks
+        verb: Writes chunks
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 917a01c304c8b3eb
+      - from: n_lumina_knowledge_prod_doc_dlq_replay_fn
+        to: n_lumina_knowledge_prod_doc_embed_events
+        verb: Republishes
+        flow_kind: RUNTIME
+        semantic_tag: retry
+        is_retry_or_dlq: true
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 90a51b304928fe6a
+      - from: n_lumina_knowledge_prod_doc_embed_dlq
+        to: n_lumina_knowledge_prod_doc_dlq_replay_fn
+        verb: Pushes DLQ
+        flow_kind: RUNTIME
+        semantic_tag: dlq
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - a7eb7834ff4bf40c
+      - from: n_lumina_knowledge_prod_doc_embed_events
+        to: n_lumina_agents_prod_embeddings_vector_idx
+        verb: Upserts index
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 6b7bb4ef723f8cce
+      - from: n_lumina_knowledge_prod_doc_embed_events
+        to: n_lumina_agents_prod_enterprise_docs_datastore
+        verb: Indexes docs
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 64a7f51c9575ddaa
+      - from: n_lumina_knowledge_prod_doc_embed_events
+        to: n_lumina_knowledge_prod_doc_embed_dlq
+        verb: Dead-letter
+        flow_kind: RUNTIME
+        semantic_tag: dlq
+        is_retry_or_dlq: true
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - bfbbe7ced249106d
+      - from: n_lumina_knowledge_prod_doc_ingestion_workflow
+        to: n_lumina_knowledge_prod_contracts_docai_ocr
+        verb: Extracts OCR
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 33aa0ebc65d7528e
+      - from: n_lumina_knowledge_prod_doc_ingestion_workflow
+        to: n_lumina_knowledge_prod_doc_ocr_retry_tasks
+        verb: Enqueues task
+        flow_kind: RUNTIME
+        semantic_tag: retry
+        is_retry_or_dlq: true
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 7e39e2f0db39b1e6

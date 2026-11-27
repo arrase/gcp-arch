@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,6 +36,40 @@ func (s *stubModelClient) GenerateJSON(_ context.Context, systemPrompt, userProm
 	s.calls++
 	s.mu.Unlock()
 	return s.handler(call, systemPrompt, userPrompt, schema)
+}
+
+func makeValidMockPNG(t *testing.T) []byte {
+	t.Helper()
+	img := image.NewNRGBA(image.Rect(0, 0, 800, 600))
+	for y := range 600 {
+		for x := range 800 {
+			img.SetNRGBA(x, y, color.NRGBA{R: 255, G: 255, B: 255, A: 255})
+		}
+	}
+	palette := []color.NRGBA{
+		{R: 26, G: 115, B: 232, A: 255},
+		{R: 52, G: 168, B: 83, A: 255},
+		{R: 251, G: 188, B: 4, A: 255},
+		{R: 234, G: 67, B: 53, A: 255},
+		{R: 147, G: 52, B: 230, A: 255},
+		{R: 0, G: 172, B: 193, A: 255},
+		{R: 60, G: 64, B: 67, A: 255},
+		{R: 232, G: 240, B: 254, A: 255},
+	}
+	for i, c := range palette {
+		x0 := 40 + (i%4)*120
+		y0 := 40 + (i/4)*110
+		for y := y0; y < y0+80; y++ {
+			for x := x0; x < x0+90; x++ {
+				img.SetNRGBA(x, y, c)
+			}
+		}
+	}
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
 }
 
 type stubBrowserRunner struct {
@@ -71,6 +108,8 @@ func TestClassifyExitCode(t *testing.T) {
 		{"wrapped ScaleLimitError", runtimeErr(&synth.ScaleLimitError{ResourceCount: 501, MaxAllowed: 500}), exitUsage},
 		{"LayoutCollisionError", &render.LayoutCollisionError{Collisions: []render.Collision{{Kind: "card", ViewID: "v1"}}}, exitUsage},
 		{"wrapped LayoutCollisionError", fmt.Errorf("render: %w", &render.LayoutCollisionError{}), exitUsage},
+		{"GeometryReportError", &render.GeometryReportError{Path: "geometry_report.json", Detail: "aspect_ratio"}, exitUsage},
+		{"wrapped GeometryReportError", fmt.Errorf("render: %w", &render.GeometryReportError{Path: "geometry_report.json", Detail: "aspect_ratio"}), exitUsage},
 		{"unwrapped cobra error", errors.New("unknown flag: --nope"), exitUsage},
 	}
 	for _, tc := range cases {
@@ -453,34 +492,10 @@ func writeMinimalFactsFile(t *testing.T, path string, extraBucket bool) *extract
 	return facts
 }
 
-func minimalModelStub(facts *extract.FactsFile) *stubModelClient {
-	table := synth.NewInternTable(facts)
-	apiRID, _ := table.ResourceID("//run.googleapis.com/projects/p1/locations/us-central1/services/api")
-	bktRID, _ := table.ResourceID("//storage.googleapis.com/p1-data")
-	e1ID, _ := table.EdgeID(facts.Edges[0].ID)
-
+func minimalModelStub(_ *extract.FactsFile) *stubModelClient {
 	return &stubModelClient{
-		handler: func(call int, _, _ string, _ *genai.Schema) ([]byte, error) {
-			if call == 0 {
-				return json.Marshal(synth.Pass1Plan{
-					Components: []synth.Pass1Component{
-						{ID: "api", Title: "API Service", IconKey: "cloud_run", ComponentKind: manifest.KindWorkload, ProjectID: "p1", BackedByIDs: []string{apiRID}},
-						{ID: "data_bucket", Title: "Data Bucket", IconKey: "cloud_storage", ComponentKind: manifest.KindDatastore, ProjectID: "p1", BackedByIDs: []string{bktRID}},
-					},
-					DetailViews: []synth.Pass1DetailView{
-						{ID: "app_view", Title: "App Architecture", Archetype: manifest.ArchetypeLandscapeMatrix, AccentMode: manifest.AccentRuntime, ComponentIDs: []string{"api", "data_bucket"}},
-					},
-				})
-			}
-			return json.Marshal(synth.Pass2View{
-				Placements: []synth.Pass2Placement{
-					{ComponentID: "api", Column: 0},
-					{ComponentID: "data_bucket", Column: 1},
-				},
-				Edges: []synth.Pass2Edge{
-					{From: "api", To: "data_bucket", Verb: "writes data", FlowKind: manifest.FlowRuntime, Provenance: manifest.ProvenanceVerified, EvidenceEdgeIDs: []string{e1ID}},
-				},
-			})
+		handler: func(int, string, string, *genai.Schema) ([]byte, error) {
+			return []byte(`{"focus_summary":"Minimal test","detail_views":[],"node_enrichments":[],"edge_enrichments":[]}`), nil
 		},
 	}
 }
@@ -518,7 +533,6 @@ func testSynthesizeUsageErrors(t *testing.T, tmp, factsPath string) {
 		{"extra arg", []string{"synthesize", factsPath, "extra", "--vertex-project", "vp"}, exitUsage},
 		{"day1 missing vertex-project", []string{"synthesize", factsPath}, exitUsage},
 		{"invalid thinking-level", []string{"synthesize", factsPath, "--vertex-project", "vp", "--thinking-level", "ultra"}, exitUsage},
-		{"invalid concurrency", []string{"synthesize", factsPath, "--vertex-project", "vp", "--concurrency", "0"}, exitUsage},
 		{"empty out", []string{"synthesize", factsPath, "--vertex-project", "vp", "-o", "  "}, exitUsage},
 		{"bad schema version", []string{"synthesize", badJSON, "--vertex-project", "vp"}, exitUsage},
 		{"missing facts file", []string{"synthesize", filepath.Join(tmp, "missing.json"), "--vertex-project", "vp"}, exitRuntime},
@@ -575,7 +589,7 @@ func testSynthesizeDay1Outcomes(t *testing.T, tmp, factsPath string, facts *extr
 		"synthesize", factsPath,
 		"--vertex-project", "ai-sandbox", "--vertex-location", "global",
 		"--model", "gemini-4-carbon", "--thinking-level", "high",
-		"--concurrency", "2", "-o", outYAML,
+		"-o", outYAML,
 	}, &stdout, &stderr, deps)
 	if code != exitOK {
 		t.Fatalf("day1 synthesize exit=%d, want 0 (stderr=%s)", code, stderr.String())
@@ -583,7 +597,7 @@ func testSynthesizeDay1Outcomes(t *testing.T, tmp, factsPath string, facts *extr
 	if gotVertexOpts.Project != "ai-sandbox" || gotVertexOpts.Location != "global" || gotVertexOpts.Model != "gemini-4-carbon" || gotVertexOpts.ThinkingLevel != "high" {
 		t.Fatalf("unexpected VertexClientOptions: %+v", gotVertexOpts)
 	}
-	if !strings.Contains(stdout.String(), "Wrote "+outYAML) {
+	if !strings.Contains(stdout.String(), "Wrote "+outYAML) || !strings.Contains(stdout.String(), "conservation=PASS") {
 		t.Errorf("unexpected stdout: %q", stdout.String())
 	}
 
@@ -598,19 +612,6 @@ func testSynthesizeDay1Outcomes(t *testing.T, tmp, factsPath string, facts *extr
 	stderr.Reset()
 	if code := run([]string{"synthesize", factsPath, "--vertex-project", "ai-sandbox", "-o", outYAML}, &stdout, &stderr, rpcFailDeps); code != exitRuntime {
 		t.Fatalf("vertex RPC error got exit %d, want 1", code)
-	}
-
-	valFailDeps := appDeps{
-		newModelClient: func(_ context.Context, _ synth.VertexClientOptions) (synth.ModelClient, error) {
-			return &stubModelClient{handler: func(int, string, string, *genai.Schema) ([]byte, error) {
-				return []byte(`{"components":[],"container_defs":[],"excluded_resources":[],"detail_views":[]}`), nil
-			}}, nil
-		},
-	}
-	stdout.Reset()
-	stderr.Reset()
-	if code := run([]string{"synthesize", factsPath, "--vertex-project", "ai-sandbox", "-o", outYAML}, &stdout, &stderr, valFailDeps); code != exitUsage {
-		t.Fatalf("validation exhaustion got exit %d, want 2 (stderr=%s)", code, stderr.String())
 	}
 }
 
@@ -692,22 +693,9 @@ func assertReconcileDeltaWrites(t *testing.T, tmp, archPath string, beforeBytes 
 		t.Fatalf("delta reconcile without --vertex-project exit=%d, want 2 (stderr=%s)", code, stderr.String())
 	}
 
-	deltaTable := synth.NewInternTable(deltaFacts)
-	archRID, _ := deltaTable.ResourceID("//storage.googleapis.com/p1-archive")
 	deltaDeps := appDeps{
 		newModelClient: func(_ context.Context, _ synth.VertexClientOptions) (synth.ModelClient, error) {
-			return &stubModelClient{
-				handler: func(int, string, string, *genai.Schema) ([]byte, error) {
-					return json.Marshal(synth.ReconcilePatch{
-						NewComponents: []synth.Pass1Component{
-							{ID: "archive_bucket", Title: "Archive Bucket", IconKey: "cloud_storage", ComponentKind: manifest.KindDatastore, ProjectID: "p1", BackedByIDs: []string{archRID}},
-						},
-						NewPlacements: []synth.ReconcileNewPlacement{
-							{ViewID: "app_view", Placement: synth.Pass2Placement{ComponentID: "archive_bucket", Column: 1}},
-						},
-					})
-				},
-			}, nil
+			return minimalModelStub(deltaFacts), nil
 		},
 	}
 
@@ -1004,6 +992,7 @@ func testRenderRunnerOutcomes(t *testing.T, tmp, manifestPath string) {
 		t.Fatalf("browser crash exit=%d, want 1", code)
 	}
 
+	validPNG := makeValidMockPNG(t)
 	okDeps := appDeps{
 		newBrowserRunner: func(_, _ string) (render.BrowserRunner, error) {
 			return &stubBrowserRunner{
@@ -1011,7 +1000,7 @@ func testRenderRunnerOutcomes(t *testing.T, tmp, manifestPath string) {
 					return &render.BrowserOutput{
 						Result: render.BrowserRenderResult{OK: true, HTML: string(req.HTML)},
 						PDF:    []byte("%PDF-1.4\n"),
-						PNGs:   map[string][]byte{"00-view_0_system_index.png": {0x89, 'P', 'N', 'G'}},
+						PNGs:   map[string][]byte{"00-view_0_system_index.png": validPNG},
 					}, nil
 				},
 			}, nil
@@ -1093,16 +1082,15 @@ func testConfigFileValidationCases(t *testing.T) {
 	}
 
 	invalidYAMLs := map[string]string{
-		"unknown_key":     "bogus_key: 123\n",
-		"trailing_doc":    "model: gemini-4-carbon\n---\nmodel: other\n",
-		"bad_thinking":    "thinking_level: turbo\n",
-		"bad_concurrency": "concurrency: 0\n",
-		"bad_cb_runs":     "cloudbuild_runs: 0\n",
-		"bad_format":      "format: [pdf, svg]\n",
-		"empty_format":    "format: []\n",
-		"bad_alias_key":   "project_aliases:\n  abc: proj-a\n",
-		"bad_alias_val":   "project_aliases:\n  123: bad/proj\n",
-		"bad_scope":       "org: projects/wrong\n",
+		"unknown_key":   "bogus_key: 123\n",
+		"trailing_doc":  "model: gemini-4-carbon\n---\nmodel: other\n",
+		"bad_thinking":  "thinking_level: turbo\n",
+		"bad_cb_runs":   "cloudbuild_runs: 0\n",
+		"bad_format":    "format: [pdf, svg]\n",
+		"empty_format":  "format: []\n",
+		"bad_alias_key": "project_aliases:\n  abc: proj-a\n",
+		"bad_alias_val": "project_aliases:\n  123: bad/proj\n",
+		"bad_scope":     "org: projects/wrong\n",
 	}
 	for name, content := range invalidYAMLs {
 		p := filepath.Join(tmp, name+".yaml")
@@ -1138,7 +1126,6 @@ vertex_project: cfg-vertex
 vertex_location: europe-west4
 model: gemini-4-neon
 thinking_level: medium
-concurrency: 2
 cloudbuild_runs: 7
 chrome_path: %q
 format:

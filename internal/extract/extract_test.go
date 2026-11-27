@@ -19,9 +19,9 @@ import (
 	"time"
 
 	"cloud.google.com/go/asset/apiv1/assetpb"
+	"cloud.google.com/go/auth"
 	"cloud.google.com/go/iam/apiv1/iampb"
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
-	"golang.org/x/oauth2/google"
 	"golang.org/x/time/rate"
 	"google.golang.org/api/bigquery/v2"
 	"google.golang.org/api/dataflow/v1b3"
@@ -272,10 +272,12 @@ func assertDegradedAndAuthErrors(t *testing.T) {
 				Message: "blocked",
 				Details: []any{
 					map[string]any{
-						"@type":    "type.googleapis.com/google.rpc.ErrorInfo",
-						"reason":   "VPC_SERVICE_CONTROLS",
-						"domain":   "googleapis.com",
-						"metadata": map[string]any{"vpcServiceControlsUniqueIdentifier": "rest-uuid-9"},
+						"@type":  "type.googleapis.com/google.rpc.ErrorInfo",
+						"reason": "VPC_SERVICE_CONTROLS",
+						"domain": "googleapis.com",
+						"metadata": map[string]any{
+							"vpcServiceControlsUniqueIdentifier": "rest-uuid-9",
+						},
 					},
 				},
 			},
@@ -352,14 +354,17 @@ func assertRateLimitAndRetry(t *testing.T) {
 
 func assertQuotaProjectAndProgress(t *testing.T) {
 	t.Helper()
-	creds := &google.Credentials{JSON: []byte(`{"type":"authorized_user","quota_project_id":"adc-qp"}`)}
+	t.Setenv("GOOGLE_CLOUD_QUOTA_PROJECT", "")
+	creds := auth.NewCredentials(&auth.CredentialsOptions{
+		JSON: []byte(`{"type":"authorized_user","quota_project_id":"adc-qp"}`),
+	})
 	if got := ResolveQuotaProject(creds, ""); got != "adc-qp" {
 		t.Fatalf("ResolveQuotaProject(adc, \"\") = %q, want adc-qp", got)
 	}
 	if got := ResolveQuotaProject(creds, "override-qp"); got != "override-qp" {
 		t.Fatalf("ResolveQuotaProject(adc, override) = %q, want override-qp", got)
 	}
-	if got := ResolveQuotaProject(&google.Credentials{}, ""); got != "" {
+	if got := ResolveQuotaProject(&auth.Credentials{}, ""); got != "" {
 		t.Fatalf("ResolveQuotaProject(empty) = %q, want empty", got)
 	}
 
@@ -818,7 +823,7 @@ func assertProjectedAttrsClean(t *testing.T, assetType, wantKey string, poison, 
 		}
 	}
 	for k := range attrs {
-		if IsSensitiveKey(k) {
+		if _, leaked := poison[k]; leaked || strings.Contains(strings.ToLower(k), "last-applied-configuration") {
 			t.Errorf("%s: sensitive key %q appeared in allowlisted attrs", assetType, k)
 		}
 	}
@@ -2218,11 +2223,19 @@ func assertFixtureGraphIntegrity(t *testing.T, facts *FactsFile) {
 
 func collectResourceURIsAndCheckSensitiveKeys(t *testing.T, resources []FactResource) map[string]bool {
 	t.Helper()
+	forbiddenAttrKeys := map[string]bool{
+		"startup-script": true, "startup-script-url": true, "shutdown-script": true, "user-data": true,
+		"env": true, "envvariables": true, "secretenv": true, "environmentvariables": true,
+		"buildenvironmentvariables": true, "args": true, "command": true, "script": true,
+		"data": true, "binarydata": true, "stringdata": true, "substitutions": true,
+		"query": true, "rawquery": true, "schema": true, "webhookconfig": true,
+		"kubectl.kubernetes.io/last-applied-configuration": true, "last-applied-configuration": true,
+	}
 	resURIs := make(map[string]bool, len(resources))
 	for _, r := range resources {
 		resURIs[r.URI] = true
 		for k := range r.Attributes {
-			if IsSensitiveKey(k) {
+			if forbiddenAttrKeys[strings.ToLower(strings.TrimSpace(k))] {
 				t.Errorf("fixture resource %s contains sensitive key %q", r.URI, k)
 			}
 		}
@@ -2665,7 +2678,7 @@ func assertEnricherPaginationAndDegradedExtract(t *testing.T, clients *Clients) 
 
 func assertDegradedVertexPreflightProbes(t *testing.T, clients *Clients, httpSrv *httptest.Server) {
 	t.Helper()
-	// Exercise parseHTTPError via RunPreflight against failing Vertex CRM & model endpoints.
+	// Exercise googleapi error classification via RunPreflight against failing Vertex CRM & model endpoints.
 	rep, err := RunPreflight(context.Background(), clients, []string{"projects/p-err"}, VertexPreflightOptions{
 		Project:        "ai-err",
 		HTTPClient:     httpSrv.Client(),

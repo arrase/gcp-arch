@@ -1,0 +1,836 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-27T00:00:00Z",
+  "scopes": [
+    "folders/510100"
+  ],
+  "hierarchy": {
+    "organizations": [
+      {
+        "org_id": "910000101",
+        "display_name": "Nova Retail Group"
+      }
+    ],
+    "folders": [
+      {
+        "folder_id": "510100",
+        "display_name": "retail-prod",
+        "parent": "organizations/910000101"
+      }
+    ],
+    "projects": [
+      {
+        "project_id": "nova-ai-prod",
+        "project_number": "5101001004",
+        "display_name": "Nova AI Prod",
+        "parent": "folders/510100",
+        "shared_vpc_host_project": "nova-shared-net"
+      },
+      {
+        "project_id": "nova-data-prod",
+        "project_number": "5101001003",
+        "display_name": "Nova Data Prod",
+        "parent": "folders/510100",
+        "shared_vpc_host_project": "nova-shared-net"
+      },
+      {
+        "project_id": "nova-retail-prod",
+        "project_number": "5101001002",
+        "display_name": "Nova Retail Prod",
+        "parent": "folders/510100",
+        "shared_vpc_host_project": "nova-shared-net"
+      },
+      {
+        "project_id": "nova-shared-net",
+        "project_number": "5101001001",
+        "display_name": "Nova Shared Net",
+        "parent": "folders/510100"
+      },
+      {
+        "project_id": "p9876543210fedcba-tp",
+        "display_name": "Google PSA Tenant",
+        "is_psa_tenant": true
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//aiplatform.googleapis.com/projects/nova-ai-prod/locations/europe-west1/endpoints/recs-ranker-v4",
+      "asset_type": "aiplatform.googleapis.com/Endpoint",
+      "project_id": "nova-ai-prod",
+      "location": "europe-west1",
+      "display_name": "recs-ranker-v4",
+      "parent_uri": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared",
+      "attributes": {
+        "deployed_model_count": 1,
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/nova-ai-prod/locations/europe-west1/keyRings/ai-keyring/cryptoKeys/ai-model-cmek",
+        "vpc": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared"
+      }
+    },
+    {
+      "uri": "//aiplatform.googleapis.com/projects/nova-ai-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "asset_type": "aiplatform.googleapis.com/PublisherModel",
+      "project_id": "nova-ai-prod",
+      "location": "global",
+      "display_name": "gemini-4-carbon",
+      "attributes": {
+        "invocations": 64200,
+        "model_id": "gemini-4-carbon",
+        "publisher": "google"
+      }
+    },
+    {
+      "uri": "//alloydb.googleapis.com/projects/nova-retail-prod/locations/europe-west1/clusters/orders-alloydb",
+      "asset_type": "alloydb.googleapis.com/Cluster",
+      "project_id": "nova-retail-prod",
+      "location": "europe-west1",
+      "display_name": "orders-alloydb",
+      "parent_uri": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared",
+      "attributes": {
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/nova-retail-prod/locations/europe-west1/keyRings/retail-keyring/cryptoKeys/retail-orders-cmek",
+        "private_ip": "10.60.0.10",
+        "psa_tenant_project": "p9876543210fedcba-tp",
+        "vpc": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared"
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/nova-data-prod/datasets/merchandising_mart",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "nova-data-prod",
+      "location": "EU",
+      "display_name": "merchandising_mart",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/nova-data-prod/locations/europe-west1/keyRings/data-keyring/cryptoKeys/data-lake-cmek",
+        "location": "EU",
+        "table_count": 7
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/nova-data-prod/datasets/retail_dw",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "nova-data-prod",
+      "location": "EU",
+      "display_name": "retail_dw",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/nova-data-prod/locations/europe-west1/keyRings/data-keyring/cryptoKeys/data-lake-cmek",
+        "location": "EU",
+        "table_count": 16
+      }
+    },
+    {
+      "uri": "//cloudfunctions.googleapis.com/projects/nova-retail-prod/locations/europe-west1/functions/orders-dlq-replay-fn",
+      "asset_type": "cloudfunctions.googleapis.com/CloudFunction",
+      "project_id": "nova-retail-prod",
+      "location": "europe-west1",
+      "display_name": "orders-dlq-replay-fn",
+      "parent_uri": "//compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/subnetworks/retail-run-egress",
+      "attributes": {
+        "ingress": "ALLOW_INTERNAL_ONLY",
+        "runtime": "go122",
+        "service_account": "orders-replay-sa@nova-retail-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/nova-ai-prod/locations/europe-west1/keyRings/ai-keyring/cryptoKeys/ai-model-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "nova-ai-prod",
+      "location": "europe-west1",
+      "display_name": "ai-model-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/nova-data-prod/locations/europe-west1/keyRings/data-keyring/cryptoKeys/data-lake-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "nova-data-prod",
+      "location": "europe-west1",
+      "display_name": "data-lake-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/nova-retail-prod/locations/europe-west1/keyRings/retail-keyring/cryptoKeys/retail-orders-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "nova-retail-prod",
+      "location": "europe-west1",
+      "display_name": "retail-orders-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/nova-retail-prod/global/forwardingRules/shop-edge-https-lb",
+      "asset_type": "compute.googleapis.com/GlobalForwardingRule",
+      "project_id": "nova-retail-prod",
+      "location": "global",
+      "display_name": "shop-edge-https-lb",
+      "attributes": {
+        "ingress_hosts": [
+          "shop.novaretail.example.com"
+        ],
+        "ip_address": "203.0.113.80",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "EXTERNAL_MANAGED",
+        "port_range": "443-443",
+        "tls": true
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "nova-shared-net",
+      "location": "global",
+      "display_name": "nova-shared",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "GLOBAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/routers/shared-nat-ew1",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "nova-shared-net",
+      "location": "europe-west1",
+      "display_name": "shared-nat-ew1",
+      "parent_uri": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared",
+      "attributes": {
+        "nat_count": 1,
+        "vpc": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/subnetworks/dataflow-stream-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "nova-shared-net",
+      "location": "europe-west1",
+      "display_name": "dataflow-stream-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared",
+      "attributes": {
+        "cidr": "10.50.20.0/22",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/subnetworks/retail-run-egress",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "nova-shared-net",
+      "location": "europe-west1",
+      "display_name": "retail-run-egress",
+      "parent_uri": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared",
+      "attributes": {
+        "cidr": "10.50.10.0/24",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared"
+      }
+    },
+    {
+      "uri": "//dataflow.googleapis.com/projects/nova-data-prod/locations/europe-west1/jobs/orders-stream-enrich-v2",
+      "asset_type": "dataflow.googleapis.com/Job",
+      "project_id": "nova-data-prod",
+      "location": "europe-west1",
+      "display_name": "orders-stream-enrich-v2",
+      "parent_uri": "//compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/subnetworks/dataflow-stream-subnet",
+      "attributes": {
+        "job_type": "JOB_TYPE_STREAMING",
+        "service_account": "dataflow-etl-sa@nova-data-prod.iam.gserviceaccount.com",
+        "state": "JOB_STATE_RUNNING",
+        "subnet": "//compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/subnetworks/dataflow-stream-subnet",
+        "vpc": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared"
+      }
+    },
+    {
+      "uri": "//external.http/endpoints/payment-psp-gateway",
+      "asset_type": "external.http/Endpoint",
+      "project_id": "external",
+      "location": "global",
+      "display_name": "payment-psp-gateway",
+      "is_external": true,
+      "attributes": {
+        "host": "pay.novaretail.example.net"
+      }
+    },
+    {
+      "uri": "//external.internet/clients/web-mobile-shoppers",
+      "asset_type": "external.internet/ClientGroup",
+      "project_id": "external",
+      "location": "global",
+      "display_name": "web-mobile-shoppers",
+      "is_external": true,
+      "attributes": {
+        "origin": "Global Internet"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/nova-ai-prod/serviceAccounts/vertex-recs-sa@nova-ai-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "nova-ai-prod",
+      "display_name": "vertex-recs-sa@nova-ai-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "vertex-recs-sa@nova-ai-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/nova-data-prod/serviceAccounts/dataflow-etl-sa@nova-data-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "nova-data-prod",
+      "display_name": "dataflow-etl-sa@nova-data-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "dataflow-etl-sa@nova-data-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/nova-retail-prod/serviceAccounts/checkout-svc-sa@nova-retail-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "nova-retail-prod",
+      "display_name": "checkout-svc-sa@nova-retail-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "checkout-svc-sa@nova-retail-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/nova-retail-prod/serviceAccounts/orders-replay-sa@nova-retail-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "nova-retail-prod",
+      "display_name": "orders-replay-sa@nova-retail-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "orders-replay-sa@nova-retail-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/nova-retail-prod/serviceAccounts/storefront-api-sa@nova-retail-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "nova-retail-prod",
+      "display_name": "storefront-api-sa@nova-retail-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "storefront-api-sa@nova-retail-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/nova-shared-net/sinks/retail-audit-log-sink",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "nova-shared-net",
+      "location": "global",
+      "display_name": "retail-audit-log-sink"
+    },
+    {
+      "uri": "//looker.googleapis.com/projects/nova-ai-prod/locations/europe-west1/instances/novaretail-looker-bi",
+      "asset_type": "looker.googleapis.com/Instance",
+      "project_id": "nova-ai-prod",
+      "location": "europe-west1",
+      "display_name": "novaretail-looker-bi",
+      "attributes": {
+        "edition": "CORE_ENTERPRISE"
+      }
+    },
+    {
+      "uri": "//monitoring.googleapis.com/projects/nova-retail-prod/alertPolicies/9101001",
+      "asset_type": "monitoring.googleapis.com/AlertPolicy",
+      "project_id": "nova-retail-prod",
+      "location": "global",
+      "display_name": "checkout-slo-alert",
+      "attributes": {
+        "enabled": true
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/nova-retail-prod/subscriptions/orders-dataflow-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "nova-retail-prod",
+      "location": "global",
+      "display_name": "orders-dataflow-sub",
+      "attributes": {
+        "ack_deadline_seconds": 60
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/nova-retail-prod/subscriptions/orders-dlq-replay-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "nova-retail-prod",
+      "location": "global",
+      "display_name": "orders-dlq-replay-sub",
+      "attributes": {
+        "ack_deadline_seconds": 30
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/nova-retail-prod/topics/retail-orders-dlq",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "nova-retail-prod",
+      "location": "global",
+      "display_name": "retail-orders-dlq",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/nova-retail-prod/locations/europe-west1/keyRings/retail-keyring/cryptoKeys/retail-orders-cmek"
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/nova-retail-prod/topics/retail-orders-v1",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "nova-retail-prod",
+      "location": "global",
+      "display_name": "retail-orders-v1",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/nova-retail-prod/locations/europe-west1/keyRings/retail-keyring/cryptoKeys/retail-orders-cmek"
+      }
+    },
+    {
+      "uri": "//redis.googleapis.com/projects/nova-retail-prod/locations/europe-west1/instances/retail-session-redis",
+      "asset_type": "redis.googleapis.com/Instance",
+      "project_id": "nova-retail-prod",
+      "location": "europe-west1",
+      "display_name": "retail-session-redis",
+      "parent_uri": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared",
+      "attributes": {
+        "private_ip": "10.60.4.5",
+        "psa_tenant_project": "p9876543210fedcba-tp",
+        "redis_version": "REDIS_7_2",
+        "vpc": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/checkout-service",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "nova-retail-prod",
+      "location": "europe-west1",
+      "display_name": "checkout-service",
+      "parent_uri": "//compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/subnetworks/retail-run-egress",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "service_account": "checkout-svc-sa@nova-retail-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/subnetworks/retail-run-egress",
+        "vpc": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/storefront-api",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "nova-retail-prod",
+      "location": "europe-west1",
+      "display_name": "storefront-api",
+      "parent_uri": "//compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/subnetworks/retail-run-egress",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "service_account": "storefront-api-sa@nova-retail-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/subnetworks/retail-run-egress",
+        "vpc": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/nova-retail-prod/secrets/alloydb-app-creds",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "nova-retail-prod",
+      "display_name": "alloydb-app-creds",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/nova-retail-prod/secrets/payment-psp-api-key",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "nova-retail-prod",
+      "display_name": "payment-psp-api-key",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/nova-data-raw-events",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "nova-data-prod",
+      "location": "EU",
+      "display_name": "nova-data-raw-events",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/nova-data-prod/locations/europe-west1/keyRings/data-keyring/cryptoKeys/data-lake-cmek",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/nova-orders-dlq-archive",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "nova-retail-prod",
+      "location": "EU",
+      "display_name": "nova-orders-dlq-archive",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/nova-retail-prod/locations/europe-west1/keyRings/retail-keyring/cryptoKeys/retail-orders-cmek",
+        "storage_class": "NEARLINE",
+        "uniform_bucket_level_access": true
+      }
+    },
+    {
+      "uri": "//vpcaccess.googleapis.com/projects/nova-retail-prod/locations/europe-west1/connectors/retail-vpc-connector",
+      "asset_type": "vpcaccess.googleapis.com/Connector",
+      "project_id": "nova-retail-prod",
+      "location": "europe-west1",
+      "display_name": "retail-vpc-connector",
+      "parent_uri": "//compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/subnetworks/retail-run-egress",
+      "attributes": {
+        "subnet": "//compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/subnetworks/retail-run-egress",
+        "vpc": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "0979c0f9bf553621",
+      "from_uri": "//aiplatform.googleapis.com/projects/nova-ai-prod/locations/europe-west1/endpoints/recs-ranker-v4",
+      "to_uri": "//cloudkms.googleapis.com/projects/nova-ai-prod/locations/europe-west1/keyRings/ai-keyring/cryptoKeys/ai-model-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "2d6c54f7d2ce73e4",
+      "from_uri": "//aiplatform.googleapis.com/projects/nova-ai-prod/locations/europe-west1/endpoints/recs-ranker-v4",
+      "to_uri": "//iam.googleapis.com/projects/nova-ai-prod/serviceAccounts/vertex-recs-sa@nova-ai-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "f5b5357d9d129552",
+      "from_uri": "//alloydb.googleapis.com/projects/nova-retail-prod/locations/europe-west1/clusters/orders-alloydb",
+      "to_uri": "//cloudkms.googleapis.com/projects/nova-retail-prod/locations/europe-west1/keyRings/retail-keyring/cryptoKeys/retail-orders-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "e3f534d8681256b3",
+      "from_uri": "//bigquery.googleapis.com/projects/nova-data-prod/datasets/merchandising_mart",
+      "to_uri": "//aiplatform.googleapis.com/projects/nova-ai-prod/locations/europe-west1/endpoints/recs-ranker-v4",
+      "kind": "CONFIG_REF",
+      "detail": "vertex_features"
+    },
+    {
+      "id": "7df21962db0a557b",
+      "from_uri": "//bigquery.googleapis.com/projects/nova-data-prod/datasets/merchandising_mart",
+      "to_uri": "//looker.googleapis.com/projects/nova-ai-prod/locations/europe-west1/instances/novaretail-looker-bi",
+      "kind": "CONFIG_REF",
+      "detail": "bq_read_api"
+    },
+    {
+      "id": "ddfa28ec2eaf622a",
+      "from_uri": "//bigquery.googleapis.com/projects/nova-data-prod/datasets/retail_dw",
+      "to_uri": "//bigquery.googleapis.com/projects/nova-data-prod/datasets/merchandising_mart",
+      "kind": "BQ_LINEAGE",
+      "detail": "sql_transform"
+    },
+    {
+      "id": "a9cf6010130b8a33",
+      "from_uri": "//bigquery.googleapis.com/projects/nova-data-prod/datasets/retail_dw",
+      "to_uri": "//cloudkms.googleapis.com/projects/nova-data-prod/locations/europe-west1/keyRings/data-keyring/cryptoKeys/data-lake-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "1600da769d09f5fd",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/nova-retail-prod/locations/europe-west1/functions/orders-dlq-replay-fn",
+      "to_uri": "//iam.googleapis.com/projects/nova-retail-prod/serviceAccounts/orders-replay-sa@nova-retail-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "f2c42577be04ebf5",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/nova-retail-prod/locations/europe-west1/functions/orders-dlq-replay-fn",
+      "to_uri": "//pubsub.googleapis.com/projects/nova-retail-prod/topics/retail-orders-v1",
+      "kind": "CONFIG_REF",
+      "detail": "republish_retry"
+    },
+    {
+      "id": "874037d12a2043b1",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/nova-retail-prod/locations/europe-west1/functions/orders-dlq-replay-fn",
+      "to_uri": "//storage.googleapis.com/nova-orders-dlq-archive",
+      "kind": "CONFIG_REF",
+      "detail": "gcs_archive"
+    },
+    {
+      "id": "703dcc3fbaec1926",
+      "from_uri": "//compute.googleapis.com/projects/nova-retail-prod/global/forwardingRules/shop-edge-https-lb",
+      "to_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/checkout-service",
+      "kind": "CONFIG_REF",
+      "detail": "https:/orders"
+    },
+    {
+      "id": "28a9febcfebb48ae",
+      "from_uri": "//compute.googleapis.com/projects/nova-retail-prod/global/forwardingRules/shop-edge-https-lb",
+      "to_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/storefront-api",
+      "kind": "CONFIG_REF",
+      "detail": "https:/catalog"
+    },
+    {
+      "id": "d5b47745e6547a35",
+      "from_uri": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared",
+      "to_uri": "//alloydb.googleapis.com/projects/nova-retail-prod/locations/europe-west1/clusters/orders-alloydb",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com"
+    },
+    {
+      "id": "6b5e906a5ca1b67f",
+      "from_uri": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared",
+      "to_uri": "//redis.googleapis.com/projects/nova-retail-prod/locations/europe-west1/instances/retail-session-redis",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com"
+    },
+    {
+      "id": "30a460a873e7c267",
+      "from_uri": "//compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/routers/shared-nat-ew1",
+      "to_uri": "//compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared",
+      "kind": "CONFIG_REF",
+      "detail": "cloud_nat"
+    },
+    {
+      "id": "21bf2e1015be1d0a",
+      "from_uri": "//dataflow.googleapis.com/projects/nova-data-prod/locations/europe-west1/jobs/orders-stream-enrich-v2",
+      "to_uri": "//bigquery.googleapis.com/projects/nova-data-prod/datasets/retail_dw",
+      "kind": "CONFIG_REF",
+      "detail": "bq_stream_write"
+    },
+    {
+      "id": "3964f54f8aeb36e5",
+      "from_uri": "//dataflow.googleapis.com/projects/nova-data-prod/locations/europe-west1/jobs/orders-stream-enrich-v2",
+      "to_uri": "//iam.googleapis.com/projects/nova-data-prod/serviceAccounts/dataflow-etl-sa@nova-data-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "0e03d4bf07616435",
+      "from_uri": "//dataflow.googleapis.com/projects/nova-data-prod/locations/europe-west1/jobs/orders-stream-enrich-v2",
+      "to_uri": "//storage.googleapis.com/nova-data-raw-events",
+      "kind": "CONFIG_REF",
+      "detail": "gcs_sink"
+    },
+    {
+      "id": "da176aa0f235fad6",
+      "from_uri": "//external.internet/clients/web-mobile-shoppers",
+      "to_uri": "//compute.googleapis.com/projects/nova-retail-prod/global/forwardingRules/shop-edge-https-lb",
+      "kind": "CONFIG_REF",
+      "detail": "https:443"
+    },
+    {
+      "id": "016dda112fdd6a89",
+      "from_uri": "//iam.googleapis.com/projects/nova-ai-prod/serviceAccounts/vertex-recs-sa@nova-ai-prod.iam.gserviceaccount.com",
+      "to_uri": "//aiplatform.googleapis.com/projects/nova-ai-prod/locations/europe-west1/endpoints/recs-ranker-v4",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/aiplatform.user"
+    },
+    {
+      "id": "d6e1fbb747342c13",
+      "from_uri": "//iam.googleapis.com/projects/nova-data-prod/serviceAccounts/dataflow-etl-sa@nova-data-prod.iam.gserviceaccount.com",
+      "to_uri": "//bigquery.googleapis.com/projects/nova-data-prod/datasets/retail_dw",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/bigquery.dataEditor"
+    },
+    {
+      "id": "f6f2d27bce4388c1",
+      "from_uri": "//iam.googleapis.com/projects/nova-retail-prod/serviceAccounts/checkout-svc-sa@nova-retail-prod.iam.gserviceaccount.com",
+      "to_uri": "//pubsub.googleapis.com/projects/nova-retail-prod/topics/retail-orders-v1",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/pubsub.publisher"
+    },
+    {
+      "id": "bb0115801f2acc9c",
+      "from_uri": "//logging.googleapis.com/projects/nova-shared-net/sinks/retail-audit-log-sink",
+      "to_uri": "//storage.googleapis.com/nova-data-raw-events",
+      "kind": "CONFIG_REF",
+      "detail": "audit_sink"
+    },
+    {
+      "id": "9d5fe2bfab81c05b",
+      "from_uri": "//monitoring.googleapis.com/projects/nova-retail-prod/alertPolicies/9101001",
+      "to_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/checkout-service",
+      "kind": "CONFIG_REF",
+      "detail": "slo_alert"
+    },
+    {
+      "id": "acb2448a70a98287",
+      "from_uri": "//pubsub.googleapis.com/projects/nova-retail-prod/subscriptions/orders-dataflow-sub",
+      "to_uri": "//dataflow.googleapis.com/projects/nova-data-prod/locations/europe-west1/jobs/orders-stream-enrich-v2",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.pull"
+    },
+    {
+      "id": "0e0e3330c886f189",
+      "from_uri": "//pubsub.googleapis.com/projects/nova-retail-prod/subscriptions/orders-dataflow-sub",
+      "to_uri": "//pubsub.googleapis.com/projects/nova-retail-prod/topics/retail-orders-dlq",
+      "kind": "CONFIG_REF",
+      "detail": "dead_letter"
+    },
+    {
+      "id": "bfea35ddb2a4f2d7",
+      "from_uri": "//pubsub.googleapis.com/projects/nova-retail-prod/subscriptions/orders-dlq-replay-sub",
+      "to_uri": "//cloudfunctions.googleapis.com/projects/nova-retail-prod/locations/europe-west1/functions/orders-dlq-replay-fn",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "53d7933ae2be438d",
+      "from_uri": "//pubsub.googleapis.com/projects/nova-retail-prod/topics/retail-orders-dlq",
+      "to_uri": "//pubsub.googleapis.com/projects/nova-retail-prod/subscriptions/orders-dlq-replay-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "1ec3b4c28f492df1",
+      "from_uri": "//pubsub.googleapis.com/projects/nova-retail-prod/topics/retail-orders-v1",
+      "to_uri": "//pubsub.googleapis.com/projects/nova-retail-prod/subscriptions/orders-dataflow-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "62df008561128068",
+      "from_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/checkout-service",
+      "to_uri": "//alloydb.googleapis.com/projects/nova-retail-prod/locations/europe-west1/clusters/orders-alloydb",
+      "kind": "CONFIG_REF",
+      "detail": "sql_write"
+    },
+    {
+      "id": "4f8b4c9576e4b44d",
+      "from_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/checkout-service",
+      "to_uri": "//external.http/endpoints/payment-psp-gateway",
+      "kind": "CONFIG_REF",
+      "detail": "https:mtls_charge"
+    },
+    {
+      "id": "44526f1eea064f47",
+      "from_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/checkout-service",
+      "to_uri": "//iam.googleapis.com/projects/nova-retail-prod/serviceAccounts/checkout-svc-sa@nova-retail-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "fc054ae831a32bd4",
+      "from_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/checkout-service",
+      "to_uri": "//pubsub.googleapis.com/projects/nova-retail-prod/topics/retail-orders-v1",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub_publish"
+    },
+    {
+      "id": "a1a312472bf23bdc",
+      "from_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/checkout-service",
+      "to_uri": "//secretmanager.googleapis.com/projects/nova-retail-prod/secrets/alloydb-app-creds",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "8e6d371897d4b2e5",
+      "from_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/checkout-service",
+      "to_uri": "//secretmanager.googleapis.com/projects/nova-retail-prod/secrets/payment-psp-api-key",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "b447a537ed7cd5a0",
+      "from_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/checkout-service",
+      "to_uri": "//vpcaccess.googleapis.com/projects/nova-retail-prod/locations/europe-west1/connectors/retail-vpc-connector",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "d31168056ed028d2",
+      "from_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/storefront-api",
+      "to_uri": "//aiplatform.googleapis.com/projects/nova-ai-prod/locations/europe-west1/endpoints/recs-ranker-v4",
+      "kind": "CONFIG_REF",
+      "detail": "vertex_predict"
+    },
+    {
+      "id": "62347d9149b081aa",
+      "from_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/storefront-api",
+      "to_uri": "//aiplatform.googleapis.com/projects/nova-ai-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "kind": "CONFIG_REF",
+      "detail": "vertex_generate"
+    },
+    {
+      "id": "9342e208487a3730",
+      "from_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/storefront-api",
+      "to_uri": "//alloydb.googleapis.com/projects/nova-retail-prod/locations/europe-west1/clusters/orders-alloydb",
+      "kind": "CONFIG_REF",
+      "detail": "sql_read"
+    },
+    {
+      "id": "dad2d7942533b795",
+      "from_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/storefront-api",
+      "to_uri": "//iam.googleapis.com/projects/nova-retail-prod/serviceAccounts/storefront-api-sa@nova-retail-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "5b38f0072dc1aef7",
+      "from_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/storefront-api",
+      "to_uri": "//redis.googleapis.com/projects/nova-retail-prod/locations/europe-west1/instances/retail-session-redis",
+      "kind": "CONFIG_REF",
+      "detail": "redis_session"
+    },
+    {
+      "id": "613f2a4d7e8d85c7",
+      "from_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/storefront-api",
+      "to_uri": "//secretmanager.googleapis.com/projects/nova-retail-prod/secrets/alloydb-app-creds",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "e0efa70c232da1b1",
+      "from_uri": "//run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/storefront-api",
+      "to_uri": "//vpcaccess.googleapis.com/projects/nova-retail-prod/locations/europe-west1/connectors/retail-vpc-connector",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "78ebd7a3ad60cc45",
+      "from_uri": "//storage.googleapis.com/nova-data-raw-events",
+      "to_uri": "//cloudkms.googleapis.com/projects/nova-data-prod/locations/europe-west1/keyRings/data-keyring/cryptoKeys/data-lake-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "417589b6fdc97c3b",
+      "from_uri": "//vpcaccess.googleapis.com/projects/nova-retail-prod/locations/europe-west1/connectors/retail-vpc-connector",
+      "to_uri": "//compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/subnetworks/retail-run-egress",
+      "kind": "CONFIG_REF",
+      "detail": "subnet"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "bigquery.googleapis.com/Table": 23,
+    "compute.googleapis.com/BackendService": 3,
+    "compute.googleapis.com/Firewall": 14,
+    "compute.googleapis.com/Route": 8,
+    "compute.googleapis.com/SecurityPolicy": 2,
+    "compute.googleapis.com/SslCertificate": 2,
+    "compute.googleapis.com/TargetHttpsProxy": 1,
+    "compute.googleapis.com/UrlMap": 1,
+    "run.googleapis.com/Revision": 18
+  },
+  "coverage_ledger": [
+    {
+      "scope": "folders/510100",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "folders/510100",
+      "source": "cai_iam",
+      "state": "OK"
+    },
+    {
+      "scope": "folders/510100",
+      "source": "cai_resources",
+      "state": "OK"
+    },
+    {
+      "scope": "folders/510100",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "folders/510100",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}

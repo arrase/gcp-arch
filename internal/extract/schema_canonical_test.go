@@ -236,25 +236,6 @@ func TestWriteAndLoadFactsErrorsAndEmptyCollections(t *testing.T) {
 	}
 }
 
-func TestBuildProjectIndex(t *testing.T) {
-	projects := []ProjectNode{
-		{ProjectID: "app-prod", ProjectNumber: "111222333"},
-		{ProjectID: "no-num"},
-	}
-	aliases := map[string]string{
-		"111222333": "override-prod",
-		"999888777": "shared-vpc-host",
-	}
-	got := BuildProjectIndex(projects, aliases)
-	want := map[string]string{
-		"111222333": "override-prod",
-		"999888777": "shared-vpc-host",
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("BuildProjectIndex = %v, want %v", got, want)
-	}
-}
-
 func TestCanonicalizeAIP122(t *testing.T) {
 	projIdx := map[string]string{
 		"111222333": "acme-cicd",

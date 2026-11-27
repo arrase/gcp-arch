@@ -22,6 +22,7 @@ var permissionEdgeKinds = map[extract.FactEdgeKind]bool{
 type EvidenceIndex struct {
 	factEdges     map[string]extract.FactEdge
 	sortedEdges   []extract.FactEdge
+	adjByFrom     map[string][]extract.FactEdge
 	owner         map[string]string
 	containerURIs map[string]bool
 	backed        map[string]map[string]bool
@@ -31,6 +32,7 @@ type EvidenceIndex struct {
 func NewEvidenceIndex(components []Component, containers []Container, edges []extract.FactEdge) *EvidenceIndex {
 	x := &EvidenceIndex{
 		factEdges:     make(map[string]extract.FactEdge, len(edges)),
+		adjByFrom:     make(map[string][]extract.FactEdge),
 		owner:         make(map[string]string),
 		containerURIs: make(map[string]bool),
 		backed:        make(map[string]map[string]bool, len(components)),
@@ -41,6 +43,11 @@ func NewEvidenceIndex(components []Component, containers []Container, edges []ex
 	x.sortedEdges = slices.SortedFunc(maps.Values(x.factEdges), func(a, b extract.FactEdge) int {
 		return cmp.Or(cmp.Compare(a.FromURI, b.FromURI), cmp.Compare(a.ToURI, b.ToURI), cmp.Compare(a.ID, b.ID))
 	})
+	for _, fe := range x.sortedEdges {
+		if !fe.Heuristic {
+			x.adjByFrom[fe.FromURI] = append(x.adjByFrom[fe.FromURI], fe)
+		}
+	}
 	for _, c := range components {
 		set := make(map[string]bool, len(c.BackedBy))
 		for _, br := range c.BackedBy {
@@ -116,19 +123,16 @@ func permissionOnly(edges []extract.FactEdge) bool {
 // from to component to, or nil when none exists.
 func (x *EvidenceIndex) ShortestWalk(from, to string) []string {
 	type step struct{ fromURI, edgeID string }
-	adj := make(map[string][]extract.FactEdge)
-	for _, fe := range x.sortedEdges {
-		if x.usable(fe, from, to) {
-			adj[fe.FromURI] = append(adj[fe.FromURI], fe)
-		}
-	}
 	queue := slices.Sorted(maps.Keys(x.backed[from]))
 	visited := maps.Clone(x.backed[from])
 	parent := make(map[string]step)
 	for len(queue) > 0 {
 		cur := queue[0]
 		queue = queue[1:]
-		for _, fe := range adj[cur] {
+		for _, fe := range x.adjByFrom[cur] {
+			if !x.usable(fe, from, to) {
+				continue
+			}
 			if x.backed[to][fe.ToURI] {
 				path := []string{fe.ID}
 				for s, ok := parent[cur]; ok; s, ok = parent[s.fromURI] {
@@ -147,8 +151,8 @@ func (x *EvidenceIndex) ShortestWalk(from, to string) []string {
 	return nil
 }
 
-// ComponentPair returns the ordered (from, to) pair of distinct components owning fe's endpoints.
-func (x *EvidenceIndex) ComponentPair(fe extract.FactEdge) ([2]string, bool) {
+// componentPair returns the ordered (from, to) pair of distinct components owning fe's endpoints.
+func (x *EvidenceIndex) componentPair(fe extract.FactEdge) ([2]string, bool) {
 	from, okFrom := x.owner[fe.FromURI]
 	to, okTo := x.owner[fe.ToURI]
 	return [2]string{from, to}, okFrom && okTo && from != to
@@ -162,7 +166,7 @@ func (x *EvidenceIndex) ProjectedPairs() map[[2]string]bool {
 		if fe.Heuristic {
 			continue
 		}
-		if pair, ok := x.ComponentPair(fe); ok {
+		if pair, ok := x.componentPair(fe); ok {
 			pairs[pair] = true
 		}
 	}

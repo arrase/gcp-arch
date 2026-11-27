@@ -1,0 +1,438 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-26T00:00:00Z",
+  "scopes": [
+    "projects/media-ingest-prod"
+  ],
+  "hierarchy": {
+    "projects": [
+      {
+        "project_id": "media-ingest-prod",
+        "project_number": "200400400401",
+        "display_name": "Media Ingest Prod"
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//cloudfunctions.googleapis.com/projects/media-ingest-prod/locations/europe-west1/functions/media-transcode-worker",
+      "asset_type": "cloudfunctions.googleapis.com/CloudFunction",
+      "project_id": "media-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "media-transcode-worker",
+      "parent_uri": "//compute.googleapis.com/projects/media-ingest-prod/regions/europe-west1/subnetworks/media-subnet",
+      "attributes": {
+        "entry_point": "transcode_asset",
+        "ingress": "ALLOW_INTERNAL_ONLY",
+        "runtime": "python312",
+        "service_account": "media-transcode-sa@media-ingest-prod.iam.gserviceaccount.com",
+        "url": "https://europe-west1-media-ingest-prod.cloudfunctions.net/media-transcode-worker"
+      }
+    },
+    {
+      "uri": "//cloudtasks.googleapis.com/projects/media-ingest-prod/locations/europe-west1/queues/media-retry-tasks",
+      "asset_type": "cloudtasks.googleapis.com/Queue",
+      "project_id": "media-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "media-retry-tasks",
+      "attributes": {
+        "service_account": "media-workflow-sa@media-ingest-prod.iam.gserviceaccount.com",
+        "state": "RUNNING"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/media-ingest-prod/global/networks/media-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "media-ingest-prod",
+      "location": "global",
+      "display_name": "media-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/media-ingest-prod/regions/europe-west1/subnetworks/media-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "media-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "media-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/media-ingest-prod/global/networks/media-vpc",
+      "attributes": {
+        "cidr": "10.42.0.0/24",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/media-ingest-prod/global/networks/media-vpc"
+      }
+    },
+    {
+      "uri": "//eventarc.googleapis.com/projects/media-ingest-prod/locations/europe-west1/triggers/media-upload-trigger",
+      "asset_type": "eventarc.googleapis.com/Trigger",
+      "project_id": "media-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "media-upload-trigger",
+      "attributes": {
+        "event_type": "google.cloud.storage.object.v1.finalized",
+        "service_account": "media-workflow-sa@media-ingest-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//firestore.googleapis.com/projects/media-ingest-prod/databases/(default)",
+      "asset_type": "firestore.googleapis.com/Database",
+      "project_id": "media-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "media-catalog-firestore",
+      "attributes": {
+        "concurrency_mode": "OPTIMISTIC",
+        "database_type": "FIRESTORE_NATIVE"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/media-ingest-prod/serviceAccounts/media-notify-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "media-ingest-prod",
+      "display_name": "media-notify-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "media-notify-sa@media-ingest-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/media-ingest-prod/serviceAccounts/media-transcode-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "media-ingest-prod",
+      "display_name": "media-transcode-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "media-transcode-sa@media-ingest-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/media-ingest-prod/serviceAccounts/media-workflow-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "media-ingest-prod",
+      "display_name": "media-workflow-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "media-workflow-sa@media-ingest-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/media-ingest-prod/sinks/media-events-sink",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "media-ingest-prod",
+      "display_name": "media-events-sink"
+    },
+    {
+      "uri": "//monitoring.googleapis.com/projects/media-ingest-prod/alertPolicies/9023456702",
+      "asset_type": "monitoring.googleapis.com/AlertPolicy",
+      "project_id": "media-ingest-prod",
+      "display_name": "media-dlq-backlog-alert",
+      "attributes": {
+        "enabled": true
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/media-ingest-prod/subscriptions/media-notify-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "media-ingest-prod",
+      "location": "global",
+      "display_name": "media-notify-sub",
+      "attributes": {
+        "ack_deadline_seconds": 30,
+        "push_endpoint": "https://media-notify-svc-abc123-ew.a.run.app/events"
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/media-ingest-prod/topics/eventarc-media-transport",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "media-ingest-prod",
+      "location": "global",
+      "display_name": "eventarc-media-transport"
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/media-ingest-prod/topics/media-done-topic",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "media-ingest-prod",
+      "location": "global",
+      "display_name": "media-done-topic"
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/media-ingest-prod/topics/media-notify-dlq",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "media-ingest-prod",
+      "location": "global",
+      "display_name": "media-notify-dlq"
+    },
+    {
+      "uri": "//run.googleapis.com/projects/media-ingest-prod/locations/europe-west1/services/media-notify-svc",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "media-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "media-notify-svc",
+      "parent_uri": "//compute.googleapis.com/projects/media-ingest-prod/regions/europe-west1/subnetworks/media-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "service_account": "media-notify-sa@media-ingest-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/media-ingest-prod/regions/europe-west1/subnetworks/media-subnet",
+        "url": "https://media-notify-svc-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/media-ingest-prod/global/networks/media-vpc"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/media-ingest-prod/secrets/media-cdn-signing-key",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "media-ingest-prod",
+      "display_name": "media-cdn-signing-key",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/media-ingest-prod/secrets/media-notify-webhook-secret",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "media-ingest-prod",
+      "display_name": "media-notify-webhook-secret",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/media-processed-out",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "media-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "media-processed-out",
+      "attributes": {
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/media-raw-uploads",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "media-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "media-raw-uploads",
+      "attributes": {
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    },
+    {
+      "uri": "//workflows.googleapis.com/projects/media-ingest-prod/locations/europe-west1/workflows/media-transcode-workflow",
+      "asset_type": "workflows.googleapis.com/Workflow",
+      "project_id": "media-ingest-prod",
+      "location": "europe-west1",
+      "display_name": "media-transcode-workflow",
+      "attributes": {
+        "service_account": "media-workflow-sa@media-ingest-prod.iam.gserviceaccount.com",
+        "state": "ACTIVE"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "11339722cd7625dc",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/media-ingest-prod/locations/europe-west1/functions/media-transcode-worker",
+      "to_uri": "//firestore.googleapis.com/projects/media-ingest-prod/databases/(default)",
+      "kind": "CONFIG_REF",
+      "detail": "firestore"
+    },
+    {
+      "id": "3068f001ea8f7fe8",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/media-ingest-prod/locations/europe-west1/functions/media-transcode-worker",
+      "to_uri": "//iam.googleapis.com/projects/media-ingest-prod/serviceAccounts/media-transcode-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "f0ff4d780229c2aa",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/media-ingest-prod/locations/europe-west1/functions/media-transcode-worker",
+      "to_uri": "//pubsub.googleapis.com/projects/media-ingest-prod/topics/media-done-topic",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "92caa561ee7846d2",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/media-ingest-prod/locations/europe-west1/functions/media-transcode-worker",
+      "to_uri": "//secretmanager.googleapis.com/projects/media-ingest-prod/secrets/media-cdn-signing-key",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "333b0e808c84bbd7",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/media-ingest-prod/locations/europe-west1/functions/media-transcode-worker",
+      "to_uri": "//storage.googleapis.com/media-processed-out",
+      "kind": "CONFIG_REF",
+      "detail": "gs://media-processed-out"
+    },
+    {
+      "id": "1a2520af8674d7ea",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/media-ingest-prod/locations/europe-west1/functions/media-transcode-worker",
+      "to_uri": "//storage.googleapis.com/media-raw-uploads",
+      "kind": "CONFIG_REF",
+      "detail": "gs://media-raw-uploads"
+    },
+    {
+      "id": "d4887b07f4e8c5e7",
+      "from_uri": "//cloudtasks.googleapis.com/projects/media-ingest-prod/locations/europe-west1/queues/media-retry-tasks",
+      "to_uri": "//cloudfunctions.googleapis.com/projects/media-ingest-prod/locations/europe-west1/functions/media-transcode-worker",
+      "kind": "CONFIG_REF",
+      "detail": "cloudtasks.http"
+    },
+    {
+      "id": "317a6e4dec3edaf9",
+      "from_uri": "//eventarc.googleapis.com/projects/media-ingest-prod/locations/europe-west1/triggers/media-upload-trigger",
+      "to_uri": "//iam.googleapis.com/projects/media-ingest-prod/serviceAccounts/media-workflow-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "cc79c23436573eb9",
+      "from_uri": "//eventarc.googleapis.com/projects/media-ingest-prod/locations/europe-west1/triggers/media-upload-trigger",
+      "to_uri": "//workflows.googleapis.com/projects/media-ingest-prod/locations/europe-west1/workflows/media-transcode-workflow",
+      "kind": "CONFIG_REF",
+      "detail": "eventarc.destination"
+    },
+    {
+      "id": "07591a89011abea7",
+      "from_uri": "//iam.googleapis.com/projects/media-ingest-prod/serviceAccounts/media-notify-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/media-ingest-prod/secrets/media-notify-webhook-secret",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "8db130657ea9aecf",
+      "from_uri": "//iam.googleapis.com/projects/media-ingest-prod/serviceAccounts/media-transcode-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "to_uri": "//firestore.googleapis.com/projects/media-ingest-prod/databases/(default)",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/datastore.user"
+    },
+    {
+      "id": "7535a16e20c8d63b",
+      "from_uri": "//iam.googleapis.com/projects/media-ingest-prod/serviceAccounts/media-transcode-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "to_uri": "//pubsub.googleapis.com/projects/media-ingest-prod/topics/media-done-topic",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/pubsub.publisher"
+    },
+    {
+      "id": "392a941d951ff0a7",
+      "from_uri": "//iam.googleapis.com/projects/media-ingest-prod/serviceAccounts/media-transcode-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/media-ingest-prod/secrets/media-cdn-signing-key",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "af52a4641f8d568e",
+      "from_uri": "//iam.googleapis.com/projects/media-ingest-prod/serviceAccounts/media-transcode-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "to_uri": "//storage.googleapis.com/media-processed-out",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/storage.objectAdmin"
+    },
+    {
+      "id": "aa6025206c73e106",
+      "from_uri": "//iam.googleapis.com/projects/media-ingest-prod/serviceAccounts/media-transcode-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "to_uri": "//storage.googleapis.com/media-raw-uploads",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/storage.objectViewer"
+    },
+    {
+      "id": "bfd3e474e6099afd",
+      "from_uri": "//pubsub.googleapis.com/projects/media-ingest-prod/subscriptions/media-notify-sub",
+      "to_uri": "//pubsub.googleapis.com/projects/media-ingest-prod/topics/media-notify-dlq",
+      "kind": "CONFIG_REF",
+      "detail": "dead_letter"
+    },
+    {
+      "id": "61289c4d28830b20",
+      "from_uri": "//pubsub.googleapis.com/projects/media-ingest-prod/subscriptions/media-notify-sub",
+      "to_uri": "//run.googleapis.com/projects/media-ingest-prod/locations/europe-west1/services/media-notify-svc",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "020d480a3baa20d9",
+      "from_uri": "//pubsub.googleapis.com/projects/media-ingest-prod/topics/eventarc-media-transport",
+      "to_uri": "//eventarc.googleapis.com/projects/media-ingest-prod/locations/europe-west1/triggers/media-upload-trigger",
+      "kind": "CONFIG_REF",
+      "detail": "eventarc.transport"
+    },
+    {
+      "id": "120b79a5b68ed114",
+      "from_uri": "//pubsub.googleapis.com/projects/media-ingest-prod/topics/media-done-topic",
+      "to_uri": "//pubsub.googleapis.com/projects/media-ingest-prod/subscriptions/media-notify-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "5019df91490f3ac3",
+      "from_uri": "//run.googleapis.com/projects/media-ingest-prod/locations/europe-west1/services/media-notify-svc",
+      "to_uri": "//iam.googleapis.com/projects/media-ingest-prod/serviceAccounts/media-notify-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "b6956b78f440af17",
+      "from_uri": "//run.googleapis.com/projects/media-ingest-prod/locations/europe-west1/services/media-notify-svc",
+      "to_uri": "//secretmanager.googleapis.com/projects/media-ingest-prod/secrets/media-notify-webhook-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "1124e9575efce5f4",
+      "from_uri": "//storage.googleapis.com/media-raw-uploads",
+      "to_uri": "//eventarc.googleapis.com/projects/media-ingest-prod/locations/europe-west1/triggers/media-upload-trigger",
+      "kind": "CONFIG_REF",
+      "detail": "eventarc.bucket"
+    },
+    {
+      "id": "13d718ec197adcbc",
+      "from_uri": "//workflows.googleapis.com/projects/media-ingest-prod/locations/europe-west1/workflows/media-transcode-workflow",
+      "to_uri": "//cloudtasks.googleapis.com/projects/media-ingest-prod/locations/europe-west1/queues/media-retry-tasks",
+      "kind": "CONFIG_REF",
+      "detail": "enqueue_task"
+    },
+    {
+      "id": "6619aa6a56b2f550",
+      "from_uri": "//workflows.googleapis.com/projects/media-ingest-prod/locations/europe-west1/workflows/media-transcode-workflow",
+      "to_uri": "//iam.googleapis.com/projects/media-ingest-prod/serviceAccounts/media-workflow-sa@media-ingest-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "compute.googleapis.com/Firewall": 5,
+    "compute.googleapis.com/Route": 4,
+    "logging.googleapis.com/LogBucket": 2,
+    "run.googleapis.com/Revision": 11
+  },
+  "coverage_ledger": [
+    {
+      "scope": "projects/media-ingest-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/media-ingest-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/media-ingest-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/media-ingest-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/media-ingest-prod",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}

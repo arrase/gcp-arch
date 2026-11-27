@@ -8,7 +8,6 @@ import (
 	"math"
 	"regexp"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -76,18 +75,18 @@ func loadFromYAML(data []byte) (*Registry, error) {
 	for k := range f.Icons {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 
 	symbols := make(map[string]compiledSymbol, len(keys))
 	for _, key := range keys {
 		if strings.TrimSpace(key) == "" {
 			return nil, fmt.Errorf("icon key must not be empty")
 		}
-		rawSVG := f.Icons[key].SVG
-		if err := ValidateSVG(rawSVG); err != nil {
+		sym, err := validateAndCompileSVG(key, f.Icons[key].SVG)
+		if err != nil {
 			return nil, fmt.Errorf("invalid SVG for icon %q: %w", key, err)
 		}
-		symbols[key] = compileIconSymbol(key, rawSVG)
+		symbols[key] = sym
 	}
 
 	return &Registry{
@@ -119,7 +118,7 @@ func (r *Registry) SymbolSprite(keys []string) string {
 		seen[k] = true
 		unique = append(unique, k)
 	}
-	sort.Strings(unique)
+	slices.Sort(unique)
 
 	var defs bytes.Buffer
 	var syms bytes.Buffer
@@ -259,25 +258,13 @@ func (c *symbolCompiler) handleCharData(data xml.CharData) {
 	target.WriteString(escapeXML(text))
 }
 
-// compileIconSymbol extracts a validated inline <svg> into a <symbol> body plus hoisted root <defs>
-// (<filter>, <mask>, gradients, <clipPath>, <pattern>), prefixing every internal ID and
-// url(#...)/href="#..." reference with "icon-<key>-".
-func compileIconSymbol(key, rawSVG string) compiledSymbol {
+// validateAndCompileSVG validates rawSVG and extracts it into a <symbol> body plus hoisted
+// root <defs> (<filter>, <mask>, gradients, <clipPath>, <pattern>) in a single XML pass,
+// prefixing every internal ID and url(#...)/href="#..." reference with "icon-<key>-".
+func validateAndCompileSVG(key, rawSVG string) (compiledSymbol, error) {
 	c := &symbolCompiler{idPrefix: "icon-" + key + "-"}
-	dec := xml.NewDecoder(strings.NewReader(strings.TrimSpace(rawSVG)))
-	for {
-		tok, err := dec.Token()
-		if err != nil {
-			break
-		}
-		switch t := tok.(type) {
-		case xml.StartElement:
-			c.handleStart(t)
-		case xml.EndElement:
-			c.handleEnd(t)
-		case xml.CharData:
-			c.handleCharData(t)
-		}
+	if err := parseAndValidateSVG(rawSVG, c); err != nil {
+		return compiledSymbol{}, err
 	}
 	if c.viewBox == "" {
 		c.viewBox = fallbackViewBox(c.rootW, c.rootH)
@@ -288,7 +275,7 @@ func compileIconSymbol(key, rawSVG string) compiledSymbol {
 		rootAttrs:   c.rootAttrs,
 		hoistedDefs: c.hoistedDefs.String(),
 		body:        c.body.String(),
-	}
+	}, nil
 }
 
 const (
@@ -353,7 +340,7 @@ func qualifyAttrName(name xml.Name) (string, bool) {
 }
 
 func rewriteURLRefs(val, idPrefix string) string {
-	if !strings.Contains(strings.ToLower(val), "url(") {
+	if strings.IndexByte(val, '(') < 0 || !strings.Contains(strings.ToLower(val), "url(") {
 		return val
 	}
 	return svgURLRefRe.ReplaceAllString(val, "url(#"+idPrefix+"$1)")

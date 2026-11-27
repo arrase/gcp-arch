@@ -1,8 +1,9 @@
 package extract
 
 import (
+	"maps"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -127,9 +128,7 @@ func (t *forwardingRuleTracer) recordBackend(uri string, paths []string) {
 		if p == "" {
 			continue
 		}
-		list := t.backendPaths[uri]
-		appendUnique(&list, p)
-		t.backendPaths[uri] = list
+		appendUniqueMap(t.backendPaths, uri, p)
 		appendUnique(&t.out.paths, p)
 	}
 }
@@ -180,7 +179,7 @@ func (t *forwardingRuleTracer) finalize() tracedForwardingRule {
 			continue
 		}
 		paths := t.backendPaths[bURI]
-		sort.Strings(paths)
+		slices.Sort(paths)
 		t.out.backends = append(t.out.backends, tracedBackend{
 			backendURI:    bURI,
 			backendType:   b.assetType,
@@ -189,8 +188,8 @@ func (t *forwardingRuleTracer) finalize() tracedForwardingRule {
 			paths:         paths,
 		})
 	}
-	sort.Strings(t.out.hosts)
-	sort.Strings(t.out.paths)
+	slices.Sort(t.out.hosts)
+	slices.Sort(t.out.paths)
 	return t.out
 }
 
@@ -306,18 +305,14 @@ func (st *extractState) indexVPCConnector(a *ingestedAsset) {
 	if sub == "" {
 		return
 	}
-	var subURI string
-	if !strings.Contains(sub, "/") {
-		subProj := getAttrString(a.attrs, "subnet_project")
-		if subProj == "" {
-			subProj = a.projectID
-		}
-		subURI = prefixComputeProjects + subProj + "/regions/" + a.location + "/subnetworks/" + sub
-	} else {
-		subURI = CanonicalizeAIP122WithService(sub, svcCompute, st.projIdx)
+	subProj := getAttrString(a.attrs, "subnet_project")
+	if subProj == "" {
+		subProj = a.projectID
 	}
-	if vpc := st.subnetToVPC[subURI]; vpc != "" {
-		st.connectorToVPC[a.uri] = vpc
+	if subURI := resolveComputeSubnetURI(sub, subProj, a.location, st.projIdx); subURI != "" {
+		if vpc := st.subnetToVPC[subURI]; vpc != "" {
+			st.connectorToVPC[a.uri] = vpc
+		}
 	}
 }
 
@@ -423,10 +418,7 @@ func (st *extractState) emitPSAPeeringEdge(a *ingestedAsset, vpc string) {
 	detail := "servicenetworking-googleapis-com"
 	if tenant := st.psaTenants[vpc]; tenant != "" {
 		detail = "servicenetworking-googleapis-com (" + tenant + ")"
-		if a.attrs == nil {
-			a.attrs = make(map[string]any)
-		}
-		a.attrs["psa_tenant_project"] = tenant
+		a.setAttr("psa_tenant_project", tenant)
 	}
 	if st.assetsByURI[vpc] != nil {
 		st.addEdge(vpc, a.uri, EdgePSAPeering, detail)
@@ -434,7 +426,7 @@ func (st *extractState) emitPSAPeeringEdge(a *ingestedAsset, vpc string) {
 }
 
 func (st *extractState) attachAlloyDBInstanceIPs() {
-	for _, uri := range sortedMapKeys(st.absorbed) {
+	for _, uri := range slices.Sorted(maps.Keys(st.absorbed)) {
 		ab := st.absorbed[uri]
 		if ab.assetType != "alloydb.googleapis.com/Instance" || ab.privateIP == "" || ab.parentURI == "" {
 			continue
@@ -444,12 +436,7 @@ func (st *extractState) attachAlloyDBInstanceIPs() {
 			continue
 		}
 		appendUnique(&cl.privateIPs, ab.privateIP)
-		if cl.attrs == nil {
-			cl.attrs = make(map[string]any)
-		}
-		if getAttrString(cl.attrs, "private_ip") == "" {
-			cl.attrs["private_ip"] = ab.privateIP
-		}
+		cl.setAttrIfEmpty("private_ip", ab.privateIP)
 	}
 }
 
@@ -463,10 +450,7 @@ func (st *extractState) indexPrivateIPTargets() {
 			continue
 		}
 		for _, ip := range a.privateIPs {
-			k := netIPKey{netURI: netURI, ip: ip}
-			list := st.privateIPTargets[k]
-			appendUnique(&list, a.uri)
-			st.privateIPTargets[k] = list
+			appendUniqueMap(st.privateIPTargets, netIPKey{netURI: netURI, ip: ip}, a.uri)
 		}
 	}
 }
@@ -503,7 +487,7 @@ func (st *extractState) reachableNetworks(netURI string) []string {
 	}
 	out := []string{netURI}
 	if peers := st.vpcPeers[netURI]; len(peers) > 0 {
-		out = append(out, sortedMapKeys(peers)...)
+		out = append(out, slices.Sorted(maps.Keys(peers))...)
 	}
 	return out
 }
@@ -518,7 +502,7 @@ func (st *extractState) matchPrivateIP(srcNet, ip string) []string {
 			appendUnique(&matches, targetURI)
 		}
 	}
-	sort.Strings(matches)
+	slices.Sort(matches)
 	return matches
 }
 
@@ -579,9 +563,7 @@ func (st *extractState) indexCloudRunHosts() {
 			st.registerCloudRunURL(u, a.uri)
 		}
 		if name := strings.ToLower(shortResourceName(a.uri)); name != "" {
-			list := st.runNameToURIs[name]
-			appendUnique(&list, a.uri)
-			st.runNameToURIs[name] = list
+			appendUniqueMap(st.runNameToURIs, name, a.uri)
 		}
 	}
 }
@@ -787,7 +769,7 @@ func (st *extractState) resolveAbsorbedBridges() {
 }
 
 func (st *extractState) resolveAbsorbedResourceBridges() {
-	for _, uri := range sortedMapKeys(st.absorbed) {
+	for _, uri := range slices.Sorted(maps.Keys(st.absorbed)) {
 		st.resolveSingleAbsorbedBridge(st.absorbed[uri])
 	}
 }
@@ -878,7 +860,7 @@ func (st *extractState) resolveDatastreamStreamRef(a *ingestedAsset, ref structu
 }
 
 func (st *extractState) resolveBigQueryFoldedExternalURIs() {
-	for _, dsURI := range sortedMapKeys(st.foldedExternalURIs) {
+	for _, dsURI := range slices.Sorted(maps.Keys(st.foldedExternalURIs)) {
 		if st.assetsByURI[dsURI] == nil {
 			continue
 		}
@@ -1124,27 +1106,20 @@ func (st *extractState) resolveIAMBindings() {
 	}
 
 	for _, b := range st.iamBindings {
-		isAncestor := b.assetType == "cloudresourcemanager.googleapis.com/Organization" ||
-			b.assetType == "cloudresourcemanager.googleapis.com/Folder" ||
+		isAncestor := b.assetType == assetTypeOrganization ||
+			b.assetType == assetTypeFolder ||
 			b.assetType == assetTypeProject
-		for _, member := range b.members {
-			st.resolveSingleIAMBindingMember(b, member, isAncestor, byProjType)
+		for _, email := range b.saEmails {
+			st.resolveSingleIAMBindingMember(b, email, isAncestor, byProjType)
 		}
 	}
 }
 
-func (st *extractState) resolveSingleIAMBindingMember(b *iamBindingRecord, member string, isAncestor bool, byProjType map[projAssetTypeKey][]*ingestedAsset) {
-	email, ok := parseServiceAccountMember(member)
-	if !ok {
-		return
-	}
+func (st *extractState) resolveSingleIAMBindingMember(b *iamBindingRecord, email string, isAncestor bool, byProjType map[projAssetTypeKey][]*ingestedAsset) {
 	if isAncestor && broadAncestorRoles[b.role] {
 		if sa := st.saByEmail[email]; sa != nil {
 			appendUnique(&sa.capabilities, b.role)
 		}
-		return
-	}
-	if b.role == "roles/iam.workloadIdentityUser" {
 		return
 	}
 
@@ -1242,7 +1217,7 @@ func extractConditionPinnedURIs(expr string, projIdx map[string]string) []string
 			appendUnique(&out, stripSecretVersion(r))
 		}
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }
 

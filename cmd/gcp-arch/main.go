@@ -78,14 +78,10 @@ func main() {
 }
 
 func run(args []string, stdout, stderr io.Writer, deps appDeps) int {
-	return runWithContext(context.Background(), args, stdout, stderr, deps)
-}
-
-func runWithContext(ctx context.Context, args []string, stdout, stderr io.Writer, deps appDeps) int {
 	root := newRootCmd(stdout, stderr, deps)
 	root.SetArgs(args)
 
-	if err := root.ExecuteContext(ctx); err != nil {
+	if err := root.ExecuteContext(context.Background()); err != nil {
 		code := classifyExitCode(err)
 		_, _ = fmt.Fprintf(stderr, "Error: %v\n", err)
 		return code
@@ -104,7 +100,7 @@ func newRootCmd(stdout, stderr io.Writer, deps appDeps) *cobra.Command {
   1. extract     Capture read-only multi-project facts into facts.json (v3, 0600)
   2. synthesize  Decompose facts via Vertex AI Gemini 4 into Git-tracked architecture.yaml (v1)
   3. validate    Verify architecture.yaml structure offline or with --facts provenance
-  4. render      Export vector PDF, 3x PNG, and standalone HTML via headless Chrome
+  4. render      Export vector PDF, high-DPI PNG, and standalone HTML via headless Chrome
 
 Optional defaults are read from ~/.config/gcp-arch/config.yaml
 (or $XDG_CONFIG_HOME/gcp-arch/config.yaml) when present.
@@ -158,6 +154,10 @@ func classifyExitCode(err error) int {
 	if errors.As(err, &lce) {
 		return exitUsage
 	}
+	var gre *render.GeometryReportError
+	if errors.As(err, &gre) {
+		return exitUsage
+	}
 	var ce *cliError
 	if errors.As(err, &ce) {
 		return ce.code
@@ -195,9 +195,6 @@ func (f *scopeFlags) applyConfig(cfg *appConfig) {
 }
 
 type parsedScopes struct {
-	orgs      []string
-	folders   []string
-	projects  []string
 	canonical []string
 }
 
@@ -209,27 +206,25 @@ func (f *scopeFlags) parse() (parsedScopes, error) {
 	var out parsedScopes
 	seenCanon := make(map[string]struct{})
 
-	if err := out.appendKind(f.orgs, "org", "organizations/", &out.orgs, seenCanon); err != nil {
+	if err := out.appendKind(f.orgs, "org", "organizations/", seenCanon); err != nil {
 		return out, err
 	}
-	if err := out.appendKind(f.folders, "folder", "folders/", &out.folders, seenCanon); err != nil {
+	if err := out.appendKind(f.folders, "folder", "folders/", seenCanon); err != nil {
 		return out, err
 	}
-	if err := out.appendKind(f.projects, "projects", "projects/", &out.projects, seenCanon); err != nil {
+	if err := out.appendKind(f.projects, "projects", "projects/", seenCanon); err != nil {
 		return out, err
 	}
 	return out, nil
 }
 
-func (p *parsedScopes) appendKind(rawVals []string, flagName, prefix string, target *[]string, seenCanon map[string]struct{}) error {
-	seenID := make(map[string]struct{})
+func (p *parsedScopes) appendKind(rawVals []string, flagName, prefix string, seenCanon map[string]struct{}) error {
 	for _, raw := range rawVals {
 		for _, part := range strings.Split(raw, ",") {
 			id, err := parseScopeToken(part, flagName, prefix)
 			if err != nil {
 				return err
 			}
-			appendUnique(target, seenID, id)
 			appendUnique(&p.canonical, seenCanon, prefix+id)
 		}
 	}
@@ -256,6 +251,19 @@ func appendUnique(dst *[]string, seen map[string]struct{}, val string) {
 	*dst = append(*dst, val)
 }
 
+func setProjectAlias(aliases map[string]string, rawNum, rawID, source string) error {
+	num := strings.TrimSpace(rawNum)
+	id := strings.TrimSpace(rawID)
+	if !isAllDigits(num) || !isValidProjectID(id) {
+		return fmt.Errorf("invalid %s entry %q=%q (expected <NUMBER=ID>)", source, rawNum, rawID)
+	}
+	if prev, exists := aliases[num]; exists && prev != id {
+		return fmt.Errorf("conflicting %s for project number %s (%q vs %q)", source, num, prev, id)
+	}
+	aliases[num] = id
+	return nil
+}
+
 func parseProjectAliases(raw []string) (map[string]string, error) {
 	if len(raw) == 0 {
 		return nil, nil
@@ -263,15 +271,12 @@ func parseProjectAliases(raw []string) (map[string]string, error) {
 	aliases := make(map[string]string, len(raw))
 	for _, entry := range raw {
 		num, id, ok := strings.Cut(entry, "=")
-		num = strings.TrimSpace(num)
-		id = strings.TrimSpace(id)
-		if !ok || !isAllDigits(num) || !isValidProjectID(id) {
+		if !ok {
 			return nil, usageErr(fmt.Errorf("invalid --project-alias %q (expected <NUMBER=ID>)", entry))
 		}
-		if prev, exists := aliases[num]; exists && prev != id {
-			return nil, usageErr(fmt.Errorf("conflicting --project-alias for project number %s (%q vs %q)", num, prev, id))
+		if err := setProjectAlias(aliases, num, id, "--project-alias"); err != nil {
+			return nil, usageErr(err)
 		}
-		aliases[num] = id
 	}
 	return aliases, nil
 }

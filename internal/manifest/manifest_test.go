@@ -3,7 +3,6 @@ package manifest
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -523,7 +522,7 @@ func TestValidateStructuralErrorCodes(t *testing.T) {
 		},
 		{
 			name:     "invalid container kind",
-			mutate:   func(m *Manifest) { m.Containers[0].Kind = "SUBNET" },
+			mutate:   func(m *Manifest) { m.Containers[0].Kind = "BOGUS_ZONE" },
 			wantCode: ErrInvalidContainerKind,
 		},
 		{
@@ -540,15 +539,6 @@ func TestValidateStructuralErrorCodes(t *testing.T) {
 			name:     "container parent cycle",
 			mutate:   func(m *Manifest) { m.Containers[0].ParentContainerID = "gke_cicd" },
 			wantCode: ErrContainerCycle,
-		},
-		{
-			name: "container depth > 2 in view",
-			mutate: func(m *Manifest) {
-				m.Containers = append(m.Containers, Container{ID: "proj_acme_cicd", Title: "Project", Kind: ContainerProject})
-				m.Containers[0].ParentContainerID = "proj_acme_cicd"
-				m.Views[0].ContainerIDs = append(m.Views[0].ContainerIDs, "proj_acme_cicd")
-			},
-			wantCode: ErrContainerDepthExceeded,
 		},
 		{
 			name:     "invalid excluded resource",
@@ -642,38 +632,6 @@ func TestValidateStructuralErrorCodes(t *testing.T) {
 		{
 			name:     "0 placements on detail view",
 			mutate:   func(m *Manifest) { m.Views[0].Placements = nil },
-			wantCode: ErrViewPlacementCount,
-		},
-		{
-			name: "13 placements on detail view exceeds 12",
-			mutate: func(m *Manifest) {
-				for i := range 8 {
-					id := fmt.Sprintf("extra_%d", i)
-					m.Components = append(m.Components, Component{
-						ID: id, Title: id, IconKey: "cloud_run", ComponentKind: KindWorkload, ProjectID: "p",
-						BackedBy: []BackedResource{{URI: "//run.googleapis.com/" + id, AssetType: "run.googleapis.com/Service", ProjectID: "p"}},
-					})
-					m.Views[0].Placements = append(m.Views[0].Placements, Placement{ComponentID: id, Column: 2})
-				}
-			},
-			wantCode: ErrViewPlacementCount,
-		},
-		{
-			name: "17 placements on view_0_system_index exceeds 16",
-			mutate: func(m *Manifest) {
-				v2 := m.Views[0]
-				v2.ID = "second_view"
-				v0 := View{ID: SystemIndexViewID, Title: "Index", Archetype: ArchetypeLandscapeMatrix, AccentMode: AccentMixed}
-				for i := range 17 {
-					id := fmt.Sprintf("extra_%d", i)
-					m.Components = append(m.Components, Component{
-						ID: id, Title: id, IconKey: "cloud_run", ComponentKind: KindWorkload, ProjectID: "p",
-						BackedBy: []BackedResource{{URI: "//run.googleapis.com/" + id, AssetType: "run.googleapis.com/Service", ProjectID: "p"}},
-					})
-					v0.Placements = append(v0.Placements, Placement{ComponentID: id, Column: 0})
-				}
-				m.Views = []View{v0, m.Views[0], v2}
-			},
 			wantCode: ErrViewPlacementCount,
 		},
 		{

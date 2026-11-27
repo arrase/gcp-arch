@@ -307,7 +307,7 @@ Every edge in `facts.json` is classified by one of **12** `FactEdgeKind` constan
 
 ### Structural-Wins Deduplication Merge (`putEdge`)
 
-`FactEdge.Heuristic` marks correlation-derived edges (single-instance project target joins, shared-SA attribution, and Cloud Monitoring traffic) that may back `INFERRED` diagram edges in Stage 2 but **never** `VERIFIED` ones (see [Stage 2 — Directed-Walk Provenance](synthesis.md#closed-world-guarantees-directed-walk-provenance)). When the same `EdgeID` is emitted multiple times during extraction, [`putEdge`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L366-L381) merges duplicates with:
+`FactEdge.Heuristic` marks correlation-derived edges (single-instance project target joins, shared-SA attribution, and Cloud Monitoring traffic) that may back `INFERRED` diagram edges in Stage 2 but **never** `VERIFIED` ones (see [Stage 2 — Conservation & Directed-Walk Provenance](synthesis.md#stage-2c-deterministic-conservation-provenance-gate)). When the same `EdgeID` is emitted multiple times during extraction, [`putEdge`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/cai.go#L366-L381) merges duplicates with:
 
 ```go
 st.edges[i].Heuristic = st.edges[i].Heuristic && e.Heuristic

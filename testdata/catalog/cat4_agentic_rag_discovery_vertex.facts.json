@@ -1,0 +1,693 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-26T00:00:00Z",
+  "scopes": [
+    "projects/ai-agents-prod",
+    "projects/knowledge-etl-prod"
+  ],
+  "hierarchy": {
+    "projects": [
+      {
+        "project_id": "ai-agents-prod",
+        "project_number": "4008001001",
+        "display_name": "AI Agents Prod"
+      },
+      {
+        "project_id": "knowledge-etl-prod",
+        "project_number": "4008001002",
+        "display_name": "Knowledge ETL Prod"
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//aiplatform.googleapis.com/projects/ai-agents-prod/locations/europe-west1/indexEndpoints/embeddings-idx-ep",
+      "asset_type": "aiplatform.googleapis.com/IndexEndpoint",
+      "project_id": "ai-agents-prod",
+      "location": "europe-west1",
+      "display_name": "embeddings-idx-ep",
+      "parent_uri": "//compute.googleapis.com/projects/ai-agents-prod/global/networks/agents-vpc",
+      "attributes": {
+        "deployed_index_count": 1,
+        "vpc": "//compute.googleapis.com/projects/ai-agents-prod/global/networks/agents-vpc"
+      }
+    },
+    {
+      "uri": "//aiplatform.googleapis.com/projects/ai-agents-prod/locations/europe-west1/reasoningEngines/support-rag-agent",
+      "asset_type": "aiplatform.googleapis.com/ReasoningEngine",
+      "project_id": "ai-agents-prod",
+      "location": "europe-west1",
+      "display_name": "support-rag-agent",
+      "attributes": {
+        "service_account": "reasoning-engine-sa@ai-agents-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//aiplatform.googleapis.com/projects/ai-agents-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "asset_type": "aiplatform.googleapis.com/PublisherModel",
+      "project_id": "ai-agents-prod",
+      "location": "global",
+      "display_name": "gemini-4-carbon",
+      "attributes": {
+        "invocations": 42910,
+        "model_id": "gemini-4-carbon",
+        "publisher": "google"
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/knowledge-etl-prod/datasets/corpus_warehouse",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "knowledge-etl-prod",
+      "location": "EU",
+      "display_name": "corpus_warehouse",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/keyRings/etl-keyring/cryptoKeys/etl-corpus-cmek",
+        "location": "EU",
+        "table_count": 9
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/ai-agents-prod/locations/europe-west1/keyRings/ai-keyring/cryptoKeys/ai-agent-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "ai-agents-prod",
+      "location": "europe-west1",
+      "display_name": "ai-agent-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/keyRings/etl-keyring/cryptoKeys/etl-corpus-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "knowledge-etl-prod",
+      "location": "europe-west1",
+      "display_name": "etl-corpus-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//composer.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/environments/knowledge-airflow",
+      "asset_type": "composer.googleapis.com/Environment",
+      "project_id": "knowledge-etl-prod",
+      "location": "europe-west1",
+      "display_name": "knowledge-airflow",
+      "parent_uri": "//compute.googleapis.com/projects/knowledge-etl-prod/regions/europe-west1/subnetworks/composer-dataproc-subnet",
+      "attributes": {
+        "image_version": "composer-2.9.0-airflow-2.9.3",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/keyRings/etl-keyring/cryptoKeys/etl-corpus-cmek",
+        "service_account": "composer-orch-sa@knowledge-etl-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/knowledge-etl-prod/regions/europe-west1/subnetworks/composer-dataproc-subnet",
+        "vpc": "//compute.googleapis.com/projects/knowledge-etl-prod/global/networks/knowledge-etl-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ai-agents-prod/global/forwardingRules/agents-https-fr",
+      "asset_type": "compute.googleapis.com/GlobalForwardingRule",
+      "project_id": "ai-agents-prod",
+      "location": "global",
+      "display_name": "agents-https-fr",
+      "attributes": {
+        "ingress_hosts": [
+          "agents.acme-ai.example.com"
+        ],
+        "ip_address": "34.111.88.20",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "EXTERNAL_MANAGED",
+        "port_range": "443-443",
+        "tls": true
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ai-agents-prod/global/networks/agents-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "ai-agents-prod",
+      "location": "global",
+      "display_name": "agents-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ai-agents-prod/regions/europe-west1/routers/agents-nat-router",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "ai-agents-prod",
+      "location": "europe-west1",
+      "display_name": "agents-nat-router",
+      "parent_uri": "//compute.googleapis.com/projects/ai-agents-prod/global/networks/agents-vpc",
+      "attributes": {
+        "bgp_asn": 64530,
+        "nat_count": 1,
+        "vpc": "//compute.googleapis.com/projects/ai-agents-prod/global/networks/agents-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/ai-agents-prod/regions/europe-west1/subnetworks/agents-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "ai-agents-prod",
+      "location": "europe-west1",
+      "display_name": "agents-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/ai-agents-prod/global/networks/agents-vpc",
+      "attributes": {
+        "cidr": "10.80.0.0/22",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/ai-agents-prod/global/networks/agents-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/knowledge-etl-prod/global/networks/knowledge-etl-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "knowledge-etl-prod",
+      "location": "global",
+      "display_name": "knowledge-etl-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/knowledge-etl-prod/regions/europe-west1/subnetworks/composer-dataproc-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "knowledge-etl-prod",
+      "location": "europe-west1",
+      "display_name": "composer-dataproc-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/knowledge-etl-prod/global/networks/knowledge-etl-vpc",
+      "attributes": {
+        "cidr": "10.81.0.0/20",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/knowledge-etl-prod/global/networks/knowledge-etl-vpc"
+      }
+    },
+    {
+      "uri": "//dataplex.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/lakes/knowledge-lake",
+      "asset_type": "dataplex.googleapis.com/Lake",
+      "project_id": "knowledge-etl-prod",
+      "location": "europe-west1",
+      "display_name": "knowledge-lake",
+      "attributes": {
+        "state": "ACTIVE"
+      }
+    },
+    {
+      "uri": "//dataproc.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/batches/chunking-spark-batch",
+      "asset_type": "dataproc.googleapis.com/Batch",
+      "project_id": "knowledge-etl-prod",
+      "location": "europe-west1",
+      "display_name": "chunking-spark-batch",
+      "parent_uri": "//compute.googleapis.com/projects/knowledge-etl-prod/regions/europe-west1/subnetworks/composer-dataproc-subnet",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/keyRings/etl-keyring/cryptoKeys/etl-corpus-cmek",
+        "service_account": "knowledge-etl-sa@knowledge-etl-prod.iam.gserviceaccount.com",
+        "state": "SUCCEEDED",
+        "subnet": "//compute.googleapis.com/projects/knowledge-etl-prod/regions/europe-west1/subnetworks/composer-dataproc-subnet",
+        "vpc": "//compute.googleapis.com/projects/knowledge-etl-prod/global/networks/knowledge-etl-vpc"
+      }
+    },
+    {
+      "uri": "//discoveryengine.googleapis.com/projects/ai-agents-prod/locations/global/dataStores/docs-vector-store",
+      "asset_type": "discoveryengine.googleapis.com/DataStore",
+      "project_id": "ai-agents-prod",
+      "location": "global",
+      "display_name": "docs-vector-store",
+      "attributes": {
+        "content_config": "CONTENT_REQUIRED",
+        "industry_vertical": "GENERIC"
+      }
+    },
+    {
+      "uri": "//discoveryengine.googleapis.com/projects/ai-agents-prod/locations/global/engines/enterprise-rag-search",
+      "asset_type": "discoveryengine.googleapis.com/Engine",
+      "project_id": "ai-agents-prod",
+      "location": "global",
+      "display_name": "enterprise-rag-search",
+      "attributes": {
+        "industry_vertical": "GENERIC",
+        "solution_type": "SOLUTION_TYPE_SEARCH"
+      }
+    },
+    {
+      "uri": "//firestore.googleapis.com/projects/ai-agents-prod/databases/(default)",
+      "asset_type": "firestore.googleapis.com/Database",
+      "project_id": "ai-agents-prod",
+      "location": "europe-west1",
+      "display_name": "agent-sessions",
+      "attributes": {
+        "concurrency_mode": "OPTIMISTIC",
+        "database_type": "FIRESTORE_NATIVE",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ai-agents-prod/locations/europe-west1/keyRings/ai-keyring/cryptoKeys/ai-agent-cmek"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/ai-agents-prod/serviceAccounts/agent-gateway-sa@ai-agents-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "ai-agents-prod",
+      "display_name": "agent-gateway-sa@ai-agents-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "agent-gateway-sa@ai-agents-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/ai-agents-prod/serviceAccounts/reasoning-engine-sa@ai-agents-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "ai-agents-prod",
+      "display_name": "reasoning-engine-sa@ai-agents-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "reasoning-engine-sa@ai-agents-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/knowledge-etl-prod/serviceAccounts/composer-orch-sa@knowledge-etl-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "knowledge-etl-prod",
+      "display_name": "composer-orch-sa@knowledge-etl-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "composer-orch-sa@knowledge-etl-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/knowledge-etl-prod/serviceAccounts/knowledge-etl-sa@knowledge-etl-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "knowledge-etl-prod",
+      "display_name": "knowledge-etl-sa@knowledge-etl-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "knowledge-etl-sa@knowledge-etl-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/ai-agents-prod/sinks/agent-prompts-audit-sink",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "ai-agents-prod",
+      "display_name": "agent-prompts-audit-sink"
+    },
+    {
+      "uri": "//metastore.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/services/lake-hms",
+      "asset_type": "metastore.googleapis.com/Service",
+      "project_id": "knowledge-etl-prod",
+      "location": "europe-west1",
+      "display_name": "lake-hms",
+      "parent_uri": "//compute.googleapis.com/projects/knowledge-etl-prod/global/networks/knowledge-etl-vpc",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/keyRings/etl-keyring/cryptoKeys/etl-corpus-cmek",
+        "state": "ACTIVE",
+        "tier": "DEVELOPER",
+        "vpc": "//compute.googleapis.com/projects/knowledge-etl-prod/global/networks/knowledge-etl-vpc"
+      }
+    },
+    {
+      "uri": "//monitoring.googleapis.com/projects/ai-agents-prod/alertPolicies/9056789005",
+      "asset_type": "monitoring.googleapis.com/AlertPolicy",
+      "project_id": "ai-agents-prod",
+      "display_name": "agent-token-quota-alert",
+      "attributes": {
+        "enabled": true
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/knowledge-etl-prod/subscriptions/doc-ingest-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "knowledge-etl-prod",
+      "location": "global",
+      "display_name": "doc-ingest-sub",
+      "attributes": {
+        "ack_deadline_seconds": 60
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/knowledge-etl-prod/topics/doc-ingest-topic",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "knowledge-etl-prod",
+      "location": "global",
+      "display_name": "doc-ingest-topic",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/keyRings/etl-keyring/cryptoKeys/etl-corpus-cmek"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/ai-agents-prod/locations/europe-west1/services/agent-orchestrator-api",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "ai-agents-prod",
+      "location": "europe-west1",
+      "display_name": "agent-orchestrator-api",
+      "parent_uri": "//compute.googleapis.com/projects/ai-agents-prod/regions/europe-west1/subnetworks/agents-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ai-agents-prod/locations/europe-west1/keyRings/ai-keyring/cryptoKeys/ai-agent-cmek",
+        "service_account": "agent-gateway-sa@ai-agents-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/ai-agents-prod/regions/europe-west1/subnetworks/agents-subnet",
+        "url": "https://agent-orchestrator-api-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/ai-agents-prod/global/networks/agents-vpc"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/ai-agents-prod/secrets/agent-tool-oauth-secret",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "ai-agents-prod",
+      "display_name": "agent-tool-oauth-secret",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/ai-agents-prod/locations/europe-west1/keyRings/ai-keyring/cryptoKeys/ai-agent-cmek",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/embeddings-artifacts",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "knowledge-etl-prod",
+      "location": "europe-west1",
+      "display_name": "embeddings-artifacts",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/keyRings/etl-keyring/cryptoKeys/etl-corpus-cmek",
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/raw-knowledge-docs",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "knowledge-etl-prod",
+      "location": "europe-west1",
+      "display_name": "raw-knowledge-docs",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/keyRings/etl-keyring/cryptoKeys/etl-corpus-cmek",
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "c9d2e1971048d0f9",
+      "from_uri": "//aiplatform.googleapis.com/projects/ai-agents-prod/locations/europe-west1/reasoningEngines/support-rag-agent",
+      "to_uri": "//aiplatform.googleapis.com/projects/ai-agents-prod/locations/europe-west1/indexEndpoints/embeddings-idx-ep",
+      "kind": "CONFIG_REF",
+      "detail": "vector_search"
+    },
+    {
+      "id": "93f305bf1b878f05",
+      "from_uri": "//aiplatform.googleapis.com/projects/ai-agents-prod/locations/europe-west1/reasoningEngines/support-rag-agent",
+      "to_uri": "//aiplatform.googleapis.com/projects/ai-agents-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "kind": "MONITORING_TRAFFIC",
+      "detail": "invocations:42910",
+      "heuristic": true
+    },
+    {
+      "id": "8f69e17c1f0e2989",
+      "from_uri": "//aiplatform.googleapis.com/projects/ai-agents-prod/locations/europe-west1/reasoningEngines/support-rag-agent",
+      "to_uri": "//discoveryengine.googleapis.com/projects/ai-agents-prod/locations/global/engines/enterprise-rag-search",
+      "kind": "CONFIG_REF",
+      "detail": "rag_grounding"
+    },
+    {
+      "id": "62ab9467ee531669",
+      "from_uri": "//aiplatform.googleapis.com/projects/ai-agents-prod/locations/europe-west1/reasoningEngines/support-rag-agent",
+      "to_uri": "//iam.googleapis.com/projects/ai-agents-prod/serviceAccounts/reasoning-engine-sa@ai-agents-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "44be85345c032ef9",
+      "from_uri": "//bigquery.googleapis.com/projects/knowledge-etl-prod/datasets/corpus_warehouse",
+      "to_uri": "//cloudkms.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/keyRings/etl-keyring/cryptoKeys/etl-corpus-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "0cfc52b5e75f3599",
+      "from_uri": "//bigquery.googleapis.com/projects/knowledge-etl-prod/datasets/corpus_warehouse",
+      "to_uri": "//discoveryengine.googleapis.com/projects/ai-agents-prod/locations/global/dataStores/docs-vector-store",
+      "kind": "CONFIG_REF",
+      "detail": "bq_import"
+    },
+    {
+      "id": "5d3c9328feb1e86f",
+      "from_uri": "//composer.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/environments/knowledge-airflow",
+      "to_uri": "//dataproc.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/batches/chunking-spark-batch",
+      "kind": "CONFIG_REF",
+      "detail": "airflow_trigger"
+    },
+    {
+      "id": "e18756fa8ea3e86f",
+      "from_uri": "//composer.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/environments/knowledge-airflow",
+      "to_uri": "//iam.googleapis.com/projects/knowledge-etl-prod/serviceAccounts/composer-orch-sa@knowledge-etl-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "7c401da633dde215",
+      "from_uri": "//composer.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/environments/knowledge-airflow",
+      "to_uri": "//pubsub.googleapis.com/projects/knowledge-etl-prod/topics/doc-ingest-topic",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "dfdb2f6151f5f089",
+      "from_uri": "//compute.googleapis.com/projects/ai-agents-prod/global/forwardingRules/agents-https-fr",
+      "to_uri": "//run.googleapis.com/projects/ai-agents-prod/locations/europe-west1/services/agent-orchestrator-api",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "74ac10f1ef061976",
+      "from_uri": "//compute.googleapis.com/projects/ai-agents-prod/global/networks/agents-vpc",
+      "to_uri": "//compute.googleapis.com/projects/knowledge-etl-prod/global/networks/knowledge-etl-vpc",
+      "kind": "VPC_PEERING",
+      "detail": "ai-etl-peering"
+    },
+    {
+      "id": "6b32a1a13649f17b",
+      "from_uri": "//dataplex.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/lakes/knowledge-lake",
+      "to_uri": "//bigquery.googleapis.com/projects/knowledge-etl-prod/datasets/corpus_warehouse",
+      "kind": "CONFIG_REF",
+      "detail": "dataplex_asset"
+    },
+    {
+      "id": "802ff08d11d12eac",
+      "from_uri": "//dataplex.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/lakes/knowledge-lake",
+      "to_uri": "//storage.googleapis.com/raw-knowledge-docs",
+      "kind": "CONFIG_REF",
+      "detail": "dataplex_asset"
+    },
+    {
+      "id": "7c44d3e0a98802b2",
+      "from_uri": "//dataproc.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/batches/chunking-spark-batch",
+      "to_uri": "//bigquery.googleapis.com/projects/knowledge-etl-prod/datasets/corpus_warehouse",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "da6b4b6bf028cc96",
+      "from_uri": "//dataproc.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/batches/chunking-spark-batch",
+      "to_uri": "//iam.googleapis.com/projects/knowledge-etl-prod/serviceAccounts/knowledge-etl-sa@knowledge-etl-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "2eb237d21df85ee9",
+      "from_uri": "//dataproc.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/batches/chunking-spark-batch",
+      "to_uri": "//metastore.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/services/lake-hms",
+      "kind": "CONFIG_REF",
+      "detail": "hive_metastore"
+    },
+    {
+      "id": "1f395ae18915c52b",
+      "from_uri": "//dataproc.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/batches/chunking-spark-batch",
+      "to_uri": "//storage.googleapis.com/embeddings-artifacts",
+      "kind": "CONFIG_REF",
+      "detail": "gs://embeddings-artifacts"
+    },
+    {
+      "id": "07ca495d6de25038",
+      "from_uri": "//dataproc.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/batches/chunking-spark-batch",
+      "to_uri": "//storage.googleapis.com/raw-knowledge-docs",
+      "kind": "CONFIG_REF",
+      "detail": "gs://raw-knowledge-docs"
+    },
+    {
+      "id": "96cb29d11c41b878",
+      "from_uri": "//discoveryengine.googleapis.com/projects/ai-agents-prod/locations/global/engines/enterprise-rag-search",
+      "to_uri": "//discoveryengine.googleapis.com/projects/ai-agents-prod/locations/global/dataStores/docs-vector-store",
+      "kind": "CONFIG_REF",
+      "detail": "datastore_link"
+    },
+    {
+      "id": "8cc9249902995451",
+      "from_uri": "//firestore.googleapis.com/projects/ai-agents-prod/databases/(default)",
+      "to_uri": "//cloudkms.googleapis.com/projects/ai-agents-prod/locations/europe-west1/keyRings/ai-keyring/cryptoKeys/ai-agent-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "b51f1f36d52db517",
+      "from_uri": "//iam.googleapis.com/projects/ai-agents-prod/serviceAccounts/agent-gateway-sa@ai-agents-prod.iam.gserviceaccount.com",
+      "to_uri": "//firestore.googleapis.com/projects/ai-agents-prod/databases/(default)",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/datastore.user"
+    },
+    {
+      "id": "fbc19c06f7ee1117",
+      "from_uri": "//iam.googleapis.com/projects/ai-agents-prod/serviceAccounts/agent-gateway-sa@ai-agents-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/ai-agents-prod/secrets/agent-tool-oauth-secret",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "25371d1d377dbd66",
+      "from_uri": "//iam.googleapis.com/projects/ai-agents-prod/serviceAccounts/reasoning-engine-sa@ai-agents-prod.iam.gserviceaccount.com",
+      "to_uri": "//aiplatform.googleapis.com/projects/ai-agents-prod/locations/europe-west1/indexEndpoints/embeddings-idx-ep",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/aiplatform.user"
+    },
+    {
+      "id": "d1456845e13f88af",
+      "from_uri": "//iam.googleapis.com/projects/ai-agents-prod/serviceAccounts/reasoning-engine-sa@ai-agents-prod.iam.gserviceaccount.com",
+      "to_uri": "//discoveryengine.googleapis.com/projects/ai-agents-prod/locations/global/engines/enterprise-rag-search",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/discoveryengine.viewer"
+    },
+    {
+      "id": "5dd46ba8061d2c12",
+      "from_uri": "//iam.googleapis.com/projects/knowledge-etl-prod/serviceAccounts/knowledge-etl-sa@knowledge-etl-prod.iam.gserviceaccount.com",
+      "to_uri": "//bigquery.googleapis.com/projects/knowledge-etl-prod/datasets/corpus_warehouse",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/bigquery.dataEditor"
+    },
+    {
+      "id": "6322953127df1735",
+      "from_uri": "//iam.googleapis.com/projects/knowledge-etl-prod/serviceAccounts/knowledge-etl-sa@knowledge-etl-prod.iam.gserviceaccount.com",
+      "to_uri": "//storage.googleapis.com/embeddings-artifacts",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/storage.objectAdmin"
+    },
+    {
+      "id": "b8c9eabe68a421f9",
+      "from_uri": "//iam.googleapis.com/projects/knowledge-etl-prod/serviceAccounts/knowledge-etl-sa@knowledge-etl-prod.iam.gserviceaccount.com",
+      "to_uri": "//storage.googleapis.com/raw-knowledge-docs",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/storage.objectViewer"
+    },
+    {
+      "id": "ea08f09efd565aff",
+      "from_uri": "//pubsub.googleapis.com/projects/knowledge-etl-prod/topics/doc-ingest-topic",
+      "to_uri": "//pubsub.googleapis.com/projects/knowledge-etl-prod/subscriptions/doc-ingest-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "f7a0d1fe2a05f5ae",
+      "from_uri": "//run.googleapis.com/projects/ai-agents-prod/locations/europe-west1/services/agent-orchestrator-api",
+      "to_uri": "//aiplatform.googleapis.com/projects/ai-agents-prod/locations/europe-west1/reasoningEngines/support-rag-agent",
+      "kind": "CONFIG_REF",
+      "detail": "agent_invoke"
+    },
+    {
+      "id": "32c9d554a528b8ab",
+      "from_uri": "//run.googleapis.com/projects/ai-agents-prod/locations/europe-west1/services/agent-orchestrator-api",
+      "to_uri": "//firestore.googleapis.com/projects/ai-agents-prod/databases/(default)",
+      "kind": "CONFIG_REF",
+      "detail": "firestore"
+    },
+    {
+      "id": "699ea61a6f9c0fa9",
+      "from_uri": "//run.googleapis.com/projects/ai-agents-prod/locations/europe-west1/services/agent-orchestrator-api",
+      "to_uri": "//iam.googleapis.com/projects/ai-agents-prod/serviceAccounts/agent-gateway-sa@ai-agents-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "f9a31a73ce360c01",
+      "from_uri": "//run.googleapis.com/projects/ai-agents-prod/locations/europe-west1/services/agent-orchestrator-api",
+      "to_uri": "//secretmanager.googleapis.com/projects/ai-agents-prod/secrets/agent-tool-oauth-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "9af39dc5fe6c731e",
+      "from_uri": "//storage.googleapis.com/embeddings-artifacts",
+      "to_uri": "//aiplatform.googleapis.com/projects/ai-agents-prod/locations/europe-west1/indexEndpoints/embeddings-idx-ep",
+      "kind": "CONFIG_REF",
+      "detail": "index_embeddings"
+    },
+    {
+      "id": "454e87110771d157",
+      "from_uri": "//storage.googleapis.com/raw-knowledge-docs",
+      "to_uri": "//cloudkms.googleapis.com/projects/knowledge-etl-prod/locations/europe-west1/keyRings/etl-keyring/cryptoKeys/etl-corpus-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "7a07e2aa5167a5d0",
+      "from_uri": "//storage.googleapis.com/raw-knowledge-docs",
+      "to_uri": "//discoveryengine.googleapis.com/projects/ai-agents-prod/locations/global/dataStores/docs-vector-store",
+      "kind": "CONFIG_REF",
+      "detail": "gcs_import"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "aiplatform.googleapis.com/Index": 1,
+    "aiplatform.googleapis.com/Model": 2,
+    "bigquery.googleapis.com/Table": 9,
+    "compute.googleapis.com/Firewall": 12,
+    "compute.googleapis.com/Route": 8,
+    "dataplex.googleapis.com/Asset": 2,
+    "dataplex.googleapis.com/Zone": 2,
+    "run.googleapis.com/Revision": 5
+  },
+  "coverage_ledger": [
+    {
+      "scope": "projects/ai-agents-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ai-agents-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ai-agents-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ai-agents-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/ai-agents-prod",
+      "source": "monitoring",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/knowledge-etl-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/knowledge-etl-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/knowledge-etl-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/knowledge-etl-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/knowledge-etl-prod",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}
