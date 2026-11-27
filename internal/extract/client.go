@@ -2,29 +2,26 @@ package extract
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"cloud.google.com/go/asset/apiv1/assetpb"
+	"cloud.google.com/go/auth"
+	"cloud.google.com/go/auth/credentials"
+	"cloud.google.com/go/auth/grpctransport"
+	"cloud.google.com/go/auth/httptransport"
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
-	"github.com/tidwall/gjson"
-	"golang.org/x/oauth2/google"
 	"golang.org/x/time/rate"
-	"google.golang.org/api/bigquery/v2"
-	"google.golang.org/api/dataflow/v1b3"
-	"google.golang.org/api/googleapi"
-	"google.golang.org/api/option"
-	gtransport "google.golang.org/api/transport/grpc"
-	htransport "google.golang.org/api/transport/http"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -47,15 +44,26 @@ const (
 
 	maxRateLimitRetries = 3
 	defaultRetryBackoff = 100 * time.Millisecond
+	defaultHTTPTimeout  = 60 * time.Second
 	maxGRPCRecvMsgBytes = 32 << 20
+	maxDrainBodyBytes   = 64 << 10
 
 	cloudPlatformReadOnlyScope = "https://www.googleapis.com/auth/cloud-platform.read-only"
 	cloudPlatformScope         = "https://www.googleapis.com/auth/cloud-platform"
+	quotaProjectHeader         = "X-goog-user-project"
 	defaultAssetEndpoint       = "cloudasset.googleapis.com:443"
 	defaultMonitoringEndpoint  = "monitoring.googleapis.com:443"
+	defaultBigQueryEndpoint    = "https://bigquery.googleapis.com"
+	defaultDataflowEndpoint    = "https://dataflow.googleapis.com"
 	defaultCRMEndpoint         = "https://cloudresourcemanager.googleapis.com"
 	defaultGlobalVertexBase    = "https://aiplatform.googleapis.com"
 )
+
+var optionalEnricherServices = map[string]bool{
+	svcBigQuery:                 true,
+	"dataflow.googleapis.com":   true,
+	"monitoring.googleapis.com": true,
+}
 
 // ErrorKind categorizes GCP API errors into fatal quota/auth failures vs target-scope degradations.
 type ErrorKind string
@@ -120,7 +128,97 @@ func (e *QuotaProjectError) Error() string {
 
 func (e *QuotaProjectError) Unwrap() error { return e.Classified.Err }
 
-// ClassifyGCPError inspects both REST *googleapi.Error and gRPC status details (*errdetails.ErrorInfo)
+type httpStatusError struct {
+	Code     int
+	Message  string
+	Body     string
+	Reason   string
+	Domain   string
+	Metadata map[string]string
+}
+
+func (e *httpStatusError) Error() string {
+	if e.Message != "" {
+		return fmt.Sprintf("http %d: %s", e.Code, e.Message)
+	}
+	return fmt.Sprintf("http %d", e.Code)
+}
+
+type gcpErrorPayload struct {
+	Error struct {
+		Message string `json:"message"`
+		Errors  []struct {
+			Reason string `json:"reason"`
+		} `json:"errors"`
+		Details []struct {
+			Type     string         `json:"@type"`
+			Reason   string         `json:"reason"`
+			Domain   string         `json:"domain"`
+			Metadata map[string]any `json:"metadata"`
+		} `json:"details"`
+	} `json:"error"`
+}
+
+func parseGCPErrorBody(body []byte, dst *httpStatusError) {
+	if len(body) == 0 {
+		return
+	}
+	var payload gcpErrorPayload
+	if json.Unmarshal(body, &payload) != nil {
+		return
+	}
+	if payload.Error.Message != "" {
+		dst.Message = payload.Error.Message
+	}
+	for _, d := range payload.Error.Details {
+		if !strings.HasSuffix(d.Type, "google.rpc.ErrorInfo") {
+			continue
+		}
+		dst.Reason = d.Reason
+		dst.Domain = d.Domain
+		if len(d.Metadata) > 0 {
+			dst.Metadata = extractStringAnyMap(d.Metadata)
+		}
+		return
+	}
+	if dst.Reason == "" && len(payload.Error.Errors) > 0 {
+		dst.Reason = payload.Error.Errors[0].Reason
+	}
+}
+
+func extractStringAnyMap(meta map[string]any) map[string]string {
+	out := make(map[string]string, len(meta))
+	for k, v := range meta {
+		if s, ok := v.(string); ok {
+			out[k] = s
+		}
+	}
+	return out
+}
+
+func extractHTTPStatusErrorInfo(herr *httpStatusError, out *ClassifiedError) {
+	if herr.Message != "" {
+		out.Message = herr.Message
+	}
+	if herr.Reason != "" || herr.Domain != "" || len(herr.Metadata) > 0 {
+		out.Reason = herr.Reason
+		out.Domain = herr.Domain
+		out.Metadata = herr.Metadata
+		return
+	}
+	if herr.Body != "" {
+		var parsed httpStatusError
+		parseGCPErrorBody([]byte(herr.Body), &parsed)
+		if parsed.Message != "" && herr.Message == "" {
+			out.Message = parsed.Message
+		}
+		out.Reason = parsed.Reason
+		out.Domain = parsed.Domain
+		out.Metadata = parsed.Metadata
+	}
+}
+
+// ClassifyGCPError inspects both REST HTTP errors and gRPC status details (*errdetails.ErrorInfo)
 // to distinguish fatal caller quota-project failures from target-scope degradations.
 func ClassifyGCPError(err error, callerQuotaProject, targetProjectID, targetProjectNumber string) ClassifiedError {
 	if err == nil {
@@ -133,13 +231,10 @@ func ClassifyGCPError(err error, callerQuotaProject, targetProjectID, targetProj
 		Err:     err,
 	}
 
-	var gerr *googleapi.Error
-	if errors.As(err, &gerr) {
-		if gerr.Message != "" {
-			out.Message = gerr.Message
-		}
-		extractRESTErrorInfo(gerr, &out)
-		classifyFromReasonAndCode(&out, codes.OK, gerr.Code, callerQuotaProject, targetProjectID, targetProjectNumber)
+	var herr *httpStatusError
+	if errors.As(err, &herr) {
+		extractHTTPStatusErrorInfo(herr, &out)
+		classifyFromReasonAndCode(&out, codes.OK, herr.Code, callerQuotaProject, targetProjectID, targetProjectNumber)
 		return out
 	}
 
@@ -160,78 +255,6 @@ func ClassifyGCPError(err error, callerQuotaProject, targetProjectID, targetProj
 	return out
 }
 
-func extractRESTErrorInfo(gerr *googleapi.Error, out *ClassifiedError) {
-	if extractErrorInfoFromDetails(gerr.Details, out) {
-		return
-	}
-	if extractErrorInfoFromBody(gerr.Body, out) {
-		return
-	}
-	if out.Reason == "" && len(gerr.Errors) > 0 {
-		out.Reason = gerr.Errors[0].Reason
-	}
-}
-
-func extractErrorInfoFromDetails(details []any, out *ClassifiedError) bool {
-	for _, raw := range details {
-		m, ok := raw.(map[string]any)
-		if !ok {
-			continue
-		}
-		typeURL, _ := m["@type"].(string)
-		if !strings.HasSuffix(typeURL, "google.rpc.ErrorInfo") {
-			continue
-		}
-		applyErrorInfoMap(m, out)
-		return true
-	}
-	return false
-}
-
-func applyErrorInfoMap(m map[string]any, out *ClassifiedError) {
-	if r, ok := m["reason"].(string); ok {
-		out.Reason = r
-	}
-	if d, ok := m["domain"].(string); ok {
-		out.Domain = d
-	}
-	if meta, ok := m["metadata"].(map[string]any); ok {
-		out.Metadata = extractStringAnyMap(meta)
-	}
-}
-
-func extractStringAnyMap(meta map[string]any) map[string]string {
-	out := make(map[string]string, len(meta))
-	for k, v := range meta {
-		if s, ok := v.(string); ok {
-			out[k] = s
-		}
-	}
-	return out
-}
-
-func extractErrorInfoFromBody(body string, out *ClassifiedError) bool {
-	if body == "" {
-		return false
-	}
-	for _, item := range gjson.Get(body, "error.details").Array() {
-		if !strings.HasSuffix(item.Get("@type").String(), "google.rpc.ErrorInfo") {
-			continue
-		}
-		out.Reason = item.Get("reason").String()
-		out.Domain = item.Get("domain").String()
-		if meta := item.Get("metadata"); meta.IsObject() {
-			out.Metadata = make(map[string]string)
-			meta.ForEach(func(k, v gjson.Result) bool {
-				out.Metadata[k.String()] = v.String()
-				return true
-			})
-		}
-		return true
-	}
-	return false
-}
-
 func trimProjectPrefix(s string) string {
 	return strings.TrimPrefix(strings.TrimSpace(s), prefixProjects)
 }
@@ -243,8 +266,8 @@ func matchesTargetProject(candidate, targetID, targetNum string) bool {
 	return (targetID != "" && candidate == targetID) || (targetNum != "" && candidate == targetNum)
 }
 
-func classifyDisabledServiceKind(consumer, callerQuotaProject, targetProjectID, targetProjectNumber string) ErrorKind {
-	c := trimProjectPrefix(consumer)
+func classifyDisabledServiceKind(reason, domain string, meta map[string]string, callerQuotaProject, targetProjectID, targetProjectNumber string) ErrorKind {
+	c := trimProjectPrefix(meta["consumer"])
 	callerQP := trimProjectPrefix(callerQuotaProject)
 	targetID := trimProjectPrefix(targetProjectID)
 	targetNum := trimProjectPrefix(targetProjectNumber)
@@ -256,6 +279,13 @@ func classifyDisabledServiceKind(consumer, callerQuotaProject, targetProjectID, 
 		return ErrorKindQuotaFatal
 	}
 	if matchesTargetProject(callerQP, targetID, targetNum) || (callerQP != "" && c == callerQP) {
+		svc := strings.ToLower(strings.TrimSpace(meta["service"]))
+		if svc == "" {
+			svc = strings.ToLower(strings.TrimSpace(domain))
+		}
+		if reason == "SERVICE_DISABLED" && optionalEnricherServices[svc] {
+			return ErrorKindTargetServiceDisabled
+		}
 		return ErrorKindQuotaFatal
 	}
 	return ErrorKindTargetServiceDisabled
@@ -276,7 +306,7 @@ func classifyFromReasonAndCode(
 		out.Kind = ErrorKindQuotaFatal
 		return
 	case "SERVICE_DISABLED", "BILLING_DISABLED":
-		out.Kind = classifyDisabledServiceKind(out.Metadata["consumer"], callerQuotaProject, targetProjectID, targetProjectNumber)
+		out.Kind = classifyDisabledServiceKind(out.Reason, out.Domain, out.Metadata, callerQuotaProject, targetProjectID, targetProjectNumber)
 		return
 	case "SECURITY_POLICY_VIOLATED", "VPC_SERVICE_CONTROLS":
 		out.Kind = ErrorKindVPCSCBlocked
@@ -310,13 +340,13 @@ func isRateLimitError(err error) bool {
 			}
 		}
 	}
-	var gerr *googleapi.Error
-	if errors.As(err, &gerr) {
-		if gerr.Code == http.StatusTooManyRequests {
+	var herr *httpStatusError
+	if errors.As(err, &herr) {
+		if herr.Code == http.StatusTooManyRequests {
 			return true
 		}
 		var ce ClassifiedError
-		extractRESTErrorInfo(gerr, &ce)
+		extractHTTPStatusErrorInfo(herr, &ce)
 		if ce.Reason == "RATE_LIMIT_EXCEEDED" || ce.Reason == "rateLimitExceeded" {
 			return true
 		}
@@ -352,6 +382,10 @@ func waitLimiter(ctx context.Context, lim *rate.Limiter) error {
 	return lim.Wait(ctx)
 }
 
+type closerFunc func() error
+
+func (f closerFunc) Close() error { return f() }
+
 // ClientOptions configures read-only GCP API clients, quota project handling, rate limiters,
 // and optional test connection overrides.
 type ClientOptions struct {
@@ -376,8 +410,6 @@ type Clients struct {
 	ProjectAliases    map[string]string
 	Asset             assetpb.AssetServiceClient
 	Monitoring        monitoringpb.MetricServiceClient
-	BigQuery          *bigquery.Service
-	Dataflow          *dataflow.Service
 	HTTPClient        *http.Client
 	CAILimiter        *rate.Limiter
 	MonitoringLimiter *rate.Limiter
@@ -385,10 +417,26 @@ type Clients struct {
 	DataflowLimiter   *rate.Limiter
 	ProgressWriter    io.Writer
 
-	retryBackoff time.Duration
-	progressMu   sync.Mutex
-	lastProgress time.Time
-	closers      []io.Closer
+	bigQueryEndpoint string
+	dataflowEndpoint string
+	retryBackoff     time.Duration
+	progressMu       sync.Mutex
+	lastProgress     time.Time
+	closers          []io.Closer
+}
+
+func (c *Clients) bigQueryBaseURL() string {
+	if base := strings.TrimRight(strings.TrimSpace(c.bigQueryEndpoint), "/"); base != "" {
+		return base
+	}
+	return defaultBigQueryEndpoint
+}
+
+func (c *Clients) dataflowBaseURL() string {
+	if base := strings.TrimRight(strings.TrimSpace(c.dataflowEndpoint), "/"); base != "" {
+		return base
+	}
+	return defaultDataflowEndpoint
 }
 
 // ReportProgress writes a formatted progress line to ProgressWriter, throttled to at most once
@@ -410,7 +458,7 @@ func (c *Clients) ReportProgress(force bool, format string, args ...any) {
 	_, _ = fmt.Fprintf(c.ProgressWriter, format, args...)
 }
 
-// Close releases all gRPC connections opened by NewClients.
+// Close releases all gRPC connections and idle HTTP connections opened by NewClients.
 func (c *Clients) Close() error {
 	var firstErr error
 	for _, cl := range c.closers {
@@ -423,14 +471,15 @@ func (c *Clients) Close() error {
 
 // ResolveQuotaProject returns explicitQuotaProject if non-empty, otherwise preserves the
 // quota_project_id embedded in ADC JSON. It never falls back to a target workload project.
-func ResolveQuotaProject(creds *google.Credentials, explicitQuotaProject string) string {
+func ResolveQuotaProject(creds *auth.Credentials, explicitQuotaProject string) string {
 	if qp := strings.TrimSpace(explicitQuotaProject); qp != "" {
 		return qp
 	}
-	if creds != nil && len(creds.JSON) > 0 {
-		if qp := strings.TrimSpace(gjson.GetBytes(creds.JSON, "quota_project_id").String()); qp != "" {
-			return qp
-		}
+	if creds == nil {
+		return ""
+	}
+	if qp, err := creds.QuotaProjectID(context.Background()); err == nil {
+		return strings.TrimSpace(qp)
 	}
 	return ""
 }
@@ -440,29 +489,39 @@ func ResolveQuotaProject(creds *google.Credentials, explicitQuotaProject string)
 func NewClients(ctx context.Context, opts ClientOptions) (*Clients, error) {
 	c := newClientsWithLimiters(opts)
 
-	baseOpts, qp, err := resolveReadOnlyBaseOptions(ctx, opts)
+	creds, qp, err := resolveReadOnlyCredentials(opts)
 	if err != nil {
 		return nil, err
 	}
 	c.QuotaProject = qp
 
-	assetConn, err := dialOrReuse(ctx, opts.AssetConn, defaultAssetEndpoint, baseOpts, &c.closers)
+	assetConn, err := dialOrReuse(ctx, opts.AssetConn, defaultAssetEndpoint, creds, qp, &c.closers)
 	if err != nil {
 		_ = c.Close()
 		return nil, fmt.Errorf("dial Cloud Asset Inventory: %w", err)
 	}
 	c.Asset = assetpb.NewAssetServiceClient(assetConn)
 
-	monConn, err := dialOrReuse(ctx, opts.MonitoringConn, defaultMonitoringEndpoint, baseOpts, &c.closers)
+	monConn, err := dialOrReuse(ctx, opts.MonitoringConn, defaultMonitoringEndpoint, creds, qp, &c.closers)
 	if err != nil {
 		_ = c.Close()
 		return nil, fmt.Errorf("dial Cloud Monitoring: %w", err)
 	}
 	c.Monitoring = monitoringpb.NewMetricServiceClient(monConn)
 
-	if err := initRESTServices(ctx, c, opts, baseOpts); err != nil {
-		_ = c.Close()
-		return nil, err
+	if opts.HTTPClient != nil {
+		c.HTTPClient = opts.HTTPClient
+	} else {
+		hc, err := newAuthHTTPClient(creds, qp)
+		if err != nil {
+			_ = c.Close()
+			return nil, fmt.Errorf("create oauth2 HTTP client: %w", err)
+		}
+		c.HTTPClient = hc
+		c.closers = append(c.closers, closerFunc(func() error {
+			hc.CloseIdleConnections()
+			return nil
+		}))
 	}
 
 	return c, nil
@@ -493,80 +552,93 @@ func newClientsWithLimiters(opts ClientOptions) *Clients {
 		BQLimiter:         bqLimiter,
 		DataflowLimiter:   dfLimiter,
 		ProgressWriter:    opts.ProgressWriter,
+		bigQueryEndpoint:  opts.BigQueryEndpoint,
+		dataflowEndpoint:  opts.DataflowEndpoint,
 		retryBackoff:      opts.RetryBackoff,
 	}
 }
 
-func resolveReadOnlyBaseOptions(ctx context.Context, opts ClientOptions) ([]option.ClientOption, string, error) {
+func resolveReadOnlyCredentials(opts ClientOptions) (*auth.Credentials, string, error) {
 	if opts.AssetConn != nil && opts.MonitoringConn != nil && opts.HTTPClient != nil {
 		return nil, strings.TrimSpace(opts.QuotaProject), nil
 	}
-	creds, err := google.FindDefaultCredentials(ctx, cloudPlatformReadOnlyScope)
+	creds, err := credentials.DetectDefault(&credentials.DetectOptions{
+		Scopes: []string{cloudPlatformReadOnlyScope},
+	})
 	if err != nil {
 		return nil, "", fmt.Errorf("load Application Default Credentials: %w", err)
 	}
-	qp := ResolveQuotaProject(creds, opts.QuotaProject)
-	baseOpts := []option.ClientOption{option.WithCredentials(creds)}
-	if qp != "" {
-		baseOpts = append(baseOpts, option.WithQuotaProject(qp))
-	}
-	return baseOpts, qp, nil
+	return creds, ResolveQuotaProject(creds, opts.QuotaProject), nil
 }
 
-func initRESTServices(ctx context.Context, c *Clients, opts ClientOptions, baseOpts []option.ClientOption) error {
-	if opts.HTTPClient != nil {
-		c.HTTPClient = opts.HTTPClient
-	} else {
-		hc, _, err := htransport.NewClient(ctx, baseOpts...)
-		if err != nil {
-			return fmt.Errorf("create oauth2 HTTP client: %w", err)
-		}
-		c.HTTPClient = hc
+func newAuthHTTPClient(creds *auth.Credentials, quotaProject string) (*http.Client, error) {
+	var headers http.Header
+	if quotaProject != "" {
+		headers = http.Header{quotaProjectHeader: {quotaProject}}
 	}
-
-	bqSvc, err := bigquery.NewService(ctx, restClientOptions(c.HTTPClient, opts.BigQueryEndpoint)...)
+	hc, err := httptransport.NewClient(&httptransport.Options{
+		Credentials:      creds,
+		Headers:          headers,
+		DisableTelemetry: true,
+	})
 	if err != nil {
-		return fmt.Errorf("init BigQuery client: %w", err)
+		return nil, err
 	}
-	c.BigQuery = bqSvc
-
-	dfSvc, err := dataflow.NewService(ctx, restClientOptions(c.HTTPClient, opts.DataflowEndpoint)...)
-	if err != nil {
-		return fmt.Errorf("init Dataflow client: %w", err)
-	}
-	c.Dataflow = dfSvc
-
-	return nil
-}
-
-func restClientOptions(hc *http.Client, endpoint string) []option.ClientOption {
-	opts := []option.ClientOption{option.WithHTTPClient(hc)}
-	if endpoint != "" {
-		opts = append(opts, option.WithEndpoint(endpoint))
-	}
-	return opts
+	hc.Timeout = defaultHTTPTimeout
+	return hc, nil
 }
 
 func dialOrReuse(
 	ctx context.Context,
 	existing *grpc.ClientConn,
 	endpoint string,
-	baseOpts []option.ClientOption,
+	creds *auth.Credentials,
+	quotaProject string,
 	closers *[]io.Closer,
-) (*grpc.ClientConn, error) {
+) (grpc.ClientConnInterface, error) {
 	if existing != nil {
 		return existing, nil
 	}
-	dialOpts := slices.Concat(baseOpts, []option.ClientOption{
-		option.WithEndpoint(endpoint),
-		option.WithGRPCDialOption(grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxGRPCRecvMsgBytes))),
+	var md map[string]string
+	if quotaProject != "" {
+		md = map[string]string{quotaProjectHeader: quotaProject}
+	}
+	pool, err := grpctransport.Dial(ctx, true, &grpctransport.Options{
+		Endpoint:         endpoint,
+		Credentials:      creds,
+		Metadata:         md,
+		DisableTelemetry: true,
+		GRPCDialOpts: []grpc.DialOption{
+			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxGRPCRecvMsgBytes)),
+		},
 	})
-	conn, err := gtransport.Dial(ctx, dialOpts...)
 	if err != nil {
 		return nil, err
 	}
-	*closers = append(*closers, conn)
-	return conn, nil
+	*closers = append(*closers, pool)
+	return pool, nil
+}
+
+func getJSON(ctx context.Context, hc *http.Client, rawURL string, out any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := hc.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxDrainBodyBytes))
+		_ = resp.Body.Close()
+	}()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return parseHTTPError(resp)
+	}
+	if out == nil {
+		return nil
+	}
+	return json.NewDecoder(resp.Body).Decode(out)
 }
 
 // ProbeStatus indicates the outcome of a lightweight preflight permission probe.
@@ -678,22 +750,33 @@ func (ps *preflightState) probeCAIScopes(ctx context.Context, sortedScopes []str
 	var projectIDs []string
 	var sampleProject string
 	for _, scope := range sortedScopes {
-		if strings.HasPrefix(scope, prefixProjects) {
-			projectIDs = append(projectIDs, strings.TrimPrefix(scope, prefixProjects))
+		targetProj := ""
+		if proj, ok := strings.CutPrefix(scope, prefixProjects); ok {
+			projectIDs = append(projectIDs, proj)
+			targetProj = proj
 		}
+		isOrgOrFolder := strings.HasPrefix(scope, prefixOrganizations) || strings.HasPrefix(scope, prefixFolders)
+
 		if err := waitLimiter(ctx, ps.clients.CAILimiter); err != nil {
 			return nil, err
 		}
-		resp, err := ps.clients.Asset.ListAssets(ctx, &assetpb.ListAssetsRequest{
+		req := &assetpb.ListAssetsRequest{
 			Parent:      scope,
 			ContentType: assetpb.ContentType_RESOURCE,
 			PageSize:    1,
-		})
-		ps.recordProbe(scope, "", "cloudasset.googleapis.com", "roles/cloudasset.viewer", err)
-		if err == nil && sampleProject == "" {
-			sampleProject = firstProjectFromAssets(resp.GetAssets(), ps.clients.ProjectAliases)
 		}
-		if strings.HasPrefix(scope, prefixOrganizations) || strings.HasPrefix(scope, prefixFolders) {
+		if isOrgOrFolder {
+			req.AssetTypes = []string{assetTypeProject}
+		}
+		resp, err := ps.clients.Asset.ListAssets(ctx, req)
+		ps.recordProbe(scope, targetProj, "cloudasset.googleapis.com", "roles/cloudasset.viewer", err)
+		if err == nil && sampleProject == "" {
+			sampleProject, err = ps.sampleProjectFromScope(ctx, scope, isOrgOrFolder, resp.GetAssets())
+			if err != nil {
+				return nil, err
+			}
+		}
+		if isOrgOrFolder {
 			if err := ps.probeCAIFolderAccess(ctx, scope); err != nil {
 				return nil, err
 			}
@@ -705,11 +788,39 @@ func (ps *preflightState) probeCAIScopes(ctx context.Context, sortedScopes []str
 	return projectIDs, nil
 }
 
+func (ps *preflightState) sampleProjectFromScope(ctx context.Context, scope string, isOrgOrFolder bool, assets []*assetpb.Asset) (string, error) {
+	if proj := firstProjectFromAssets(assets, ps.clients.ProjectAliases); proj != "" || !isOrgOrFolder {
+		return proj, nil
+	}
+	if err := waitLimiter(ctx, ps.clients.CAILimiter); err != nil {
+		return "", err
+	}
+	fallbackResp, fbErr := ps.clients.Asset.ListAssets(ctx, &assetpb.ListAssetsRequest{
+		Parent:      scope,
+		ContentType: assetpb.ContentType_RESOURCE,
+		PageSize:    1,
+	})
+	if fbErr != nil {
+		return "", nil
+	}
+	return firstProjectFromAssets(fallbackResp.GetAssets(), ps.clients.ProjectAliases), nil
+}
+
 func firstProjectFromAssets(assets []*assetpb.Asset, aliases map[string]string) string {
 	for _, a := range assets {
+		if a.GetAssetType() == assetTypeProject {
+			if pid := strings.TrimSpace(getStringField(a.GetResource().GetData(), "projectId")); pid != "" {
+				return pid
+			}
+		}
 		for _, anc := range a.GetAncestors() {
 			if strings.HasPrefix(anc, prefixProjects) {
 				return mapProject(strings.TrimPrefix(anc, prefixProjects), aliases)
+			}
+		}
+		if a.GetAssetType() == assetTypeProject {
+			if last := shortResourceName(a.GetName()); last != "" {
+				return mapProject(last, aliases)
 			}
 		}
 	}
@@ -773,13 +884,15 @@ func (ps *preflightState) probeProjectEnrichers(ctx context.Context, projectIDs 
 		if err := waitLimiter(ctx, ps.clients.BQLimiter); err != nil {
 			return err
 		}
-		_, err = ps.clients.BigQuery.Jobs.List(proj).AllUsers(true).MaxResults(1).Context(ctx).Do()
+		bqURL := fmt.Sprintf("%s/bigquery/v2/projects/%s/jobs?allUsers=true&maxResults=1", ps.clients.bigQueryBaseURL(), url.PathEscape(proj))
+		err = getJSON(ctx, ps.clients.HTTPClient, bqURL, nil)
 		ps.recordProbe(scope, proj, svcBigQuery, "roles/bigquery.resourceViewer", err)
 
 		if err := waitLimiter(ctx, ps.clients.DataflowLimiter); err != nil {
 			return err
 		}
-		_, err = ps.clients.Dataflow.Projects.Locations.Jobs.List(proj, "-").Filter("ACTIVE").PageSize(1).Context(ctx).Do()
+		dfURL := fmt.Sprintf("%s/v1b3/projects/%s/locations/-/jobs?filter=ACTIVE&pageSize=1", ps.clients.dataflowBaseURL(), url.PathEscape(proj))
+		err = getJSON(ctx, ps.clients.HTTPClient, dfURL, nil)
 		ps.recordProbe(scope, proj, "dataflow.googleapis.com", "roles/dataflow.viewer", err)
 	}
 	return nil
@@ -803,11 +916,12 @@ func (ps *preflightState) probeVertexReadiness(ctx context.Context, vertexOpts V
 	vhc := vertexOpts.HTTPClient
 	if vhc == nil {
 		var authErr error
-		vhc, authErr = newCloudPlatformHTTPClient(ctx, vertexProj)
+		vhc, authErr = newCloudPlatformHTTPClient(vertexProj)
 		if authErr != nil {
 			ps.recordProbe(vertexScope, vertexProj, sourceVertexIAM, roleAIPlatformUser, authErr)
 			return
 		}
+		defer vhc.CloseIdleConnections()
 	}
 
 	granted, err := probeVertexIAMPermission(ctx, vhc, vertexOpts.CRMEndpoint, vertexProj)
@@ -873,25 +987,20 @@ func RunPreflight(ctx context.Context, clients *Clients, scopes []string, vertex
 	}
 	ps.probeVertexReadiness(ctx, vertexOpts)
 
-	sort.Slice(ps.report.Probes, func(i, j int) bool {
-		if ps.report.Probes[i].Scope != ps.report.Probes[j].Scope {
-			return ps.report.Probes[i].Scope < ps.report.Probes[j].Scope
-		}
-		return ps.report.Probes[i].Source < ps.report.Probes[j].Source
+	slices.SortFunc(ps.report.Probes, func(a, b PreflightProbe) int {
+		return cmp.Or(cmp.Compare(a.Scope, b.Scope), cmp.Compare(a.Source, b.Source))
 	})
 	return ps.report, ps.firstError()
 }
 
-func newCloudPlatformHTTPClient(ctx context.Context, quotaProject string) (*http.Client, error) {
-	creds, err := google.FindDefaultCredentials(ctx, cloudPlatformScope)
+func newCloudPlatformHTTPClient(quotaProject string) (*http.Client, error) {
+	creds, err := credentials.DetectDefault(&credentials.DetectOptions{
+		Scopes: []string{cloudPlatformScope},
+	})
 	if err != nil {
 		return nil, fmt.Errorf("load Vertex AI cloud-platform credentials: %w", err)
 	}
-	opts := []option.ClientOption{option.WithCredentials(creds)}
-	if qp := ResolveQuotaProject(creds, quotaProject); qp != "" {
-		opts = append(opts, option.WithQuotaProject(qp))
-	}
-	hc, _, err := htransport.NewClient(ctx, opts...)
+	hc, err := newAuthHTTPClient(creds, ResolveQuotaProject(creds, quotaProject))
 	if err != nil {
 		return nil, fmt.Errorf("create Vertex AI oauth2 HTTP client: %w", err)
 	}
@@ -914,11 +1023,14 @@ func probeVertexIAMPermission(ctx context.Context, hc *http.Client, crmEndpoint,
 	if err != nil {
 		return false, err
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer func() {
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxDrainBodyBytes))
+		_ = resp.Body.Close()
+	}()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return false, parseHTTPError(resp)
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxDrainBodyBytes))
 	if err != nil {
 		return false, err
 	}
@@ -941,44 +1053,18 @@ func probeVertexModelREST(ctx context.Context, hc *http.Client, vertexEndpoint, 
 		}
 	}
 	endpoint := fmt.Sprintf("%s/v1/projects/%s/locations/%s/publishers/google/models/%s", base, project, location, model)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := hc.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		return nil
-	}
-	return parseHTTPError(resp)
+	return getJSON(ctx, hc, endpoint, nil)
 }
 
 func parseHTTPError(resp *http.Response) error {
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
-	gerr := &googleapi.Error{
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxDrainBodyBytes))
+	herr := &httpStatusError{
 		Code:    resp.StatusCode,
 		Message: resp.Status,
 		Body:    string(body),
-		Header:  resp.Header,
 	}
-	var wrapper struct {
-		Error struct {
-			Message string `json:"message"`
-			Details []any  `json:"details"`
-		} `json:"error"`
-	}
-	if json.Unmarshal(body, &wrapper) == nil {
-		if wrapper.Error.Message != "" {
-			gerr.Message = wrapper.Error.Message
-		}
-		if len(wrapper.Error.Details) > 0 {
-			gerr.Details = wrapper.Error.Details
-		}
-	}
-	return gerr
+	parseGCPErrorBody(body, herr)
+	return herr
 }
 
 func iamRemediation(scope, role string) string {
@@ -1015,14 +1101,10 @@ func quotaRemediation(quotaProject, reason string) string {
 }
 
 func uniqueSortedStrings(in []string) []string {
-	seen := make(map[string]struct{}, len(in))
-	out := make([]string, 0, len(in))
-	for _, s := range in {
-		if _, dup := seen[s]; !dup {
-			seen[s] = struct{}{}
-			out = append(out, s)
-		}
+	if len(in) == 0 {
+		return []string{}
 	}
-	sort.Strings(out)
-	return out
+	out := slices.Clone(in)
+	slices.Sort(out)
+	return slices.Compact(out)
 }

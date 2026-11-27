@@ -1,0 +1,378 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-26T00:00:00Z",
+  "scopes": [
+    "projects/erp-core-prod"
+  ],
+  "hierarchy": {
+    "projects": [
+      {
+        "project_id": "erp-core-prod",
+        "project_number": "200200200201",
+        "display_name": "ERP Core Prod"
+      },
+      {
+        "project_id": "p200200abcdef12-tp",
+        "display_name": "Google PSA Tenant",
+        "is_psa_tenant": true
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//alloydb.googleapis.com/projects/erp-core-prod/locations/europe-west1/clusters/erp-ledger-alloydb",
+      "asset_type": "alloydb.googleapis.com/Cluster",
+      "project_id": "erp-core-prod",
+      "location": "europe-west1",
+      "display_name": "erp-ledger-alloydb",
+      "parent_uri": "//compute.googleapis.com/projects/erp-core-prod/global/networks/erp-vpc",
+      "attributes": {
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/erp-core-prod/locations/europe-west1/keyRings/erp-keyring/cryptoKeys/erp-db-cmek",
+        "private_ip": "10.30.16.10",
+        "psa_tenant_project": "p200200abcdef12-tp",
+        "vpc": "//compute.googleapis.com/projects/erp-core-prod/global/networks/erp-vpc"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/erp-core-prod/locations/europe-west1/keyRings/erp-keyring/cryptoKeys/erp-db-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "erp-core-prod",
+      "location": "europe-west1",
+      "display_name": "erp-db-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/erp-core-prod/global/networks/erp-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "erp-core-prod",
+      "location": "global",
+      "display_name": "erp-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/erp-core-prod/regions/europe-west1/forwardingRules/erp-regional-ext-lb",
+      "asset_type": "compute.googleapis.com/ForwardingRule",
+      "project_id": "erp-core-prod",
+      "location": "europe-west1",
+      "display_name": "erp-regional-ext-lb",
+      "parent_uri": "//compute.googleapis.com/projects/erp-core-prod/regions/europe-west1/subnetworks/erp-app-subnet",
+      "attributes": {
+        "ip_address": "34.140.22.15",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "EXTERNAL_MANAGED",
+        "port_range": "443-443",
+        "subnet": "//compute.googleapis.com/projects/erp-core-prod/regions/europe-west1/subnetworks/erp-app-subnet",
+        "vpc": "//compute.googleapis.com/projects/erp-core-prod/global/networks/erp-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/erp-core-prod/regions/europe-west1/routers/erp-nat-router",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "erp-core-prod",
+      "location": "europe-west1",
+      "display_name": "erp-nat-router",
+      "parent_uri": "//compute.googleapis.com/projects/erp-core-prod/global/networks/erp-vpc",
+      "attributes": {
+        "bgp_asn": 64512,
+        "nat_count": 1,
+        "vpc": "//compute.googleapis.com/projects/erp-core-prod/global/networks/erp-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/erp-core-prod/regions/europe-west1/subnetworks/erp-app-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "erp-core-prod",
+      "location": "europe-west1",
+      "display_name": "erp-app-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/erp-core-prod/global/networks/erp-vpc",
+      "attributes": {
+        "cidr": "10.30.0.0/22",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/erp-core-prod/global/networks/erp-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/erp-core-prod/zones/europe-west1-b/instanceGroupManagers/erp-app-mig",
+      "asset_type": "compute.googleapis.com/InstanceGroupManager",
+      "project_id": "erp-core-prod",
+      "location": "europe-west1-b",
+      "display_name": "erp-app-mig",
+      "parent_uri": "//compute.googleapis.com/projects/erp-core-prod/regions/europe-west1/subnetworks/erp-app-subnet",
+      "attributes": {
+        "base_instance_name": "erp-app-node",
+        "target_size": 4
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/erp-core-prod/zones/europe-west1-b/instances/erp-bastion-vm",
+      "asset_type": "compute.googleapis.com/Instance",
+      "project_id": "erp-core-prod",
+      "location": "europe-west1-b",
+      "display_name": "erp-bastion-vm",
+      "parent_uri": "//compute.googleapis.com/projects/erp-core-prod/regions/europe-west1/subnetworks/erp-app-subnet",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/erp-core-prod/locations/europe-west1/keyRings/erp-keyring/cryptoKeys/erp-db-cmek",
+        "machine_type": "e2-small",
+        "private_ip": "10.30.0.12",
+        "service_account": "erp-bastion-sa@erp-core-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/erp-core-prod/regions/europe-west1/subnetworks/erp-app-subnet",
+        "vpc": "//compute.googleapis.com/projects/erp-core-prod/global/networks/erp-vpc",
+        "zone": "europe-west1-b"
+      }
+    },
+    {
+      "uri": "//dns.googleapis.com/projects/erp-core-prod/managedZones/erp-internal-zone",
+      "asset_type": "dns.googleapis.com/ManagedZone",
+      "project_id": "erp-core-prod",
+      "location": "global",
+      "display_name": "erp-internal-zone",
+      "attributes": {
+        "dns_name": "erp.internal.",
+        "visibility": "private"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/erp-core-prod/serviceAccounts/erp-app-sa@erp-core-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "erp-core-prod",
+      "display_name": "erp-app-sa@erp-core-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "erp-app-sa@erp-core-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/erp-core-prod/serviceAccounts/erp-bastion-sa@erp-core-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "erp-core-prod",
+      "display_name": "erp-bastion-sa@erp-core-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "erp-bastion-sa@erp-core-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//monitoring.googleapis.com/projects/erp-core-prod/alertPolicies/9012345601",
+      "asset_type": "monitoring.googleapis.com/AlertPolicy",
+      "project_id": "erp-core-prod",
+      "display_name": "erp-alloydb-cpu-high",
+      "attributes": {
+        "enabled": true
+      }
+    },
+    {
+      "uri": "//redis.googleapis.com/projects/erp-core-prod/locations/europe-west1/instances/erp-session-redis",
+      "asset_type": "redis.googleapis.com/Instance",
+      "project_id": "erp-core-prod",
+      "location": "europe-west1",
+      "display_name": "erp-session-redis",
+      "parent_uri": "//compute.googleapis.com/projects/erp-core-prod/global/networks/erp-vpc",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/erp-core-prod/locations/europe-west1/keyRings/erp-keyring/cryptoKeys/erp-db-cmek",
+        "memory_size_gb": 5,
+        "port": 6379,
+        "private_ip": "10.30.24.4",
+        "redis_version": "REDIS_7_2",
+        "tier": "STANDARD_HA",
+        "vpc": "//compute.googleapis.com/projects/erp-core-prod/global/networks/erp-vpc"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/erp-core-prod/secrets/erp-db-admin-pass",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "erp-core-prod",
+      "display_name": "erp-db-admin-pass",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/erp-core-prod/locations/europe-west1/keyRings/erp-keyring/cryptoKeys/erp-db-cmek",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/erp-ledger-backups",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "erp-core-prod",
+      "location": "europe-west1",
+      "display_name": "erp-ledger-backups",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/erp-core-prod/locations/europe-west1/keyRings/erp-keyring/cryptoKeys/erp-db-cmek",
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "c8c7b97009a8d4cf",
+      "from_uri": "//alloydb.googleapis.com/projects/erp-core-prod/locations/europe-west1/clusters/erp-ledger-alloydb",
+      "to_uri": "//cloudkms.googleapis.com/projects/erp-core-prod/locations/europe-west1/keyRings/erp-keyring/cryptoKeys/erp-db-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "7f1c9150764db634",
+      "from_uri": "//compute.googleapis.com/projects/erp-core-prod/global/networks/erp-vpc",
+      "to_uri": "//alloydb.googleapis.com/projects/erp-core-prod/locations/europe-west1/clusters/erp-ledger-alloydb",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com (p200200abcdef12-tp)"
+    },
+    {
+      "id": "616bf81b963cfabe",
+      "from_uri": "//compute.googleapis.com/projects/erp-core-prod/global/networks/erp-vpc",
+      "to_uri": "//redis.googleapis.com/projects/erp-core-prod/locations/europe-west1/instances/erp-session-redis",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com (p200200abcdef12-tp)"
+    },
+    {
+      "id": "af30acd9abc2bff5",
+      "from_uri": "//compute.googleapis.com/projects/erp-core-prod/regions/europe-west1/forwardingRules/erp-regional-ext-lb",
+      "to_uri": "//compute.googleapis.com/projects/erp-core-prod/zones/europe-west1-b/instanceGroupManagers/erp-app-mig",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "35b9d01efc4174ed",
+      "from_uri": "//compute.googleapis.com/projects/erp-core-prod/zones/europe-west1-b/instanceGroupManagers/erp-app-mig",
+      "to_uri": "//alloydb.googleapis.com/projects/erp-core-prod/locations/europe-west1/clusters/erp-ledger-alloydb",
+      "kind": "CONFIG_REF",
+      "detail": "10.30.16.10"
+    },
+    {
+      "id": "1b51c34a664c5594",
+      "from_uri": "//compute.googleapis.com/projects/erp-core-prod/zones/europe-west1-b/instanceGroupManagers/erp-app-mig",
+      "to_uri": "//compute.googleapis.com/projects/erp-core-prod/regions/europe-west1/routers/erp-nat-router",
+      "kind": "CONFIG_REF",
+      "detail": "egress_nat"
+    },
+    {
+      "id": "f7d9a71b5445872c",
+      "from_uri": "//compute.googleapis.com/projects/erp-core-prod/zones/europe-west1-b/instanceGroupManagers/erp-app-mig",
+      "to_uri": "//iam.googleapis.com/projects/erp-core-prod/serviceAccounts/erp-app-sa@erp-core-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "4a0e644604c6af11",
+      "from_uri": "//compute.googleapis.com/projects/erp-core-prod/zones/europe-west1-b/instanceGroupManagers/erp-app-mig",
+      "to_uri": "//redis.googleapis.com/projects/erp-core-prod/locations/europe-west1/instances/erp-session-redis",
+      "kind": "CONFIG_REF",
+      "detail": "10.30.24.4"
+    },
+    {
+      "id": "04783946f3408dc0",
+      "from_uri": "//compute.googleapis.com/projects/erp-core-prod/zones/europe-west1-b/instanceGroupManagers/erp-app-mig",
+      "to_uri": "//secretmanager.googleapis.com/projects/erp-core-prod/secrets/erp-db-admin-pass",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "5231d6c4ca30807e",
+      "from_uri": "//compute.googleapis.com/projects/erp-core-prod/zones/europe-west1-b/instanceGroupManagers/erp-app-mig",
+      "to_uri": "//storage.googleapis.com/erp-ledger-backups",
+      "kind": "CONFIG_REF",
+      "detail": "gs://erp-ledger-backups"
+    },
+    {
+      "id": "4aa2dfd5fbf8134c",
+      "from_uri": "//compute.googleapis.com/projects/erp-core-prod/zones/europe-west1-b/instances/erp-bastion-vm",
+      "to_uri": "//alloydb.googleapis.com/projects/erp-core-prod/locations/europe-west1/clusters/erp-ledger-alloydb",
+      "kind": "CONFIG_REF",
+      "detail": "admin_tunnel"
+    },
+    {
+      "id": "99b8100b0ac02e8b",
+      "from_uri": "//compute.googleapis.com/projects/erp-core-prod/zones/europe-west1-b/instances/erp-bastion-vm",
+      "to_uri": "//iam.googleapis.com/projects/erp-core-prod/serviceAccounts/erp-bastion-sa@erp-core-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "f187b6c1a2ec9855",
+      "from_uri": "//dns.googleapis.com/projects/erp-core-prod/managedZones/erp-internal-zone",
+      "to_uri": "//compute.googleapis.com/projects/erp-core-prod/global/networks/erp-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "private_zone"
+    },
+    {
+      "id": "78a4f0fee924a314",
+      "from_uri": "//iam.googleapis.com/projects/erp-core-prod/serviceAccounts/erp-app-sa@erp-core-prod.iam.gserviceaccount.com",
+      "to_uri": "//alloydb.googleapis.com/projects/erp-core-prod/locations/europe-west1/clusters/erp-ledger-alloydb",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/alloydb.client"
+    },
+    {
+      "id": "35c03eb64a306de7",
+      "from_uri": "//iam.googleapis.com/projects/erp-core-prod/serviceAccounts/erp-app-sa@erp-core-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/erp-core-prod/secrets/erp-db-admin-pass",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "12b965a475298520",
+      "from_uri": "//iam.googleapis.com/projects/erp-core-prod/serviceAccounts/erp-app-sa@erp-core-prod.iam.gserviceaccount.com",
+      "to_uri": "//storage.googleapis.com/erp-ledger-backups",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/storage.objectCreator"
+    },
+    {
+      "id": "b6556295bc33325d",
+      "from_uri": "//iam.googleapis.com/projects/erp-core-prod/serviceAccounts/erp-bastion-sa@erp-core-prod.iam.gserviceaccount.com",
+      "to_uri": "//alloydb.googleapis.com/projects/erp-core-prod/locations/europe-west1/clusters/erp-ledger-alloydb",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/alloydb.viewer",
+      "heuristic": true
+    },
+    {
+      "id": "a82f77b573480d73",
+      "from_uri": "//storage.googleapis.com/erp-ledger-backups",
+      "to_uri": "//cloudkms.googleapis.com/projects/erp-core-prod/locations/europe-west1/keyRings/erp-keyring/cryptoKeys/erp-db-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "alloydb.googleapis.com/Instance": 2,
+    "compute.googleapis.com/Address": 2,
+    "compute.googleapis.com/Autoscaler": 1,
+    "compute.googleapis.com/BackendService": 1,
+    "compute.googleapis.com/Disk": 5,
+    "compute.googleapis.com/Firewall": 12,
+    "compute.googleapis.com/HealthCheck": 1,
+    "compute.googleapis.com/InstanceTemplate": 1,
+    "compute.googleapis.com/Route": 8,
+    "dns.googleapis.com/ResourceRecordSet": 6
+  },
+  "coverage_ledger": [
+    {
+      "scope": "projects/erp-core-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/erp-core-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/erp-core-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/erp-core-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/erp-core-prod",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}

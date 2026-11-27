@@ -337,9 +337,8 @@ icons:
 		})
 	}
 
-	// compileIconSymbol must terminate cleanly on malformed XML rather than spinning.
-	malformedSym := compileIconSymbol("bad", `<svg viewBox="0 0 24 24"><rect></svg>`)
-	if malformedSym.id != "gcp-icon-bad" {
-		t.Fatalf("malformedSym.id = %q, want gcp-icon-bad", malformedSym.id)
+	// validateAndCompileSVG must fail cleanly on malformed XML rather than spinning.
+	if _, err := validateAndCompileSVG("bad", `<svg viewBox="0 0 24 24"><rect></svg>`); err == nil {
+		t.Fatal("validateAndCompileSVG succeeded on malformed XML, want error")
 	}
 }

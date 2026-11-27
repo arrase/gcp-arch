@@ -50,7 +50,6 @@ type appConfig struct {
 	VertexLocation string            `yaml:"vertex_location"`
 	Model          string            `yaml:"model"`
 	ThinkingLevel  string            `yaml:"thinking_level"`
-	Concurrency    *int              `yaml:"concurrency"`
 	CloudBuildRuns *int              `yaml:"cloudbuild_runs"`
 	ChromePath     string            `yaml:"chrome_path"`
 	Format         stringSlice       `yaml:"format"`
@@ -130,9 +129,6 @@ func validateConfig(cfg *appConfig) error {
 	if _, err := synth.ParseThinkingLevel(cfg.ThinkingLevel); err != nil {
 		return err
 	}
-	if cfg.Concurrency != nil && *cfg.Concurrency < 1 {
-		return fmt.Errorf("concurrency must be >= 1")
-	}
 	if cfg.CloudBuildRuns != nil && *cfg.CloudBuildRuns < 1 {
 		return fmt.Errorf("cloudbuild_runs must be >= 1")
 	}
@@ -149,15 +145,9 @@ func cleanConfigProjectAliases(raw map[string]string) (map[string]string, error)
 	}
 	cleaned := make(map[string]string, len(raw))
 	for rawNum, rawID := range raw {
-		num := strings.TrimSpace(rawNum)
-		id := strings.TrimSpace(rawID)
-		if !isAllDigits(num) || !isValidProjectID(id) {
-			return nil, fmt.Errorf("invalid project_aliases entry %q=%q (expected <NUMBER>: <ID>)", rawNum, rawID)
+		if err := setProjectAlias(cleaned, rawNum, rawID, "project_aliases"); err != nil {
+			return nil, err
 		}
-		if prev, exists := cleaned[num]; exists && prev != id {
-			return nil, fmt.Errorf("conflicting project_aliases for project number %s (%q vs %q)", num, prev, id)
-		}
-		cleaned[num] = id
 	}
 	return cleaned, nil
 }

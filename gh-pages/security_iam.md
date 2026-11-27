@@ -11,7 +11,7 @@ This guide details the OAuth trust boundaries, quota project resolution, GCP err
 `gcp-arch` enforces strict separation between **target infrastructure discovery** and **Vertex AI synthesis billing** using two independent OAuth scopes and separate client initializers:
 
 * **Read-Only Discovery Plane ([`internal/extract/client.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go)):** `NewClients` requests Application Default Credentials strictly scoped to `https://www.googleapis.com/auth/cloud-platform.read-only` (`cloudPlatformReadOnlyScope`). Every gRPC and REST discovery call (`Cloud Asset Inventory`, `Cloud Monitoring`, `BigQuery`, `Dataflow`) carries only read-only tokens and bills API quota to the caller's quota project (`--quota-project` or ADC `quota_project_id`).
-* **Vertex AI Synthesis Plane ([`internal/synth/client.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go) & Vertex preflight):** `newGenAIClient` and `newCloudPlatformHTTPClient` request `https://www.googleapis.com/auth/cloud-platform` (`cloudPlatformScope`) exclusively against the caller-designated `--vertex-project`. Target customer projects are **never** billed for Gemini inference or sent `cloud-platform` write tokens.
+* **Vertex AI Synthesis Plane ([`internal/synth/client.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go) & Vertex preflight):** `NewVertexClient` and `newCloudPlatformHTTPClient` authenticate via `cloud.google.com/go/auth` (`https://www.googleapis.com/auth/cloud-platform`, `cloudPlatformScope`) exclusively against the caller-designated `--vertex-project`. Target customer projects are **never** billed for Gemini inference or sent `cloud-platform` write tokens.
 * **Air-Gapped Local Plane (`validate` & `render`):** Operates completely offline on Git-tracked `architecture.yaml` (and optional local `facts.json`) with zero GCP credentials and zero external network calls.
 
 ```mermaid
@@ -35,7 +35,7 @@ flowchart LR
     subgraph OFFLINE["Offline Local Plane (zero network)"]
         FACTS["facts.json (0600, gitignored, scrubbed)"]
         YAML["architecture.yaml (0644, Git-tracked)"]
-        OUT["PDF / 3x PNG / HTML (CSP + isolated Chrome)"]
+        OUT["1:1 PDF / <= 2.0x PNG / HTML (CSP + isolated Chrome)"]
         FACTS --> YAML
         YAML --> OUT
     end
@@ -43,7 +43,7 @@ flowchart LR
     CLI -- "preflight / extract" --> RO
     TARGET -- "Sanitized allowlist projection" --> FACTS
     CLI -- "synthesize / vertex preflight" --> CP
-    FACTS -- "Short-ID interned facts" --> VP
+    FACTS -- "Compact skeleton summary" --> VP
     VP -- "Structured JSON" --> YAML
     CLI -- "validate / render" --> YAML
 ```
@@ -99,7 +99,7 @@ The table below lists every IAM role required or recommended across all three su
 | **Target Project(s)** | `roles/bigquery.resourceViewer` | **Recommended** | `bigquery.jobs.list` (`AllUsers=true`, `Projection=full`, partial `Fields`) — USD 0 SQL slot cost | Skips 7-day `BQ_LINEAGE` (`sql_elt` and `bq_job`) edges (`IAM_DENIED`). |
 | **Target Project(s)** | `roles/dataflow.viewer` | **Recommended** | `dataflow.projects.locations.jobs.list` (`Filter=ACTIVE`) and `.get` (`View=JOB_VIEW_DESCRIPTION`) | Skips active `dataflow.googleapis.com/Job` synthesis and pipeline `DisplayData` `CONFIG_REF` edges (`IAM_DENIED`). |
 | **Caller Quota Project** | `roles/serviceusage.serviceUsageConsumer` | **Required** *(when using quota project)* | `X-Goog-User-Project` billing & quota checks across CAI, Monitoring, BigQuery, Dataflow *(because `option.WithQuotaProject(qp)` is attached to the shared `HTTPClient` used by BigQuery and Dataflow in [`internal/extract/client.go#L258-L260`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L258-L260), [`#L509-L537`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L509-L537), `bigquery.googleapis.com` and `dataflow.googleapis.com` also consume quota on the caller's quota project when those enrichers run, in addition to `cloudasset.googleapis.com` and `monitoring.googleapis.com`)* | **Fatal** `QuotaProjectError` (`USER_PROJECT_DENIED` / `SERVICE_DISABLED`, including when `bigquery.googleapis.com` or `dataflow.googleapis.com` is disabled on the quota project while those enrichers run), exit `1`. |
-| **Vertex AI Project (`--vertex-project`)** | `roles/aiplatform.user` | **Required** *(Stage 2 synthesis & Vertex preflight)* | `projects:testIamPermissions` (`aiplatform.endpoints.predict`), `Models.Get` (zero-token preflight), `Models.GenerateContent` (Gemini 4 structured JSON) | Stage 2 `synthesize` fails with permission error; `preflight` flags `vertex.iam` / `vertex.model` as `DENIED`. |
+| **Vertex AI Project (`--vertex-project`)** | `roles/aiplatform.user` | **Required** *(Stage 2 synthesis & Vertex preflight)* | `projects:testIamPermissions` (`aiplatform.endpoints.predict`), REST `GET .../publishers/google/models/<model>` (zero-token preflight), REST `:generateContent` (Gemini 4 structured JSON) | Stage 2 `synthesize` fails with permission error; `preflight` flags `vertex.iam` / `vertex.model` as `DENIED`. |
 
 ### Copy-Pasteable `gcloud` Grant Commands
 
@@ -157,7 +157,7 @@ The table below lists every IAM role required or recommended across all three su
     ```bash
     PRINCIPAL="user:architect@example.com"
     QUOTA_PROJECT="consultant-ops"
-    VERTEX_PROJECT="consultant-ai-sandbox"
+    VERTEX_PROJECT="my-vertex-project"
 
     # Enable discovery APIs and grant Service Usage Consumer on the caller's quota project
     # (bigquery.googleapis.com and dataflow.googleapis.com also consume quota on the quota project when those enrichers run)
@@ -194,7 +194,7 @@ The table below lists every IAM role required or recommended across all three su
 | **4** | `bigquery.googleapis.com` | Each explicit / sample project | `BigQuery.Jobs.List(proj).AllUsers(true).MaxResults(1)` | `roles/bigquery.resourceViewer` |
 | **5** | `dataflow.googleapis.com` | Each explicit / sample project | `Dataflow.Projects.Locations.Jobs.List(proj, "-").Filter("ACTIVE").PageSize(1)` | `roles/dataflow.viewer` |
 | **6** | `vertex.iam` | `--vertex-project` *(only when set, using `cloud-platform` scope)* | `POST https://cloudresourcemanager.googleapis.com/v1/projects/<proj>:testIamPermissions` with `{"permissions":["aiplatform.endpoints.predict"]}` | `roles/aiplatform.user` |
-| **7** | `vertex.model` | `--vertex-project` *(only when set, zero-token check)* | `synth.ProbeVertexModel` -> `google.golang.org/genai` `Models.Get(ctx, model, nil)` *(or fallback REST `GET /v1/projects/<proj>/locations/<loc>/publishers/google/models/<model>`)* — verifies model visibility & endpoint reachability at **0 token cost**. | `roles/aiplatform.user` |
+| **7** | `vertex.model` | `--vertex-project` *(only when set, zero-token check)* | `synth.ProbeVertexModel` -> direct Vertex AI REST `GET /v1/projects/<proj>/locations/<loc>/publishers/google/models/<model>` over `cloud.google.com/go/auth` — verifies model visibility & endpoint reachability at **0 token cost**. | `roles/aiplatform.user` |
 
 After all stages complete, `RunPreflight` deterministically sorts `report.Probes` by `(Scope, Source)` before printing the table or `--json` output.
 
@@ -257,7 +257,7 @@ All **22** sensitive payload keys in `sensitiveDroppedKeys` ([`internal/extract/
 
 ### 4. File Permissions, `.gitignore` & Crash-Safe Atomic I/O
 
-Every output file written by `gcp-arch` goes through `ioutil.WriteFileAtomic` ([`internal/ioutil/atomic.go#L19-L67`](https://github.com/arrase/gcp-arch/blob/main/internal/ioutil/atomic.go#L19-L67)), executing an explicit crash-safe sequence:
+Every output file written by `gcp-arch` goes through `atomicfile.Write` or buffered `atomicfile.WriteFunc` ([`internal/atomicfile/atomicfile.go#L19-L90`](https://github.com/arrase/gcp-arch/blob/main/internal/atomicfile/atomicfile.go#L19-L90)), executing an explicit crash-safe sequence:
 
 ```text
 MkdirAll(dirPerm) -> CreateTemp(dir, ".gcp-arch-*.tmp") -> Write -> Sync (fsync) -> Chmod(filePerm) -> Close -> os.Rename
@@ -283,7 +283,7 @@ Stage 3 (`gcp-arch render`) is hardened against XSS, data exfiltration, and unin
   All external HTTP/HTTPS requests, WebSockets, beacons, and third-party font/image loads are blocked at the browser engine level. Fonts (`Inter` 400–700, `JetBrains Mono` 400–500) are base64-embedded as `data:font/woff2` URIs.
 * **Strict Inline SVG Validation ([`internal/icons/validate.go`](https://github.com/arrase/gcp-arch/blob/main/internal/icons/validate.go)):** `ValidateSVG` parses every embedded SVG icon with `encoding/xml` and rejects XML directives, processing instructions, multiple `<svg>` roots ([`#L39-L41`](https://github.com/arrase/gcp-arch/blob/main/internal/icons/validate.go#L39-L41)), trailing content outside `<svg>` ([`#L65-L67`](https://github.com/arrase/gcp-arch/blob/main/internal/icons/validate.go#L65-L67)), forbidden elements (`<script>`, `<foreignObject>`, `<iframe>`, `<embed>`, `<object>`), `on*` event handlers, non-SVG `xmlns` and prefixed `xmlns:*` attributes ([`#L133-L141`](https://github.com/arrase/gcp-arch/blob/main/internal/icons/validate.go#L133-L141)), `javascript:`/`vbscript:`/`data:` URI schemes, `http://`/`https://` and protocol-relative `//` URLs, CSS backslash escapes, `@import`, `expression()`, and non-local `url(...)` references (only `#id` fragment references are permitted).
 * **Script-Breakout Escaping:** Routing metadata is serialized with Go's `encoding/json`, which escapes `<`, `>`, and `&` as `\u003c`, `\u003e`, and `\u0026`, preventing `</script>` injection.
-* **Isolated Ephemeral Headless Chrome ([`internal/render/cdp.go#L329-L360`](https://github.com/arrase/gcp-arch/blob/main/internal/render/cdp.go#L329-L360)):** Launches Chrome/Chromium against a temporary `0600` `file://` HTML input inside a dedicated `0700` `--user-data-dir` with `--headless=new`, `--disable-gpu`, `--no-first-run`, `--no-default-browser-check`, `--disable-background-networking`, `--disable-sync`, `--disable-extensions`, `--metrics-recording-only`, and `--mute-audio`. `--no-sandbox` is enabled **only** inside Linux containers (`/.dockerenv`, `/run/.containerenv`, or container cgroup) where unprivileged user namespaces are disabled (`unprivileged_userns_clone == 0`) or running as UID `0` (`needsNoSandbox()`, [`internal/render/cdp.go#L436-L460`](https://github.com/arrase/gcp-arch/blob/main/internal/render/cdp.go#L436-L460)).
+* **Isolated Ephemeral Headless Chrome ([`internal/render/chrome.go#L219-L252`](https://github.com/arrase/gcp-arch/blob/main/internal/render/chrome.go#L219-L252)):** Launches Chrome/Chromium against a temporary `0600` `file://` HTML input inside a dedicated `0700` `--user-data-dir` with `chromedp.DefaultExecAllocatorOptions` (`--no-first-run`, `--no-default-browser-check`, `--disable-background-networking`, `--disable-sync`, `--disable-extensions`, `--metrics-recording-only`) plus `--headless=new`, `--disable-gpu`, `--mute-audio`, `--disk-cache-size=1`, `--media-cache-size=1`, and `--renderer-process-limit=1`. `--no-sandbox` is enabled **only** inside Linux containers (`/.dockerenv`, `/run/.containerenv`, or container cgroup) where unprivileged user namespaces are disabled (`unprivileged_userns_clone == 0`) or running as UID `0` (`needsNoSandbox()`, [`internal/render/chrome.go#L399-L430`](https://github.com/arrase/gcp-arch/blob/main/internal/render/chrome.go#L399-L430)).
 
 ---
 
@@ -291,5 +291,5 @@ Stage 3 (`gcp-arch render`) is hardened against XSS, data exfiltration, and unin
 
 * [CLI & Configuration](cli_configuration.md) — Exact flags for `preflight`, `extract`, `synthesize`, `validate`, and `render`, plus `config.yaml` and exit codes.
 * [Stage 1 — Read-Only Extraction](extraction.md) — How sanitized facts, coverage entries, and allowlisted attributes are produced.
-* [Stage 2 — Gemini 4 Synthesis & Day-2](synthesis.md) — Short-ID interning and closed-world Vertex AI synthesis on `--vertex-project`.
-* [Stage 3 — Offline Rendering & Routing](rendering.md) — Complete offline HTML/PDF/PNG pipeline and Chrome DevTools Protocol runner.
+* [Stage 2 — Gemini 4 Synthesis & Day-2](synthesis.md) — Deterministic containment skeleton and bounded Vertex AI REST annotation on `--vertex-project`.
+* [Stage 3 — Offline Rendering & Routing](rendering.md) — Complete offline HTML/PDF/PNG pipeline, streaming PNG verification, and Chrome DevTools Protocol runner.

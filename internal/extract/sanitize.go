@@ -1,10 +1,11 @@
 package extract
 
 import (
+	"maps"
 	"net/netip"
 	"net/url"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
@@ -36,32 +37,6 @@ var (
 		"cluster": true, "json": true, "yaml": true, "yml": true, "txt": true,
 		"csv": true, "parquet": true, "sql": true, "py": true, "go": true, "sh": true,
 		"googleapis": true,
-	}
-
-	// sensitiveDroppedKeys lists keys unconditionally excluded from any emitted metadata.
-	sensitiveDroppedKeys = map[string]bool{
-		"startup-script":            true,
-		"startup-script-url":        true,
-		"shutdown-script":           true,
-		"user-data":                 true,
-		"env":                       true,
-		"envvariables":              true,
-		"secretenv":                 true,
-		"environmentvariables":      true,
-		"buildenvironmentvariables": true,
-		"args":                      true,
-		"command":                   true,
-		"script":                    true,
-		"data":                      true,
-		"binarydata":                true,
-		"stringdata":                true,
-		"substitutions":             true,
-		"query":                     true,
-		"rawquery":                  true,
-		"schema":                    true,
-		"webhookconfig":             true,
-		"kubectl.kubernetes.io/last-applied-configuration": true,
-		"last-applied-configuration":                       true,
 	}
 
 	// suppressedPlumbingServices salvaged from base_catalog.yaml control-plane/plumbing APIs.
@@ -223,11 +198,6 @@ func IsPSATenantProject(projectID string) bool {
 	return psaTenantRe.MatchString(strings.ToLower(strings.TrimSpace(projectID)))
 }
 
-// IsSensitiveKey reports whether key is unconditionally dropped by sanitization rules.
-func IsSensitiveKey(key string) bool {
-	return sensitiveDroppedKeys[strings.ToLower(strings.TrimSpace(key))]
-}
-
 // SanitizeURL removes userinfo (credentials), query strings, and fragments from a URL.
 func SanitizeURL(raw string) string {
 	s := strings.TrimSpace(raw)
@@ -261,6 +231,9 @@ func (c *refCollector) addEnv(v string) {
 	if v == "" {
 		return
 	}
+	if c.seenEnv == nil {
+		c.seenEnv = make(map[string]struct{}, 4)
+	}
 	if _, dup := c.seenEnv[v]; !dup {
 		c.seenEnv[v] = struct{}{}
 		c.envRefs = append(c.envRefs, v)
@@ -270,6 +243,9 @@ func (c *refCollector) addEnv(v string) {
 func (c *refCollector) addSec(v string) {
 	if v == "" {
 		return
+	}
+	if c.seenSec == nil {
+		c.seenSec = make(map[string]struct{}, 2)
 	}
 	if _, dup := c.seenSec[v]; !dup {
 		c.seenSec[v] = struct{}{}
@@ -292,96 +268,125 @@ func (c *refCollector) addCanonical(canon string) {
 // unconditionally discarding raw secrets, credentials, and scripts.
 func ExtractSanitizedRefs(raw string, projIdx map[string]string) (envRefs []string, secretRefs []string) {
 	s := strings.TrimSpace(raw)
-	if s == "" {
+	if s == "" || (!strings.ContainsAny(s, "/:.-") && !strings.Contains(s, "gcloud")) {
 		return nil, nil
 	}
-	c := &refCollector{
-		seenEnv: make(map[string]struct{}),
-		seenSec: make(map[string]struct{}),
-	}
-	scanSecretAndSQLRefs(s, projIdx, c)
-	scanRegistryAndCLIFlagRefs(s, projIdx, c)
-	scanURIAndEndpointRefs(s, projIdx, c)
-	scanNetworkAndDatasetRefs(s, projIdx, c)
+	var c refCollector
+	scanSecretAndSQLRefs(s, projIdx, &c)
+	scanRegistryAndCLIFlagRefs(s, projIdx, &c)
+	scanURIAndEndpointRefs(s, projIdx, &c)
+	scanNetworkAndDatasetRefs(s, projIdx, &c)
 	return c.envRefs, c.secretRefs
 }
 
 func scanSecretAndSQLRefs(s string, projIdx map[string]string, c *refCollector) {
-	for _, m := range secretRefRe.FindAllString(s, -1) {
-		c.addSec(CanonicalizeAIP122(m, projIdx))
+	if strings.Contains(s, "/secrets/") {
+		for _, m := range secretRefRe.FindAllString(s, -1) {
+			c.addSec(CanonicalizeAIP122(m, projIdx))
+		}
 	}
-	for _, m := range cloudSQLPathRe.FindAllStringSubmatch(s, -1) {
-		c.addEnv(prefixSQLProjects + mapProject(m[1], projIdx) + segInstances + m[3])
+	if strings.Contains(s, "/cloudsql/") {
+		for _, m := range cloudSQLPathRe.FindAllStringSubmatch(s, -1) {
+			c.addEnv(prefixSQLProjects + mapProject(m[1], projIdx) + segInstances + m[3])
+		}
 	}
-	for _, m := range bareCloudSQLRe.FindAllStringSubmatch(s, -1) {
-		c.addEnv(prefixSQLProjects + mapProject(m[1], projIdx) + segInstances + m[3])
+	if strings.ContainsRune(s, ':') {
+		for _, m := range bareCloudSQLRe.FindAllStringSubmatch(s, -1) {
+			c.addEnv(prefixSQLProjects + mapProject(m[1], projIdx) + segInstances + m[3])
+		}
 	}
 }
 
 func scanRegistryAndCLIFlagRefs(s string, projIdx map[string]string, c *refCollector) {
-	for _, m := range artifactRegistryRe.FindAllStringSubmatch(s, -1) {
-		loc := strings.ToLower(m[1])
-		proj := mapProject(m[2], projIdx)
-		c.addEnv("//artifactregistry.googleapis.com/projects/" + proj + segLocations + loc + "/repositories/" + m[3])
+	if strings.Contains(s, ".pkg.dev/") {
+		for _, m := range artifactRegistryRe.FindAllStringSubmatch(s, -1) {
+			loc := strings.ToLower(m[1])
+			proj := mapProject(m[2], projIdx)
+			c.addEnv("//artifactregistry.googleapis.com/projects/" + proj + segLocations + loc + "/repositories/" + m[3])
+		}
 	}
-	for _, m := range gcrImageRe.FindAllStringSubmatch(s, -1) {
-		c.addEnv(prefixGCR + mapProject(m[2], projIdx))
+	if strings.Contains(s, "gcr.io/") {
+		for _, m := range gcrImageRe.FindAllStringSubmatch(s, -1) {
+			c.addEnv(prefixGCR + mapProject(m[2], projIdx))
+		}
 	}
-	for _, m := range flagProjectRe.FindAllStringSubmatch(s, -1) {
-		c.addEnv(flagProjectPrefix + mapProject(m[1], projIdx))
+	if strings.Contains(s, "--project") {
+		for _, m := range flagProjectRe.FindAllStringSubmatch(s, -1) {
+			c.addEnv(flagProjectPrefix + mapProject(m[1], projIdx))
+		}
 	}
-	for _, m := range flagClusterRe.FindAllStringSubmatch(s, -1) {
-		c.addEnv(flagClusterPrefix + m[1])
+	if strings.Contains(s, "--cluster") {
+		for _, m := range flagClusterRe.FindAllStringSubmatch(s, -1) {
+			c.addEnv(flagClusterPrefix + m[1])
+		}
 	}
-	for _, m := range gcloudRunDeployRe.FindAllStringSubmatch(s, -1) {
-		c.addEnv(prefixRunDeploy + m[1])
+	if strings.Contains(s, "gcloud") {
+		for _, m := range gcloudRunDeployRe.FindAllStringSubmatch(s, -1) {
+			c.addEnv(prefixRunDeploy + m[1])
+		}
 	}
 }
 
 func scanURIAndEndpointRefs(s string, projIdx map[string]string, c *refCollector) {
-	for _, idx := range aip122URIRe.FindAllStringIndex(s, -1) {
-		if idx[0] > 0 && s[idx[0]-1] == ':' {
-			continue
+	if strings.Contains(s, "googleapis.com/") {
+		for _, idx := range aip122URIRe.FindAllStringIndex(s, -1) {
+			if idx[0] > 0 && s[idx[0]-1] == ':' {
+				continue
+			}
+			c.addCanonical(CanonicalizeAIP122(s[idx[0]:idx[1]], projIdx))
 		}
-		c.addCanonical(CanonicalizeAIP122(s[idx[0]:idx[1]], projIdx))
-	}
-	for _, m := range googleapisURLRe.FindAllString(s, -1) {
-		c.addCanonical(CanonicalizeAIP122(SanitizeURL(m), projIdx))
-	}
-	for _, m := range gcsBucketRe.FindAllStringSubmatch(s, -1) {
-		c.addEnv("gs://" + m[1])
-	}
-	for _, m := range runAppURLRe.FindAllStringSubmatch(s, -1) {
-		c.addEnv(prefixHTTPS + strings.ToLower(m[1]))
-	}
-	for _, m := range cloudFuncURLRe.FindAllStringSubmatch(s, -1) {
-		ref := prefixHTTPS + strings.ToLower(m[1])
-		if m[2] != "" {
-			ref += "/" + m[2]
+		for _, m := range googleapisURLRe.FindAllString(s, -1) {
+			c.addCanonical(CanonicalizeAIP122(SanitizeURL(m), projIdx))
 		}
-		c.addEnv(ref)
 	}
-	for _, m := range relResourceRe.FindAllString(s, -1) {
-		c.addCanonical(CanonicalizeAIP122(m, projIdx))
+	if strings.Contains(s, "gs://") {
+		for _, m := range gcsBucketRe.FindAllStringSubmatch(s, -1) {
+			c.addEnv("gs://" + m[1])
+		}
+	}
+	if strings.Contains(s, ".run.app") {
+		for _, m := range runAppURLRe.FindAllStringSubmatch(s, -1) {
+			c.addEnv(prefixHTTPS + strings.ToLower(m[1]))
+		}
+	}
+	if strings.Contains(s, ".cloudfunctions.net") {
+		for _, m := range cloudFuncURLRe.FindAllStringSubmatch(s, -1) {
+			ref := prefixHTTPS + strings.ToLower(m[1])
+			if m[2] != "" {
+				ref += "/" + m[2]
+			}
+			c.addEnv(ref)
+		}
+	}
+	if strings.Contains(s, "projects/") {
+		for _, m := range relResourceRe.FindAllString(s, -1) {
+			c.addCanonical(CanonicalizeAIP122(m, projIdx))
+		}
 	}
 }
 
 func scanNetworkAndDatasetRefs(s string, projIdx map[string]string, c *refCollector) {
-	for _, m := range connURLRe.FindAllString(s, -1) {
-		if u, err := url.Parse(SanitizeURL(m)); err == nil {
-			if ip := parsePrivateIPv4(u.Hostname()); ip != "" {
+	if strings.Contains(s, "://") {
+		for _, m := range connURLRe.FindAllString(s, -1) {
+			if u, err := url.Parse(SanitizeURL(m)); err == nil {
+				if ip := parsePrivateIPv4(u.Hostname()); ip != "" {
+					c.addEnv(ip)
+				}
+			}
+		}
+	}
+	if strings.ContainsRune(s, '.') {
+		for _, m := range ipv4Re.FindAllString(s, -1) {
+			if ip := parsePrivateIPv4(m); ip != "" {
 				c.addEnv(ip)
 			}
 		}
 	}
-	for _, m := range ipv4Re.FindAllString(s, -1) {
-		if ip := parsePrivateIPv4(m); ip != "" {
-			c.addEnv(ip)
-		}
-	}
-	if m := projDatasetRe.FindStringSubmatch(s); len(m) == 3 {
-		if !excludedDatasetSuffixes[strings.ToLower(m[2])] {
-			c.addEnv(mapProject(m[1], projIdx) + "." + m[2])
+	if strings.ContainsAny(s, ".:") {
+		if m := projDatasetRe.FindStringSubmatch(s); len(m) == 3 {
+			if !excludedDatasetSuffixes[strings.ToLower(m[2])] {
+				c.addEnv(mapProject(m[1], projIdx) + "." + m[2])
+			}
 		}
 	}
 }
@@ -421,17 +426,32 @@ func (p *attrProjector) setURI(k, raw, defaultSvc string) {
 			p.attrs[k] = prefixComputeProjects + mapProject(p.projID, p.projIdx) + "/global/networks/" + raw
 			return
 		case "subnet":
-			if p.region != "" {
-				p.attrs[k] = prefixComputeProjects + mapProject(p.projID, p.projIdx) + "/regions/" + p.region + "/subnetworks/" + raw
-				return
+			if uri := resolveComputeSubnetURI(raw, p.projID, p.region, p.projIdx); uri != "" {
+				p.attrs[k] = uri
+			} else {
+				p.attrs[k] = raw
 			}
-			p.attrs[k] = raw
 			return
 		}
 	}
 	if canon := CanonicalizeAIP122WithService(raw, defaultSvc, p.projIdx); canon != "" {
 		p.attrs[k] = canon
 	}
+}
+
+func resolveComputeSubnetURI(raw, projID, location string, projIdx map[string]string) string {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return ""
+	}
+	if strings.Contains(s, "/") {
+		return CanonicalizeAIP122WithService(s, svcCompute, projIdx)
+	}
+	reg := regionFromLocation(location)
+	if reg == "" || projID == "" {
+		return ""
+	}
+	return prefixComputeProjects + mapProject(projID, projIdx) + "/regions/" + reg + "/subnetworks/" + s
 }
 
 func (p *attrProjector) setFirstNICNetwork(parent *structpb.Struct) {
@@ -611,7 +631,7 @@ func projectForwardingRuleAttrs(p *attrProjector, data *structpb.Struct) {
 	p.setStr("ip_protocol", getStringField(data, "IPProtocol"))
 	p.setStr("load_balancing_scheme", getStringField(data, "loadBalancingScheme"))
 	if ports := getStringListField(data, "ports"); len(ports) > 0 {
-		sort.Strings(ports)
+		slices.Sort(ports)
 		p.attrs["ports"] = ports
 	}
 	p.setURI("vpc", getStringField(data, "network"), svcCompute)
@@ -708,7 +728,7 @@ func projectK8sServiceAttrs(p *attrProjector, data *structpb.Struct) {
 		}
 	}
 	if len(ports) > 0 {
-		sort.Ints(ports)
+		slices.Sort(ports)
 		p.attrs["ports"] = ports
 	}
 }
@@ -1076,9 +1096,11 @@ func projectVPCConnectorAttrs(p *attrProjector, data *structpb.Struct) {
 	if subName == "" {
 		return
 	}
-	if subProj != "" && !strings.Contains(subName, "/") && p.region != "" {
-		p.attrs["subnet"] = prefixComputeProjects + mapProject(subProj, p.projIdx) + "/regions/" + p.region + "/subnetworks/" + subName
-		return
+	if subProj != "" {
+		if uri := resolveComputeSubnetURI(subName, subProj, p.region, p.projIdx); uri != "" {
+			p.attrs["subnet"] = uri
+			return
+		}
 	}
 	p.setStr("subnet", subName)
 }
@@ -1320,8 +1342,8 @@ func extractCloudBuildPayloadRefs(build *structpb.Struct, projIdx map[string]str
 	if objs := getStructField(getStructField(build, "artifacts"), "objects"); objs != nil {
 		addExtractedRefs(getStringField(objs, "location"), projIdx, &refs, &secretRefs)
 	}
-	sort.Strings(refs)
-	sort.Strings(secretRefs)
+	slices.Sort(refs)
+	slices.Sort(secretRefs)
 	return refs, secretRefs
 }
 
@@ -1390,13 +1412,9 @@ func extractEnvMapRefs(envMap *structpb.Struct, projIdx map[string]string, envRe
 	if envMap == nil {
 		return
 	}
-	keys := make([]string, 0, len(envMap.GetFields()))
-	for k := range envMap.GetFields() {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		addExtractedRefs(envMap.GetFields()[k].GetStringValue(), projIdx, envRefs, secretRefs)
+	fields := envMap.GetFields()
+	for _, k := range slices.Sorted(maps.Keys(fields)) {
+		addExtractedRefs(fields[k].GetStringValue(), projIdx, envRefs, secretRefs)
 	}
 }
 
@@ -1691,13 +1709,17 @@ func isNumeric(s string) bool {
 }
 
 func appendUnique(slice *[]string, v string) {
+	if v == "" || slices.Contains(*slice, v) {
+		return
+	}
+	*slice = append(*slice, v)
+}
+
+func appendUniqueMap[K comparable](m map[K][]string, key K, v string) {
 	if v == "" {
 		return
 	}
-	for _, existing := range *slice {
-		if existing == v {
-			return
-		}
-	}
-	*slice = append(*slice, v)
+	list := m[key]
+	appendUnique(&list, v)
+	m[key] = list
 }

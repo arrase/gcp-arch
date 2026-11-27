@@ -1,605 +1,1339 @@
 schema_version: v1
 metadata:
-  generated_at: "2026-11-25T00:00:00Z"
+  generated_at: '2026-11-27T15:53:03Z'
   scopes:
-    - projects/nova-ai-prod
-    - projects/nova-data-prod
-    - projects/nova-retail-prod
-    - projects/nova-shared-net
+  - folders/510100
 components:
-  - id: analytics_warehouse
-    title: Orders Analytics Warehouse
-    subtitle: bq:nova-data-prod.retail_dw
-    icon_key: bigquery
-    component_kind: DATASTORE
-    project_id: nova-data-prod
-    backed_by:
-      - uri: //bigquery.googleapis.com/projects/nova-data-prod/datasets/retail_dw
-        asset_type: bigquery.googleapis.com/Dataset
-        project_id: nova-data-prod
-    inline_meta:
-      - label: Location
-        value: EU
-      - label: Tables
-        value: orders_fact, events
-  - id: bi_looker_dashboards
-    title: Looker BI Dashboards
-    subtitle: Executive & merchandising BI
-    icon_key: looker
-    component_kind: EXTERNAL_TARGET
+- id: n_external_payment_psp_gateway
+  title: payment-psp-gateway
+  subtitle: External mTLS Payment Gateway
+  icon_key: external_client
+  component_kind: EXTERNAL_TARGET
+  project_id: external
+  topo_rank: 6
+  sub_rank: 13
+  backed_by:
+  - uri: //external.http/endpoints/payment-psp-gateway
+    asset_type: external.http/Endpoint
     project_id: external
-    backed_by:
-      - uri: //looker.example.net/instances/novaretail-bi
-        asset_type: external.looker.com/Instance
-        project_id: external
-    inline_meta:
-      - label: Access
-        value: BQ Read API
-      - label: Refresh
-        value: Near real-time
-  - id: checkout_service
-    title: Checkout Service
-    subtitle: cloudrun / europe-west1
-    icon_key: cloud_run
-    component_kind: WORKLOAD
-    project_id: nova-retail-prod
-    backed_by:
-      - uri: //iam.googleapis.com/projects/nova-retail-prod/serviceAccounts/checkout-svc@nova-retail-prod.iam.gserviceaccount.com
-        asset_type: iam.googleapis.com/ServiceAccount
-        project_id: nova-retail-prod
-      - uri: //run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/checkout-service
-        asset_type: run.googleapis.com/Service
-        project_id: nova-retail-prod
-      - uri: //secretmanager.googleapis.com/projects/nova-retail-prod/secrets/payment-psp-api-key
-        asset_type: secretmanager.googleapis.com/Secret
-        project_id: nova-retail-prod
-    inline_meta:
-      - label: VPC Egress
-        value: Direct VPC
-      - label: Secret
-        value: payment-psp-api-key
-  - id: cloud_nat_egress
-    title: Cloud NAT Egress
-    subtitle: router:shared-nat-ew1
-    icon_key: cloud_router
-    component_kind: INGRESS
-    project_id: nova-shared-net
-    backed_by:
-      - uri: //compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/addresses/shared-nat-ip-1
-        asset_type: compute.googleapis.com/Address
-        project_id: nova-shared-net
-      - uri: //compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/routers/shared-nat-ew1
-        asset_type: compute.googleapis.com/Router
-        project_id: nova-shared-net
-    inline_meta:
-      - label: Region
-        value: europe-west1
-      - label: NAT IP
-        value: 203.0.113.81
-  - id: edge_https_lb
-    title: Global HTTPS LB
-    subtitle: shop.example.com
-    icon_key: cloud_load_balancing
-    component_kind: INGRESS
-    project_id: nova-retail-prod
-    backed_by:
-      - uri: //compute.googleapis.com/projects/nova-retail-prod/global/forwardingRules/shop-https-fr
-        asset_type: compute.googleapis.com/GlobalForwardingRule
-        project_id: nova-retail-prod
-      - uri: //compute.googleapis.com/projects/nova-retail-prod/global/securityPolicies/shop-edge-waf
-        asset_type: compute.googleapis.com/SecurityPolicy
-        project_id: nova-retail-prod
-      - uri: //compute.googleapis.com/projects/nova-retail-prod/global/urlMaps/shop-url-map
-        asset_type: compute.googleapis.com/UrlMap
-        project_id: nova-retail-prod
-    inline_meta:
-      - label: Anycast IP
-        value: 203.0.113.80:443
-      - label: WAF
-        value: Cloud Armor
-  - id: order_events_topic
-    title: Order Events Topic
-    subtitle: pubsub / retail.orders.v1
-    icon_key: pubsub
-    component_kind: MESSAGING
-    project_id: nova-retail-prod
-    backed_by:
-      - uri: //pubsub.googleapis.com/projects/nova-retail-prod/subscriptions/orders-dataflow-sub
-        asset_type: pubsub.googleapis.com/Subscription
-        project_id: nova-retail-prod
-      - uri: //pubsub.googleapis.com/projects/nova-retail-prod/topics/retail-orders-v1
-        asset_type: pubsub.googleapis.com/Topic
-        project_id: nova-retail-prod
-    inline_meta:
-      - label: Retention
-        value: 7d / DLQ
-      - label: Schema
-        value: Avro v1
-  - id: order_stream_dataflow
-    title: Order Stream ETL
-    subtitle: dataflow / europe-west1
-    icon_key: dataflow
-    component_kind: PIPELINE
-    project_id: nova-data-prod
-    backed_by:
-      - uri: //dataflow.googleapis.com/projects/nova-data-prod/locations/europe-west1/jobs/orders-stream-enrich-v2
-        asset_type: dataflow.googleapis.com/Job
-        project_id: nova-data-prod
-      - uri: //iam.googleapis.com/projects/nova-data-prod/serviceAccounts/dataflow-worker@nova-data-prod.iam.gserviceaccount.com
-        asset_type: iam.googleapis.com/ServiceAccount
-        project_id: nova-data-prod
-    inline_meta:
-      - label: Mode
-        value: Streaming Engine
-      - label: Workers
-        value: Autoscale 2..16
-  - id: orders_alloydb
-    title: Orders AlloyDB
-    subtitle: POSTGRES_16 / 10.60.0.10
-    icon_key: alloydb
-    component_kind: DATASTORE
-    project_id: nova-retail-prod
-    backed_by:
-      - uri: //alloydb.googleapis.com/projects/nova-retail-prod/locations/europe-west1/clusters/orders-prod
-        asset_type: alloydb.googleapis.com/Cluster
-        project_id: nova-retail-prod
-    inline_meta:
-      - label: HA Mode
-        value: Regional + Read
-      - label: PSA Tenant
-        value: p9876543210fedcba-tp
-      - label: CIDR
-        value: 10.60.0.0/24
-  - id: payment_gateway_ext
-    title: External Payment PSP
-    subtitle: pay.example.net
-    icon_key: external_client
-    component_kind: EXTERNAL_TARGET
+  members:
+  - payment-psp-gateway
+  badges:
+  - kind: exposure
+    label: EXTERNAL
+- id: n_external_web_mobile_shoppers
+  title: web-mobile-shoppers
+  subtitle: External Web & Mobile Clients
+  icon_key: external_client
+  component_kind: EXTERNAL_CALLER
+  project_id: external
+  backed_by:
+  - uri: //external.internet/clients/web-mobile-shoppers
+    asset_type: external.internet/ClientGroup
     project_id: external
-    backed_by:
-      - uri: //payments.example.net/v2/charges
-        asset_type: external.http/Endpoint
-        project_id: external
-    inline_meta:
-      - label: Protocol
-        value: mTLS HTTPS
-      - label: Egress
-        value: Cloud NAT
-  - id: raw_events_bucket
-    title: Raw Events Data Lake
-    subtitle: gs://nova-data-raw-events
-    icon_key: cloud_storage
-    component_kind: DATASTORE
-    project_id: nova-data-prod
-    backed_by:
-      - uri: //storage.googleapis.com/nova-data-raw-events
-        asset_type: storage.googleapis.com/Bucket
-        project_id: nova-data-prod
-    inline_meta:
-      - label: Location
-        value: EU Dual-Region
-      - label: Lifecycle
-        value: Coldline 90d
-  - id: recs_vertex_endpoint
-    title: Vertex AI Recs Endpoint
-    subtitle: vertexai / europe-west1
-    icon_key: vertexai
-    component_kind: WORKLOAD
+  members:
+  - web-mobile-shoppers
+  badges:
+  - kind: exposure
+    label: EXTERNAL
+- id: n_nova_ai_prod_gemini_4_carbon
+  title: gemini-4-carbon
+  subtitle: Vertex AI Publisher Foundation Model
+  icon_key: foundation_model
+  component_kind: DATASTORE
+  project_id: nova-ai-prod
+  service_project_id: nova-ai-prod
+  topo_rank: 5
+  sub_rank: 7
+  backed_by:
+  - uri: //aiplatform.googleapis.com/projects/nova-ai-prod/locations/global/publishers/google/models/gemini-4-carbon
+    asset_type: aiplatform.googleapis.com/PublisherModel
     project_id: nova-ai-prod
-    backed_by:
-      - uri: //aiplatform.googleapis.com/projects/nova-ai-prod/locations/europe-west1/endpoints/recs-ranker-v4
-        asset_type: aiplatform.googleapis.com/Endpoint
-        project_id: nova-ai-prod
-      - uri: //iam.googleapis.com/projects/nova-ai-prod/serviceAccounts/vertex-recs@nova-ai-prod.iam.gserviceaccount.com
-        asset_type: iam.googleapis.com/ServiceAccount
-        project_id: nova-ai-prod
-    inline_meta:
-      - label: Model
-        value: two-tower-v4
-      - label: Machine
-        value: n2-standard-8
-  - id: session_cache
-    title: Session Cache
-    subtitle: redis 7.2 / PSC
-    icon_key: memorystore
-    component_kind: DATASTORE
+  members:
+  - gemini-4-carbon
+  badges:
+  - kind: project
+    label: nova-ai-prod
+- id: n_nova_ai_prod_novaretail_looker_bi
+  title: novaretail-looker-bi
+  subtitle: Private Looker BI Analytics Instance
+  icon_key: looker
+  component_kind: WORKLOAD
+  project_id: nova-ai-prod
+  service_project_id: nova-ai-prod
+  topo_rank: 7
+  sub_rank: 16
+  backed_by:
+  - uri: //looker.googleapis.com/projects/nova-ai-prod/locations/europe-west1/instances/novaretail-looker-bi
+    asset_type: looker.googleapis.com/Instance
+    project_id: nova-ai-prod
+  members:
+  - novaretail-looker-bi
+  badges:
+  - kind: project
+    label: nova-ai-prod
+- id: n_nova_ai_prod_recs_ranker_v4
+  title: recs-ranker-v4
+  subtitle: Private Vertex AI Prediction Endpoint
+  icon_key: vertexai
+  component_kind: WORKLOAD
+  project_id: nova-ai-prod
+  service_project_id: nova-ai-prod
+  topo_rank: 7
+  sub_rank: 17
+  backed_by:
+  - uri: //aiplatform.googleapis.com/projects/nova-ai-prod/locations/europe-west1/endpoints/recs-ranker-v4
+    asset_type: aiplatform.googleapis.com/Endpoint
+    project_id: nova-ai-prod
+  members:
+  - recs-ranker-v4
+  badges:
+  - kind: kms
+    label: 'KMS: ai-model-cmek'
+  - kind: project
+    label: nova-ai-prod
+  - kind: sa
+    label: 'SA: vertex-recs-sa'
+- id: n_nova_data_prod_merchandising_mart
+  title: merchandising_mart
+  subtitle: Curated Merchandising BigQuery Dataset
+  icon_key: bigquery
+  component_kind: DATASTORE
+  project_id: nova-data-prod
+  service_project_id: nova-data-prod
+  topo_rank: 6
+  sub_rank: 14
+  backed_by:
+  - uri: //bigquery.googleapis.com/projects/nova-data-prod/datasets/merchandising_mart
+    asset_type: bigquery.googleapis.com/Dataset
+    project_id: nova-data-prod
+  members:
+  - merchandising_mart
+  badges:
+  - kind: kms
+    label: 'KMS: data-lake-cmek'
+  - kind: project
+    label: nova-data-prod
+  inline_meta:
+  - label: Location
+    value: EU
+- id: n_nova_data_prod_nova_data_raw_events
+  title: nova-data-raw-events
+  subtitle: Private Raw Events GCS Bucket
+  icon_key: cloud_storage
+  component_kind: DATASTORE
+  project_id: nova-data-prod
+  service_project_id: nova-data-prod
+  topo_rank: 5
+  sub_rank: 8
+  backed_by:
+  - uri: //storage.googleapis.com/nova-data-raw-events
+    asset_type: storage.googleapis.com/Bucket
+    project_id: nova-data-prod
+  members:
+  - nova-data-raw-events
+  badges:
+  - kind: kms
+    label: 'KMS: data-lake-cmek'
+  - kind: log
+    label: 'Obs: retail-audit-log-sink'
+  - kind: project
+    label: nova-data-prod
+  inline_meta:
+  - label: Class
+    value: STANDARD
+- id: n_nova_data_prod_orders_stream_enrich_v2
+  title: orders-stream-enrich-v2
+  subtitle: Private Streaming Dataflow Pipeline
+  icon_key: dataflow
+  component_kind: PIPELINE
+  project_id: nova-data-prod
+  service_project_id: nova-data-prod
+  topo_rank: 4
+  sub_rank: 6
+  backed_by:
+  - uri: //dataflow.googleapis.com/projects/nova-data-prod/locations/europe-west1/jobs/orders-stream-enrich-v2
+    asset_type: dataflow.googleapis.com/Job
+    project_id: nova-data-prod
+  members:
+  - orders-stream-enrich-v2
+  badges:
+  - kind: project
+    label: nova-data-prod
+  - kind: sa
+    label: 'SA: dataflow-etl-sa'
+- id: n_nova_data_prod_retail_dw
+  title: retail_dw
+  subtitle: Core Retail BigQuery Data Warehouse
+  icon_key: bigquery
+  component_kind: DATASTORE
+  project_id: nova-data-prod
+  service_project_id: nova-data-prod
+  topo_rank: 5
+  sub_rank: 9
+  backed_by:
+  - uri: //bigquery.googleapis.com/projects/nova-data-prod/datasets/retail_dw
+    asset_type: bigquery.googleapis.com/Dataset
+    project_id: nova-data-prod
+  members:
+  - retail_dw
+  badges:
+  - kind: kms
+    label: 'KMS: data-lake-cmek'
+  - kind: project
+    label: nova-data-prod
+  - kind: sa
+    label: 'SA: dataflow-etl-sa'
+  inline_meta:
+  - label: Location
+    value: EU
+- id: n_nova_retail_prod_checkout_service
+  title: checkout-service
+  subtitle: Private Cloud Run Checkout API
+  icon_key: cloud_run
+  component_kind: WORKLOAD
+  project_id: nova-retail-prod
+  service_project_id: nova-retail-prod
+  topo_rank: 2
+  sub_rank: 2
+  backed_by:
+  - uri: //run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/checkout-service
+    asset_type: run.googleapis.com/Service
     project_id: nova-retail-prod
-    backed_by:
-      - uri: //redis.googleapis.com/projects/nova-retail-prod/locations/europe-west1/instances/retail-sessions
-        asset_type: redis.googleapis.com/Instance
-        project_id: nova-retail-prod
-    inline_meta:
-      - label: Tier
-        value: Standard HA 5GB
-      - label: Region
-        value: europe-west1
-  - id: shared_vpc_hub
-    title: Shared VPC Hub
-    subtitle: vpc:nova-shared (10.50.0.0/16)
-    icon_key: virtual_private_cloud
-    component_kind: COHORT
-    project_id: nova-shared-net
-    backed_by:
-      - uri: //compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared
-        asset_type: compute.googleapis.com/Network
-        project_id: nova-shared-net
-      - uri: //compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/subnetworks/retail-run-egress
-        asset_type: compute.googleapis.com/Subnetwork
-        project_id: nova-shared-net
-    inline_meta:
-      - label: Routing
-        value: GLOBAL
-      - label: Peering
-        value: PSA + PSC
-  - id: storefront_api
-    title: Storefront API
-    subtitle: cloudrun / europe-west1
-    icon_key: cloud_run
-    component_kind: WORKLOAD
+  members:
+  - checkout-service
+  badges:
+  - kind: log
+    label: 'Obs: checkout-slo-alert'
+  - kind: project
+    label: nova-retail-prod
+  - kind: sa
+    label: 'SA: checkout-svc-sa'
+  - kind: secret
+    label: 'Secret: alloydb-app-creds'
+  - kind: secret
+    label: 'Secret: payment-psp-api-key'
+  - kind: vpc_conn
+    label: 'VPC-Conn: retail-vpc-connector'
+  inline_meta:
+  - label: Ingress
+    value: INTERNAL_LOAD_BALANCER
+- id: n_nova_retail_prod_nova_orders_dlq_archive
+  title: nova-orders-dlq-archive
+  subtitle: Private DLQ Archive GCS Bucket
+  icon_key: cloud_storage
+  component_kind: DATASTORE
+  project_id: nova-retail-prod
+  service_project_id: nova-retail-prod
+  topo_rank: 6
+  sub_rank: 15
+  backed_by:
+  - uri: //storage.googleapis.com/nova-orders-dlq-archive
+    asset_type: storage.googleapis.com/Bucket
     project_id: nova-retail-prod
-    notes: Curated service boundary for public catalog and cart reads; preserved across Day-2 reconcile.
-    backed_by:
-      - uri: //iam.googleapis.com/projects/nova-retail-prod/serviceAccounts/storefront-api@nova-retail-prod.iam.gserviceaccount.com
-        asset_type: iam.googleapis.com/ServiceAccount
-        project_id: nova-retail-prod
-      - uri: //run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/storefront-api
-        asset_type: run.googleapis.com/Service
-        project_id: nova-retail-prod
-    inline_meta:
-      - label: VPC Egress
-        value: Direct VPC
-      - label: Scale
-        value: Min 2 / Max 40
-  - id: web_mobile_clients
-    title: Web & Mobile Shoppers
-    subtitle: Public HTTPS clients
-    icon_key: external_client
-    component_kind: EXTERNAL_CALLER
-    project_id: external
-    backed_by:
-      - uri: //shop.novaretail.example.com/clients
-        asset_type: external.client/WebMobile
-        project_id: external
-    inline_meta:
-      - label: Origin
-        value: Global Internet
+  members:
+  - nova-orders-dlq-archive
+  badges:
+  - kind: kms
+    label: 'KMS: retail-orders-cmek'
+  - kind: project
+    label: nova-retail-prod
+  inline_meta:
+  - label: Class
+    value: NEARLINE
+- id: n_nova_retail_prod_orders_alloydb
+  title: orders-alloydb
+  subtitle: Private PSA AlloyDB Transactional Cluster
+  icon_key: alloydb
+  component_kind: DATASTORE
+  project_id: nova-retail-prod
+  service_project_id: nova-retail-prod
+  topo_rank: 5
+  sub_rank: 11
+  backed_by:
+  - uri: //alloydb.googleapis.com/projects/nova-retail-prod/locations/europe-west1/clusters/orders-alloydb
+    asset_type: alloydb.googleapis.com/Cluster
+    project_id: nova-retail-prod
+  members:
+  - orders-alloydb
+  badges:
+  - kind: kms
+    label: 'KMS: retail-orders-cmek'
+  - kind: project
+    label: nova-retail-prod
+  - kind: psa
+    label: PSA Peering
+  inline_meta:
+  - label: Engine
+    value: POSTGRES_16
+  - label: Private IP
+    value: 10.60.0.10
+- id: n_nova_retail_prod_orders_dlq_replay_fn
+  title: orders-dlq-replay-fn
+  subtitle: Private DLQ Replay Cloud Function
+  icon_key: cloud_functions
+  component_kind: WORKLOAD
+  project_id: nova-retail-prod
+  service_project_id: nova-retail-prod
+  topo_rank: 5
+  sub_rank: 10
+  backed_by:
+  - uri: //cloudfunctions.googleapis.com/projects/nova-retail-prod/locations/europe-west1/functions/orders-dlq-replay-fn
+    asset_type: cloudfunctions.googleapis.com/CloudFunction
+    project_id: nova-retail-prod
+  members:
+  - orders-dlq-replay-fn
+  badges:
+  - kind: project
+    label: nova-retail-prod
+  - kind: sa
+    label: 'SA: orders-replay-sa'
+  inline_meta:
+  - label: Runtime
+    value: go122
+- id: n_nova_retail_prod_retail_orders_dlq
+  title: retail-orders-dlq
+  subtitle: Private Dead-Letter Pub/Sub Topic
+  icon_key: pubsub
+  component_kind: MESSAGING
+  project_id: nova-retail-prod
+  service_project_id: nova-retail-prod
+  topo_rank: 4
+  sub_rank: 5
+  backed_by:
+  - uri: //pubsub.googleapis.com/projects/nova-retail-prod/subscriptions/orders-dlq-replay-sub
+    asset_type: pubsub.googleapis.com/Subscription
+    project_id: nova-retail-prod
+  - uri: //pubsub.googleapis.com/projects/nova-retail-prod/topics/retail-orders-dlq
+    asset_type: pubsub.googleapis.com/Topic
+    project_id: nova-retail-prod
+  members:
+  - orders-dlq-replay-sub
+  - retail-orders-dlq
+  badges:
+  - kind: kms
+    label: 'KMS: retail-orders-cmek'
+  - kind: project
+    label: nova-retail-prod
+  - kind: sub
+    label: 'sub: orders-dlq-replay-sub'
+  folded_edge_ids:
+  - 53d7933ae2be438d
+  inline_meta:
+  - label: Subscriptions
+    value: '1'
+- id: n_nova_retail_prod_retail_orders_v1
+  title: retail-orders-v1
+  subtitle: Private Order Events Pub/Sub Topic
+  icon_key: pubsub
+  component_kind: MESSAGING
+  project_id: nova-retail-prod
+  service_project_id: nova-retail-prod
+  topo_rank: 3
+  sub_rank: 4
+  backed_by:
+  - uri: //pubsub.googleapis.com/projects/nova-retail-prod/subscriptions/orders-dataflow-sub
+    asset_type: pubsub.googleapis.com/Subscription
+    project_id: nova-retail-prod
+  - uri: //pubsub.googleapis.com/projects/nova-retail-prod/topics/retail-orders-v1
+    asset_type: pubsub.googleapis.com/Topic
+    project_id: nova-retail-prod
+  members:
+  - orders-dataflow-sub
+  - retail-orders-v1
+  badges:
+  - kind: kms
+    label: 'KMS: retail-orders-cmek'
+  - kind: project
+    label: nova-retail-prod
+  - kind: sa
+    label: 'SA: checkout-svc-sa'
+  - kind: sub
+    label: 'sub: orders-dataflow-sub'
+  folded_edge_ids:
+  - 1ec3b4c28f492df1
+  inline_meta:
+  - label: Subscriptions
+    value: '1'
+- id: n_nova_retail_prod_retail_session_redis
+  title: retail-session-redis
+  subtitle: Private PSA Memorystore Redis Instance
+  icon_key: memorystore
+  component_kind: DATASTORE
+  project_id: nova-retail-prod
+  service_project_id: nova-retail-prod
+  topo_rank: 5
+  sub_rank: 12
+  backed_by:
+  - uri: //redis.googleapis.com/projects/nova-retail-prod/locations/europe-west1/instances/retail-session-redis
+    asset_type: redis.googleapis.com/Instance
+    project_id: nova-retail-prod
+  members:
+  - retail-session-redis
+  badges:
+  - kind: project
+    label: nova-retail-prod
+  - kind: psa
+    label: PSA Peering
+  inline_meta:
+  - label: Redis
+    value: REDIS_7_2
+- id: n_nova_retail_prod_shop_edge_https_lb
+  title: shop-edge-https-lb
+  subtitle: Public Global HTTPS Load Balancer
+  icon_key: cloud_load_balancing
+  component_kind: INGRESS
+  project_id: nova-retail-prod
+  service_project_id: nova-retail-prod
+  topo_rank: 1
+  sub_rank: 1
+  backed_by:
+  - uri: //compute.googleapis.com/projects/nova-retail-prod/global/forwardingRules/shop-edge-https-lb
+    asset_type: compute.googleapis.com/GlobalForwardingRule
+    project_id: nova-retail-prod
+  members:
+  - shop-edge-https-lb
+  badges:
+  - kind: exposure
+    label: PUBLIC
+  - kind: project
+    label: nova-retail-prod
+  inline_meta:
+  - label: VIP
+    value: 203.0.113.80:443-443
+  - label: Scheme
+    value: EXTERNAL_MANAGED
+- id: n_nova_retail_prod_storefront_api
+  title: storefront-api
+  subtitle: Private Cloud Run Storefront API
+  icon_key: cloud_run
+  component_kind: WORKLOAD
+  project_id: nova-retail-prod
+  service_project_id: nova-retail-prod
+  topo_rank: 2
+  sub_rank: 3
+  backed_by:
+  - uri: //run.googleapis.com/projects/nova-retail-prod/locations/europe-west1/services/storefront-api
+    asset_type: run.googleapis.com/Service
+    project_id: nova-retail-prod
+  members:
+  - storefront-api
+  badges:
+  - kind: project
+    label: nova-retail-prod
+  - kind: sa
+    label: 'SA: storefront-api-sa'
+  - kind: secret
+    label: 'Secret: alloydb-app-creds'
+  - kind: vpc_conn
+    label: 'VPC-Conn: retail-vpc-connector'
+  inline_meta:
+  - label: Ingress
+    value: INTERNAL_LOAD_BALANCER
 containers:
-  - id: ext_partners
-    title: External SaaS & Partners
-    subtitle: Third-party & BI endpoints
-    kind: EXTERNAL_ZONE
-  - id: ext_shoppers
-    title: Public Internet
-    subtitle: Web & mobile shoppers
-    kind: EXTERNAL_ZONE
-  - id: proj_ai_prod
-    title: "Project: nova-ai-prod"
-    subtitle: europe-west1
-    kind: PROJECT
-  - id: proj_data_prod
-    title: "Project: nova-data-prod"
-    subtitle: europe-west1 / EU
-    kind: PROJECT
-  - id: proj_retail_prod
-    title: "Project: nova-retail-prod"
-    subtitle: europe-west1
-    kind: PROJECT
-  - id: proj_shared_net
-    title: "Shared VPC: nova-shared-net"
-    subtitle: Host network project
-    kind: SHARED_HUB
-  - id: psa_alloydb_zone
-    title: Google PSA Tenant
-    subtitle: p9876543210fedcba-tp
-    kind: PSA_ZONE
-  - id: psc_redis_zone
-    title: Private Service Connect
-    subtitle: Managed Redis attachment
-    kind: PSA_ZONE
-    backed_by:
-      - uri: //compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/forwardingRules/psc-redis-sessions
-        asset_type: compute.googleapis.com/ForwardingRule
-        project_id: nova-shared-net
-excluded_resources:
-  - uri: //compute.googleapis.com/projects/nova-retail-prod/global/networks/default
+- id: ext_sources
+  title: External Callers & Sources
+  kind: EXTERNAL_ZONE
+  exposure: EXTERNAL
+  order_hint: -100
+- id: ext_targets
+  title: External Targets & Peered Networks
+  kind: EXTERNAL_ZONE
+  exposure: EXTERNAL
+  order_hint: 900
+- id: folder_510100
+  title: 'Folder: retail-prod'
+  subtitle: folders/510100
+  kind: FOLDER
+  parent_container_id: org_910000101
+  order_hint: 20
+- id: org_910000101
+  title: 'Org: Nova Retail Group'
+  subtitle: organizations/910000101
+  kind: ORG
+  order_hint: 10
+- id: proj_nova_ai_prod
+  title: Nova AI Prod (nova-ai-prod)
+  kind: PROJECT
+  parent_container_id: folder_510100
+  badges:
+  - Shared VPC Service Project
+  order_hint: 30
+- id: proj_nova_data_prod
+  title: Nova Data Prod (nova-data-prod)
+  kind: PROJECT
+  parent_container_id: folder_510100
+  badges:
+  - Shared VPC Service Project
+  order_hint: 30
+- id: proj_nova_retail_prod
+  title: Nova Retail Prod (nova-retail-prod)
+  kind: PROJECT
+  parent_container_id: folder_510100
+  badges:
+  - Shared VPC Service Project
+  order_hint: 30
+- id: proj_nova_shared_net
+  title: Nova Shared Net (nova-shared-net)
+  kind: PROJECT
+  parent_container_id: folder_510100
+  badges:
+  - Shared VPC Host
+  order_hint: 30
+- id: reg_vpc_nova_shared_net_nova_shared_europe_west1
+  title: 'Region: europe-west1'
+  kind: REGION
+  parent_container_id: vpc_nova_shared_net_nova_shared
+  order_hint: 50
+- id: sub_nova_shared_net_dataflow_stream_subnet
+  title: 'Subnet: dataflow-stream-subnet'
+  subtitle: 10.50.20.0/22
+  kind: SUBNET
+  exposure: PRIVATE
+  parent_container_id: reg_vpc_nova_shared_net_nova_shared_europe_west1
+  badges:
+  - PRIVATE
+  order_hint: 65
+  backed_by:
+  - uri: //compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/subnetworks/dataflow-stream-subnet
+    asset_type: compute.googleapis.com/Subnetwork
+    project_id: nova-shared-net
+- id: sub_nova_shared_net_retail_run_egress
+  title: 'Subnet: retail-run-egress'
+  subtitle: 10.50.10.0/24
+  kind: SUBNET
+  exposure: PRIVATE
+  parent_container_id: reg_vpc_nova_shared_net_nova_shared_europe_west1
+  badges:
+  - PRIVATE
+  order_hint: 62
+  folded_edge_ids:
+  - 417589b6fdc97c3b
+  backed_by:
+  - uri: //compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/subnetworks/retail-run-egress
+    asset_type: compute.googleapis.com/Subnetwork
+    project_id: nova-shared-net
+- id: vpc_nova_shared_net_nova_shared
+  title: 'VPC: nova-shared'
+  subtitle: 'Host: nova-shared-net'
+  kind: VPC
+  parent_container_id: proj_nova_shared_net
+  badges:
+  - 'NAT: shared-nat-ew1'
+  - Shared VPC (3 svc projects)
+  order_hint: 40
+  folded_edge_ids:
+  - 30a460a873e7c267
+  - 6b5e906a5ca1b67f
+  - d5b47745e6547a35
+  backed_by:
+  - uri: //compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared
     asset_type: compute.googleapis.com/Network
+    project_id: nova-shared-net
+- id: zone_exposure_zone_private_proj_nova_ai_prod
+  title: Managed Services & Messaging
+  kind: EXPOSURE_ZONE
+  exposure: PRIVATE
+  parent_container_id: proj_nova_ai_prod
+  order_hint: 80
+- id: zone_exposure_zone_private_proj_nova_data_prod
+  title: Managed Services & Messaging
+  kind: EXPOSURE_ZONE
+  exposure: PRIVATE
+  parent_container_id: proj_nova_data_prod
+  order_hint: 80
+- id: zone_exposure_zone_private_proj_nova_retail_prod
+  title: Managed Services & Messaging
+  kind: EXPOSURE_ZONE
+  exposure: PRIVATE
+  parent_container_id: proj_nova_retail_prod
+  order_hint: 80
+- id: zone_exposure_zone_private_reg_vpc_nova_shared_net_nova_shared_europe_west1
+  title: Private VPC Services
+  kind: EXPOSURE_ZONE
+  exposure: PRIVATE
+  parent_container_id: reg_vpc_nova_shared_net_nova_shared_europe_west1
+  order_hint: 72
+- id: zone_exposure_zone_private_sub_nova_shared_net_dataflow_stream_subnet
+  title: Private Workloads
+  kind: EXPOSURE_ZONE
+  exposure: PRIVATE
+  parent_container_id: sub_nova_shared_net_dataflow_stream_subnet
+  order_hint: 64
+- id: zone_exposure_zone_private_sub_nova_shared_net_retail_run_egress
+  title: Private Workloads
+  kind: EXPOSURE_ZONE
+  exposure: PRIVATE
+  parent_container_id: sub_nova_shared_net_retail_run_egress
+  order_hint: 64
+- id: zone_exposure_zone_public_vpc_nova_shared_net_nova_shared
+  title: Public Edge Ingress
+  subtitle: EXTERNAL_MANAGED
+  kind: EXPOSURE_ZONE
+  exposure: PUBLIC
+  parent_container_id: vpc_nova_shared_net_nova_shared
+  order_hint: 45
+- id: zone_psa_zone_private_reg_vpc_nova_shared_net_nova_shared_europe_west1
+  title: PSA Private Service Access
+  subtitle: 'Tenant: p9876543210fedcba-tp'
+  kind: PSA_ZONE
+  exposure: PRIVATE
+  parent_container_id: reg_vpc_nova_shared_net_nova_shared_europe_west1
+  badges:
+  - PSA Peering
+  order_hint: 75
+  folded_edge_ids:
+  - 6b5e906a5ca1b67f
+  - d5b47745e6547a35
+transversal_items:
+- id: tr_005_vertex_recs_sa_nova_ai_prod_iam_gservicea
+  category: IAM_SA
+  asset_type: iam.googleapis.com/ServiceAccount
+  display_name: vertex-recs-sa@nova-ai-prod.iam.gserviceaccount.com
+  detail: ServiceAccount
+  project_id: nova-ai-prod
+  owner_container_id: proj_nova_ai_prod
+  attached_node_ids:
+  - n_nova_ai_prod_recs_ranker_v4
+  backed_by:
+  - uri: //iam.googleapis.com/projects/nova-ai-prod/serviceAccounts/vertex-recs-sa@nova-ai-prod.iam.gserviceaccount.com
+    asset_type: iam.googleapis.com/ServiceAccount
+    project_id: nova-ai-prod
+  backed_edge_ids:
+  - 016dda112fdd6a89
+  - 2d6c54f7d2ce73e4
+  roles:
+  - roles/aiplatform.user
+- id: tr_006_dataflow_etl_sa_nova_data_prod_iam_gservi
+  category: IAM_SA
+  asset_type: iam.googleapis.com/ServiceAccount
+  display_name: dataflow-etl-sa@nova-data-prod.iam.gserviceaccount.com
+  detail: ServiceAccount
+  project_id: nova-data-prod
+  owner_container_id: proj_nova_data_prod
+  attached_node_ids:
+  - n_nova_data_prod_orders_stream_enrich_v2
+  - n_nova_data_prod_retail_dw
+  backed_by:
+  - uri: //iam.googleapis.com/projects/nova-data-prod/serviceAccounts/dataflow-etl-sa@nova-data-prod.iam.gserviceaccount.com
+    asset_type: iam.googleapis.com/ServiceAccount
+    project_id: nova-data-prod
+  backed_edge_ids:
+  - 3964f54f8aeb36e5
+  - d6e1fbb747342c13
+  roles:
+  - roles/bigquery.dataEditor
+- id: tr_007_checkout_svc_sa_nova_retail_prod_iam_gser
+  category: IAM_SA
+  asset_type: iam.googleapis.com/ServiceAccount
+  display_name: checkout-svc-sa@nova-retail-prod.iam.gserviceaccount.com
+  detail: ServiceAccount
+  project_id: nova-retail-prod
+  owner_container_id: proj_nova_retail_prod
+  attached_node_ids:
+  - n_nova_retail_prod_checkout_service
+  - n_nova_retail_prod_retail_orders_v1
+  backed_by:
+  - uri: //iam.googleapis.com/projects/nova-retail-prod/serviceAccounts/checkout-svc-sa@nova-retail-prod.iam.gserviceaccount.com
+    asset_type: iam.googleapis.com/ServiceAccount
     project_id: nova-retail-prod
-    reason: Unused GCP default VPC network suppressed as boilerplate
-  - uri: //logging.googleapis.com/projects/nova-retail-prod/sinks/_Default
+  backed_edge_ids:
+  - 44526f1eea064f47
+  - f6f2d27bce4388c1
+  roles:
+  - roles/pubsub.publisher
+- id: tr_008_orders_replay_sa_nova_retail_prod_iam_gse
+  category: IAM_SA
+  asset_type: iam.googleapis.com/ServiceAccount
+  display_name: orders-replay-sa@nova-retail-prod.iam.gserviceaccount.com
+  detail: ServiceAccount
+  project_id: nova-retail-prod
+  owner_container_id: proj_nova_retail_prod
+  attached_node_ids:
+  - n_nova_retail_prod_orders_dlq_replay_fn
+  backed_by:
+  - uri: //iam.googleapis.com/projects/nova-retail-prod/serviceAccounts/orders-replay-sa@nova-retail-prod.iam.gserviceaccount.com
+    asset_type: iam.googleapis.com/ServiceAccount
+    project_id: nova-retail-prod
+  backed_edge_ids:
+  - 1600da769d09f5fd
+- id: tr_009_storefront_api_sa_nova_retail_prod_iam_gs
+  category: IAM_SA
+  asset_type: iam.googleapis.com/ServiceAccount
+  display_name: storefront-api-sa@nova-retail-prod.iam.gserviceaccount.com
+  detail: ServiceAccount
+  project_id: nova-retail-prod
+  owner_container_id: proj_nova_retail_prod
+  attached_node_ids:
+  - n_nova_retail_prod_storefront_api
+  backed_by:
+  - uri: //iam.googleapis.com/projects/nova-retail-prod/serviceAccounts/storefront-api-sa@nova-retail-prod.iam.gserviceaccount.com
+    asset_type: iam.googleapis.com/ServiceAccount
+    project_id: nova-retail-prod
+  backed_edge_ids:
+  - dad2d7942533b795
+- id: tr_001_ai_model_cmek
+  category: KMS
+  asset_type: cloudkms.googleapis.com/CryptoKey
+  display_name: ai-model-cmek
+  detail: europe-west1 | ENCRYPT_DECRYPT
+  project_id: nova-ai-prod
+  owner_container_id: proj_nova_ai_prod
+  attached_node_ids:
+  - n_nova_ai_prod_recs_ranker_v4
+  backed_by:
+  - uri: //cloudkms.googleapis.com/projects/nova-ai-prod/locations/europe-west1/keyRings/ai-keyring/cryptoKeys/ai-model-cmek
+    asset_type: cloudkms.googleapis.com/CryptoKey
+    project_id: nova-ai-prod
+  backed_edge_ids:
+  - 0979c0f9bf553621
+- id: tr_002_data_lake_cmek
+  category: KMS
+  asset_type: cloudkms.googleapis.com/CryptoKey
+  display_name: data-lake-cmek
+  detail: europe-west1 | ENCRYPT_DECRYPT
+  project_id: nova-data-prod
+  owner_container_id: proj_nova_data_prod
+  attached_node_ids:
+  - n_nova_data_prod_nova_data_raw_events
+  - n_nova_data_prod_retail_dw
+  backed_by:
+  - uri: //cloudkms.googleapis.com/projects/nova-data-prod/locations/europe-west1/keyRings/data-keyring/cryptoKeys/data-lake-cmek
+    asset_type: cloudkms.googleapis.com/CryptoKey
+    project_id: nova-data-prod
+  backed_edge_ids:
+  - 78ebd7a3ad60cc45
+  - a9cf6010130b8a33
+- id: tr_003_retail_orders_cmek
+  category: KMS
+  asset_type: cloudkms.googleapis.com/CryptoKey
+  display_name: retail-orders-cmek
+  detail: europe-west1 | ENCRYPT_DECRYPT
+  project_id: nova-retail-prod
+  owner_container_id: proj_nova_retail_prod
+  attached_node_ids:
+  - n_nova_retail_prod_orders_alloydb
+  backed_by:
+  - uri: //cloudkms.googleapis.com/projects/nova-retail-prod/locations/europe-west1/keyRings/retail-keyring/cryptoKeys/retail-orders-cmek
+    asset_type: cloudkms.googleapis.com/CryptoKey
+    project_id: nova-retail-prod
+  backed_edge_ids:
+  - f5b5357d9d129552
+- id: tr_004_shared_nat_ew1
+  category: NAT_ROUTER
+  asset_type: compute.googleapis.com/Router
+  display_name: shared-nat-ew1
+  detail: europe-west1
+  project_id: nova-shared-net
+  owner_container_id: vpc_nova_shared_net_nova_shared
+  backed_by:
+  - uri: //compute.googleapis.com/projects/nova-shared-net/regions/europe-west1/routers/shared-nat-ew1
+    asset_type: compute.googleapis.com/Router
+    project_id: nova-shared-net
+  backed_edge_ids:
+  - 30a460a873e7c267
+- id: tr_010_retail_audit_log_sink
+  category: OBSERVABILITY
+  asset_type: logging.googleapis.com/LogSink
+  display_name: retail-audit-log-sink
+  detail: global
+  project_id: nova-shared-net
+  owner_container_id: proj_nova_shared_net
+  attached_node_ids:
+  - n_nova_data_prod_nova_data_raw_events
+  backed_by:
+  - uri: //logging.googleapis.com/projects/nova-shared-net/sinks/retail-audit-log-sink
     asset_type: logging.googleapis.com/LogSink
+    project_id: nova-shared-net
+  backed_edge_ids:
+  - bb0115801f2acc9c
+- id: tr_011_checkout_slo_alert
+  category: OBSERVABILITY
+  asset_type: monitoring.googleapis.com/AlertPolicy
+  display_name: checkout-slo-alert
+  detail: global
+  project_id: nova-retail-prod
+  owner_container_id: proj_nova_retail_prod
+  attached_node_ids:
+  - n_nova_retail_prod_checkout_service
+  backed_by:
+  - uri: //monitoring.googleapis.com/projects/nova-retail-prod/alertPolicies/9101001
+    asset_type: monitoring.googleapis.com/AlertPolicy
     project_id: nova-retail-prod
-    reason: Default Cloud Logging sink suppressed as platform plumbing
-rejected_edges:
-  - from: storefront_api
-    to: raw_events_bucket
-    reason: Storefront API never writes directly to raw analytics archive; events flow exclusively via Pub/Sub and Dataflow
+  backed_edge_ids:
+  - 9d5fe2bfab81c05b
+- id: tr_012_alloydb_app_creds
+  category: SECRET
+  asset_type: secretmanager.googleapis.com/Secret
+  display_name: alloydb-app-creds
+  detail: automatic
+  project_id: nova-retail-prod
+  owner_container_id: proj_nova_retail_prod
+  attached_node_ids:
+  - n_nova_retail_prod_checkout_service
+  - n_nova_retail_prod_storefront_api
+  backed_by:
+  - uri: //secretmanager.googleapis.com/projects/nova-retail-prod/secrets/alloydb-app-creds
+    asset_type: secretmanager.googleapis.com/Secret
+    project_id: nova-retail-prod
+  backed_edge_ids:
+  - 613f2a4d7e8d85c7
+  - a1a312472bf23bdc
+- id: tr_013_payment_psp_api_key
+  category: SECRET
+  asset_type: secretmanager.googleapis.com/Secret
+  display_name: payment-psp-api-key
+  detail: automatic
+  project_id: nova-retail-prod
+  owner_container_id: proj_nova_retail_prod
+  attached_node_ids:
+  - n_nova_retail_prod_checkout_service
+  backed_by:
+  - uri: //secretmanager.googleapis.com/projects/nova-retail-prod/secrets/payment-psp-api-key
+    asset_type: secretmanager.googleapis.com/Secret
+    project_id: nova-retail-prod
+  backed_edge_ids:
+  - 8e6d371897d4b2e5
+- id: tr_014_retail_vpc_connector
+  category: VPC_ACCESS
+  asset_type: vpcaccess.googleapis.com/Connector
+  display_name: retail-vpc-connector
+  detail: europe-west1
+  project_id: nova-retail-prod
+  owner_container_id: sub_nova_shared_net_retail_run_egress
+  attached_node_ids:
+  - n_nova_retail_prod_checkout_service
+  - n_nova_retail_prod_storefront_api
+  backed_by:
+  - uri: //vpcaccess.googleapis.com/projects/nova-retail-prod/locations/europe-west1/connectors/retail-vpc-connector
+    asset_type: vpcaccess.googleapis.com/Connector
+    project_id: nova-retail-prod
+  backed_edge_ids:
+  - 417589b6fdc97c3b
+  - b447a537ed7cd5a0
+  - e0efa70c232da1b1
+structural_edges:
+- edge_id: 1ec3b4c28f492df1
+  kind: CONFIG_REF
+  from_uri: //pubsub.googleapis.com/projects/nova-retail-prod/topics/retail-orders-v1
+  to_uri: //pubsub.googleapis.com/projects/nova-retail-prod/subscriptions/orders-dataflow-sub
+  reason: 1to1_plumbing_fold
+  target_id: n_nova_retail_prod_retail_orders_v1
+- edge_id: 53d7933ae2be438d
+  kind: CONFIG_REF
+  from_uri: //pubsub.googleapis.com/projects/nova-retail-prod/topics/retail-orders-dlq
+  to_uri: //pubsub.googleapis.com/projects/nova-retail-prod/subscriptions/orders-dlq-replay-sub
+  reason: 1to1_plumbing_fold
+  target_id: n_nova_retail_prod_retail_orders_dlq
+- edge_id: 6b5e906a5ca1b67f
+  kind: PSA_PEERING
+  from_uri: //compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared
+  to_uri: //redis.googleapis.com/projects/nova-retail-prod/locations/europe-west1/instances/retail-session-redis
+  reason: psa_container_boundary
+  target_id: zone_psa_zone_private_reg_vpc_nova_shared_net_nova_shared_europe_west1
+- edge_id: d5b47745e6547a35
+  kind: PSA_PEERING
+  from_uri: //compute.googleapis.com/projects/nova-shared-net/global/networks/nova-shared
+  to_uri: //alloydb.googleapis.com/projects/nova-retail-prod/locations/europe-west1/clusters/orders-alloydb
+  reason: psa_container_boundary
+  target_id: zone_psa_zone_private_reg_vpc_nova_shared_net_nova_shared_europe_west1
+suppressed_plumbing_counts:
+  bigquery.googleapis.com/Table: 23
+  compute.googleapis.com/BackendService: 3
+  compute.googleapis.com/Firewall: 14
+  compute.googleapis.com/Route: 8
+  compute.googleapis.com/SecurityPolicy: 2
+  compute.googleapis.com/SslCertificate: 2
+  compute.googleapis.com/TargetHttpsProxy: 1
+  compute.googleapis.com/UrlMap: 1
+  run.googleapis.com/Revision: 18
 views:
-  - id: view_0_system_index
-    title: System Index Map
-    subtitle: 3 logical views across 15 architecture components
-    archetype: landscape_matrix
-    accent_mode: MIXED
-    placements:
-      - component_id: web_mobile_clients
-        column: 0
-      - component_id: data_ai_pipeline
-        column: 1
-      - component_id: shared_vpc_connectivity
-        column: 3
-      - component_id: storefront_runtime
-        column: 2
-      - component_id: bi_looker_dashboards
-        column: 4
-      - component_id: payment_gateway_ext
-        column: 4
-    edges:
-      - from: data_ai_pipeline
-        to: bi_looker_dashboards
-        verb: sends traffic
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-      - from: storefront_runtime
-        to: data_ai_pipeline
-        verb: Order stream
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-      - from: storefront_runtime
-        to: payment_gateway_ext
-        verb: sends traffic
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-      - from: storefront_runtime
-        to: shared_vpc_connectivity
-        verb: PSA network
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-      - from: web_mobile_clients
-        to: storefront_runtime
-        verb: calls ingress
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-  - id: data_ai_pipeline
-    title: Streaming Analytics & Vertex AI Recommendations
-    subtitle: Real-time Pub/Sub order stream through Dataflow into Cloud Storage, BigQuery, Vertex AI, and Looker BI
-    archetype: stage_pipeline
-    accent_mode: MIXED
-    container_ids:
-      - ext_partners
-      - proj_ai_prod
-      - proj_data_prod
-      - proj_retail_prod
-    placements:
-      - component_id: order_events_topic
-        container_id: proj_retail_prod
-        column: 0
-        off_page_refs:
-          - target_view_id: storefront_runtime
-            label: Order events
-            direction: IN
-      - component_id: order_stream_dataflow
-        container_id: proj_data_prod
-        column: 1
-      - component_id: raw_events_bucket
-        container_id: proj_data_prod
-        column: 2
-      - component_id: analytics_warehouse
-        container_id: proj_data_prod
-        column: 2
-      - component_id: recs_vertex_endpoint
-        container_id: proj_ai_prod
-        column: 3
-      - component_id: bi_looker_dashboards
-        container_id: ext_partners
-        column: 3
-    edges:
-      - from: analytics_warehouse
-        to: bi_looker_dashboards
-        verb: serves metrics
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60105
-        via_bus_id: bq_consumers
-      - from: analytics_warehouse
-        to: recs_vertex_endpoint
-        verb: trains features
-        flow_kind: RUNTIME
-        provenance: INFERRED
-        inference_rationale: Vertex AI training pipelines consume feature views exported from nova-data-prod.retail_dw via cross-project IAM binding.
-        via_bus_id: bq_consumers
-      - from: order_events_topic
-        to: order_stream_dataflow
-        verb: streams orders
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60101
-      - from: order_stream_dataflow
-        to: analytics_warehouse
-        verb: loads tables
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60103
-        via_bus_id: dataflow_sinks
-      - from: order_stream_dataflow
-        to: raw_events_bucket
-        verb: archives JSON
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60102
-        via_bus_id: dataflow_sinks
-  - id: shared_vpc_connectivity
-    title: Shared VPC & Private Service Connectivity
-    subtitle: Direct VPC egress from Cloud Run service workloads through nova-shared-net to PSA AlloyDB, PSC Redis, and Cloud NAT
-    archetype: hub_spoke
-    accent_mode: RUNTIME
-    container_ids:
-      - proj_retail_prod
-      - proj_shared_net
-      - psa_alloydb_zone
-      - psc_redis_zone
-    placements:
-      - component_id: storefront_api
-        container_id: proj_retail_prod
-        column: 0
-      - component_id: checkout_service
-        container_id: proj_retail_prod
-        column: 0
-      - component_id: shared_vpc_hub
-        container_id: proj_shared_net
-        column: 1
-      - component_id: cloud_nat_egress
-        container_id: proj_shared_net
-        column: 2
-      - component_id: orders_alloydb
-        container_id: psa_alloydb_zone
-        column: 2
-      - component_id: session_cache
-        container_id: psc_redis_zone
-        column: 2
-    edges:
-      - from: checkout_service
-        to: shared_vpc_hub
-        verb: Direct VPC
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60202
-        via_bus_id: vpc_egress_in
-      - from: shared_vpc_hub
-        to: cloud_nat_egress
-        verb: egress NAT
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60205
-        via_bus_id: vpc_hub_out
-      - from: shared_vpc_hub
-        to: orders_alloydb
-        verb: PSA peering
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60203
-        via_bus_id: vpc_hub_out
-      - from: shared_vpc_hub
-        to: session_cache
-        verb: PSC endpoint
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60204
-        via_bus_id: vpc_hub_out
-      - from: storefront_api
-        to: shared_vpc_hub
-        verb: Direct VPC
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60201
-        via_bus_id: vpc_egress_in
-  - id: storefront_runtime
-    title: Storefront & Checkout Runtime
-    subtitle: Global HTTPS ingress to Cloud Run services backed by Memorystore Redis, AlloyDB, Pub/Sub, and external payment PSP
-    archetype: landscape_matrix
-    accent_mode: RUNTIME
-    container_ids:
-      - ext_partners
-      - ext_shoppers
-      - proj_retail_prod
-      - psa_alloydb_zone
-    placements:
-      - component_id: web_mobile_clients
-        container_id: ext_shoppers
-        column: 0
-      - component_id: edge_https_lb
-        container_id: proj_retail_prod
-        column: 1
-      - component_id: storefront_api
-        container_id: proj_retail_prod
-        column: 2
-      - component_id: checkout_service
-        container_id: proj_retail_prod
-        column: 2
-      - component_id: session_cache
-        container_id: proj_retail_prod
-        column: 3
-      - component_id: order_events_topic
-        container_id: proj_retail_prod
-        column: 3
-        off_page_refs:
-          - target_view_id: data_ai_pipeline
-            label: Order stream
-            direction: OUT
-      - component_id: orders_alloydb
-        container_id: psa_alloydb_zone
-        column: 3
-        off_page_refs:
-          - target_view_id: shared_vpc_connectivity
-            label: PSA network
-            direction: OUT
-      - component_id: payment_gateway_ext
-        container_id: ext_partners
-        column: 4
-    edges:
-      - from: checkout_service
-        to: order_events_topic
-        verb: publishes event
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60307
-        via_bus_id: checkout_out
-      - from: checkout_service
-        to: orders_alloydb
-        verb: commits order
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60306
-        via_bus_id: checkout_out
-      - from: checkout_service
-        to: payment_gateway_ext
-        verb: authorizes pay
-        flow_kind: RUNTIME
-        provenance: INFERRED
-        inference_rationale: Checkout service holds Secret Manager key payment-psp-api-key and routes outbound HTTPS to payments.example.net via Cloud NAT.
-      - from: edge_https_lb
-        to: checkout_service
-        verb: routes /orders
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60303
-        via_bus_id: lb_backends
-      - from: edge_https_lb
-        to: storefront_api
-        verb: routes /catalog
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60302
-        via_bus_id: lb_backends
-      - from: storefront_api
-        to: orders_alloydb
-        verb: reads catalog
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60305
-      - from: storefront_api
-        to: session_cache
-        verb: reads session
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60304
-      - from: web_mobile_clients
-        to: edge_https_lb
-        verb: HTTPS traffic
-        flow_kind: RUNTIME
-        provenance: VERIFIED
-        evidence_edge_ids:
-          - a1b2c3d4e5f60301
+- id: view_0_system_index
+  title: System Architecture Overview
+  subtitle: 18 components · 20 flows · 14 governance items
+  focus_summary: Cloud-native retail storefront and checkout platform on Cloud Run
+    backed by AlloyDB, Memorystore, real-time Pub/Sub and Dataflow analytics into
+    BigQuery, and Vertex AI personalization.
+  include_transversal_panel: true
+  archetype: layered_flow
+  accent_mode: RUNTIME
+  container_ids:
+  - ext_sources
+  - ext_targets
+  - folder_510100
+  - org_910000101
+  - proj_nova_ai_prod
+  - proj_nova_data_prod
+  - proj_nova_retail_prod
+  - proj_nova_shared_net
+  - reg_vpc_nova_shared_net_nova_shared_europe_west1
+  - sub_nova_shared_net_dataflow_stream_subnet
+  - sub_nova_shared_net_retail_run_egress
+  - vpc_nova_shared_net_nova_shared
+  - zone_exposure_zone_private_proj_nova_ai_prod
+  - zone_exposure_zone_private_proj_nova_data_prod
+  - zone_exposure_zone_private_proj_nova_retail_prod
+  - zone_exposure_zone_private_reg_vpc_nova_shared_net_nova_shared_europe_west1
+  - zone_exposure_zone_private_sub_nova_shared_net_dataflow_stream_subnet
+  - zone_exposure_zone_private_sub_nova_shared_net_retail_run_egress
+  - zone_exposure_zone_public_vpc_nova_shared_net_nova_shared
+  - zone_psa_zone_private_reg_vpc_nova_shared_net_nova_shared_europe_west1
+  placements:
+  - component_id: n_external_web_mobile_shoppers
+    container_id: ext_sources
+    column: 0
+  - component_id: n_nova_retail_prod_shop_edge_https_lb
+    container_id: zone_exposure_zone_public_vpc_nova_shared_net_nova_shared
+    column: 1
+  - component_id: n_nova_retail_prod_checkout_service
+    container_id: zone_exposure_zone_private_sub_nova_shared_net_retail_run_egress
+    column: 2
+  - component_id: n_nova_retail_prod_storefront_api
+    container_id: zone_exposure_zone_private_sub_nova_shared_net_retail_run_egress
+    column: 2
+  - component_id: n_nova_retail_prod_retail_orders_v1
+    container_id: zone_exposure_zone_private_proj_nova_retail_prod
+    column: 3
+  - component_id: n_nova_retail_prod_retail_orders_dlq
+    container_id: zone_exposure_zone_private_proj_nova_retail_prod
+    column: 4
+  - component_id: n_nova_data_prod_orders_stream_enrich_v2
+    container_id: zone_exposure_zone_private_sub_nova_shared_net_dataflow_stream_subnet
+    column: 4
+  - component_id: n_nova_ai_prod_gemini_4_carbon
+    container_id: zone_exposure_zone_private_proj_nova_ai_prod
+    column: 5
+  - component_id: n_nova_data_prod_nova_data_raw_events
+    container_id: zone_exposure_zone_private_proj_nova_data_prod
+    column: 5
+  - component_id: n_nova_data_prod_retail_dw
+    container_id: zone_exposure_zone_private_proj_nova_data_prod
+    column: 5
+  - component_id: n_nova_retail_prod_orders_dlq_replay_fn
+    container_id: zone_exposure_zone_private_sub_nova_shared_net_retail_run_egress
+    column: 5
+  - component_id: n_nova_retail_prod_orders_alloydb
+    container_id: zone_psa_zone_private_reg_vpc_nova_shared_net_nova_shared_europe_west1
+    column: 5
+  - component_id: n_nova_retail_prod_retail_session_redis
+    container_id: zone_psa_zone_private_reg_vpc_nova_shared_net_nova_shared_europe_west1
+    column: 5
+  - component_id: n_external_payment_psp_gateway
+    container_id: ext_targets
+    column: 6
+  - component_id: n_nova_data_prod_merchandising_mart
+    container_id: zone_exposure_zone_private_proj_nova_data_prod
+    column: 6
+  - component_id: n_nova_retail_prod_nova_orders_dlq_archive
+    container_id: zone_exposure_zone_private_proj_nova_retail_prod
+    column: 6
+  - component_id: n_nova_ai_prod_novaretail_looker_bi
+    container_id: zone_exposure_zone_private_proj_nova_ai_prod
+    column: 7
+  - component_id: n_nova_ai_prod_recs_ranker_v4
+    container_id: zone_exposure_zone_private_reg_vpc_nova_shared_net_nova_shared_europe_west1
+    column: 7
+  edges:
+  - from: n_external_web_mobile_shoppers
+    to: n_nova_retail_prod_shop_edge_https_lb
+    verb: HTTPS :443
+    flow_kind: RUNTIME
+    semantic_tag: ingress
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - da176aa0f235fad6
+  - from: n_nova_data_prod_merchandising_mart
+    to: n_nova_ai_prod_novaretail_looker_bi
+    verb: Reads BQ API
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 7df21962db0a557b
+  - from: n_nova_data_prod_merchandising_mart
+    to: n_nova_ai_prod_recs_ranker_v4
+    verb: Syncs features
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - e3f534d8681256b3
+  - from: n_nova_data_prod_orders_stream_enrich_v2
+    to: n_nova_data_prod_nova_data_raw_events
+    verb: Writes raw GCS
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 0e03d4bf07616435
+  - from: n_nova_data_prod_orders_stream_enrich_v2
+    to: n_nova_data_prod_retail_dw
+    verb: Streams to BQ
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 21bf2e1015be1d0a
+  - from: n_nova_data_prod_retail_dw
+    to: n_nova_data_prod_merchandising_mart
+    verb: SQL transform
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - ddfa28ec2eaf622a
+  - from: n_nova_retail_prod_checkout_service
+    to: n_external_payment_psp_gateway
+    verb: mTLS charge
+    flow_kind: RUNTIME
+    semantic_tag: hybrid
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 4f8b4c9576e4b44d
+  - from: n_nova_retail_prod_checkout_service
+    to: n_nova_retail_prod_orders_alloydb
+    verb: Writes SQL
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 62df008561128068
+  - from: n_nova_retail_prod_checkout_service
+    to: n_nova_retail_prod_retail_orders_v1
+    verb: Publishes
+    flow_kind: RUNTIME
+    semantic_tag: async
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - fc054ae831a32bd4
+  - from: n_nova_retail_prod_orders_dlq_replay_fn
+    to: n_nova_retail_prod_nova_orders_dlq_archive
+    verb: Archives DLQ
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 874037d12a2043b1
+  - from: n_nova_retail_prod_orders_dlq_replay_fn
+    to: n_nova_retail_prod_retail_orders_v1
+    verb: Retry publish
+    flow_kind: RUNTIME
+    semantic_tag: retry
+    is_retry_or_dlq: true
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - f2c42577be04ebf5
+  - from: n_nova_retail_prod_retail_orders_dlq
+    to: n_nova_retail_prod_orders_dlq_replay_fn
+    verb: Pushes DLQ
+    flow_kind: RUNTIME
+    semantic_tag: dlq
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - bfea35ddb2a4f2d7
+  - from: n_nova_retail_prod_retail_orders_v1
+    to: n_nova_data_prod_orders_stream_enrich_v2
+    verb: Pulls stream
+    flow_kind: RUNTIME
+    semantic_tag: async
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - acb2448a70a98287
+  - from: n_nova_retail_prod_retail_orders_v1
+    to: n_nova_retail_prod_retail_orders_dlq
+    verb: Dead-letter
+    flow_kind: RUNTIME
+    semantic_tag: dlq
+    is_retry_or_dlq: true
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 0e0e3330c886f189
+  - from: n_nova_retail_prod_shop_edge_https_lb
+    to: n_nova_retail_prod_checkout_service
+    verb: HTTPS /orders
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 703dcc3fbaec1926
+  - from: n_nova_retail_prod_shop_edge_https_lb
+    to: n_nova_retail_prod_storefront_api
+    verb: HTTPS /catalog
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 28a9febcfebb48ae
+  - from: n_nova_retail_prod_storefront_api
+    to: n_nova_ai_prod_gemini_4_carbon
+    verb: Generates AI
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 62347d9149b081aa
+  - from: n_nova_retail_prod_storefront_api
+    to: n_nova_ai_prod_recs_ranker_v4
+    verb: Predicts recs
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - d31168056ed028d2
+  - from: n_nova_retail_prod_storefront_api
+    to: n_nova_retail_prod_orders_alloydb
+    verb: Reads SQL
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 9342e208487a3730
+  - from: n_nova_retail_prod_storefront_api
+    to: n_nova_retail_prod_retail_session_redis
+    verb: Reads session
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 5b38f0072dc1aef7
+- id: view_1
+  title: Storefront Ingress & Core Runtime
+  subtitle: External shoppers, HTTPS load balancing, and Cloud Run APIs
+  focus_summary: Public HTTPS ingress routing shopper traffic to private Cloud Run
+    storefront and checkout microservices.
+  include_transversal_panel: true
+  archetype: layered_flow
+  accent_mode: RUNTIME
+  container_ids:
+  - ext_sources
+  - folder_510100
+  - org_910000101
+  - proj_nova_shared_net
+  - reg_vpc_nova_shared_net_nova_shared_europe_west1
+  - sub_nova_shared_net_retail_run_egress
+  - vpc_nova_shared_net_nova_shared
+  - zone_exposure_zone_private_sub_nova_shared_net_retail_run_egress
+  - zone_exposure_zone_public_vpc_nova_shared_net_nova_shared
+  placements:
+  - component_id: n_external_web_mobile_shoppers
+    container_id: ext_sources
+    column: 0
+  - component_id: n_nova_retail_prod_shop_edge_https_lb
+    container_id: zone_exposure_zone_public_vpc_nova_shared_net_nova_shared
+    column: 1
+  - component_id: n_nova_retail_prod_checkout_service
+    container_id: zone_exposure_zone_private_sub_nova_shared_net_retail_run_egress
+    column: 2
+    off_page_refs:
+    - target_view_id: view_2
+      label: orders-alloydb (+2 in view_2)
+      direction: OUT
+  - component_id: n_nova_retail_prod_storefront_api
+    container_id: zone_exposure_zone_private_sub_nova_shared_net_retail_run_egress
+    column: 2
+    off_page_refs:
+    - target_view_id: view_2
+      label: gemini-4-carbon (+3 in view_2)
+      direction: OUT
+  edges:
+  - from: n_external_web_mobile_shoppers
+    to: n_nova_retail_prod_shop_edge_https_lb
+    verb: HTTPS :443
+    flow_kind: RUNTIME
+    semantic_tag: ingress
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - da176aa0f235fad6
+  - from: n_nova_retail_prod_shop_edge_https_lb
+    to: n_nova_retail_prod_checkout_service
+    verb: HTTPS /orders
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 703dcc3fbaec1926
+  - from: n_nova_retail_prod_shop_edge_https_lb
+    to: n_nova_retail_prod_storefront_api
+    verb: HTTPS /catalog
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 28a9febcfebb48ae
+- id: view_2
+  title: Event Streaming, Datastores & AI
+  subtitle: Order messaging, Dataflow analytics, AlloyDB, and Vertex AI
+  focus_summary: Transactional persistence, asynchronous order streaming with DLQ
+    replay, BigQuery warehousing, external PSP billing, and Vertex AI serving.
+  include_transversal_panel: true
+  archetype: layered_flow
+  accent_mode: RUNTIME
+  container_ids:
+  - ext_targets
+  - folder_510100
+  - org_910000101
+  - proj_nova_ai_prod
+  - proj_nova_data_prod
+  - proj_nova_retail_prod
+  - proj_nova_shared_net
+  - reg_vpc_nova_shared_net_nova_shared_europe_west1
+  - sub_nova_shared_net_dataflow_stream_subnet
+  - sub_nova_shared_net_retail_run_egress
+  - vpc_nova_shared_net_nova_shared
+  - zone_exposure_zone_private_proj_nova_ai_prod
+  - zone_exposure_zone_private_proj_nova_data_prod
+  - zone_exposure_zone_private_proj_nova_retail_prod
+  - zone_exposure_zone_private_reg_vpc_nova_shared_net_nova_shared_europe_west1
+  - zone_exposure_zone_private_sub_nova_shared_net_dataflow_stream_subnet
+  - zone_exposure_zone_private_sub_nova_shared_net_retail_run_egress
+  - zone_psa_zone_private_reg_vpc_nova_shared_net_nova_shared_europe_west1
+  placements:
+  - component_id: n_nova_retail_prod_retail_orders_v1
+    container_id: zone_exposure_zone_private_proj_nova_retail_prod
+    column: 3
+    off_page_refs:
+    - target_view_id: view_1
+      label: checkout-service (view_1)
+      direction: IN
+  - component_id: n_nova_retail_prod_retail_orders_dlq
+    container_id: zone_exposure_zone_private_proj_nova_retail_prod
+    column: 4
+  - component_id: n_nova_data_prod_orders_stream_enrich_v2
+    container_id: zone_exposure_zone_private_sub_nova_shared_net_dataflow_stream_subnet
+    column: 4
+  - component_id: n_nova_ai_prod_gemini_4_carbon
+    container_id: zone_exposure_zone_private_proj_nova_ai_prod
+    column: 5
+    off_page_refs:
+    - target_view_id: view_1
+      label: storefront-api (view_1)
+      direction: IN
+  - component_id: n_nova_data_prod_nova_data_raw_events
+    container_id: zone_exposure_zone_private_proj_nova_data_prod
+    column: 5
+  - component_id: n_nova_data_prod_retail_dw
+    container_id: zone_exposure_zone_private_proj_nova_data_prod
+    column: 5
+  - component_id: n_nova_retail_prod_orders_dlq_replay_fn
+    container_id: zone_exposure_zone_private_sub_nova_shared_net_retail_run_egress
+    column: 5
+  - component_id: n_nova_retail_prod_orders_alloydb
+    container_id: zone_psa_zone_private_reg_vpc_nova_shared_net_nova_shared_europe_west1
+    column: 5
+    off_page_refs:
+    - target_view_id: view_1
+      label: checkout-service (+1 in view_1)
+      direction: IN
+  - component_id: n_nova_retail_prod_retail_session_redis
+    container_id: zone_psa_zone_private_reg_vpc_nova_shared_net_nova_shared_europe_west1
+    column: 5
+    off_page_refs:
+    - target_view_id: view_1
+      label: storefront-api (view_1)
+      direction: IN
+  - component_id: n_external_payment_psp_gateway
+    container_id: ext_targets
+    column: 6
+    off_page_refs:
+    - target_view_id: view_1
+      label: checkout-service (view_1)
+      direction: IN
+  - component_id: n_nova_data_prod_merchandising_mart
+    container_id: zone_exposure_zone_private_proj_nova_data_prod
+    column: 6
+  - component_id: n_nova_retail_prod_nova_orders_dlq_archive
+    container_id: zone_exposure_zone_private_proj_nova_retail_prod
+    column: 6
+  - component_id: n_nova_ai_prod_novaretail_looker_bi
+    container_id: zone_exposure_zone_private_proj_nova_ai_prod
+    column: 7
+  - component_id: n_nova_ai_prod_recs_ranker_v4
+    container_id: zone_exposure_zone_private_reg_vpc_nova_shared_net_nova_shared_europe_west1
+    column: 7
+    off_page_refs:
+    - target_view_id: view_1
+      label: storefront-api (view_1)
+      direction: IN
+  edges:
+  - from: n_nova_data_prod_merchandising_mart
+    to: n_nova_ai_prod_novaretail_looker_bi
+    verb: Reads BQ API
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 7df21962db0a557b
+  - from: n_nova_data_prod_merchandising_mart
+    to: n_nova_ai_prod_recs_ranker_v4
+    verb: Syncs features
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - e3f534d8681256b3
+  - from: n_nova_data_prod_orders_stream_enrich_v2
+    to: n_nova_data_prod_nova_data_raw_events
+    verb: Writes raw GCS
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 0e03d4bf07616435
+  - from: n_nova_data_prod_orders_stream_enrich_v2
+    to: n_nova_data_prod_retail_dw
+    verb: Streams to BQ
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 21bf2e1015be1d0a
+  - from: n_nova_data_prod_retail_dw
+    to: n_nova_data_prod_merchandising_mart
+    verb: SQL transform
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - ddfa28ec2eaf622a
+  - from: n_nova_retail_prod_orders_dlq_replay_fn
+    to: n_nova_retail_prod_nova_orders_dlq_archive
+    verb: Archives DLQ
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 874037d12a2043b1
+  - from: n_nova_retail_prod_orders_dlq_replay_fn
+    to: n_nova_retail_prod_retail_orders_v1
+    verb: Retry publish
+    flow_kind: RUNTIME
+    semantic_tag: retry
+    is_retry_or_dlq: true
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - f2c42577be04ebf5
+  - from: n_nova_retail_prod_retail_orders_dlq
+    to: n_nova_retail_prod_orders_dlq_replay_fn
+    verb: Pushes DLQ
+    flow_kind: RUNTIME
+    semantic_tag: dlq
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - bfea35ddb2a4f2d7
+  - from: n_nova_retail_prod_retail_orders_v1
+    to: n_nova_data_prod_orders_stream_enrich_v2
+    verb: Pulls stream
+    flow_kind: RUNTIME
+    semantic_tag: async
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - acb2448a70a98287
+  - from: n_nova_retail_prod_retail_orders_v1
+    to: n_nova_retail_prod_retail_orders_dlq
+    verb: Dead-letter
+    flow_kind: RUNTIME
+    semantic_tag: dlq
+    is_retry_or_dlq: true
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 0e0e3330c886f189

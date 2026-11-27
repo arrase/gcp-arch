@@ -4,9 +4,11 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"maps"
+	"net/url"
 	"regexp"
 	"slices"
-	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -14,9 +16,6 @@ import (
 
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/api/bigquery/v2"
-	"google.golang.org/api/dataflow/v1b3"
-	"google.golang.org/api/googleapi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -30,7 +29,9 @@ const (
 	enrichmentLookback   = 7 * 24 * time.Hour
 	dailyAlignmentSecond = 86400
 
-	bqJobListFields = googleapi.Field("jobs(id,jobReference,user_email,principal_subject,configuration(query/destinationTable,load/destinationTable,copy(sourceTable,sourceTables,destinationTable)),statistics/query/referencedTables),nextPageToken")
+	bqJobListFields       = "jobs(user_email,principal_subject,configuration(query/destinationTable,load/destinationTable,copy(sourceTable,sourceTables,destinationTable)),statistics/query/referencedTables),nextPageToken"
+	dataflowJobListFields = "jobs(id,location),nextPageToken"
+	dataflowJobGetFields  = "id,name,type,currentState,location,environment(serviceAccountEmail,tempStoragePrefix,dataset,workerPools(network,subnetwork)),pipelineDescription(displayData(strValue,url),originalPipelineTransform(displayData(strValue,url)))"
 
 	sourceBQJobs             = "bq_jobs"
 	sourceDataflowJobs       = "dataflow_jobs"
@@ -106,13 +107,96 @@ var (
 	}
 )
 
-type bqJobLink struct {
-	projectID        string
-	jobID            string
-	userEmail        string
-	principalSubject string
-	referencedTables []string
-	destinationTable string
+type bqTableRef struct {
+	ProjectID string `json:"projectId,omitempty"`
+	DatasetID string `json:"datasetId,omitempty"`
+	TableID   string `json:"tableId,omitempty"`
+}
+
+type bqJobConfig struct {
+	Query *struct {
+		DestinationTable *bqTableRef `json:"destinationTable,omitempty"`
+	} `json:"query,omitempty"`
+	Load *struct {
+		DestinationTable *bqTableRef `json:"destinationTable,omitempty"`
+	} `json:"load,omitempty"`
+	Copy *bqCopyConfig `json:"copy,omitempty"`
+}
+
+type bqCopyConfig struct {
+	SourceTable      *bqTableRef   `json:"sourceTable,omitempty"`
+	SourceTables     []*bqTableRef `json:"sourceTables,omitempty"`
+	DestinationTable *bqTableRef   `json:"destinationTable,omitempty"`
+}
+
+type bqJobItem struct {
+	UserEmail        string       `json:"user_email,omitempty"`
+	PrincipalSubject string       `json:"principal_subject,omitempty"`
+	Configuration    *bqJobConfig `json:"configuration,omitempty"`
+	Statistics       *struct {
+		Query *struct {
+			ReferencedTables []*bqTableRef `json:"referencedTables,omitempty"`
+		} `json:"query,omitempty"`
+	} `json:"statistics,omitempty"`
+}
+
+type bqJobListResponse struct {
+	Jobs          []*bqJobItem `json:"jobs,omitempty"`
+	NextPageToken string       `json:"nextPageToken,omitempty"`
+}
+
+type bqDatasetEdgeKey struct {
+	fromDS string
+	toDS   string
+}
+
+type bqPrincipalDSKey struct {
+	email string
+	dsURI string
+}
+
+type bqEnrichResult struct {
+	lineageEdges []bqDatasetEdgeKey
+	principalDS  []bqPrincipalDSKey
+}
+
+type dfDisplayData struct {
+	StrValue string `json:"strValue,omitempty"`
+	URL      string `json:"url,omitempty"`
+}
+
+type dfWorkerPool struct {
+	Network    string `json:"network,omitempty"`
+	Subnetwork string `json:"subnetwork,omitempty"`
+}
+
+type dfEnvironment struct {
+	ServiceAccountEmail string          `json:"serviceAccountEmail,omitempty"`
+	TempStoragePrefix   string          `json:"tempStoragePrefix,omitempty"`
+	Dataset             string          `json:"dataset,omitempty"`
+	WorkerPools         []*dfWorkerPool `json:"workerPools,omitempty"`
+}
+
+type dfPipelineDescription struct {
+	DisplayData               []*dfDisplayData `json:"displayData,omitempty"`
+	OriginalPipelineTransform []*struct {
+		DisplayData []*dfDisplayData `json:"displayData,omitempty"`
+	} `json:"originalPipelineTransform,omitempty"`
+}
+
+type dfJob struct {
+	ID                  string                 `json:"id,omitempty"`
+	Name                string                 `json:"name,omitempty"`
+	Type                string                 `json:"type,omitempty"`
+	CurrentState        string                 `json:"currentState,omitempty"`
+	Location            string                 `json:"location,omitempty"`
+	Environment         *dfEnvironment         `json:"environment,omitempty"`
+	PipelineDescription *dfPipelineDescription `json:"pipelineDescription,omitempty"`
+}
+
+type dfListJobsResponse struct {
+	Jobs          []*dfJob `json:"jobs,omitempty"`
+	NextPageToken string   `json:"nextPageToken,omitempty"`
 }
 
 type dataflowJobLink struct {
@@ -202,20 +286,18 @@ func isDataPlaneReadMethod(method string) bool {
 
 func (st *extractState) runEnrichers(ctx context.Context, clients *Clients) error {
 	var (
-		bqLinks []*bqJobLink
+		bqRes   *bqEnrichResult
 		dfLinks []*dataflowJobLink
 		monRes  *monitoringResult
 	)
 
 	g, gctx := errgroup.WithContext(ctx)
-	if clients.BigQuery != nil {
+	if clients.HTTPClient != nil {
 		g.Go(func() error {
 			var err error
-			bqLinks, err = st.fetchBigQueryJobs(gctx, clients)
+			bqRes, err = st.fetchBigQueryJobs(gctx, clients)
 			return err
 		})
-	}
-	if clients.Dataflow != nil {
 		g.Go(func() error {
 			var err error
 			dfLinks, err = st.fetchDataflowJobs(gctx, clients)
@@ -235,8 +317,11 @@ func (st *extractState) runEnrichers(ctx context.Context, clients *Clients) erro
 
 	// Apply results sequentially on the main goroutine for determinism and zero data races.
 	st.applyDataflowLinks(dfLinks)
-	st.applyBigQueryLinks(bqLinks)
-	st.applyMonitoringResult(monRes)
+	if bqRes != nil || monRes != nil {
+		saWorkloads := st.indexSAEmailToWorkloads()
+		st.applyBigQueryResult(bqRes, saWorkloads)
+		st.applyMonitoringResult(monRes, saWorkloads)
+	}
 	return nil
 }
 
@@ -250,46 +335,7 @@ func (st *extractState) enabledProjects(candidates []string, serviceHost string)
 	return projects
 }
 
-func fetchProjectItemsConcurrently[T any](
-	ctx context.Context,
-	clients *Clients,
-	projects []string,
-	progressFmt string,
-	fetchFn func(context.Context, string) ([]T, error),
-) ([]T, error) {
-	var (
-		mu        sync.Mutex
-		items     []T
-		completed atomic.Int32
-	)
-	total := len(projects)
-
-	g, gctx := errgroup.WithContext(ctx)
-	g.SetLimit(maxEnrichWorkers)
-
-	for _, proj := range projects {
-		g.Go(func() error {
-			projItems, err := fetchFn(gctx, proj)
-			if err != nil {
-				return err
-			}
-			if len(projItems) > 0 {
-				mu.Lock()
-				items = append(items, projItems...)
-				mu.Unlock()
-			}
-			done := completed.Add(1)
-			clients.ReportProgress(false, progressFmt, done, total)
-			return nil
-		})
-	}
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-func (st *extractState) fetchBigQueryJobs(ctx context.Context, clients *Clients) ([]*bqJobLink, error) {
+func (st *extractState) fetchBigQueryJobs(ctx context.Context, clients *Clients) (*bqEnrichResult, error) {
 	projects := st.enabledProjects(st.allDiscoveredProjects(), svcBigQuery)
 	if len(projects) == 0 {
 		return nil, nil
@@ -298,38 +344,82 @@ func (st *extractState) fetchBigQueryJobs(ctx context.Context, clients *Clients)
 	endTime := st.effectiveReadTime()
 	minCreationMs := uint64(endTime.Add(-enrichmentLookback).UnixMilli())
 
-	links, err := fetchProjectItemsConcurrently(ctx, clients, projects, "Enrich BigQuery jobs: %d/%d projects", func(gctx context.Context, proj string) ([]*bqJobLink, error) {
-		return st.fetchProjectBigQueryJobs(gctx, clients, proj, minCreationMs)
-	})
-	if err != nil {
+	var (
+		mu           sync.Mutex
+		lineageSet   = make(map[bqDatasetEdgeKey]struct{})
+		principalSet = make(map[bqPrincipalDSKey]struct{})
+		completed    atomic.Int32
+	)
+	total := len(projects)
+
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(maxEnrichWorkers)
+
+	for _, proj := range projects {
+		g.Go(func() error {
+			localLineage, localPrincipal, err := st.fetchProjectBigQueryJobs(gctx, clients, proj, minCreationMs)
+			if err != nil {
+				return err
+			}
+			if len(localLineage) > 0 || len(localPrincipal) > 0 {
+				mu.Lock()
+				maps.Copy(lineageSet, localLineage)
+				maps.Copy(principalSet, localPrincipal)
+				mu.Unlock()
+			}
+			done := completed.Add(1)
+			clients.ReportProgress(false, "Enrich BigQuery jobs: %d/%d projects", done, total)
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
 		return nil, err
 	}
-
-	slices.SortFunc(links, func(a, b *bqJobLink) int {
-		return cmp.Or(cmp.Compare(a.projectID, b.projectID), cmp.Compare(a.jobID, b.jobID))
-	})
-	return links, nil
+	if len(lineageSet) == 0 && len(principalSet) == 0 {
+		return nil, nil
+	}
+	return buildBQEnrichResult(lineageSet, principalSet), nil
 }
 
-func (st *extractState) fetchProjectBigQueryJobs(ctx context.Context, clients *Clients, proj string, minCreationMs uint64) ([]*bqJobLink, error) {
+func buildBQEnrichResult(lineageSet map[bqDatasetEdgeKey]struct{}, principalSet map[bqPrincipalDSKey]struct{}) *bqEnrichResult {
+	lineageEdges := slices.Collect(maps.Keys(lineageSet))
+	slices.SortFunc(lineageEdges, func(a, b bqDatasetEdgeKey) int {
+		return cmp.Or(cmp.Compare(a.fromDS, b.fromDS), cmp.Compare(a.toDS, b.toDS))
+	})
+	principalDS := slices.Collect(maps.Keys(principalSet))
+	slices.SortFunc(principalDS, func(a, b bqPrincipalDSKey) int {
+		return cmp.Or(cmp.Compare(a.email, b.email), cmp.Compare(a.dsURI, b.dsURI))
+	})
+	return &bqEnrichResult{
+		lineageEdges: lineageEdges,
+		principalDS:  principalDS,
+	}
+}
+
+func (st *extractState) fetchProjectBigQueryJobs(
+	ctx context.Context,
+	clients *Clients,
+	proj string,
+	minCreationMs uint64,
+) (map[bqDatasetEdgeKey]struct{}, map[bqPrincipalDSKey]struct{}, error) {
 	scope := prefixProjects + proj
 	projNum := st.projectNumberFor(proj)
 	pageToken := ""
-	var projLinks []*bqJobLink
+	localLineage := make(map[bqDatasetEdgeKey]struct{})
+	localPrincipal := make(map[bqPrincipalDSKey]struct{})
 
 	for page := 1; page <= maxBQJobPages; page++ {
-		pageLinks, nextToken, degraded, err := st.fetchProjectBigQueryPage(ctx, clients, proj, projNum, scope, minCreationMs, pageToken)
+		nextToken, degraded, err := st.fetchProjectBigQueryPage(ctx, clients, proj, projNum, scope, minCreationMs, pageToken, localLineage, localPrincipal)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if degraded {
-			return projLinks, nil
+			return localLineage, localPrincipal, nil
 		}
-		projLinks = append(projLinks, pageLinks...)
 		pageToken = nextToken
 		if pageToken == "" {
 			st.addCoverage(CoverageEntry{Scope: scope, Source: sourceBQJobs, State: CoverageOK})
-			return projLinks, nil
+			return localLineage, localPrincipal, nil
 		}
 	}
 	st.addCoverage(CoverageEntry{
@@ -338,7 +428,7 @@ func (st *extractState) fetchProjectBigQueryJobs(ctx context.Context, clients *C
 		State:  CoverageTruncatingCap,
 		Detail: fmt.Sprintf("reached %d-page BigQuery jobs.list cap within 7-day window", maxBQJobPages),
 	})
-	return projLinks, nil
+	return localLineage, localPrincipal, nil
 }
 
 func (st *extractState) fetchProjectBigQueryPage(
@@ -347,189 +437,137 @@ func (st *extractState) fetchProjectBigQueryPage(
 	proj, projNum, scope string,
 	minCreationMs uint64,
 	pageToken string,
-) (links []*bqJobLink, nextToken string, degraded bool, err error) {
+	localLineage map[bqDatasetEdgeKey]struct{},
+	localPrincipal map[bqPrincipalDSKey]struct{},
+) (nextToken string, degraded bool, err error) {
 	resp, listErr := listBigQueryJobsPage(ctx, clients, proj, minCreationMs, pageToken)
 	if listErr != nil {
 		deg, fatalErr := st.handleEnrichError(listErr, clients, proj, projNum, scope, sourceBQJobs)
 		if fatalErr != nil {
-			return nil, "", false, fatalErr
+			return "", false, fatalErr
 		}
 		if deg {
-			return nil, "", true, nil
+			return "", true, nil
 		}
-		return nil, "", false, fmt.Errorf("bigquery jobs.list(%s): %w", proj, listErr)
+		return "", false, fmt.Errorf("bigquery jobs.list(%s): %w", proj, listErr)
 	}
 	for _, job := range resp.Jobs {
-		if link := extractBQJobLink(proj, job, st.projIdx); link != nil {
-			links = append(links, link)
-		}
+		recordBQJob(job, st.projIdx, localLineage, localPrincipal)
 	}
-	return links, resp.NextPageToken, false, nil
+	return resp.NextPageToken, false, nil
 }
 
-func listBigQueryJobsPage(ctx context.Context, clients *Clients, proj string, minCreationMs uint64, pageToken string) (*bigquery.JobList, error) {
-	var resp *bigquery.JobList
+func listBigQueryJobsPage(ctx context.Context, clients *Clients, proj string, minCreationMs uint64, pageToken string) (*bqJobListResponse, error) {
+	q := url.Values{}
+	q.Set("allUsers", "true")
+	q.Set("projection", "full")
+	q.Set("minCreationTime", strconv.FormatUint(minCreationMs, 10))
+	q.Set("maxResults", strconv.Itoa(bqJobPageSize))
+	q.Set("fields", bqJobListFields)
+	if pageToken != "" {
+		q.Set("pageToken", pageToken)
+	}
+	endpoint := fmt.Sprintf("%s/bigquery/v2/projects/%s/jobs?%s", clients.bigQueryBaseURL(), url.PathEscape(proj), q.Encode())
+
+	var resp bqJobListResponse
 	err := retryOnRateLimit(ctx, clients.retryBackoff, func() error {
 		if err := waitLimiter(ctx, clients.BQLimiter); err != nil {
 			return err
 		}
-		call := clients.BigQuery.Jobs.List(proj).
-			AllUsers(true).
-			Projection("full").
-			MinCreationTime(minCreationMs).
-			MaxResults(bqJobPageSize).
-			Fields(bqJobListFields).
-			Context(ctx)
-		if pageToken != "" {
-			call.PageToken(pageToken)
-		}
-		var doErr error
-		resp, doErr = call.Do()
-		return doErr
+		resp = bqJobListResponse{}
+		return getJSON(ctx, clients.HTTPClient, endpoint, &resp)
 	})
-	return resp, err
+	return &resp, err
 }
 
-func extractBQJobLink(projectID string, job *bigquery.JobListJobs, projIdx map[string]string) *bqJobLink {
+func recordBQJob(
+	job *bqJobItem,
+	projIdx map[string]string,
+	lineage map[bqDatasetEdgeKey]struct{},
+	principals map[bqPrincipalDSKey]struct{},
+) {
 	if job == nil {
-		return nil
+		return
 	}
-	refTables := collectBQQueryReferencedTables(job.Statistics, projIdx)
-	destTable, copyRefs := extractBQJobConfigTables(job.Configuration, projIdx)
-	for _, uri := range copyRefs {
-		appendUnique(&refTables, uri)
-	}
-	if len(refTables) == 0 && destTable == "" {
-		return nil
-	}
-	sort.Strings(refTables)
-	return &bqJobLink{
-		projectID:        projectID,
-		jobID:            extractBQJobID(job),
-		userEmail:        job.UserEmail,
-		principalSubject: job.PrincipalSubject,
-		referencedTables: refTables,
-		destinationTable: destTable,
-	}
-}
-
-func collectBQQueryReferencedTables(stats *bigquery.JobStatistics, projIdx map[string]string) []string {
-	if stats == nil || stats.Query == nil {
-		return nil
-	}
-	var refs []string
-	for _, tr := range stats.Query.ReferencedTables {
-		if uri := canonicalBQTableRef(tr, projIdx); uri != "" {
-			appendUnique(&refs, uri)
+	var refDatasets []string
+	if job.Statistics != nil && job.Statistics.Query != nil {
+		for _, tr := range job.Statistics.Query.ReferencedTables {
+			appendUnique(&refDatasets, canonicalBQDatasetRef(tr, projIdx))
 		}
 	}
-	return refs
+	destDS, copyRefs := extractBQJobConfigDatasets(job.Configuration, projIdx)
+	for _, ds := range copyRefs {
+		appendUnique(&refDatasets, ds)
+	}
+	if len(refDatasets) == 0 && destDS == "" {
+		return
+	}
+
+	email := extractPrincipalEmail(job.PrincipalSubject, job.UserEmail)
+	for _, refDS := range refDatasets {
+		if destDS != "" && refDS != destDS {
+			lineage[bqDatasetEdgeKey{fromDS: refDS, toDS: destDS}] = struct{}{}
+		}
+		if email != "" {
+			principals[bqPrincipalDSKey{email: email, dsURI: refDS}] = struct{}{}
+		}
+	}
+	if destDS != "" && email != "" {
+		principals[bqPrincipalDSKey{email: email, dsURI: destDS}] = struct{}{}
+	}
 }
 
-func extractBQJobConfigTables(cfg *bigquery.JobConfiguration, projIdx map[string]string) (string, []string) {
+func extractBQJobConfigDatasets(cfg *bqJobConfig, projIdx map[string]string) (string, []string) {
 	if cfg == nil {
 		return "", nil
 	}
 	switch {
 	case cfg.Query != nil && cfg.Query.DestinationTable != nil:
-		return canonicalBQTableRef(cfg.Query.DestinationTable, projIdx), nil
+		return canonicalBQDatasetRef(cfg.Query.DestinationTable, projIdx), nil
 	case cfg.Load != nil && cfg.Load.DestinationTable != nil:
-		return canonicalBQTableRef(cfg.Load.DestinationTable, projIdx), nil
+		return canonicalBQDatasetRef(cfg.Load.DestinationTable, projIdx), nil
 	case cfg.Copy != nil:
-		return extractBQCopyTables(cfg.Copy, projIdx)
+		return extractBQCopyDatasets(cfg.Copy, projIdx)
 	}
 	return "", nil
 }
 
-func extractBQCopyTables(cp *bigquery.JobConfigurationTableCopy, projIdx map[string]string) (string, []string) {
-	dest := canonicalBQTableRef(cp.DestinationTable, projIdx)
+func extractBQCopyDatasets(cp *bqCopyConfig, projIdx map[string]string) (string, []string) {
+	dest := canonicalBQDatasetRef(cp.DestinationTable, projIdx)
 	var refs []string
-	if uri := canonicalBQTableRef(cp.SourceTable, projIdx); uri != "" {
-		appendUnique(&refs, uri)
-	}
+	appendUnique(&refs, canonicalBQDatasetRef(cp.SourceTable, projIdx))
 	for _, tr := range cp.SourceTables {
-		if uri := canonicalBQTableRef(tr, projIdx); uri != "" {
-			appendUnique(&refs, uri)
-		}
+		appendUnique(&refs, canonicalBQDatasetRef(tr, projIdx))
 	}
 	return dest, refs
 }
 
-func extractBQJobID(job *bigquery.JobListJobs) string {
-	if job.JobReference != nil && job.JobReference.JobId != "" {
-		return job.JobReference.JobId
-	}
-	return job.Id
-}
-
-func canonicalBQTableRef(tr *bigquery.TableReference, projIdx map[string]string) string {
-	if tr == nil || tr.ProjectId == "" || tr.DatasetId == "" || tr.TableId == "" {
+func canonicalBQDatasetRef(tr *bqTableRef, projIdx map[string]string) string {
+	if tr == nil || tr.ProjectID == "" || tr.DatasetID == "" || tr.TableID == "" {
 		return ""
 	}
-	if strings.HasPrefix(tr.DatasetId, "_") || strings.HasPrefix(tr.TableId, "_script") || anonTableRe.MatchString(tr.TableId) {
+	if strings.HasPrefix(tr.DatasetID, "_") || strings.HasPrefix(tr.TableID, "_script") || anonTableRe.MatchString(tr.TableID) {
 		return ""
 	}
-	proj := mapProject(tr.ProjectId, projIdx)
-	return prefixBQProjects + proj + segDatasets + tr.DatasetId + "/tables/" + tr.TableId
+	return prefixBQProjects + mapProject(tr.ProjectID, projIdx) + segDatasets + tr.DatasetID
 }
 
-func (st *extractState) applyBigQueryLinks(links []*bqJobLink) {
-	if len(links) == 0 {
+func (st *extractState) applyBigQueryResult(res *bqEnrichResult, saWorkloads map[string][]string) {
+	if res == nil {
 		return
 	}
-	saWorkloads := st.indexSAEmailToWorkloads()
-	for _, job := range links {
-		st.applySingleBigQueryLink(job, saWorkloads)
+	for _, e := range res.lineageEdges {
+		st.emitTargetEdge(e.fromDS, e.toDS, EdgeBQLineage, "sql_elt", oosConfigRefCrossProject)
 	}
-}
-
-func (st *extractState) applySingleBigQueryLink(job *bqJobLink, saWorkloads map[string][]string) {
-	destDS := normalizeBQDatasetURI(job.destinationTable, job.projectID, st.projIdx)
-	refDatasets := st.collectBQReferencedDatasets(job)
-	st.emitBQLineageEdges(refDatasets, destDS)
-
-	touched := appendUniqueDataset(refDatasets, destDS)
-	if len(touched) == 0 {
-		return
-	}
-	srcURI, heuristic := st.resolvePrincipalSource(extractPrincipalEmail(job.principalSubject, job.userEmail), saWorkloads)
-	if srcURI == "" {
-		return
-	}
-	for _, dsURI := range touched {
-		if from, to, ok := st.resolveEdgeEndpoints(srcURI, dsURI, oosConfigRefCrossProject); ok {
+	for _, pd := range res.principalDS {
+		srcURI, heuristic := st.resolvePrincipalSource(pd.email, saWorkloads)
+		if srcURI == "" {
+			continue
+		}
+		if from, to, ok := st.resolveEdgeEndpoints(srcURI, pd.dsURI, oosConfigRefCrossProject); ok {
 			st.putEdge(FactEdge{FromURI: from, ToURI: to, Kind: EdgeBQLineage, Detail: "bq_job", Heuristic: heuristic})
 		}
 	}
-}
-
-func (st *extractState) collectBQReferencedDatasets(job *bqJobLink) []string {
-	var refDatasets []string
-	for _, tbl := range job.referencedTables {
-		if ds := normalizeBQDatasetURI(tbl, job.projectID, st.projIdx); ds != "" {
-			appendUnique(&refDatasets, ds)
-		}
-	}
-	return refDatasets
-}
-
-func (st *extractState) emitBQLineageEdges(refDatasets []string, destDS string) {
-	if destDS == "" {
-		return
-	}
-	for _, refDS := range refDatasets {
-		if refDS != destDS {
-			st.emitTargetEdge(refDS, destDS, EdgeBQLineage, "sql_elt", oosConfigRefCrossProject)
-		}
-	}
-}
-
-func appendUniqueDataset(refDatasets []string, destDS string) []string {
-	touched := slices.Clone(refDatasets)
-	if destDS != "" {
-		appendUnique(&touched, destDS)
-	}
-	return touched
 }
 
 // resolvePrincipalSource attributes a Service Account's activity to its dedicated workload when exactly
@@ -563,10 +601,33 @@ func (st *extractState) fetchDataflowJobs(ctx context.Context, clients *Clients)
 		return nil, nil
 	}
 
-	links, err := fetchProjectItemsConcurrently(ctx, clients, projects, "Enrich Dataflow jobs: %d/%d projects", func(gctx context.Context, proj string) ([]*dataflowJobLink, error) {
-		return st.fetchProjectDataflowJobs(gctx, clients, proj)
-	})
-	if err != nil {
+	var (
+		mu        sync.Mutex
+		links     []*dataflowJobLink
+		completed atomic.Int32
+	)
+	total := len(projects)
+
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(maxEnrichWorkers)
+
+	for _, proj := range projects {
+		g.Go(func() error {
+			projLinks, err := st.fetchProjectDataflowJobs(gctx, clients, proj)
+			if err != nil {
+				return err
+			}
+			if len(projLinks) > 0 {
+				mu.Lock()
+				links = append(links, projLinks...)
+				mu.Unlock()
+			}
+			done := completed.Add(1)
+			clients.ReportProgress(false, "Enrich Dataflow jobs: %d/%d projects", done, total)
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
 		return nil, err
 	}
 
@@ -615,60 +676,70 @@ func (st *extractState) fetchProjectDataflowJobs(ctx context.Context, clients *C
 	return projLinks, nil
 }
 
-func listDataflowJobsPage(ctx context.Context, clients *Clients, proj, pageToken string) (*dataflow.ListJobsResponse, error) {
-	var resp *dataflow.ListJobsResponse
+func listDataflowJobsPage(ctx context.Context, clients *Clients, proj, pageToken string) (*dfListJobsResponse, error) {
+	q := url.Values{}
+	q.Set("filter", "ACTIVE")
+	q.Set("fields", dataflowJobListFields)
+	if pageToken != "" {
+		q.Set("pageToken", pageToken)
+	}
+	endpoint := fmt.Sprintf("%s/v1b3/projects/%s/locations/-/jobs?%s", clients.dataflowBaseURL(), url.PathEscape(proj), q.Encode())
+
+	var resp dfListJobsResponse
 	err := retryOnRateLimit(ctx, clients.retryBackoff, func() error {
 		if err := waitLimiter(ctx, clients.DataflowLimiter); err != nil {
 			return err
 		}
-		call := clients.Dataflow.Projects.Locations.Jobs.List(proj, "-").Filter("ACTIVE").Context(ctx)
-		if pageToken != "" {
-			call.PageToken(pageToken)
-		}
-		var doErr error
-		resp, doErr = call.Do()
-		return doErr
+		resp = dfListJobsResponse{}
+		return getJSON(ctx, clients.HTTPClient, endpoint, &resp)
 	})
-	return resp, err
+	return &resp, err
 }
 
-func (st *extractState) fetchDataflowJobDetails(ctx context.Context, clients *Clients, proj, projNum, scope string, summaries []*dataflow.Job) ([]*dataflowJobLink, bool, error) {
+func (st *extractState) fetchDataflowJobDetails(ctx context.Context, clients *Clients, proj, projNum, scope string, summaries []*dfJob) ([]*dataflowJobLink, bool, error) {
 	var links []*dataflowJobLink
 	for _, summary := range summaries {
 		loc := summary.Location
 		if loc == "" {
 			loc = "us-central1"
 		}
-		var detail *dataflow.Job
-		err := retryOnRateLimit(ctx, clients.retryBackoff, func() error {
-			if err := waitLimiter(ctx, clients.DataflowLimiter); err != nil {
-				return err
-			}
-			var doErr error
-			detail, doErr = clients.Dataflow.Projects.Locations.Jobs.Get(proj, loc, summary.Id).
-				View("JOB_VIEW_DESCRIPTION").
-				Context(ctx).
-				Do()
-			return doErr
-		})
+		detail, err := getDataflowJob(ctx, clients, proj, loc, summary.ID)
 		if err != nil {
 			if deg, fatalErr := st.handleEnrichError(err, clients, proj, projNum, scope, sourceDataflowJobs); fatalErr != nil {
 				return nil, false, fatalErr
 			} else if deg {
 				return links, true, nil
 			}
-			return nil, false, fmt.Errorf("dataflow jobs.get(%s/%s/%s): %w", proj, loc, summary.Id, err)
+			return nil, false, fmt.Errorf("dataflow jobs.get(%s/%s/%s): %w", proj, loc, summary.ID, err)
 		}
 		links = append(links, extractDataflowJobLink(proj, loc, detail, st.projIdx))
 	}
 	return links, false, nil
 }
 
-func extractDataflowJobLink(proj, loc string, job *dataflow.Job, projIdx map[string]string) *dataflowJobLink {
+func getDataflowJob(ctx context.Context, clients *Clients, proj, loc, jobID string) (*dfJob, error) {
+	q := url.Values{}
+	q.Set("view", "JOB_VIEW_DESCRIPTION")
+	q.Set("fields", dataflowJobGetFields)
+	endpoint := fmt.Sprintf("%s/v1b3/projects/%s/locations/%s/jobs/%s?%s",
+		clients.dataflowBaseURL(), url.PathEscape(proj), url.PathEscape(loc), url.PathEscape(jobID), q.Encode())
+
+	var detail dfJob
+	err := retryOnRateLimit(ctx, clients.retryBackoff, func() error {
+		if err := waitLimiter(ctx, clients.DataflowLimiter); err != nil {
+			return err
+		}
+		detail = dfJob{}
+		return getJSON(ctx, clients.HTTPClient, endpoint, &detail)
+	})
+	return &detail, err
+}
+
+func extractDataflowJobLink(proj, loc string, job *dfJob, projIdx map[string]string) *dataflowJobLink {
 	link := &dataflowJobLink{
 		projectID: proj,
 		location:  loc,
-		jobID:     job.Id,
+		jobID:     job.ID,
 		jobName:   job.Name,
 		jobType:   job.Type,
 		state:     job.CurrentState,
@@ -676,7 +747,7 @@ func extractDataflowJobLink(proj, loc string, job *dataflow.Job, projIdx map[str
 	var refs []string
 	extractDataflowEnvironment(link, job.Environment, projIdx, &refs)
 	extractDataflowPipelineRefs(job.PipelineDescription, projIdx, &refs)
-	sort.Strings(refs)
+	slices.Sort(refs)
 	link.resourceURIs = refs
 	return link
 }
@@ -691,7 +762,7 @@ func appendSanitizedRefs(dst *[]string, raw string, projIdx map[string]string) {
 	}
 }
 
-func extractDataflowEnvironment(link *dataflowJobLink, env *dataflow.Environment, projIdx map[string]string, refs *[]string) {
+func extractDataflowEnvironment(link *dataflowJobLink, env *dfEnvironment, projIdx map[string]string, refs *[]string) {
 	if env == nil {
 		return
 	}
@@ -708,7 +779,7 @@ func extractDataflowEnvironment(link *dataflowJobLink, env *dataflow.Environment
 	}
 }
 
-func extractDataflowPipelineRefs(desc *dataflow.PipelineDescription, projIdx map[string]string, refs *[]string) {
+func extractDataflowPipelineRefs(desc *dfPipelineDescription, projIdx map[string]string, refs *[]string) {
 	if desc == nil {
 		return
 	}
@@ -718,10 +789,10 @@ func extractDataflowPipelineRefs(desc *dataflow.PipelineDescription, projIdx map
 	}
 }
 
-func appendDisplayDataRefs(refs *[]string, items []*dataflow.DisplayData, projIdx map[string]string) {
+func appendDisplayDataRefs(refs *[]string, items []*dfDisplayData, projIdx map[string]string) {
 	for _, dd := range items {
 		appendSanitizedRefs(refs, dd.StrValue, projIdx)
-		appendSanitizedRefs(refs, dd.Url, projIdx)
+		appendSanitizedRefs(refs, dd.URL, projIdx)
 	}
 }
 
@@ -923,7 +994,7 @@ func mergeMonitoringMaps(
 func buildMonitoringResult(consumedAgg map[consumedAPIKey]int64, pubAgg map[publisherModelKey]*publisherModelStat) *monitoringResult {
 	res := &monitoringResult{
 		consumed:        make([]*consumedAPIStat, 0, len(consumedAgg)),
-		publisherModels: make([]*publisherModelStat, 0, len(pubAgg)),
+		publisherModels: slices.Collect(maps.Values(pubAgg)),
 	}
 	for k, cnt := range consumedAgg {
 		res.consumed = append(res.consumed, &consumedAPIStat{
@@ -935,31 +1006,20 @@ func buildMonitoringResult(consumedAgg map[consumedAPIKey]int64, pubAgg map[publ
 			count:       cnt,
 		})
 	}
-	sort.Slice(res.consumed, func(i, j int) bool {
-		a, b := res.consumed[i], res.consumed[j]
-		if a.projectID != b.projectID {
-			return a.projectID < b.projectID
-		}
-		if a.serviceHost != b.serviceHost {
-			return a.serviceHost < b.serviceHost
-		}
-		if a.saUniqueID != b.saUniqueID {
-			return a.saUniqueID < b.saUniqueID
-		}
-		return a.method < b.method
+	slices.SortFunc(res.consumed, func(a, b *consumedAPIStat) int {
+		return cmp.Or(
+			cmp.Compare(a.projectID, b.projectID),
+			cmp.Compare(a.serviceHost, b.serviceHost),
+			cmp.Compare(a.saUniqueID, b.saUniqueID),
+			cmp.Compare(a.method, b.method),
+		)
 	})
-	for _, ps := range pubAgg {
-		res.publisherModels = append(res.publisherModels, ps)
-	}
-	sort.Slice(res.publisherModels, func(i, j int) bool {
-		a, b := res.publisherModels[i], res.publisherModels[j]
-		if a.projectID != b.projectID {
-			return a.projectID < b.projectID
-		}
-		if a.location != b.location {
-			return a.location < b.location
-		}
-		return a.modelID < b.modelID
+	slices.SortFunc(res.publisherModels, func(a, b *publisherModelStat) int {
+		return cmp.Or(
+			cmp.Compare(a.projectID, b.projectID),
+			cmp.Compare(a.location, b.location),
+			cmp.Compare(a.modelID, b.modelID),
+		)
 	})
 	return res
 }
@@ -1099,13 +1159,12 @@ type monitoringAggKey struct {
 	saUID string
 }
 
-func (st *extractState) applyMonitoringResult(res *monitoringResult) {
+func (st *extractState) applyMonitoringResult(res *monitoringResult, saWorkloads map[string][]string) {
 	if res == nil {
 		return
 	}
 	pubByProj := st.materializePublisherModels(res.publisherModels)
 	targetsByProjType := st.indexTargetsByProjType()
-	saWorkloads := st.indexSAEmailToWorkloads()
 	totals, genTotals, hasNonSAGenAI := st.aggregateConsumedAPICalls(res.consumed)
 	st.emitConsumedAPIEdges(totals, targetsByProjType, saWorkloads)
 	st.emitPublisherModelEdges(genTotals, hasNonSAGenAI, pubByProj, saWorkloads)
@@ -1147,9 +1206,7 @@ func (st *extractState) materializePublisherModels(models []*publisherModelStat)
 			st.assets = append(st.assets, rec)
 			st.assetsByURI[uri] = rec
 		}
-		list := pubByProj[proj]
-		appendUnique(&list, uri)
-		pubByProj[proj] = list
+		appendUniqueMap(pubByProj, proj, uri)
 	}
 	return pubByProj
 }
@@ -1222,18 +1279,9 @@ func (st *extractState) resolveMonitoringSource(saUID string, saWorkloads map[st
 }
 
 func (st *extractState) emitConsumedAPIEdges(totals map[monitoringAggKey]int64, targetsByProjType map[projAssetTypeKey][]string, saWorkloads map[string][]string) {
-	keys := make([]monitoringAggKey, 0, len(totals))
-	for k := range totals {
-		keys = append(keys, k)
-	}
-	sort.Slice(keys, func(i, j int) bool {
-		if keys[i].proj != keys[j].proj {
-			return keys[i].proj < keys[j].proj
-		}
-		if keys[i].host != keys[j].host {
-			return keys[i].host < keys[j].host
-		}
-		return keys[i].saUID < keys[j].saUID
+	keys := slices.Collect(maps.Keys(totals))
+	slices.SortFunc(keys, func(a, b monitoringAggKey) int {
+		return cmp.Or(cmp.Compare(a.proj, b.proj), cmp.Compare(a.host, b.host), cmp.Compare(a.saUID, b.saUID))
 	})
 
 	for _, k := range keys {
@@ -1254,15 +1302,9 @@ func (st *extractState) emitConsumedAPIEdges(totals map[monitoringAggKey]int64, 
 }
 
 func (st *extractState) emitPublisherModelEdges(genTotals map[monitoringAggKey]int64, hasNonSAGenAI map[string]bool, pubByProj, saWorkloads map[string][]string) {
-	genKeys := make([]monitoringAggKey, 0, len(genTotals))
-	for k := range genTotals {
-		genKeys = append(genKeys, k)
-	}
-	sort.Slice(genKeys, func(i, j int) bool {
-		if genKeys[i].proj != genKeys[j].proj {
-			return genKeys[i].proj < genKeys[j].proj
-		}
-		return genKeys[i].saUID < genKeys[j].saUID
+	genKeys := slices.Collect(maps.Keys(genTotals))
+	slices.SortFunc(genKeys, func(a, b monitoringAggKey) int {
+		return cmp.Or(cmp.Compare(a.proj, b.proj), cmp.Compare(a.saUID, b.saUID))
 	})
 	for _, k := range genKeys {
 		if hasNonSAGenAI[k.proj] {
@@ -1298,9 +1340,7 @@ func (st *extractState) indexSAEmailToWorkloads() map[string][]string {
 				continue
 			}
 		}
-		list := out[sa]
-		appendUnique(&list, a.uri)
-		out[sa] = list
+		appendUniqueMap(out, sa, a.uri)
 	}
 	return out
 }
@@ -1400,12 +1440,7 @@ func (st *extractState) allDiscoveredProjects() []string {
 			seen[a.projectID] = struct{}{}
 		}
 	}
-	out := make([]string, 0, len(seen))
-	for p := range seen {
-		out = append(out, p)
-	}
-	sort.Strings(out)
-	return out
+	return slices.Sorted(maps.Keys(seen))
 }
 
 func (st *extractState) nonEmptyProjects() []string {
@@ -1418,12 +1453,7 @@ func (st *extractState) nonEmptyProjects() []string {
 			seen[a.projectID] = struct{}{}
 		}
 	}
-	out := make([]string, 0, len(seen))
-	for p := range seen {
-		out = append(out, p)
-	}
-	sort.Strings(out)
-	return out
+	return slices.Sorted(maps.Keys(seen))
 }
 
 func (st *extractState) isServiceMaybeEnabled(proj, host string) bool {

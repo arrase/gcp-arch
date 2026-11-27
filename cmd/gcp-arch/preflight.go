@@ -44,7 +44,7 @@ When --vertex-project is supplied, also run a zero-token Vertex AI IAM and model
 readiness check using cloud-platform credentials.
 
 At least one target scope (--org, --folder, or --projects) is required.`,
-		Example: `  gcp-arch preflight --projects acme-cicd --vertex-project consultant-ai-sandbox
+		Example: `  gcp-arch preflight --projects acme-cicd --vertex-project my-vertex-project
   gcp-arch preflight --folder 555000111 --quota-project my-quota-proj --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {

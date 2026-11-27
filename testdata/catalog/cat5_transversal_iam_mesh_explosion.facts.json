@@ -1,0 +1,2428 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-26T00:00:00Z",
+  "scopes": [
+    "folders/444051"
+  ],
+  "hierarchy": {
+    "organizations": [
+      {
+        "org_id": "900500002",
+        "display_name": "Platform Security Org"
+      }
+    ],
+    "folders": [
+      {
+        "folder_id": "444051",
+        "display_name": "plat-sec-prod",
+        "parent": "organizations/900500002"
+      }
+    ],
+    "projects": [
+      {
+        "project_id": "p501000abcdef12-tp",
+        "display_name": "Google PSA Tenant",
+        "is_psa_tenant": true
+      },
+      {
+        "project_id": "plat-commerce-core-svc-prod",
+        "project_number": "5010001002",
+        "display_name": "Plat Commerce Core",
+        "parent": "folders/444051",
+        "shared_vpc_host_project": "plat-sec-net-host-prod"
+      },
+      {
+        "project_id": "plat-risk-scoring-svc-prod",
+        "project_number": "5010001003",
+        "display_name": "Plat Risk Scoring",
+        "parent": "folders/444051",
+        "shared_vpc_host_project": "plat-sec-net-host-prod"
+      },
+      {
+        "project_id": "plat-sec-net-host-prod",
+        "project_number": "5010001001",
+        "display_name": "Plat Sec Net Host",
+        "parent": "folders/444051"
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//aiplatform.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "asset_type": "aiplatform.googleapis.com/PublisherModel",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "global",
+      "display_name": "gemini-4-carbon",
+      "attributes": {
+        "invocations": 91400,
+        "model_id": "gemini-4-carbon",
+        "publisher": "google"
+      }
+    },
+    {
+      "uri": "//alloydb.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/clusters/platform-risk-scoring-feature-alloydb-cluster",
+      "asset_type": "alloydb.googleapis.com/Cluster",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-scoring-feature-alloydb-cluster",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production",
+      "attributes": {
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-alloydb-scoring-encryption-cmek",
+        "private_ip": "10.95.68.10",
+        "psa_tenant_project": "p501000abcdef12-tp",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/plat-commerce-core-svc-prod/datasets/platform_commerce_transactional_audit_ds",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "EU",
+      "display_name": "platform_commerce_transactional_audit_ds",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-bigquery-analytics-cmek-key-01",
+        "location": "EU",
+        "table_count": 21
+      }
+    },
+    {
+      "uri": "//bigquery.googleapis.com/projects/plat-risk-scoring-svc-prod/datasets/platform_risk_scoring_compliance_features_ds",
+      "asset_type": "bigquery.googleapis.com/Dataset",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "EU",
+      "display_name": "platform_risk_scoring_compliance_features_ds",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-bigquery-analytics-cmek-key-01",
+        "location": "EU",
+        "table_count": 15
+      }
+    },
+    {
+      "uri": "//cloudfunctions.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/functions/platform-commerce-async-webhook-signature-validator-fn",
+      "asset_type": "cloudfunctions.googleapis.com/CloudFunction",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-async-webhook-signature-validator-fn",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-commerce-core-workloads-private-subnet-ew1",
+      "attributes": {
+        "entry_point": "HandleEvent",
+        "ingress": "ALLOW_INTERNAL_ONLY",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-secrets-envelope-cmek-key-01",
+        "runtime": "go122",
+        "service_account": "svc-checkout-gateway@plat-commerce-core-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//cloudfunctions.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/functions/platform-commerce-tax-jurisdiction-lookup-enricher-func",
+      "asset_type": "cloudfunctions.googleapis.com/CloudFunction",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-tax-jurisdiction-lookup-enricher-func",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-commerce-core-workloads-private-subnet-ew1",
+      "attributes": {
+        "entry_point": "HandleEvent",
+        "ingress": "ALLOW_INTERNAL_ONLY",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-secrets-envelope-cmek-key-01",
+        "runtime": "go122",
+        "service_account": "svc-catalog-pricing@plat-commerce-core-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//cloudfunctions.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/functions/platform-risk-alert-escalation-pagerduty-dispatcher-fn",
+      "asset_type": "cloudfunctions.googleapis.com/CloudFunction",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-alert-escalation-pagerduty-dispatcher-fn",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+      "attributes": {
+        "entry_point": "HandleEvent",
+        "ingress": "ALLOW_INTERNAL_ONLY",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-alloydb-scoring-encryption-cmek",
+        "runtime": "go122",
+        "service_account": "svc-aml-screener@plat-risk-scoring-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//cloudfunctions.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/functions/platform-risk-dead-letter-quarantine-remediation-fn-01",
+      "asset_type": "cloudfunctions.googleapis.com/CloudFunction",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-dead-letter-quarantine-remediation-fn-01",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+      "attributes": {
+        "entry_point": "HandleEvent",
+        "ingress": "ALLOW_INTERNAL_ONLY",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-alloydb-scoring-encryption-cmek",
+        "runtime": "go122",
+        "service_account": "svc-dataflow-risk@plat-risk-scoring-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-bucket-vault-encryption-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-bucket-vault-encryption-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-secrets-envelope-cmek-key-01",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-secrets-envelope-cmek-key-01",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-sql-ledger-encryption-cmek-key",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-sql-ledger-encryption-cmek-key",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-alloydb-scoring-encryption-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-alloydb-scoring-encryption-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-bigquery-analytics-cmek-key-01",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-bigquery-analytics-cmek-key-01",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/plat-sec-net-host-prod/locations/europe-west1/keyRings/host-cmek-ring/cryptoKeys/platform-shared-pubsub-audit-bus-cmek-key-01",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "plat-sec-net-host-prod",
+      "location": "europe-west1",
+      "display_name": "platform-shared-pubsub-audit-bus-cmek-key-01",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/plat-commerce-core-svc-prod/global/forwardingRules/platform-commerce-external-edge-waf-https-fr-01",
+      "asset_type": "compute.googleapis.com/GlobalForwardingRule",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "global",
+      "display_name": "platform-commerce-external-edge-waf-https-fr-01",
+      "attributes": {
+        "ip_address": "34.120.99.10",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "EXTERNAL_MANAGED",
+        "port_range": "443-443",
+        "tls": true
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/plat-risk-scoring-svc-prod/regions/europe-west1/forwardingRules/platform-risk-scoring-internal-envoy-ilb-fr-01",
+      "asset_type": "compute.googleapis.com/ForwardingRule",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-scoring-internal-envoy-ilb-fr-01",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+      "attributes": {
+        "ip_address": "10.95.16.40",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "INTERNAL_MANAGED",
+        "port_range": "8443-8443",
+        "subnet": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "plat-sec-net-host-prod",
+      "location": "global",
+      "display_name": "platform-security-zero-trust-shared-hub-vpc-production",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "GLOBAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/routers/platform-egress-nat-gateway-router-zone-a-ew1",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "plat-sec-net-host-prod",
+      "location": "europe-west1",
+      "display_name": "platform-egress-nat-gateway-router-zone-a-ew1",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production",
+      "attributes": {
+        "bgp_asn": 65301,
+        "nat_count": 3,
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/routers/platform-egress-nat-gateway-router-zone-b-ew1",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "plat-sec-net-host-prod",
+      "location": "europe-west1",
+      "display_name": "platform-egress-nat-gateway-router-zone-b-ew1",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production",
+      "attributes": {
+        "bgp_asn": 65302,
+        "nat_count": 3,
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/routers/platform-egress-nat-gateway-router-zone-c-ew1",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "plat-sec-net-host-prod",
+      "location": "europe-west1",
+      "display_name": "platform-egress-nat-gateway-router-zone-c-ew1",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production",
+      "attributes": {
+        "bgp_asn": 65303,
+        "nat_count": 3,
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-commerce-core-workloads-private-subnet-ew1",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "plat-sec-net-host-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-core-workloads-private-subnet-ew1",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production",
+      "attributes": {
+        "cidr": "10.95.0.0/20",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "plat-sec-net-host-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-scoring-analytics-private-subnet-ew1",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production",
+      "attributes": {
+        "cidr": "10.95.16.0/20",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01",
+      "asset_type": "container.googleapis.com/Cluster",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-gke-confidential-cluster-01",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-commerce-core-workloads-private-subnet-ew1",
+      "attributes": {
+        "mode": "Standard",
+        "private_nodes": true,
+        "release_channel": "REGULAR",
+        "subnet": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-commerce-core-workloads-private-subnet-ew1",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production",
+        "workload_pool": "plat-commerce-core-svc-prod.svc.id.goog"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-checkout-order-state-machine-worker",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-checkout-order-state-machine-worker",
+      "parent_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01",
+      "attributes": {
+        "namespace": "commerce",
+        "replicas": 3,
+        "service_account": "svc-checkout-gateway@plat-commerce-core-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-inventory-lock-lease-coordinator-svc",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-inventory-lock-lease-coordinator-svc",
+      "parent_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01",
+      "attributes": {
+        "namespace": "commerce",
+        "replicas": 3,
+        "service_account": "svc-cart-session@plat-commerce-core-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-loyalty-points-settlement-processor",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-loyalty-points-settlement-processor",
+      "parent_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01",
+      "attributes": {
+        "namespace": "commerce",
+        "replicas": 3,
+        "service_account": "svc-promo-coupon@plat-commerce-core-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-pricing-currency-matrix-calculator-v2",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-pricing-currency-matrix-calculator-v2",
+      "parent_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01",
+      "attributes": {
+        "namespace": "commerce",
+        "replicas": 3,
+        "service_account": "svc-catalog-pricing@plat-commerce-core-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/batch/cronjobs/platform-commerce-hourly-stale-cart-expiration-cronjob",
+      "asset_type": "batch.k8s.io/CronJob",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-hourly-stale-cart-expiration-cronjob",
+      "parent_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01",
+      "attributes": {
+        "namespace": "commerce",
+        "schedule": "0 * * * *",
+        "service_account": "svc-tax-compliance@plat-commerce-core-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/batch/cronjobs/platform-commerce-nightly-pci-reconciliation-cronjob-01",
+      "asset_type": "batch.k8s.io/CronJob",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-nightly-pci-reconciliation-cronjob-01",
+      "parent_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01",
+      "attributes": {
+        "namespace": "commerce",
+        "schedule": "0 * * * *",
+        "service_account": "svc-promo-coupon@plat-commerce-core-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/networking.k8s.io/ingresses/platform-commerce-k8s-gateway-ingress-resource",
+      "asset_type": "networking.k8s.io/Ingress",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-k8s-gateway-ingress-resource",
+      "parent_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01",
+      "attributes": {
+        "ingress_class": "gce",
+        "namespace": "commerce"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/services/platform-commerce-checkout-clusterip-service",
+      "asset_type": "k8s.io/Service",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-checkout-clusterip-service",
+      "parent_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01",
+      "attributes": {
+        "namespace": "commerce",
+        "ports": [
+          8080
+        ],
+        "service_type": "ClusterIP"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/services/platform-commerce-pricing-clusterip-service",
+      "asset_type": "k8s.io/Service",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-pricing-clusterip-service",
+      "parent_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01",
+      "attributes": {
+        "namespace": "commerce",
+        "ports": [
+          8081
+        ],
+        "service_type": "ClusterIP"
+      }
+    },
+    {
+      "uri": "//dataflow.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/jobs/platform-risk-realtime-feature-aggregation-streaming-01",
+      "asset_type": "dataflow.googleapis.com/Job",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-realtime-feature-aggregation-streaming-01",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+      "attributes": {
+        "job_type": "JOB_TYPE_STREAMING",
+        "service_account": "svc-dataflow-risk@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+        "state": "JOB_STATE_RUNNING",
+        "subnet": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//firestore.googleapis.com/projects/plat-commerce-core-svc-prod/databases/(default)",
+      "asset_type": "firestore.googleapis.com/Database",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-ephemeral-carts-firestore",
+      "attributes": {
+        "concurrency_mode": "OPTIMISTIC",
+        "database_type": "FIRESTORE_NATIVE",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-sql-ledger-encryption-cmek-key"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-cart-session@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "plat-commerce-core-svc-prod",
+      "display_name": "svc-cart-session@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "svc-cart-session@plat-commerce-core-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-catalog-pricing@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "plat-commerce-core-svc-prod",
+      "display_name": "svc-catalog-pricing@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "svc-catalog-pricing@plat-commerce-core-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-checkout-gateway@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "plat-commerce-core-svc-prod",
+      "display_name": "svc-checkout-gateway@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "svc-checkout-gateway@plat-commerce-core-svc-prod.iam.gserviceaccount.com"
+      },
+      "project_capabilities": [
+        "roles/viewer"
+      ]
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-promo-coupon@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "plat-commerce-core-svc-prod",
+      "display_name": "svc-promo-coupon@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "svc-promo-coupon@plat-commerce-core-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-tax-compliance@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "plat-commerce-core-svc-prod",
+      "display_name": "svc-tax-compliance@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "svc-tax-compliance@plat-commerce-core-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-aml-screener@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "display_name": "svc-aml-screener@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "svc-aml-screener@plat-risk-scoring-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-dataflow-risk@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "display_name": "svc-dataflow-risk@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "svc-dataflow-risk@plat-risk-scoring-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-fraud-scorer@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "display_name": "svc-fraud-scorer@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "svc-fraud-scorer@plat-risk-scoring-svc-prod.iam.gserviceaccount.com"
+      },
+      "project_capabilities": [
+        "roles/viewer"
+      ]
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-kyc-verifier@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "display_name": "svc-kyc-verifier@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "svc-kyc-verifier@plat-risk-scoring-svc-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/plat-sec-net-host-prod/serviceAccounts/svc-sec-observability@plat-sec-net-host-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "plat-sec-net-host-prod",
+      "display_name": "svc-sec-observability@plat-sec-net-host-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "svc-sec-observability@plat-sec-net-host-prod.iam.gserviceaccount.com"
+      },
+      "project_capabilities": [
+        "roles/viewer"
+      ]
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/plat-commerce-core-svc-prod/sinks/platform-commerce-pci-audit-log-export-sink-01",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "plat-commerce-core-svc-prod",
+      "display_name": "platform-commerce-pci-audit-log-export-sink-01"
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/plat-risk-scoring-svc-prod/sinks/platform-risk-scoring-compliance-log-sink-01",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "display_name": "platform-risk-scoring-compliance-log-sink-01"
+    },
+    {
+      "uri": "//monitoring.googleapis.com/projects/plat-commerce-core-svc-prod/alertPolicies/9052000001",
+      "asset_type": "monitoring.googleapis.com/AlertPolicy",
+      "project_id": "plat-commerce-core-svc-prod",
+      "display_name": "platform-commerce-checkout-error-budget-alert",
+      "attributes": {
+        "enabled": true
+      }
+    },
+    {
+      "uri": "//monitoring.googleapis.com/projects/plat-risk-scoring-svc-prod/alertPolicies/9052000002",
+      "asset_type": "monitoring.googleapis.com/AlertPolicy",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "display_name": "platform-risk-scoring-iam-anomaly-burst-alert",
+      "attributes": {
+        "enabled": true
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/plat-commerce-core-svc-prod/topics/platform-commerce-transactional-domain-events",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "global",
+      "display_name": "platform-commerce-transactional-domain-events",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-sec-net-host-prod/locations/europe-west1/keyRings/host-cmek-ring/cryptoKeys/platform-shared-pubsub-audit-bus-cmek-key-01"
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/subscriptions/platform-commerce-to-risk-evaluation-sub-01",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "global",
+      "display_name": "platform-commerce-to-risk-evaluation-sub-01",
+      "attributes": {
+        "ack_deadline_seconds": 60
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/subscriptions/platform-risk-alert-notification-handler-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "global",
+      "display_name": "platform-risk-alert-notification-handler-sub",
+      "attributes": {
+        "ack_deadline_seconds": 30
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/subscriptions/platform-risk-dataflow-streaming-ingest-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "global",
+      "display_name": "platform-risk-dataflow-streaming-ingest-sub",
+      "attributes": {
+        "ack_deadline_seconds": 60
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/topics/platform-risk-scoring-evaluation-alerts-topic",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "global",
+      "display_name": "platform-risk-scoring-evaluation-alerts-topic",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-sec-net-host-prod/locations/europe-west1/keyRings/host-cmek-ring/cryptoKeys/platform-shared-pubsub-audit-bus-cmek-key-01"
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/plat-sec-net-host-prod/topics/platform-shared-failed-events-dead-letter-topic",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "plat-sec-net-host-prod",
+      "location": "global",
+      "display_name": "platform-shared-failed-events-dead-letter-topic",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-sec-net-host-prod/locations/europe-west1/keyRings/host-cmek-ring/cryptoKeys/platform-shared-pubsub-audit-bus-cmek-key-01"
+      }
+    },
+    {
+      "uri": "//redis.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/instances/platform-risk-velocity-counters-redis-ha-01",
+      "asset_type": "redis.googleapis.com/Instance",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-velocity-counters-redis-ha-01",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-alloydb-scoring-encryption-cmek",
+        "memory_size_gb": 16,
+        "port": 6379,
+        "private_ip": "10.95.72.4",
+        "redis_version": "REDIS_7_2",
+        "tier": "STANDARD_HA",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-checkout-api-orchestration-service-v3",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-checkout-api-orchestration-service-v3",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-commerce-core-workloads-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-sql-ledger-encryption-cmek-key",
+        "service_account": "svc-checkout-gateway@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-commerce-core-workloads-private-subnet-ew1",
+        "url": "https://platform-commerce-checkout-api-orchestration-service-v3-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-invoice-pdf-receipt-generator-service",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-invoice-pdf-receipt-generator-service",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-commerce-core-workloads-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-bucket-vault-encryption-cmek",
+        "service_account": "svc-tax-compliance@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-commerce-core-workloads-private-subnet-ew1",
+        "url": "https://platform-commerce-invoice-pdf-receipt-generator-service-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-payment-capture-idempotency-service-v2",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-payment-capture-idempotency-service-v2",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-commerce-core-workloads-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-bucket-vault-encryption-cmek",
+        "service_account": "svc-catalog-pricing@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-commerce-core-workloads-private-subnet-ew1",
+        "url": "https://platform-commerce-payment-capture-idempotency-service-v2-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-promotional-eligibility-evaluator-svc",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-promotional-eligibility-evaluator-svc",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-commerce-core-workloads-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-sql-ledger-encryption-cmek-key",
+        "service_account": "svc-promo-coupon@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-commerce-core-workloads-private-subnet-ew1",
+        "url": "https://platform-commerce-promotional-eligibility-evaluator-svc-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-shopping-cart-state-synchronizer-svc",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-shopping-cart-state-synchronizer-svc",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-commerce-core-workloads-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-secrets-envelope-cmek-key-01",
+        "service_account": "svc-cart-session@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-commerce-core-workloads-private-subnet-ew1",
+        "url": "https://platform-commerce-shopping-cart-state-synchronizer-svc-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-chargeback-evidence-bundle-assembler-svc",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-chargeback-evidence-bundle-assembler-svc",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-alloydb-scoring-encryption-cmek",
+        "service_account": "svc-fraud-scorer@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+        "url": "https://platform-risk-chargeback-evidence-bundle-assembler-svc-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-device-reputation-telemetry-collector-svc",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-device-reputation-telemetry-collector-svc",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-bigquery-analytics-cmek-key-01",
+        "service_account": "svc-dataflow-risk@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+        "url": "https://platform-risk-device-reputation-telemetry-collector-svc-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-manual-case-review-notification-bridge-01",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-manual-case-review-notification-bridge-01",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-bigquery-analytics-cmek-key-01",
+        "service_account": "svc-kyc-verifier@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+        "url": "https://platform-risk-manual-case-review-notification-bridge-01-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-real-time-transaction-scoring-gateway-v2",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-real-time-transaction-scoring-gateway-v2",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-bigquery-analytics-cmek-key-01",
+        "service_account": "svc-kyc-verifier@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+        "url": "https://platform-risk-real-time-transaction-scoring-gateway-v2-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-sanctions-watchlist-screening-adapter-svc",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-sanctions-watchlist-screening-adapter-svc",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-alloydb-scoring-encryption-cmek",
+        "service_account": "svc-aml-screener@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/plat-sec-net-host-prod/regions/europe-west1/subnetworks/platform-risk-scoring-analytics-private-subnet-ew1",
+        "url": "https://platform-risk-sanctions-watchlist-screening-adapter-svc-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-adyen-merchant-api-key-secret",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "plat-commerce-core-svc-prod",
+      "display_name": "platform-commerce-adyen-merchant-api-key-secret",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-secrets-envelope-cmek-key-01",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-oauth-jwks-private-key-pem",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "plat-commerce-core-svc-prod",
+      "display_name": "platform-commerce-oauth-jwks-private-key-pem",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-secrets-envelope-cmek-key-01",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-postgres-iam-rotation-secret",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "plat-commerce-core-svc-prod",
+      "display_name": "platform-commerce-postgres-iam-rotation-secret",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-secrets-envelope-cmek-key-01",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-stripe-live-signing-secret-v3",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "plat-commerce-core-svc-prod",
+      "display_name": "platform-commerce-stripe-live-signing-secret-v3",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-secrets-envelope-cmek-key-01",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/plat-risk-scoring-svc-prod/secrets/platform-risk-alloydb-analytics-reader-secret",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "display_name": "platform-risk-alloydb-analytics-reader-secret",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-alloydb-scoring-encryption-cmek",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/plat-risk-scoring-svc-prod/secrets/platform-risk-device-fingerprint-hmac-secret-v2",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "display_name": "platform-risk-device-fingerprint-hmac-secret-v2",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-alloydb-scoring-encryption-cmek",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/plat-risk-scoring-svc-prod/secrets/platform-risk-sanctions-vendor-api-bearer-token",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "display_name": "platform-risk-sanctions-vendor-api-bearer-token",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-alloydb-scoring-encryption-cmek",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/plat-sec-net-host-prod/secrets/platform-security-siem-webhook-forwarding-token",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "plat-sec-net-host-prod",
+      "display_name": "platform-security-siem-webhook-forwarding-token",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-sec-net-host-prod/locations/europe-west1/keyRings/host-cmek-ring/cryptoKeys/platform-shared-pubsub-audit-bus-cmek-key-01",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "asset_type": "sqladmin.googleapis.com/Instance",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-orders-cloudsql-postgres-16",
+      "parent_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production",
+      "attributes": {
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-sql-ledger-encryption-cmek-key",
+        "private_ip": "10.95.64.5",
+        "psa_tenant_project": "p501000abcdef12-tp",
+        "tier": "db-custom-8-32768",
+        "vpc": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/platform-commerce-pci-receipts-encrypted-vault",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "plat-commerce-core-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-commerce-pci-receipts-encrypted-vault",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-bucket-vault-encryption-cmek",
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/platform-risk-scoring-model-features-lake-eu",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-scoring-model-features-lake-eu",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-bigquery-analytics-cmek-key-01",
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    },
+    {
+      "uri": "//workflows.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/workflows/platform-risk-compliance-aml-orchestration-workflow",
+      "asset_type": "workflows.googleapis.com/Workflow",
+      "project_id": "plat-risk-scoring-svc-prod",
+      "location": "europe-west1",
+      "display_name": "platform-risk-compliance-aml-orchestration-workflow",
+      "attributes": {
+        "service_account": "svc-aml-screener@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+        "state": "ACTIVE"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "ee44653070d8006f",
+      "from_uri": "//alloydb.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/clusters/platform-risk-scoring-feature-alloydb-cluster",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-alloydb-scoring-encryption-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "7aff5891a2ab3aa1",
+      "from_uri": "//bigquery.googleapis.com/projects/plat-commerce-core-svc-prod/datasets/platform_commerce_transactional_audit_ds",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-risk-scoring-svc-prod/datasets/platform_risk_scoring_compliance_features_ds",
+      "kind": "BQ_LINEAGE",
+      "detail": "sql_elt"
+    },
+    {
+      "id": "cfb52f2d6fb59d64",
+      "from_uri": "//bigquery.googleapis.com/projects/plat-commerce-core-svc-prod/datasets/platform_commerce_transactional_audit_ds",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-bigquery-analytics-cmek-key-01",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "c6436a71dbadc527",
+      "from_uri": "//bigquery.googleapis.com/projects/plat-risk-scoring-svc-prod/datasets/platform_risk_scoring_compliance_features_ds",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-bigquery-analytics-cmek-key-01",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "df8ed7023cc46acb",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/functions/platform-commerce-async-webhook-signature-validator-fn",
+      "to_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-checkout-gateway@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "86b14058b90a97d3",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/functions/platform-commerce-async-webhook-signature-validator-fn",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-stripe-live-signing-secret-v3",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "074597ce02c2752d",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/functions/platform-commerce-async-webhook-signature-validator-fn",
+      "to_uri": "//storage.googleapis.com/platform-risk-scoring-model-features-lake-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://platform-risk-scoring-model-features-lake-eu"
+    },
+    {
+      "id": "66b926e4d6b01b96",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/functions/platform-commerce-tax-jurisdiction-lookup-enricher-func",
+      "to_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-catalog-pricing@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "03a1b3a7911a87f8",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/functions/platform-commerce-tax-jurisdiction-lookup-enricher-func",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-adyen-merchant-api-key-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "5c680ba998de8d8c",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/functions/platform-commerce-tax-jurisdiction-lookup-enricher-func",
+      "to_uri": "//storage.googleapis.com/platform-risk-scoring-model-features-lake-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://platform-risk-scoring-model-features-lake-eu"
+    },
+    {
+      "id": "e6251d89064bb8dd",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/functions/platform-risk-alert-escalation-pagerduty-dispatcher-fn",
+      "to_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-aml-screener@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "1c73231e6534881c",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/functions/platform-risk-alert-escalation-pagerduty-dispatcher-fn",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-risk-scoring-svc-prod/secrets/platform-risk-alloydb-analytics-reader-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "48877af4d88c41b1",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/functions/platform-risk-alert-escalation-pagerduty-dispatcher-fn",
+      "to_uri": "//storage.googleapis.com/platform-risk-scoring-model-features-lake-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://platform-risk-scoring-model-features-lake-eu"
+    },
+    {
+      "id": "6166199f733f69f8",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/functions/platform-risk-dead-letter-quarantine-remediation-fn-01",
+      "to_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-dataflow-risk@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "c9f5905d7ced7910",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/functions/platform-risk-dead-letter-quarantine-remediation-fn-01",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-sec-net-host-prod/secrets/platform-security-siem-webhook-forwarding-token",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "b042ee324b50bd34",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/functions/platform-risk-dead-letter-quarantine-remediation-fn-01",
+      "to_uri": "//storage.googleapis.com/platform-risk-scoring-model-features-lake-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://platform-risk-scoring-model-features-lake-eu"
+    },
+    {
+      "id": "8f21a173345a15f7",
+      "from_uri": "//compute.googleapis.com/projects/plat-commerce-core-svc-prod/global/forwardingRules/platform-commerce-external-edge-waf-https-fr-01",
+      "to_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-checkout-api-orchestration-service-v3",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "e205f5b43d91d971",
+      "from_uri": "//compute.googleapis.com/projects/plat-commerce-core-svc-prod/global/forwardingRules/platform-commerce-external-edge-waf-https-fr-01",
+      "to_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-invoice-pdf-receipt-generator-service",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "4ff242df317a6e90",
+      "from_uri": "//compute.googleapis.com/projects/plat-commerce-core-svc-prod/global/forwardingRules/platform-commerce-external-edge-waf-https-fr-01",
+      "to_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-payment-capture-idempotency-service-v2",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "dc8acccab2a822e6",
+      "from_uri": "//compute.googleapis.com/projects/plat-commerce-core-svc-prod/global/forwardingRules/platform-commerce-external-edge-waf-https-fr-01",
+      "to_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-promotional-eligibility-evaluator-svc",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "16336f04bb467733",
+      "from_uri": "//compute.googleapis.com/projects/plat-commerce-core-svc-prod/global/forwardingRules/platform-commerce-external-edge-waf-https-fr-01",
+      "to_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-shopping-cart-state-synchronizer-svc",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "fd48ce0568702cc4",
+      "from_uri": "//compute.googleapis.com/projects/plat-risk-scoring-svc-prod/regions/europe-west1/forwardingRules/platform-risk-scoring-internal-envoy-ilb-fr-01",
+      "to_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-chargeback-evidence-bundle-assembler-svc",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "4312b81239f8a9e3",
+      "from_uri": "//compute.googleapis.com/projects/plat-risk-scoring-svc-prod/regions/europe-west1/forwardingRules/platform-risk-scoring-internal-envoy-ilb-fr-01",
+      "to_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-device-reputation-telemetry-collector-svc",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "e8179ec65b6e0a9d",
+      "from_uri": "//compute.googleapis.com/projects/plat-risk-scoring-svc-prod/regions/europe-west1/forwardingRules/platform-risk-scoring-internal-envoy-ilb-fr-01",
+      "to_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-manual-case-review-notification-bridge-01",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "b3ed6a6412bdc90b",
+      "from_uri": "//compute.googleapis.com/projects/plat-risk-scoring-svc-prod/regions/europe-west1/forwardingRules/platform-risk-scoring-internal-envoy-ilb-fr-01",
+      "to_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-real-time-transaction-scoring-gateway-v2",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "fd754d4e09bccacf",
+      "from_uri": "//compute.googleapis.com/projects/plat-risk-scoring-svc-prod/regions/europe-west1/forwardingRules/platform-risk-scoring-internal-envoy-ilb-fr-01",
+      "to_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-sanctions-watchlist-screening-adapter-svc",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "36c1e0eb8e811d5f",
+      "from_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production",
+      "to_uri": "//alloydb.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/clusters/platform-risk-scoring-feature-alloydb-cluster",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com (p501000abcdef12-tp)"
+    },
+    {
+      "id": "4c3d7ffc439798f9",
+      "from_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production",
+      "to_uri": "//redis.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/instances/platform-risk-velocity-counters-redis-ha-01",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com (p501000abcdef12-tp)"
+    },
+    {
+      "id": "93724f1426dc46f2",
+      "from_uri": "//compute.googleapis.com/projects/plat-sec-net-host-prod/global/networks/platform-security-zero-trust-shared-hub-vpc-production",
+      "to_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com (p501000abcdef12-tp)"
+    },
+    {
+      "id": "2a45887c4028d7a4",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-checkout-order-state-machine-worker",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-commerce-core-svc-prod/datasets/platform_commerce_transactional_audit_ds",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "c221d43bb5c2b6dc",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-checkout-order-state-machine-worker",
+      "to_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-checkout-gateway@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "ksa:commerce/platform-commerce-chec"
+    },
+    {
+      "id": "bae5d421f641c7aa",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-checkout-order-state-machine-worker",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-adyen-merchant-api-key-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "b70f112363db10ff",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-checkout-order-state-machine-worker",
+      "to_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.64.5"
+    },
+    {
+      "id": "77b177ddc2767b8e",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-inventory-lock-lease-coordinator-svc",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-commerce-core-svc-prod/datasets/platform_commerce_transactional_audit_ds",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "4a726a1d100a7a43",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-inventory-lock-lease-coordinator-svc",
+      "to_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-cart-session@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "ksa:commerce/platform-commerce-inve"
+    },
+    {
+      "id": "06bd92c1fbf629a4",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-inventory-lock-lease-coordinator-svc",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-postgres-iam-rotation-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "235d5d3c2a5ec596",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-inventory-lock-lease-coordinator-svc",
+      "to_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.64.5"
+    },
+    {
+      "id": "17e904b557869d5c",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-loyalty-points-settlement-processor",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-commerce-core-svc-prod/datasets/platform_commerce_transactional_audit_ds",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "fccfddd85488ab43",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-loyalty-points-settlement-processor",
+      "to_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-promo-coupon@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "ksa:commerce/platform-commerce-loya"
+    },
+    {
+      "id": "537bd5dd2f923c94",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-loyalty-points-settlement-processor",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-stripe-live-signing-secret-v3",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "91df94bb6be6a181",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-loyalty-points-settlement-processor",
+      "to_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.64.5"
+    },
+    {
+      "id": "cae5ce7cb32f0e40",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-pricing-currency-matrix-calculator-v2",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-commerce-core-svc-prod/datasets/platform_commerce_transactional_audit_ds",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "e0aeb255e58e390f",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-pricing-currency-matrix-calculator-v2",
+      "to_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-catalog-pricing@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "ksa:commerce/platform-commerce-pric"
+    },
+    {
+      "id": "8eae51d252a8b683",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-pricing-currency-matrix-calculator-v2",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-oauth-jwks-private-key-pem",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "b355d69e54a712c7",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-pricing-currency-matrix-calculator-v2",
+      "to_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.64.5"
+    },
+    {
+      "id": "643118ef93a82997",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/batch/cronjobs/platform-commerce-hourly-stale-cart-expiration-cronjob",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-commerce-core-svc-prod/datasets/platform_commerce_transactional_audit_ds",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "bfddf8cf72482165",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/batch/cronjobs/platform-commerce-hourly-stale-cart-expiration-cronjob",
+      "to_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-tax-compliance@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "ksa:commerce/platform-commerce-hour"
+    },
+    {
+      "id": "63359cce620504e8",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/batch/cronjobs/platform-commerce-hourly-stale-cart-expiration-cronjob",
+      "to_uri": "//storage.googleapis.com/platform-commerce-pci-receipts-encrypted-vault",
+      "kind": "CONFIG_REF",
+      "detail": "gs://platform-commerce-pci-receipts-encrypted-vault"
+    },
+    {
+      "id": "fa87c0fd8b78f024",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/batch/cronjobs/platform-commerce-nightly-pci-reconciliation-cronjob-01",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-commerce-core-svc-prod/datasets/platform_commerce_transactional_audit_ds",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "9efb974055d7bd6b",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/batch/cronjobs/platform-commerce-nightly-pci-reconciliation-cronjob-01",
+      "to_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-promo-coupon@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "ksa:commerce/platform-commerce-nigh"
+    },
+    {
+      "id": "90aa95497251b39c",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/batch/cronjobs/platform-commerce-nightly-pci-reconciliation-cronjob-01",
+      "to_uri": "//storage.googleapis.com/platform-commerce-pci-receipts-encrypted-vault",
+      "kind": "CONFIG_REF",
+      "detail": "gs://platform-commerce-pci-receipts-encrypted-vault"
+    },
+    {
+      "id": "ce5f49789ebdc29a",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/networking.k8s.io/ingresses/platform-commerce-k8s-gateway-ingress-resource",
+      "to_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/services/platform-commerce-checkout-clusterip-service",
+      "kind": "K8S_INGRESS_BACKEND",
+      "detail": "commerce.internal/checkout"
+    },
+    {
+      "id": "8601ea3796f9fe84",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/networking.k8s.io/ingresses/platform-commerce-k8s-gateway-ingress-resource",
+      "to_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/services/platform-commerce-pricing-clusterip-service",
+      "kind": "K8S_INGRESS_BACKEND",
+      "detail": "commerce.internal/pricing"
+    },
+    {
+      "id": "2fb5e05404a786f8",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/services/platform-commerce-checkout-clusterip-service",
+      "to_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-checkout-order-state-machine-worker",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "app=platform-commerce-checko"
+    },
+    {
+      "id": "eabf58fc84f96b25",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/services/platform-commerce-checkout-clusterip-service",
+      "to_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-inventory-lock-lease-coordinator-svc",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "app=platform-commerce-invent"
+    },
+    {
+      "id": "720571f904724743",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/services/platform-commerce-pricing-clusterip-service",
+      "to_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-loyalty-points-settlement-processor",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "app=platform-commerce-loyalt"
+    },
+    {
+      "id": "57098db512ffc826",
+      "from_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/services/platform-commerce-pricing-clusterip-service",
+      "to_uri": "//container.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/clusters/platform-commerce-gke-confidential-cluster-01/k8s/namespaces/commerce/apps/deployments/platform-commerce-pricing-currency-matrix-calculator-v2",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "app=platform-commerce-pricin"
+    },
+    {
+      "id": "2151498b8647353b",
+      "from_uri": "//dataflow.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/jobs/platform-risk-realtime-feature-aggregation-streaming-01",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-risk-scoring-svc-prod/datasets/platform_risk_scoring_compliance_features_ds",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.write"
+    },
+    {
+      "id": "2664da82f1afccdc",
+      "from_uri": "//dataflow.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/jobs/platform-risk-realtime-feature-aggregation-streaming-01",
+      "to_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-dataflow-risk@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "183776e6fdd86877",
+      "from_uri": "//dataflow.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/jobs/platform-risk-realtime-feature-aggregation-streaming-01",
+      "to_uri": "//storage.googleapis.com/platform-risk-scoring-model-features-lake-eu",
+      "kind": "CONFIG_REF",
+      "detail": "gs://platform-risk-scoring-model-features-lake-eu"
+    },
+    {
+      "id": "a948b974285e248b",
+      "from_uri": "//firestore.googleapis.com/projects/plat-commerce-core-svc-prod/databases/(default)",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-sql-ledger-encryption-cmek-key",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "a7a3554f131d9c07",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-cart-session@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-secrets-envelope-cmek-key-01",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+    },
+    {
+      "id": "94562d2f045092fc",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-cart-session@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-commerce-core-svc-prod/topics/platform-commerce-transactional-domain-events",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/pubsub.publisher"
+    },
+    {
+      "id": "4cfc304aa9bcb93c",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-cart-session@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-oauth-jwks-private-key-pem",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "f17d8f26a9223f79",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-cart-session@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudsql.client"
+    },
+    {
+      "id": "95afea3ad83d512f",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-catalog-pricing@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-bucket-vault-encryption-cmek",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+    },
+    {
+      "id": "dc04e47a339dfcae",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-catalog-pricing@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-commerce-core-svc-prod/topics/platform-commerce-transactional-domain-events",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/pubsub.publisher"
+    },
+    {
+      "id": "838f961e09454276",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-catalog-pricing@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-adyen-merchant-api-key-secret",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "2afdb0abc7ea90d3",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-catalog-pricing@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudsql.client"
+    },
+    {
+      "id": "4d81723f00e975ec",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-checkout-gateway@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-sql-ledger-encryption-cmek-key",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+    },
+    {
+      "id": "3f0f881a08bb99fc",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-checkout-gateway@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-commerce-core-svc-prod/topics/platform-commerce-transactional-domain-events",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/pubsub.publisher"
+    },
+    {
+      "id": "a6988a764763b392",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-checkout-gateway@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-stripe-live-signing-secret-v3",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "2aea33ab42d091fb",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-checkout-gateway@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudsql.client"
+    },
+    {
+      "id": "da3146ff095e68e3",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-promo-coupon@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-sql-ledger-encryption-cmek-key",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+    },
+    {
+      "id": "5a3b1f893cc334ee",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-promo-coupon@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-commerce-core-svc-prod/topics/platform-commerce-transactional-domain-events",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/pubsub.publisher"
+    },
+    {
+      "id": "6fb336e5962ad62b",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-promo-coupon@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-postgres-iam-rotation-secret",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "a12d054373f200a3",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-promo-coupon@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudsql.client"
+    },
+    {
+      "id": "ca9b3a5c655044a0",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-tax-compliance@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-bucket-vault-encryption-cmek",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+    },
+    {
+      "id": "515789b12f41ff1b",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-tax-compliance@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-commerce-core-svc-prod/topics/platform-commerce-transactional-domain-events",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/pubsub.publisher"
+    },
+    {
+      "id": "5ac00952d2a794ad",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-tax-compliance@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-stripe-live-signing-secret-v3",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "645bfbb65869abf3",
+      "from_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-tax-compliance@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudsql.client"
+    },
+    {
+      "id": "62282395184435c5",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-aml-screener@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//alloydb.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/clusters/platform-risk-scoring-feature-alloydb-cluster",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/alloydb.client"
+    },
+    {
+      "id": "416c91cebae6b92c",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-aml-screener@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-risk-scoring-svc-prod/datasets/platform_risk_scoring_compliance_features_ds",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/bigquery.dataViewer"
+    },
+    {
+      "id": "85441d3e73fa95cb",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-aml-screener@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-alloydb-scoring-encryption-cmek",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+    },
+    {
+      "id": "82a999f51fefc8f2",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-aml-screener@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-risk-scoring-svc-prod/secrets/platform-risk-alloydb-analytics-reader-secret",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "4bf5206bab619d9f",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-dataflow-risk@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//alloydb.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/clusters/platform-risk-scoring-feature-alloydb-cluster",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/alloydb.client"
+    },
+    {
+      "id": "1b826f3c049c92f4",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-dataflow-risk@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-risk-scoring-svc-prod/datasets/platform_risk_scoring_compliance_features_ds",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/bigquery.dataEditor"
+    },
+    {
+      "id": "73c7ce2c460f67a2",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-dataflow-risk@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-risk-scoring-svc-prod/datasets/platform_risk_scoring_compliance_features_ds",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/bigquery.dataViewer"
+    },
+    {
+      "id": "a8338f165cfcf6dd",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-dataflow-risk@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-bigquery-analytics-cmek-key-01",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+    },
+    {
+      "id": "c85e6f388b78ad29",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-dataflow-risk@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-sec-net-host-prod/secrets/platform-security-siem-webhook-forwarding-token",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "4baf619da909fdb9",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-fraud-scorer@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//alloydb.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/clusters/platform-risk-scoring-feature-alloydb-cluster",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/alloydb.client"
+    },
+    {
+      "id": "4cf1925157a73a4a",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-fraud-scorer@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-risk-scoring-svc-prod/datasets/platform_risk_scoring_compliance_features_ds",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/bigquery.dataViewer"
+    },
+    {
+      "id": "1e1f598c73ce7011",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-fraud-scorer@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-alloydb-scoring-encryption-cmek",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+    },
+    {
+      "id": "18af7817b90b68ab",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-fraud-scorer@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-risk-scoring-svc-prod/secrets/platform-risk-sanctions-vendor-api-bearer-token",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "b66eb21fdb70fa48",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-kyc-verifier@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//alloydb.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/clusters/platform-risk-scoring-feature-alloydb-cluster",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/alloydb.client"
+    },
+    {
+      "id": "519b4674cebcdffc",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-kyc-verifier@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-risk-scoring-svc-prod/datasets/platform_risk_scoring_compliance_features_ds",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/bigquery.dataViewer"
+    },
+    {
+      "id": "04fee953aafe764f",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-kyc-verifier@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-bigquery-analytics-cmek-key-01",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+    },
+    {
+      "id": "1bac1a316f60cdc4",
+      "from_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-kyc-verifier@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-risk-scoring-svc-prod/secrets/platform-risk-device-fingerprint-hmac-secret-v2",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "21f7b17e13b03102",
+      "from_uri": "//iam.googleapis.com/projects/plat-sec-net-host-prod/serviceAccounts/svc-sec-observability@plat-sec-net-host-prod.iam.gserviceaccount.com",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-commerce-core-svc-prod/datasets/platform_commerce_transactional_audit_ds",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/bigquery.dataViewer"
+    },
+    {
+      "id": "f77f1e18169502c1",
+      "from_uri": "//iam.googleapis.com/projects/plat-sec-net-host-prod/serviceAccounts/svc-sec-observability@plat-sec-net-host-prod.iam.gserviceaccount.com",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-risk-scoring-svc-prod/datasets/platform_risk_scoring_compliance_features_ds",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/bigquery.dataViewer"
+    },
+    {
+      "id": "68cc3ceea61f696e",
+      "from_uri": "//iam.googleapis.com/projects/plat-sec-net-host-prod/serviceAccounts/svc-sec-observability@plat-sec-net-host-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-sec-net-host-prod/secrets/platform-security-siem-webhook-forwarding-token",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "dca619caede3c7b6",
+      "from_uri": "//pubsub.googleapis.com/projects/plat-commerce-core-svc-prod/topics/platform-commerce-transactional-domain-events",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-sec-net-host-prod/locations/europe-west1/keyRings/host-cmek-ring/cryptoKeys/platform-shared-pubsub-audit-bus-cmek-key-01",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "ecc5d03688024bcd",
+      "from_uri": "//pubsub.googleapis.com/projects/plat-commerce-core-svc-prod/topics/platform-commerce-transactional-domain-events",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/subscriptions/platform-commerce-to-risk-evaluation-sub-01",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "8cfeba26bc8809dd",
+      "from_uri": "//pubsub.googleapis.com/projects/plat-commerce-core-svc-prod/topics/platform-commerce-transactional-domain-events",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/subscriptions/platform-risk-dataflow-streaming-ingest-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "197fb4522a28ab23",
+      "from_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/subscriptions/platform-commerce-to-risk-evaluation-sub-01",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-sec-net-host-prod/topics/platform-shared-failed-events-dead-letter-topic",
+      "kind": "CONFIG_REF",
+      "detail": "dead_letter"
+    },
+    {
+      "id": "e5113d2e9f83e812",
+      "from_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/subscriptions/platform-risk-alert-notification-handler-sub",
+      "to_uri": "//cloudfunctions.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/functions/platform-commerce-async-webhook-signature-validator-fn",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "1d59efc67f4d3d91",
+      "from_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/subscriptions/platform-risk-alert-notification-handler-sub",
+      "to_uri": "//cloudfunctions.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/functions/platform-commerce-tax-jurisdiction-lookup-enricher-func",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "1ab1c69e465703fa",
+      "from_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/subscriptions/platform-risk-alert-notification-handler-sub",
+      "to_uri": "//cloudfunctions.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/functions/platform-risk-alert-escalation-pagerduty-dispatcher-fn",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "1357c100f35451fa",
+      "from_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/subscriptions/platform-risk-alert-notification-handler-sub",
+      "to_uri": "//cloudfunctions.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/functions/platform-risk-dead-letter-quarantine-remediation-fn-01",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "4b912ec52306cf65",
+      "from_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/subscriptions/platform-risk-dataflow-streaming-ingest-sub",
+      "to_uri": "//dataflow.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/jobs/platform-risk-realtime-feature-aggregation-streaming-01",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.pull"
+    },
+    {
+      "id": "de4ae5f81b2c1170",
+      "from_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/subscriptions/platform-risk-dataflow-streaming-ingest-sub",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-sec-net-host-prod/topics/platform-shared-failed-events-dead-letter-topic",
+      "kind": "CONFIG_REF",
+      "detail": "dead_letter"
+    },
+    {
+      "id": "2906bd0e14e6da49",
+      "from_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/topics/platform-risk-scoring-evaluation-alerts-topic",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-sec-net-host-prod/locations/europe-west1/keyRings/host-cmek-ring/cryptoKeys/platform-shared-pubsub-audit-bus-cmek-key-01",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "1da19bc5480c192f",
+      "from_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/topics/platform-risk-scoring-evaluation-alerts-topic",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/subscriptions/platform-risk-alert-notification-handler-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "2ddd7ec20f689c69",
+      "from_uri": "//pubsub.googleapis.com/projects/plat-sec-net-host-prod/topics/platform-shared-failed-events-dead-letter-topic",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-sec-net-host-prod/locations/europe-west1/keyRings/host-cmek-ring/cryptoKeys/platform-shared-pubsub-audit-bus-cmek-key-01",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "734cc9331cbe4369",
+      "from_uri": "//redis.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/instances/platform-risk-velocity-counters-redis-ha-01",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-alloydb-scoring-encryption-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "011d04a707440635",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-checkout-api-orchestration-service-v3",
+      "to_uri": "//compute.googleapis.com/projects/plat-risk-scoring-svc-prod/regions/europe-west1/forwardingRules/platform-risk-scoring-internal-envoy-ilb-fr-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.16.40"
+    },
+    {
+      "id": "926ce07c9af11504",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-checkout-api-orchestration-service-v3",
+      "to_uri": "//firestore.googleapis.com/projects/plat-commerce-core-svc-prod/databases/(default)",
+      "kind": "CONFIG_REF",
+      "detail": "firestore"
+    },
+    {
+      "id": "f8c1b51ef675f7ab",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-checkout-api-orchestration-service-v3",
+      "to_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-checkout-gateway@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "55b8f88cc3127c48",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-checkout-api-orchestration-service-v3",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-commerce-core-svc-prod/topics/platform-commerce-transactional-domain-events",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "f62a3f4535053ad5",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-checkout-api-orchestration-service-v3",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-stripe-live-signing-secret-v3",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "8bfc00ae8a01debd",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-checkout-api-orchestration-service-v3",
+      "to_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.64.5"
+    },
+    {
+      "id": "5e3d475eb897e44e",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-checkout-api-orchestration-service-v3",
+      "to_uri": "//storage.googleapis.com/platform-commerce-pci-receipts-encrypted-vault",
+      "kind": "CONFIG_REF",
+      "detail": "gs://platform-commerce-pci-receipts-encrypted-vault"
+    },
+    {
+      "id": "f7dfcc15adf36986",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-invoice-pdf-receipt-generator-service",
+      "to_uri": "//compute.googleapis.com/projects/plat-risk-scoring-svc-prod/regions/europe-west1/forwardingRules/platform-risk-scoring-internal-envoy-ilb-fr-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.16.40"
+    },
+    {
+      "id": "2ddadc8b06eec6e7",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-invoice-pdf-receipt-generator-service",
+      "to_uri": "//firestore.googleapis.com/projects/plat-commerce-core-svc-prod/databases/(default)",
+      "kind": "CONFIG_REF",
+      "detail": "firestore"
+    },
+    {
+      "id": "d34db4272c1f66e3",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-invoice-pdf-receipt-generator-service",
+      "to_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-tax-compliance@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "4eb5cdc835eddab2",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-invoice-pdf-receipt-generator-service",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-commerce-core-svc-prod/topics/platform-commerce-transactional-domain-events",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "ac47a3af9a4ee098",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-invoice-pdf-receipt-generator-service",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-stripe-live-signing-secret-v3",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "f78268a8d0b53faf",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-invoice-pdf-receipt-generator-service",
+      "to_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.64.5"
+    },
+    {
+      "id": "7f5235558a05a5ff",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-invoice-pdf-receipt-generator-service",
+      "to_uri": "//storage.googleapis.com/platform-commerce-pci-receipts-encrypted-vault",
+      "kind": "CONFIG_REF",
+      "detail": "gs://platform-commerce-pci-receipts-encrypted-vault"
+    },
+    {
+      "id": "23ad7936140da4d4",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-payment-capture-idempotency-service-v2",
+      "to_uri": "//compute.googleapis.com/projects/plat-risk-scoring-svc-prod/regions/europe-west1/forwardingRules/platform-risk-scoring-internal-envoy-ilb-fr-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.16.40"
+    },
+    {
+      "id": "ab0d5ce28f8595c2",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-payment-capture-idempotency-service-v2",
+      "to_uri": "//firestore.googleapis.com/projects/plat-commerce-core-svc-prod/databases/(default)",
+      "kind": "CONFIG_REF",
+      "detail": "firestore"
+    },
+    {
+      "id": "312c9b8834f917e2",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-payment-capture-idempotency-service-v2",
+      "to_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-catalog-pricing@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "2dddfeccfb29a169",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-payment-capture-idempotency-service-v2",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-commerce-core-svc-prod/topics/platform-commerce-transactional-domain-events",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "222d33892c84b998",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-payment-capture-idempotency-service-v2",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-adyen-merchant-api-key-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "b381c18a276fb65f",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-payment-capture-idempotency-service-v2",
+      "to_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.64.5"
+    },
+    {
+      "id": "8e6326e91d803ee3",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-payment-capture-idempotency-service-v2",
+      "to_uri": "//storage.googleapis.com/platform-commerce-pci-receipts-encrypted-vault",
+      "kind": "CONFIG_REF",
+      "detail": "gs://platform-commerce-pci-receipts-encrypted-vault"
+    },
+    {
+      "id": "03aaf6141cae5c76",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-promotional-eligibility-evaluator-svc",
+      "to_uri": "//compute.googleapis.com/projects/plat-risk-scoring-svc-prod/regions/europe-west1/forwardingRules/platform-risk-scoring-internal-envoy-ilb-fr-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.16.40"
+    },
+    {
+      "id": "e85557f582a7f1e3",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-promotional-eligibility-evaluator-svc",
+      "to_uri": "//firestore.googleapis.com/projects/plat-commerce-core-svc-prod/databases/(default)",
+      "kind": "CONFIG_REF",
+      "detail": "firestore"
+    },
+    {
+      "id": "f2b4c215a8af0cc8",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-promotional-eligibility-evaluator-svc",
+      "to_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-promo-coupon@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "10c26e6014850b63",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-promotional-eligibility-evaluator-svc",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-commerce-core-svc-prod/topics/platform-commerce-transactional-domain-events",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "0f1f7ce4edabc754",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-promotional-eligibility-evaluator-svc",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-postgres-iam-rotation-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "623ac6484f694234",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-promotional-eligibility-evaluator-svc",
+      "to_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.64.5"
+    },
+    {
+      "id": "4f2feef78daf125f",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-promotional-eligibility-evaluator-svc",
+      "to_uri": "//storage.googleapis.com/platform-commerce-pci-receipts-encrypted-vault",
+      "kind": "CONFIG_REF",
+      "detail": "gs://platform-commerce-pci-receipts-encrypted-vault"
+    },
+    {
+      "id": "95997e32cd9916f5",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-shopping-cart-state-synchronizer-svc",
+      "to_uri": "//compute.googleapis.com/projects/plat-risk-scoring-svc-prod/regions/europe-west1/forwardingRules/platform-risk-scoring-internal-envoy-ilb-fr-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.16.40"
+    },
+    {
+      "id": "1b13f1af673e86d2",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-shopping-cart-state-synchronizer-svc",
+      "to_uri": "//firestore.googleapis.com/projects/plat-commerce-core-svc-prod/databases/(default)",
+      "kind": "CONFIG_REF",
+      "detail": "firestore"
+    },
+    {
+      "id": "1d0754b85f3be79f",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-shopping-cart-state-synchronizer-svc",
+      "to_uri": "//iam.googleapis.com/projects/plat-commerce-core-svc-prod/serviceAccounts/svc-cart-session@plat-commerce-core-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "c683d349fe27d099",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-shopping-cart-state-synchronizer-svc",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-commerce-core-svc-prod/topics/platform-commerce-transactional-domain-events",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "263d0e5770ef17fe",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-shopping-cart-state-synchronizer-svc",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-commerce-core-svc-prod/secrets/platform-commerce-oauth-jwks-private-key-pem",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "8265fb5c7151b3b2",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-shopping-cart-state-synchronizer-svc",
+      "to_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.64.5"
+    },
+    {
+      "id": "db626f6a7b729a12",
+      "from_uri": "//run.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/services/platform-commerce-shopping-cart-state-synchronizer-svc",
+      "to_uri": "//storage.googleapis.com/platform-commerce-pci-receipts-encrypted-vault",
+      "kind": "CONFIG_REF",
+      "detail": "gs://platform-commerce-pci-receipts-encrypted-vault"
+    },
+    {
+      "id": "6e9677a6615e26c6",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-chargeback-evidence-bundle-assembler-svc",
+      "to_uri": "//aiplatform.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "kind": "MONITORING_TRAFFIC",
+      "detail": "invocations:24000",
+      "heuristic": true
+    },
+    {
+      "id": "0f274f5137bad0c7",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-chargeback-evidence-bundle-assembler-svc",
+      "to_uri": "//alloydb.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/clusters/platform-risk-scoring-feature-alloydb-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.68.10"
+    },
+    {
+      "id": "b192d537cc494cac",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-chargeback-evidence-bundle-assembler-svc",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-risk-scoring-svc-prod/datasets/platform_risk_scoring_compliance_features_ds",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.read"
+    },
+    {
+      "id": "e7dd3de8ee1ba55c",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-chargeback-evidence-bundle-assembler-svc",
+      "to_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-fraud-scorer@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "04c914adf8c015a8",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-chargeback-evidence-bundle-assembler-svc",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/topics/platform-risk-scoring-evaluation-alerts-topic",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "4d93e744bc654816",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-chargeback-evidence-bundle-assembler-svc",
+      "to_uri": "//redis.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/instances/platform-risk-velocity-counters-redis-ha-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.72.4"
+    },
+    {
+      "id": "0e494e8279065ee7",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-chargeback-evidence-bundle-assembler-svc",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-risk-scoring-svc-prod/secrets/platform-risk-sanctions-vendor-api-bearer-token",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "5d05b542b1a06ec3",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-device-reputation-telemetry-collector-svc",
+      "to_uri": "//aiplatform.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "kind": "MONITORING_TRAFFIC",
+      "detail": "invocations:22500",
+      "heuristic": true
+    },
+    {
+      "id": "a58d40566ed3114d",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-device-reputation-telemetry-collector-svc",
+      "to_uri": "//alloydb.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/clusters/platform-risk-scoring-feature-alloydb-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.68.10"
+    },
+    {
+      "id": "140251c5c38f7e41",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-device-reputation-telemetry-collector-svc",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-risk-scoring-svc-prod/datasets/platform_risk_scoring_compliance_features_ds",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.read"
+    },
+    {
+      "id": "9fb5c8fe94548499",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-device-reputation-telemetry-collector-svc",
+      "to_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-dataflow-risk@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "9b54ad597d24530d",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-device-reputation-telemetry-collector-svc",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/topics/platform-risk-scoring-evaluation-alerts-topic",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "338dea8da5e2ef37",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-device-reputation-telemetry-collector-svc",
+      "to_uri": "//redis.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/instances/platform-risk-velocity-counters-redis-ha-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.72.4"
+    },
+    {
+      "id": "01c5ddde0071c21e",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-device-reputation-telemetry-collector-svc",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-sec-net-host-prod/secrets/platform-security-siem-webhook-forwarding-token",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "63472a763ecbaad6",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-manual-case-review-notification-bridge-01",
+      "to_uri": "//aiplatform.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "kind": "MONITORING_TRAFFIC",
+      "detail": "invocations:25500",
+      "heuristic": true
+    },
+    {
+      "id": "2e275d9db665e917",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-manual-case-review-notification-bridge-01",
+      "to_uri": "//alloydb.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/clusters/platform-risk-scoring-feature-alloydb-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.68.10"
+    },
+    {
+      "id": "943bd8afad07a54a",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-manual-case-review-notification-bridge-01",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-risk-scoring-svc-prod/datasets/platform_risk_scoring_compliance_features_ds",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.read"
+    },
+    {
+      "id": "907c30e1925ef2ab",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-manual-case-review-notification-bridge-01",
+      "to_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-kyc-verifier@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "4afbeeb52ef01998",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-manual-case-review-notification-bridge-01",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/topics/platform-risk-scoring-evaluation-alerts-topic",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "f05d69bc2c868f22",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-manual-case-review-notification-bridge-01",
+      "to_uri": "//redis.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/instances/platform-risk-velocity-counters-redis-ha-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.72.4"
+    },
+    {
+      "id": "4d5049810c734071",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-manual-case-review-notification-bridge-01",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-risk-scoring-svc-prod/secrets/platform-risk-device-fingerprint-hmac-secret-v2",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "de12547957f2d8ae",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-real-time-transaction-scoring-gateway-v2",
+      "to_uri": "//aiplatform.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "kind": "MONITORING_TRAFFIC",
+      "detail": "invocations:19500",
+      "heuristic": true
+    },
+    {
+      "id": "5792dd5f1614f44f",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-real-time-transaction-scoring-gateway-v2",
+      "to_uri": "//alloydb.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/clusters/platform-risk-scoring-feature-alloydb-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.68.10"
+    },
+    {
+      "id": "e493220403d2a7b7",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-real-time-transaction-scoring-gateway-v2",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-risk-scoring-svc-prod/datasets/platform_risk_scoring_compliance_features_ds",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.read"
+    },
+    {
+      "id": "d637ef67ce0b33a1",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-real-time-transaction-scoring-gateway-v2",
+      "to_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-kyc-verifier@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "fa6f86b6d738754e",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-real-time-transaction-scoring-gateway-v2",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/topics/platform-risk-scoring-evaluation-alerts-topic",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "b390dd846fb91eaf",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-real-time-transaction-scoring-gateway-v2",
+      "to_uri": "//redis.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/instances/platform-risk-velocity-counters-redis-ha-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.72.4"
+    },
+    {
+      "id": "866c68923475f519",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-real-time-transaction-scoring-gateway-v2",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-risk-scoring-svc-prod/secrets/platform-risk-device-fingerprint-hmac-secret-v2",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "d2ab2f5e9ef238bc",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-sanctions-watchlist-screening-adapter-svc",
+      "to_uri": "//aiplatform.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/global/publishers/google/models/gemini-4-carbon",
+      "kind": "MONITORING_TRAFFIC",
+      "detail": "invocations:21000",
+      "heuristic": true
+    },
+    {
+      "id": "030a5a197cbec572",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-sanctions-watchlist-screening-adapter-svc",
+      "to_uri": "//alloydb.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/clusters/platform-risk-scoring-feature-alloydb-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.68.10"
+    },
+    {
+      "id": "37b0ee9bcc651b10",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-sanctions-watchlist-screening-adapter-svc",
+      "to_uri": "//bigquery.googleapis.com/projects/plat-risk-scoring-svc-prod/datasets/platform_risk_scoring_compliance_features_ds",
+      "kind": "CONFIG_REF",
+      "detail": "bigquery.read"
+    },
+    {
+      "id": "a72a039afd074126",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-sanctions-watchlist-screening-adapter-svc",
+      "to_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-aml-screener@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "cffbc0ed251e97ef",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-sanctions-watchlist-screening-adapter-svc",
+      "to_uri": "//pubsub.googleapis.com/projects/plat-risk-scoring-svc-prod/topics/platform-risk-scoring-evaluation-alerts-topic",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.publish"
+    },
+    {
+      "id": "d6c13933142685fd",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-sanctions-watchlist-screening-adapter-svc",
+      "to_uri": "//redis.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/instances/platform-risk-velocity-counters-redis-ha-01",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.72.4"
+    },
+    {
+      "id": "dbde3a60c3f83285",
+      "from_uri": "//run.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/services/platform-risk-sanctions-watchlist-screening-adapter-svc",
+      "to_uri": "//secretmanager.googleapis.com/projects/plat-risk-scoring-svc-prod/secrets/platform-risk-alloydb-analytics-reader-secret",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "769dcc4078c2595b",
+      "from_uri": "//sqladmin.googleapis.com/projects/plat-commerce-core-svc-prod/instances/platform-commerce-orders-cloudsql-postgres-16",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-sql-ledger-encryption-cmek-key",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "e95bb2f8b3a1d152",
+      "from_uri": "//storage.googleapis.com/platform-commerce-pci-receipts-encrypted-vault",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-commerce-core-svc-prod/locations/europe-west1/keyRings/core-cmek-ring/cryptoKeys/platform-commerce-bucket-vault-encryption-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "07cd9cfa601e053a",
+      "from_uri": "//storage.googleapis.com/platform-risk-scoring-model-features-lake-eu",
+      "to_uri": "//cloudkms.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/keyRings/risk-cmek-ring/cryptoKeys/platform-risk-bigquery-analytics-cmek-key-01",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "d21a4602661e8737",
+      "from_uri": "//workflows.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/workflows/platform-risk-compliance-aml-orchestration-workflow",
+      "to_uri": "//alloydb.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/clusters/platform-risk-scoring-feature-alloydb-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "10.95.68.10"
+    },
+    {
+      "id": "4b60b09bcfd1174a",
+      "from_uri": "//workflows.googleapis.com/projects/plat-risk-scoring-svc-prod/locations/europe-west1/workflows/platform-risk-compliance-aml-orchestration-workflow",
+      "to_uri": "//iam.googleapis.com/projects/plat-risk-scoring-svc-prod/serviceAccounts/svc-aml-screener@plat-risk-scoring-svc-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "alloydb.googleapis.com/Instance": 2,
+    "bigquery.googleapis.com/Table": 36,
+    "compute.googleapis.com/BackendService": 6,
+    "compute.googleapis.com/Firewall": 54,
+    "compute.googleapis.com/NetworkEndpointGroup": 5,
+    "compute.googleapis.com/Route": 64,
+    "compute.googleapis.com/SecurityPolicy": 8,
+    "container.googleapis.com/NodePool": 3,
+    "k8s.io/Pod": 42,
+    "logging.googleapis.com/LogBucket": 4,
+    "run.googleapis.com/Revision": 72,
+    "servicenetworking.googleapis.com/Connection": 3
+  },
+  "coverage_ledger": [
+    {
+      "scope": "projects/plat-commerce-core-svc-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/plat-commerce-core-svc-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/plat-commerce-core-svc-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/plat-commerce-core-svc-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/plat-commerce-core-svc-prod",
+      "source": "monitoring",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/plat-risk-scoring-svc-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/plat-risk-scoring-svc-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/plat-risk-scoring-svc-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/plat-risk-scoring-svc-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/plat-risk-scoring-svc-prod",
+      "source": "monitoring",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/plat-sec-net-host-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/plat-sec-net-host-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/plat-sec-net-host-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/plat-sec-net-host-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/plat-sec-net-host-prod",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}

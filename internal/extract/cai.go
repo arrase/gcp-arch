@@ -1,10 +1,12 @@
 package extract
 
 import (
+	"cmp"
 	"container/heap"
 	"context"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -68,7 +70,6 @@ type vpcPeeringInfo struct {
 
 type runTrafficEntry struct {
 	revisionName string
-	percent      int
 	latest       bool
 }
 
@@ -168,7 +169,7 @@ type iamBindingRecord struct {
 	assetType     string
 	projectID     string
 	role          string
-	members       []string
+	saEmails      []string
 	conditionExpr string
 }
 
@@ -328,6 +329,8 @@ func Extract(ctx context.Context, clients *Clients, opts ExtractOptions) (*Facts
 
 	// 2. Re-canonicalize with complete projIdx, reconcile active revisions, fold counts.
 	st.reconcilePostCAI()
+	st.revisions = nil
+	st.foldedCounts = nil
 
 	// 3. Suppress GKE node infra and index VPC/PSA peering, private IPs, and Cloud Run hosts.
 	st.suppressGKENodeInfra()
@@ -336,12 +339,20 @@ func Extract(ctx context.Context, clients *Clients, opts ExtractOptions) (*Facts
 
 	// 4. Resolve GKE (ConfigMap refs, Workload Identity, Service->Workload, LB->NEG->Service, Ingress).
 	st.resolveGKE()
+	st.gke = nil
 
 	// 5. Resolve Cloud Build triggers, synthetic GitHub/GitLab repos, and min-heap succeeded builds.
 	st.resolveCloudBuild()
+	st.cbHeaps = nil
+	st.cbTriggers = nil
 
 	// 6. Resolve remaining LB/structural pointers, env/ConfigMap refs, and IAM bindings.
 	st.resolveStructuralAndIAM()
+	st.iamBindings = nil
+	st.lbAssets = nil
+	st.absorbed = nil
+	st.foldedExternalURIs = nil
+	st.gkeResolvedNEGs = nil
 
 	// 7. Run bounded concurrent enrichers (BigQuery SQL lineage, active Dataflow jobs, Cloud Monitoring).
 	if err := st.runEnrichers(ctx, clients); err != nil {
@@ -511,7 +522,19 @@ func listCAIPage(ctx context.Context, clients *Clients, req *assetpb.ListAssetsR
 }
 
 func (st *extractState) handleCAIScopeError(err error, quotaProject, scope, source, contentLabel string) (degraded bool, fatalErr error) {
-	ce := ClassifyGCPError(err, quotaProject, "", "")
+	var targetID, targetNum string
+	if rawProj, ok := strings.CutPrefix(scope, prefixProjects); ok {
+		if isNumeric(rawProj) {
+			targetNum = rawProj
+			if mapped := mapProject(rawProj, st.projIdx); mapped != rawProj {
+				targetID = mapped
+			}
+		} else {
+			targetID = rawProj
+			targetNum = st.projectNumberFor(rawProj)
+		}
+	}
+	ce := ClassifyGCPError(err, quotaProject, targetID, targetNum)
 	if ce.IsFatalQuota() {
 		return false, &QuotaProjectError{Classified: ce}
 	}
@@ -532,28 +555,51 @@ func (st *extractState) ingestIAMPolicyAsset(a *assetpb.Asset) {
 	if pol == nil {
 		return
 	}
+	assetType := a.GetAssetType()
+	isSubnetwork := assetType == assetTypeSubnetwork
+	isOrgOrFolder := assetType == "cloudresourcemanager.googleapis.com/Organization" ||
+		assetType == "cloudresourcemanager.googleapis.com/Folder"
 	resURI := CanonicalizeAIP122(a.GetName(), st.projIdx)
 	projID := extractProjectID(resURI, a.GetAncestors(), st.projIdx)
-	isSubnetwork := a.GetAssetType() == assetTypeSubnetwork
 	for _, b := range pol.GetBindings() {
-		if isSubnetwork && !isSubnetAttachmentRole(b.GetRole()) {
+		role := b.GetRole()
+		if role == "roles/iam.workloadIdentityUser" {
+			continue
+		}
+		if isSubnetwork && !isSubnetAttachmentRole(role) {
+			continue
+		}
+		if isOrgOrFolder && !broadAncestorRoles[role] {
+			continue
+		}
+		saEmails := extractServiceAccountMembers(b.GetMembers())
+		if len(saEmails) == 0 {
 			continue
 		}
 		condExpr := ""
 		if cond := b.GetCondition(); cond != nil {
 			condExpr = cond.GetExpression()
 		}
-		members := append([]string(nil), b.GetMembers()...)
-		sort.Strings(members)
 		st.iamBindings = append(st.iamBindings, &iamBindingRecord{
 			resourceURI:   resURI,
-			assetType:     a.GetAssetType(),
+			assetType:     assetType,
 			projectID:     projID,
-			role:          b.GetRole(),
-			members:       members,
+			role:          role,
+			saEmails:      saEmails,
 			conditionExpr: condExpr,
 		})
 	}
+}
+
+func extractServiceAccountMembers(members []string) []string {
+	var out []string
+	for _, m := range members {
+		if email, ok := parseServiceAccountMember(m); ok {
+			out = append(out, email)
+		}
+	}
+	slices.Sort(out)
+	return out
 }
 
 func isSubnetAttachmentRole(role string) bool {
@@ -741,9 +787,7 @@ func (st *extractState) foldNodePool(canonURI, resParent string, data *structpb.
 		return
 	}
 	for _, ig := range getStringListField(data, "instanceGroupUrls") {
-		list := st.gke.clusterIGURLs[clusterURI]
-		appendUnique(&list, CanonicalizeAIP122WithService(ig, svcCompute, st.projIdx))
-		st.gke.clusterIGURLs[clusterURI] = list
+		appendUniqueMap(st.gke.clusterIGURLs, clusterURI, CanonicalizeAIP122WithService(ig, svcCompute, st.projIdx))
 	}
 }
 
@@ -756,8 +800,8 @@ func (st *extractState) expandBareSubnetAttr(rec *ingestedAsset) {
 	if subProj == "" {
 		subProj = rec.projectID
 	}
-	if reg := regionFromLocation(rec.location); reg != "" && subProj != "" {
-		rec.attrs["subnet"] = prefixComputeProjects + mapProject(subProj, st.projIdx) + "/regions/" + reg + "/subnetworks/" + sub
+	if expanded := resolveComputeSubnetURI(sub, subProj, rec.location, st.projIdx); expanded != "" {
+		rec.attrs["subnet"] = expanded
 	}
 }
 
@@ -766,11 +810,8 @@ func (st *extractState) indexRetainedK8sAsset(rec *ingestedAsset, res *assetpb.R
 	ns := extractK8sNamespace(rec.uri, data)
 	name := extractK8sName(rec.uri, data)
 	rec.parentURI = clusterURI
-	if rec.attrs == nil {
-		rec.attrs = make(map[string]any)
-	}
 	if ns != "" {
-		rec.attrs["namespace"] = ns
+		rec.setAttr("namespace", ns)
 	}
 	switch rec.assetType {
 	case "apps.k8s.io/Deployment", "apps.k8s.io/StatefulSet", "apps.k8s.io/DaemonSet",
@@ -975,12 +1016,7 @@ func (st *extractState) addFoldCount(parentURI, attrKey string) {
 }
 
 func (st *extractState) addFoldedExternalURI(dsURI, u string) {
-	if u == "" {
-		return
-	}
-	list := st.foldedExternalURIs[dsURI]
-	appendUnique(&list, u)
-	st.foldedExternalURIs[dsURI] = list
+	appendUniqueMap(st.foldedExternalURIs, dsURI, u)
 }
 
 func (st *extractState) foldBigQueryChild(canonURI, countKey string, data *structpb.Struct) {
@@ -1463,9 +1499,7 @@ func extractGKEClusterMetadata(st *extractState, rec *ingestedAsset, data *struc
 	}
 	addIGURLs := func(src *structpb.Struct) {
 		for _, ig := range getStringListField(src, "instanceGroupUrls") {
-			list := st.gke.clusterIGURLs[rec.uri]
-			appendUnique(&list, CanonicalizeAIP122WithService(ig, svcCompute, st.projIdx))
-			st.gke.clusterIGURLs[rec.uri] = list
+			appendUniqueMap(st.gke.clusterIGURLs, rec.uri, CanonicalizeAIP122WithService(ig, svcCompute, st.projIdx))
 		}
 	}
 	addIGURLs(data)
@@ -1590,7 +1624,7 @@ func extractCloudRunTraffic(data *structpb.Struct) []runTrafficEntry {
 			rName = getStringField(tm, "revision")
 		}
 		latest := getBoolValue(tm, "latestRevision") || getStringField(tm, "type") == "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
-		out = append(out, runTrafficEntry{revisionName: rName, percent: pct, latest: latest})
+		out = append(out, runTrafficEntry{revisionName: rName, latest: latest})
 	}
 	return out
 }
@@ -1924,12 +1958,19 @@ func extractAssetLabels(data *structpb.Struct) map[string]string {
 }
 
 func (st *extractState) reconcilePostCAI() {
-	st.rekeyProjectsAndServices()
-	st.rekeyFoldedMaps()
-	st.rekeyIntermediates()
-	st.gke.rekey(st.projIdx)
-	st.rekeyCloudBuild()
-	st.rekeyAndDedupAssets()
+	if len(st.projIdx) > 0 {
+		st.rekeyProjectsAndServices()
+		st.rekeyFoldedMaps()
+		st.rekeyIntermediates()
+		st.gke.rekey(st.projIdx)
+		st.rekeyCloudBuild()
+		st.rekeyAssets()
+		for _, b := range st.iamBindings {
+			b.resourceURI = CanonicalizeAIP122(b.resourceURI, st.projIdx)
+			b.projectID = mapProject(b.projectID, st.projIdx)
+		}
+	}
+	st.dedupAndSortAssets()
 	st.indexServiceAccountsAndFoldedCounts()
 	for _, a := range st.assets {
 		switch a.assetType {
@@ -1939,15 +1980,11 @@ func (st *extractState) reconcilePostCAI() {
 			st.reconcileAppEngineService(a)
 		}
 	}
-	for _, b := range st.iamBindings {
-		b.resourceURI = CanonicalizeAIP122(b.resourceURI, st.projIdx)
-		b.projectID = mapProject(b.projectID, st.projIdx)
-	}
 }
 
 func (st *extractState) rekeyProjectsAndServices() {
 	rekeyedProjects := make(map[string]ProjectNode, len(st.projects))
-	for _, k := range sortedMapKeys(st.projects) {
+	for _, k := range slices.Sorted(maps.Keys(st.projects)) {
 		p := st.projects[k]
 		canonID := mapProject(k, st.projIdx)
 		if p.ProjectID != "" {
@@ -2016,9 +2053,7 @@ func (st *extractState) rekeyFoldedMaps() {
 	for rawKey, uris := range st.foldedExternalURIs {
 		ck := CanonicalizeAIP122(rawKey, st.projIdx)
 		for _, u := range uris {
-			list := rekeyedExt[ck]
-			appendUnique(&list, CanonicalizeAIP122(u, st.projIdx))
-			rekeyedExt[ck] = list
+			appendUniqueMap(rekeyedExt, ck, CanonicalizeAIP122(u, st.projIdx))
 		}
 	}
 	st.foldedExternalURIs = rekeyedExt
@@ -2113,7 +2148,7 @@ func (st *extractState) rekeyCloudBuild() {
 	st.cbHeaps = rekeyedHeaps
 }
 
-func (st *extractState) rekeyAndDedupAssets() {
+func (st *extractState) rekeyAssets() {
 	st.assetsByURI = make(map[string]*ingestedAsset, len(st.assets))
 	for _, a := range st.assets {
 		a.uri = CanonicalizeAIP122(a.uri, st.projIdx)
@@ -2128,18 +2163,15 @@ func (st *extractState) rekeyAndDedupAssets() {
 		recanonicalizeAttrURIs(a.attrs, st.projIdx)
 		st.assetsByURI[a.uri] = a
 	}
+}
 
-	deduped := make([]*ingestedAsset, 0, len(st.assetsByURI))
-	for _, a := range st.assetsByURI {
-		deduped = append(deduped, a)
+func (st *extractState) dedupAndSortAssets() {
+	if len(st.assets) != len(st.assetsByURI) {
+		st.assets = slices.Collect(maps.Values(st.assetsByURI))
 	}
-	sort.Slice(deduped, func(i, j int) bool {
-		if deduped[i].uri != deduped[j].uri {
-			return deduped[i].uri < deduped[j].uri
-		}
-		return deduped[i].assetType < deduped[j].assetType
+	slices.SortFunc(st.assets, func(a, b *ingestedAsset) int {
+		return cmp.Or(cmp.Compare(a.uri, b.uri), cmp.Compare(a.assetType, b.assetType))
 	})
-	st.assets = deduped
 }
 
 func (st *extractState) indexServiceAccountsAndFoldedCounts() {
@@ -2158,14 +2190,11 @@ func applyFoldedCounts(a *ingestedAsset, fc map[string]int) {
 	if len(fc) == 0 {
 		return
 	}
-	if a.attrs == nil {
-		a.attrs = make(map[string]any)
-	}
-	for _, ck := range sortedMapKeys(fc) {
+	for _, ck := range slices.Sorted(maps.Keys(fc)) {
 		if prev, ok := a.attrs[ck].(int); ok && prev >= fc[ck] {
 			continue
 		}
-		a.attrs[ck] = fc[ck]
+		a.setAttr(ck, fc[ck])
 	}
 }
 
@@ -2205,20 +2234,24 @@ func mergeServiceRevisionBase(svc *ingestedAsset, rev *revisionSummary) {
 	for _, s := range rev.secretRefs {
 		appendUnique(&svc.secretRefs, s)
 	}
-	if svc.attrs == nil {
-		svc.attrs = make(map[string]any)
-	}
-	setAttrIfEmpty(svc.attrs, "service_account", rev.serviceAccount)
-	if setAttrIfEmpty(svc.attrs, "vpc_connector", rev.vpcConnector) {
+	svc.setAttrIfEmpty("service_account", rev.serviceAccount)
+	if svc.setAttrIfEmpty("vpc_connector", rev.vpcConnector) {
 		svc.addOutRef(rev.vpcConnector, svcVPCAccess, "vpc_connector", "")
 	}
 }
 
-func setAttrIfEmpty(attrs map[string]any, key, val string) bool {
-	if val == "" || getAttrString(attrs, key) != "" {
+func (a *ingestedAsset) setAttr(key string, val any) {
+	if a.attrs == nil {
+		a.attrs = make(map[string]any)
+	}
+	a.attrs[key] = val
+}
+
+func (a *ingestedAsset) setAttrIfEmpty(key, val string) bool {
+	if val == "" || getAttrString(a.attrs, key) != "" {
 		return false
 	}
-	attrs[key] = val
+	a.setAttr(key, val)
 	return true
 }
 
@@ -2227,15 +2260,15 @@ func mergeCloudRunRevision(svc *ingestedAsset, rev *revisionSummary) {
 	for _, db := range rev.cloudSQLInstances {
 		appendUnique(&svc.envRefs, db)
 	}
-	setAttrIfEmpty(svc.attrs, "vpc", rev.networkURI)
-	setAttrIfEmpty(svc.attrs, "subnet", rev.subnetURI)
+	svc.setAttrIfEmpty("vpc", rev.networkURI)
+	svc.setAttrIfEmpty("subnet", rev.subnetURI)
 }
 
 func (st *extractState) reconcileAppEngineService(svc *ingestedAsset) {
 	if len(svc.aeSplit) == 0 {
 		return
 	}
-	for _, verID := range sortedMapKeys(svc.aeSplit) {
+	for _, verID := range slices.Sorted(maps.Keys(svc.aeSplit)) {
 		if rev, ok := st.revisions[svc.uri+"/versions/"+verID]; ok {
 			mergeServiceRevisionBase(svc, rev)
 		}
@@ -2277,15 +2310,9 @@ func (st *extractState) resolveCloudBuildTriggers() {
 }
 
 func (st *extractState) resolveCloudBuildHeaps() {
-	keys := make([]cbHeapKey, 0, len(st.cbHeaps))
-	for k := range st.cbHeaps {
-		keys = append(keys, k)
-	}
-	sort.Slice(keys, func(i, j int) bool {
-		if keys[i].projectID != keys[j].projectID {
-			return keys[i].projectID < keys[j].projectID
-		}
-		return keys[i].triggerID < keys[j].triggerID
+	keys := slices.Collect(maps.Keys(st.cbHeaps))
+	slices.SortFunc(keys, func(a, b cbHeapKey) int {
+		return cmp.Or(cmp.Compare(a.projectID, b.projectID), cmp.Compare(a.triggerID, b.triggerID))
 	})
 
 	for _, k := range keys {
@@ -2307,12 +2334,9 @@ func (st *extractState) flushCloudBuildHeap(k cbHeapKey, h *cbBuildMinHeap) {
 	if sourceURI == "" {
 		return
 	}
-	items := append([]*cbBuildItem(nil), (*h)...)
-	sort.Slice(items, func(i, j int) bool {
-		if !items[i].createTime.Equal(items[j].createTime) {
-			return items[i].createTime.Before(items[j].createTime)
-		}
-		return items[i].uri < items[j].uri
+	items := slices.Clone(*h)
+	slices.SortFunc(items, func(a, b *cbBuildItem) int {
+		return cmp.Or(a.createTime.Compare(b.createTime), cmp.Compare(a.uri, b.uri))
 	})
 	for _, item := range items {
 		st.resolveCloudBuildRefList(sourceURI, k.projectID, item.refs, item.secretRefs)
@@ -2398,7 +2422,7 @@ func (st *extractState) buildFactsFile() *FactsFile {
 		hints = append(hints, *h)
 	}
 
-	out := normalizedFactsCopy(&FactsFile{
+	out := &FactsFile{
 		SchemaVersion:            FactsSchemaVersion,
 		ReadTime:                 rt.Format(time.RFC3339),
 		Scopes:                   st.scopes,
@@ -2408,8 +2432,9 @@ func (st *extractState) buildFactsFile() *FactsFile {
 		SuppressedPlumbingCounts: st.suppressed,
 		OutOfScopeTargets:        hints,
 		CoverageLedger:           st.ledger,
-	})
-	return &out
+	}
+	normalizeFactsInPlace(out)
+	return out
 }
 
 func (st *extractState) collectFactHierarchy() Hierarchy {
@@ -2542,7 +2567,7 @@ func canonicalizeSlice(items []string, projIdx map[string]string) []string {
 		}
 		appendUnique(&out, v)
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }
 

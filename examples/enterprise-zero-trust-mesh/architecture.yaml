@@ -1,0 +1,2044 @@
+schema_version: v1
+metadata:
+  generated_at: '2026-11-27T15:49:56Z'
+  scopes:
+  - organizations/940400001
+components:
+- id: cohort_aegis_delivery_sec_ci_build_triggers_4x
+  title: CI Build Triggers (4x)
+  subtitle: Private Cloud Build Triggers (4x Cohort, 4x total — check detail view
+    for per-trigger filters/substitutions if troubleshooting a single pipeline
+  icon_key: cloud_build
+  component_kind: COHORT
+  project_id: aegis-delivery-sec
+  topo_rank: 1
+  sub_rank: 2
+  backed_by:
+  - uri: //cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-commerce-gateway
+    asset_type: cloudbuild.googleapis.com/BuildTrigger
+    project_id: aegis-delivery-sec
+  - uri: //cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-inventory-allocator
+    asset_type: cloudbuild.googleapis.com/BuildTrigger
+    project_id: aegis-delivery-sec
+  - uri: //cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-order-orchestrator
+    asset_type: cloudbuild.googleapis.com/BuildTrigger
+    project_id: aegis-delivery-sec
+  - uri: //cloudbuild.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/triggers/build-risk-policy-engine
+    asset_type: cloudbuild.googleapis.com/BuildTrigger
+    project_id: aegis-delivery-sec
+  members:
+  - build-commerce-gateway
+  - build-inventory-allocator
+  - build-order-orchestrator
+  - build-risk-policy-engine
+  badges:
+  - kind: sa
+    label: 'SA: cloudbuild-signer-sa'
+  inline_meta:
+  - label: Members
+    value: 4 homogeneous resources
+- id: n_aegis_commerce_prod_aegis_admin_portal
+  title: aegis-admin-portal
+  subtitle: App Engine Admin Portal Service
+  icon_key: app_engine
+  component_kind: WORKLOAD
+  project_id: aegis-commerce-prod
+  service_project_id: aegis-commerce-prod
+  topo_rank: 2
+  sub_rank: 5
+  backed_by:
+  - uri: //appengine.googleapis.com/projects/aegis-commerce-prod/services/aegis-admin-portal
+    asset_type: appengine.googleapis.com/Service
+    project_id: aegis-commerce-prod
+  members:
+  - aegis-admin-portal
+  badges:
+  - kind: project
+    label: aegis-commerce-prod
+- id: n_aegis_commerce_prod_aegis_edge_waf_lb
+  title: aegis-edge-waf-lb
+  subtitle: Public Global HTTPS WAF Load Balancer
+  icon_key: cloud_load_balancing
+  component_kind: INGRESS
+  project_id: aegis-commerce-prod
+  service_project_id: aegis-commerce-prod
+  topo_rank: 2
+  sub_rank: 7
+  backed_by:
+  - uri: //compute.googleapis.com/projects/aegis-commerce-prod/global/forwardingRules/aegis-edge-waf-lb
+    asset_type: compute.googleapis.com/GlobalForwardingRule
+    project_id: aegis-commerce-prod
+  members:
+  - aegis-edge-waf-lb
+  badges:
+  - kind: exposure
+    label: PUBLIC
+  - kind: project
+    label: aegis-commerce-prod
+  inline_meta:
+  - label: VIP
+    value: 198.51.100.80:443-443
+  - label: Scheme
+    value: EXTERNAL_MANAGED
+- id: n_aegis_commerce_prod_commerce_audit_dw
+  title: commerce_audit_dw
+  subtitle: Private BigQuery Audit Dataset
+  icon_key: bigquery
+  component_kind: DATASTORE
+  project_id: aegis-commerce-prod
+  service_project_id: aegis-commerce-prod
+  topo_rank: 5
+  sub_rank: 12
+  backed_by:
+  - uri: //bigquery.googleapis.com/projects/aegis-commerce-prod/datasets/commerce_audit_dw
+    asset_type: bigquery.googleapis.com/Dataset
+    project_id: aegis-commerce-prod
+  members:
+  - commerce_audit_dw
+  badges:
+  - kind: kms
+    label: 'KMS: compliance-bq-cmek'
+  - kind: project
+    label: aegis-commerce-prod
+  inline_meta:
+  - label: Location
+    value: EU
+- id: n_aegis_commerce_prod_commerce_gateway_api
+  title: commerce-gateway-api
+  subtitle: Private GKE API Gateway Deployment
+  icon_key: k8s_workload
+  component_kind: WORKLOAD
+  project_id: aegis-commerce-prod
+  service_project_id: aegis-commerce-prod
+  topo_rank: 5
+  sub_rank: 11
+  backed_by:
+  - uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/commerce-gateway-api
+    asset_type: apps.k8s.io/Deployment
+    project_id: aegis-commerce-prod
+  - uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/networking.k8s.io/ingresses/commerce-gateway-ingress
+    asset_type: networking.k8s.io/Ingress
+    project_id: aegis-commerce-prod
+  - uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/commerce-gateway-api
+    asset_type: k8s.io/Service
+    project_id: aegis-commerce-prod
+  members:
+  - commerce-gateway-api
+  - commerce-gateway-ingress
+  badges:
+  - kind: ingress
+    label: 'ing: commerce-gateway-ingress'
+  - kind: log
+    label: 'Obs: commerce-slo-burn-alert'
+  - kind: project
+    label: aegis-commerce-prod
+  - kind: sa
+    label: 'SA: commerce-gateway-sa'
+  - kind: svc
+    label: 'svc: commerce-gateway-api'
+  folded_edge_ids:
+  - 09d2b68fb15ac50b
+  - d4828c6135e7df53
+  inline_meta:
+  - label: Namespace
+    value: commerce
+- id: n_aegis_commerce_prod_commerce_orders_sql
+  title: commerce-orders-sql
+  subtitle: Private PSA Cloud SQL Instance
+  icon_key: cloud_sql
+  component_kind: DATASTORE
+  project_id: aegis-commerce-prod
+  service_project_id: aegis-commerce-prod
+  topo_rank: 7
+  sub_rank: 20
+  backed_by:
+  - uri: //sqladmin.googleapis.com/projects/aegis-commerce-prod/instances/commerce-orders-sql
+    asset_type: sqladmin.googleapis.com/Instance
+    project_id: aegis-commerce-prod
+  members:
+  - commerce-orders-sql
+  badges:
+  - kind: kms
+    label: 'KMS: commerce-sql-cmek'
+  - kind: project
+    label: aegis-commerce-prod
+  - kind: psa
+    label: PSA Peering
+  inline_meta:
+  - label: Engine
+    value: POSTGRES_16
+  - label: Private IP
+    value: 10.92.0.5
+- id: n_aegis_commerce_prod_domain_events_bus
+  title: domain-events-bus
+  subtitle: Private Pub/Sub Domain Event Topic
+  icon_key: pubsub
+  component_kind: MESSAGING
+  project_id: aegis-commerce-prod
+  service_project_id: aegis-commerce-prod
+  topo_rank: 7
+  sub_rank: 17
+  backed_by:
+  - uri: //pubsub.googleapis.com/projects/aegis-commerce-prod/subscriptions/risk-events-sub
+    asset_type: pubsub.googleapis.com/Subscription
+    project_id: aegis-commerce-prod
+  - uri: //pubsub.googleapis.com/projects/aegis-commerce-prod/topics/domain-events-bus
+    asset_type: pubsub.googleapis.com/Topic
+    project_id: aegis-commerce-prod
+  members:
+  - domain-events-bus
+  - risk-events-sub
+  badges:
+  - kind: project
+    label: aegis-commerce-prod
+  - kind: sa
+    label: 'SA: order-orchestrator-sa'
+  - kind: sub
+    label: 'sub: risk-events-sub'
+  folded_edge_ids:
+  - 7b7d56c9bc01c849
+  inline_meta:
+  - label: Subscriptions
+    value: '1'
+- id: n_aegis_commerce_prod_domain_events_dlq
+  title: domain-events-dlq
+  subtitle: Private Pub/Sub Dead-Letter Topic
+  icon_key: pubsub
+  component_kind: MESSAGING
+  project_id: aegis-commerce-prod
+  service_project_id: aegis-commerce-prod
+  topo_rank: 4
+  sub_rank: 9
+  backed_by:
+  - uri: //pubsub.googleapis.com/projects/aegis-commerce-prod/subscriptions/domain-dlq-sub
+    asset_type: pubsub.googleapis.com/Subscription
+    project_id: aegis-commerce-prod
+  - uri: //pubsub.googleapis.com/projects/aegis-commerce-prod/topics/domain-events-dlq
+    asset_type: pubsub.googleapis.com/Topic
+    project_id: aegis-commerce-prod
+  members:
+  - domain-dlq-sub
+  - domain-events-dlq
+  badges:
+  - kind: log
+    label: 'Obs: risk-dlq-backlog-alert'
+  - kind: project
+    label: aegis-commerce-prod
+  - kind: sub
+    label: 'sub: domain-dlq-sub'
+  folded_edge_ids:
+  - 9e73df62a081e5b8
+  inline_meta:
+  - label: Subscriptions
+    value: '1'
+- id: n_aegis_commerce_prod_inventory_allocator_svc
+  title: inventory-allocator-svc
+  subtitle: Private GKE Inventory Microservice
+  icon_key: k8s_workload
+  component_kind: WORKLOAD
+  project_id: aegis-commerce-prod
+  service_project_id: aegis-commerce-prod
+  topo_rank: 6
+  sub_rank: 14
+  backed_by:
+  - uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/inventory-allocator-svc
+    asset_type: apps.k8s.io/Deployment
+    project_id: aegis-commerce-prod
+  - uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/inventory-allocator-svc
+    asset_type: k8s.io/Service
+    project_id: aegis-commerce-prod
+  members:
+  - inventory-allocator-svc
+  badges:
+  - kind: project
+    label: aegis-commerce-prod
+  - kind: sa
+    label: 'SA: inventory-allocator-sa'
+  - kind: secret
+    label: 'Secret: commerce-db-credentials'
+  - kind: svc
+    label: 'svc: inventory-allocator-svc'
+  folded_edge_ids:
+  - 86c78ab473647638
+  inline_meta:
+  - label: Namespace
+    value: commerce
+- id: n_aegis_commerce_prod_order_orchestrator_svc
+  title: order-orchestrator-svc
+  subtitle: Private GKE Order Orchestrator
+  icon_key: k8s_workload
+  component_kind: WORKLOAD
+  project_id: aegis-commerce-prod
+  service_project_id: aegis-commerce-prod
+  topo_rank: 6
+  sub_rank: 15
+  backed_by:
+  - uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/order-orchestrator-svc
+    asset_type: apps.k8s.io/Deployment
+    project_id: aegis-commerce-prod
+  - uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/order-orchestrator-svc
+    asset_type: k8s.io/Service
+    project_id: aegis-commerce-prod
+  members:
+  - order-orchestrator-svc
+  badges:
+  - kind: project
+    label: aegis-commerce-prod
+  - kind: sa
+    label: 'SA: order-orchestrator-sa'
+  - kind: secret
+    label: 'Secret: commerce-db-credentials'
+  - kind: svc
+    label: 'svc: order-orchestrator-svc'
+  folded_edge_ids:
+  - ec1dea77ec4a609d
+  inline_meta:
+  - label: Namespace
+    value: commerce
+- id: n_aegis_commerce_prod_pci_compliance_auditor
+  title: pci-compliance-auditor
+  subtitle: Private GKE CronJob Auditor
+  icon_key: k8s_workload
+  component_kind: WORKLOAD
+  project_id: aegis-commerce-prod
+  service_project_id: aegis-commerce-prod
+  topo_rank: 2
+  sub_rank: 4
+  backed_by:
+  - uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/batch/cronjobs/pci-compliance-auditor
+    asset_type: batch.k8s.io/CronJob
+    project_id: aegis-commerce-prod
+  members:
+  - pci-compliance-auditor
+  badges:
+  - kind: project
+    label: aegis-commerce-prod
+- id: n_aegis_commerce_prod_shared_session_redis
+  title: shared-session-redis
+  subtitle: Private Memorystore Redis Cluster
+  icon_key: memorystore
+  component_kind: DATASTORE
+  project_id: aegis-commerce-prod
+  service_project_id: aegis-commerce-prod
+  topo_rank: 7
+  sub_rank: 18
+  backed_by:
+  - uri: //redis.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/shared-session-redis
+    asset_type: redis.googleapis.com/Cluster
+    project_id: aegis-commerce-prod
+  members:
+  - shared-session-redis
+  badges:
+  - kind: project
+    label: aegis-commerce-prod
+  inline_meta:
+  - label: Redis
+    value: REDIS_7_2
+- id: n_aegis_commerce_prod_tax_enrichment_fn
+  title: tax-enrichment-fn
+  subtitle: Private Cloud Function Tax Calculator
+  icon_key: cloud_functions
+  component_kind: WORKLOAD
+  project_id: aegis-commerce-prod
+  service_project_id: aegis-commerce-prod
+  topo_rank: 7
+  sub_rank: 19
+  backed_by:
+  - uri: //cloudfunctions.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/functions/tax-enrichment-fn
+    asset_type: cloudfunctions.googleapis.com/CloudFunction
+    project_id: aegis-commerce-prod
+  members:
+  - tax-enrichment-fn
+  badges:
+  - kind: project
+    label: aegis-commerce-prod
+  - kind: sa
+    label: 'SA: tax-enrichment-sa'
+  - kind: secret
+    label: 'Secret: tax-provider-api-token'
+  - kind: vpc_conn
+    label: 'VPC-Conn: ew1-serverless-conn'
+  inline_meta:
+  - label: Runtime
+    value: go122
+- id: n_aegis_delivery_sec_aegis_build_attestations
+  title: aegis-build-attestations
+  subtitle: Private Cloud Storage Attestation Bucket
+  icon_key: cloud_storage
+  component_kind: DATASTORE
+  project_id: aegis-delivery-sec
+  topo_rank: 5
+  sub_rank: 13
+  backed_by:
+  - uri: //storage.googleapis.com/aegis-build-attestations
+    asset_type: storage.googleapis.com/Bucket
+    project_id: aegis-delivery-sec
+  members:
+  - aegis-build-attestations
+  badges:
+  - kind: kms
+    label: 'KMS: binary-authz-cmek'
+  inline_meta:
+  - label: Class
+    value: STANDARD
+- id: n_aegis_delivery_sec_aegis_progressive_deploy
+  title: aegis-progressive-deploy
+  subtitle: Private Cloud Deploy Delivery Pipeline
+  icon_key: cloud_deploy
+  component_kind: PIPELINE
+  project_id: aegis-delivery-sec
+  topo_rank: 4
+  sub_rank: 10
+  backed_by:
+  - uri: //clouddeploy.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/deliveryPipelines/aegis-progressive-deploy
+    asset_type: clouddeploy.googleapis.com/DeliveryPipeline
+    project_id: aegis-delivery-sec
+  members:
+  - aegis-progressive-deploy
+  badges:
+  - kind: sa
+    label: 'SA: clouddeploy-rollout-sa'
+- id: n_aegis_delivery_sec_aegis_signed_containers
+  title: aegis-signed-containers
+  subtitle: Private Artifact Registry Repository
+  icon_key: artifact_registry
+  component_kind: DATASTORE
+  project_id: aegis-delivery-sec
+  topo_rank: 3
+  sub_rank: 8
+  backed_by:
+  - uri: //artifactregistry.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/repositories/aegis-signed-containers
+    asset_type: artifactregistry.googleapis.com/Repository
+    project_id: aegis-delivery-sec
+  members:
+  - aegis-signed-containers
+  badges:
+  - kind: kms
+    label: 'KMS: binary-authz-cmek'
+  - kind: sa
+    label: 'SA: cloudbuild-signer-sa'
+  inline_meta:
+  - label: Format
+    value: DOCKER
+- id: n_aegis_net_host_aegis_internal_dns
+  title: aegis-internal-dns
+  subtitle: Private Cloud DNS Managed Zone
+  icon_key: cloud_dns
+  component_kind: INGRESS
+  project_id: aegis-net-host
+  topo_rank: 1
+  sub_rank: 3
+  backed_by:
+  - uri: //dns.googleapis.com/projects/aegis-net-host/managedZones/aegis-internal-dns
+    asset_type: dns.googleapis.com/ManagedZone
+    project_id: aegis-net-host
+  members:
+  - aegis-internal-dns
+  badges:
+  - kind: dns
+    label: 'DNS: aegis-zero-trust-vpc'
+- id: n_aegis_risk_prod_fraud_alert_dispatcher
+  title: fraud-alert-dispatcher
+  subtitle: Private Cloud Run Alert Dispatcher
+  icon_key: cloud_run
+  component_kind: WORKLOAD
+  project_id: aegis-risk-prod
+  service_project_id: aegis-risk-prod
+  topo_rank: 8
+  sub_rank: 21
+  backed_by:
+  - uri: //run.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/services/fraud-alert-dispatcher
+    asset_type: run.googleapis.com/Service
+    project_id: aegis-risk-prod
+  members:
+  - fraud-alert-dispatcher
+  badges:
+  - kind: project
+    label: aegis-risk-prod
+  - kind: sa
+    label: 'SA: risk-policy-sa'
+  - kind: secret
+    label: 'Secret: siem-webhook-secret'
+  inline_meta:
+  - label: Ingress
+    value: INTERNAL_ONLY
+- id: n_aegis_risk_prod_gemini_4_carbon
+  title: gemini-4-carbon
+  subtitle: Vertex AI Foundation Publisher Model
+  icon_key: foundation_model
+  component_kind: DATASTORE
+  project_id: aegis-risk-prod
+  service_project_id: aegis-risk-prod
+  topo_rank: 9
+  sub_rank: 24
+  backed_by:
+  - uri: //aiplatform.googleapis.com/projects/aegis-risk-prod/locations/global/publishers/google/models/gemini-4-carbon
+    asset_type: aiplatform.googleapis.com/PublisherModel
+    project_id: aegis-risk-prod
+  members:
+  - gemini-4-carbon
+  badges:
+  - kind: project
+    label: aegis-risk-prod
+- id: n_aegis_risk_prod_montecarlo_risk_batch
+  title: montecarlo-risk-batch
+  subtitle: Private Cloud Batch Simulation Job
+  icon_key: batch
+  component_kind: WORKLOAD
+  project_id: aegis-risk-prod
+  service_project_id: aegis-risk-prod
+  topo_rank: 2
+  sub_rank: 6
+  backed_by:
+  - uri: //batch.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/jobs/montecarlo-risk-batch
+    asset_type: batch.googleapis.com/Job
+    project_id: aegis-risk-prod
+  members:
+  - montecarlo-risk-batch
+  badges:
+  - kind: project
+    label: aegis-risk-prod
+  - kind: sa
+    label: 'SA: montecarlo-batch-sa'
+- id: n_aegis_risk_prod_risk_compliance_mart
+  title: risk_compliance_mart
+  subtitle: Private BigQuery Risk Compliance Mart
+  icon_key: bigquery
+  component_kind: DATASTORE
+  project_id: aegis-risk-prod
+  service_project_id: aegis-risk-prod
+  topo_rank: 9
+  sub_rank: 23
+  backed_by:
+  - uri: //bigquery.googleapis.com/projects/aegis-risk-prod/datasets/risk_compliance_mart
+    asset_type: bigquery.googleapis.com/Dataset
+    project_id: aegis-risk-prod
+  members:
+  - risk_compliance_mart
+  badges:
+  - kind: kms
+    label: 'KMS: compliance-bq-cmek'
+  - kind: project
+    label: aegis-risk-prod
+  - kind: sa
+    label: 'SA: montecarlo-batch-sa'
+  inline_meta:
+  - label: Location
+    value: EU
+- id: n_aegis_risk_prod_risk_features_alloydb
+  title: risk-features-alloydb
+  subtitle: Private PSA AlloyDB Feature Cluster
+  icon_key: alloydb
+  component_kind: DATASTORE
+  project_id: aegis-risk-prod
+  service_project_id: aegis-risk-prod
+  topo_rank: 9
+  sub_rank: 25
+  backed_by:
+  - uri: //alloydb.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/clusters/risk-features-alloydb
+    asset_type: alloydb.googleapis.com/Cluster
+    project_id: aegis-risk-prod
+  members:
+  - risk-features-alloydb
+  badges:
+  - kind: kms
+    label: 'KMS: risk-alloydb-cmek'
+  - kind: project
+    label: aegis-risk-prod
+  - kind: psa
+    label: PSA Peering
+  - kind: sa
+    label: 'SA: risk-policy-sa'
+  inline_meta:
+  - label: Engine
+    value: POSTGRES_16
+  - label: Private IP
+    value: 10.93.0.10
+- id: n_aegis_risk_prod_risk_internal_ilb
+  title: risk-internal-ilb
+  subtitle: Internal Regional Load Balancer
+  icon_key: cloud_load_balancing
+  component_kind: INGRESS
+  project_id: aegis-risk-prod
+  service_project_id: aegis-risk-prod
+  topo_rank: 7
+  sub_rank: 16
+  backed_by:
+  - uri: //compute.googleapis.com/projects/aegis-risk-prod/regions/europe-west4/forwardingRules/risk-internal-ilb
+    asset_type: compute.googleapis.com/ForwardingRule
+    project_id: aegis-risk-prod
+  members:
+  - risk-internal-ilb
+  badges:
+  - kind: exposure
+    label: INTERNAL
+  - kind: project
+    label: aegis-risk-prod
+  inline_meta:
+  - label: VIP
+    value: 10.91.16.25:8443-8443
+  - label: Scheme
+    value: INTERNAL_MANAGED
+- id: n_aegis_risk_prod_risk_policy_engine
+  title: risk-policy-engine
+  subtitle: Private Cloud Run Risk Policy Service
+  icon_key: cloud_run
+  component_kind: WORKLOAD
+  project_id: aegis-risk-prod
+  service_project_id: aegis-risk-prod
+  topo_rank: 8
+  sub_rank: 22
+  backed_by:
+  - uri: //run.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/services/risk-policy-engine
+    asset_type: run.googleapis.com/Service
+    project_id: aegis-risk-prod
+  members:
+  - risk-policy-engine
+  badges:
+  - kind: project
+    label: aegis-risk-prod
+  - kind: sa
+    label: 'SA: risk-policy-sa'
+  - kind: secret
+    label: 'Secret: risk-model-signing-key'
+  inline_meta:
+  - label: Ingress
+    value: INTERNAL_LOAD_BALANCER
+- id: n_external_github_aegis_monorepo
+  title: github-aegis-monorepo
+  subtitle: External GitHub Monorepo
+  icon_key: github
+  component_kind: EXTERNAL_CALLER
+  project_id: external
+  backed_by:
+  - uri: //github.com/aegis-corp/enterprise-platform
+    asset_type: external.github.com/Repository
+    project_id: external
+  members:
+  - github-aegis-monorepo
+  badges:
+  - kind: exposure
+    label: EXTERNAL
+- id: n_external_global_enterprise_clients
+  title: global-enterprise-clients
+  subtitle: External Enterprise Client Traffic
+  icon_key: external_client
+  component_kind: EXTERNAL_CALLER
+  project_id: external
+  sub_rank: 1
+  backed_by:
+  - uri: //external.internet/clients/global-enterprise-clients
+    asset_type: external.internet/ClientGroup
+    project_id: external
+  members:
+  - global-enterprise-clients
+  badges:
+  - kind: exposure
+    label: EXTERNAL
+containers:
+- id: ext_sources
+  title: External Callers & Sources
+  kind: EXTERNAL_ZONE
+  exposure: EXTERNAL
+  order_hint: -100
+- id: folder_550100
+  title: 'Folder: platform-shared'
+  subtitle: folders/550100
+  kind: FOLDER
+  parent_container_id: org_940400001
+  order_hint: 20
+- id: folder_550200
+  title: 'Folder: prod-domains'
+  subtitle: folders/550200
+  kind: FOLDER
+  parent_container_id: org_940400001
+  order_hint: 20
+- id: gke_aegis_commerce_prod_gke_commerce_ew1
+  title: 'GKE Cluster: gke-commerce-ew1'
+  subtitle: europe-west1
+  kind: GKE_CLUSTER
+  exposure: PRIVATE
+  parent_container_id: sub_aegis_net_host_ew1_gke_commerce_subnet
+  badges:
+  - Private Nodes
+  order_hint: 70
+  backed_by:
+  - uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1
+    asset_type: container.googleapis.com/Cluster
+    project_id: aegis-commerce-prod
+- id: org_940400001
+  title: 'Org: Aegis Cloud Enterprise'
+  subtitle: organizations/940400001
+  kind: ORG
+  order_hint: 10
+- id: proj_aegis_commerce_prod
+  title: Aegis Commerce Prod (aegis-commerce-prod)
+  kind: PROJECT
+  parent_container_id: folder_550200
+  badges:
+  - Shared VPC Service Project
+  order_hint: 30
+- id: proj_aegis_delivery_sec
+  title: Aegis Delivery Sec (aegis-delivery-sec)
+  kind: PROJECT
+  parent_container_id: folder_550100
+  order_hint: 30
+- id: proj_aegis_net_host
+  title: Aegis Net Host (aegis-net-host)
+  kind: PROJECT
+  parent_container_id: folder_550100
+  badges:
+  - Shared VPC Host
+  order_hint: 30
+- id: proj_aegis_risk_prod
+  title: Aegis Risk Prod (aegis-risk-prod)
+  kind: PROJECT
+  parent_container_id: folder_550200
+  badges:
+  - Shared VPC Service Project
+  order_hint: 30
+- id: reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+  title: 'Region: europe-west1'
+  kind: REGION
+  parent_container_id: vpc_aegis_net_host_aegis_zero_trust_vpc
+  order_hint: 50
+- id: reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west4
+  title: 'Region: europe-west4'
+  kind: REGION
+  parent_container_id: vpc_aegis_net_host_aegis_zero_trust_vpc
+  order_hint: 50
+- id: sub_aegis_net_host_ew1_dmz_public_subnet
+  title: 'Subnet: ew1-dmz-public-subnet'
+  subtitle: 10.90.0.0/24
+  kind: SUBNET
+  exposure: PUBLIC
+  parent_container_id: reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+  badges:
+  - PUBLIC
+  order_hint: 60
+  backed_by:
+  - uri: //compute.googleapis.com/projects/aegis-net-host/regions/europe-west1/subnetworks/ew1-dmz-public-subnet
+    asset_type: compute.googleapis.com/Subnetwork
+    project_id: aegis-net-host
+- id: sub_aegis_net_host_ew1_gke_commerce_subnet
+  title: 'Subnet: ew1-gke-commerce-subnet'
+  subtitle: 10.90.16.0/20
+  kind: SUBNET
+  exposure: PRIVATE
+  parent_container_id: reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+  badges:
+  - PRIVATE
+  order_hint: 62
+  folded_edge_ids:
+  - 1b012b668db44a15
+  backed_by:
+  - uri: //compute.googleapis.com/projects/aegis-net-host/regions/europe-west1/subnetworks/ew1-gke-commerce-subnet
+    asset_type: compute.googleapis.com/Subnetwork
+    project_id: aegis-net-host
+- id: sub_aegis_net_host_ew4_risk_compute_subnet
+  title: 'Subnet: ew4-risk-compute-subnet'
+  subtitle: 10.91.16.0/20
+  kind: SUBNET
+  exposure: PRIVATE
+  parent_container_id: reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west4
+  badges:
+  - PRIVATE
+  order_hint: 62
+  backed_by:
+  - uri: //compute.googleapis.com/projects/aegis-net-host/regions/europe-west4/subnetworks/ew4-risk-compute-subnet
+    asset_type: compute.googleapis.com/Subnetwork
+    project_id: aegis-net-host
+- id: vpc_aegis_net_host_aegis_zero_trust_vpc
+  title: 'VPC: aegis-zero-trust-vpc'
+  subtitle: 'Host: aegis-net-host'
+  kind: VPC
+  parent_container_id: proj_aegis_net_host
+  badges:
+  - 'DNS: aegis-internal-dns'
+  - 'NAT: ew1-nat-router'
+  - 'NAT: ew4-nat-router'
+  - Shared VPC (2 svc projects)
+  order_hint: 40
+  folded_edge_ids:
+  - 02ecd49b9f3f8b86
+  - 0fbf3be99c5efd2d
+  - 2c2078bc9d9b0537
+  - 811332a80bfa85b5
+  - ce7324887c861ec3
+  backed_by:
+  - uri: //compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc
+    asset_type: compute.googleapis.com/Network
+    project_id: aegis-net-host
+- id: zone_exposure_zone_internal_sub_aegis_net_host_ew4_risk_compute_subnet
+  title: Internal Exposure
+  kind: EXPOSURE_ZONE
+  exposure: INTERNAL
+  parent_container_id: sub_aegis_net_host_ew4_risk_compute_subnet
+  order_hint: 63
+- id: zone_exposure_zone_private_proj_aegis_commerce_prod
+  title: Managed Services & Messaging
+  kind: EXPOSURE_ZONE
+  exposure: PRIVATE
+  parent_container_id: proj_aegis_commerce_prod
+  order_hint: 80
+- id: zone_exposure_zone_private_proj_aegis_delivery_sec
+  title: Managed Services & Messaging
+  kind: EXPOSURE_ZONE
+  exposure: PRIVATE
+  parent_container_id: proj_aegis_delivery_sec
+  order_hint: 80
+- id: zone_exposure_zone_private_proj_aegis_net_host
+  title: Managed Services & Messaging
+  kind: EXPOSURE_ZONE
+  exposure: PRIVATE
+  parent_container_id: proj_aegis_net_host
+  order_hint: 80
+- id: zone_exposure_zone_private_proj_aegis_risk_prod
+  title: Managed Services & Messaging
+  kind: EXPOSURE_ZONE
+  exposure: PRIVATE
+  parent_container_id: proj_aegis_risk_prod
+  order_hint: 80
+- id: zone_exposure_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+  title: Private VPC Services
+  kind: EXPOSURE_ZONE
+  exposure: PRIVATE
+  parent_container_id: reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+  order_hint: 72
+- id: zone_exposure_zone_private_sub_aegis_net_host_ew1_gke_commerce_subnet
+  title: Private Workloads
+  kind: EXPOSURE_ZONE
+  exposure: PRIVATE
+  parent_container_id: sub_aegis_net_host_ew1_gke_commerce_subnet
+  order_hint: 64
+- id: zone_exposure_zone_private_sub_aegis_net_host_ew4_risk_compute_subnet
+  title: Private Workloads
+  kind: EXPOSURE_ZONE
+  exposure: PRIVATE
+  parent_container_id: sub_aegis_net_host_ew4_risk_compute_subnet
+  order_hint: 64
+- id: zone_exposure_zone_public_vpc_aegis_net_host_aegis_zero_trust_vpc
+  title: Public Edge Ingress
+  subtitle: EXTERNAL_MANAGED
+  kind: EXPOSURE_ZONE
+  exposure: PUBLIC
+  parent_container_id: vpc_aegis_net_host_aegis_zero_trust_vpc
+  order_hint: 45
+- id: zone_psa_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+  title: PSA Private Service Access
+  subtitle: 'Tenant: p940400abcdef12-tp'
+  kind: PSA_ZONE
+  exposure: PRIVATE
+  parent_container_id: reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+  badges:
+  - PSA Peering
+  order_hint: 75
+  folded_edge_ids:
+  - 02ecd49b9f3f8b86
+- id: zone_psa_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west4
+  title: PSA Private Service Access
+  subtitle: 'Tenant: p940400abcdef12-tp'
+  kind: PSA_ZONE
+  exposure: PRIVATE
+  parent_container_id: reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west4
+  badges:
+  - PSA Peering
+  order_hint: 75
+  folded_edge_ids:
+  - 2c2078bc9d9b0537
+transversal_items:
+- id: tr_007_commerce_gateway_sa_aegis_commerce_prod_i
+  category: IAM_SA
+  asset_type: iam.googleapis.com/ServiceAccount
+  display_name: commerce-gateway-sa@aegis-commerce-prod.iam.gserviceaccount.com
+  detail: ServiceAccount
+  project_id: aegis-commerce-prod
+  owner_container_id: proj_aegis_commerce_prod
+  attached_node_ids:
+  - n_aegis_commerce_prod_commerce_gateway_api
+  backed_by:
+  - uri: //iam.googleapis.com/projects/aegis-commerce-prod/serviceAccounts/commerce-gateway-sa@aegis-commerce-prod.iam.gserviceaccount.com
+    asset_type: iam.googleapis.com/ServiceAccount
+    project_id: aegis-commerce-prod
+  backed_edge_ids:
+  - 52a6e330ea483fc4
+- id: tr_008_inventory_allocator_sa_aegis_commerce_pro
+  category: IAM_SA
+  asset_type: iam.googleapis.com/ServiceAccount
+  display_name: inventory-allocator-sa@aegis-commerce-prod.iam.gserviceaccount.com
+  detail: ServiceAccount
+  project_id: aegis-commerce-prod
+  owner_container_id: proj_aegis_commerce_prod
+  attached_node_ids:
+  - n_aegis_commerce_prod_inventory_allocator_svc
+  backed_by:
+  - uri: //iam.googleapis.com/projects/aegis-commerce-prod/serviceAccounts/inventory-allocator-sa@aegis-commerce-prod.iam.gserviceaccount.com
+    asset_type: iam.googleapis.com/ServiceAccount
+    project_id: aegis-commerce-prod
+  backed_edge_ids:
+  - 343e5eda8d439fad
+- id: tr_009_order_orchestrator_sa_aegis_commerce_prod
+  category: IAM_SA
+  asset_type: iam.googleapis.com/ServiceAccount
+  display_name: order-orchestrator-sa@aegis-commerce-prod.iam.gserviceaccount.com
+  detail: ServiceAccount
+  project_id: aegis-commerce-prod
+  owner_container_id: proj_aegis_commerce_prod
+  attached_node_ids:
+  - n_aegis_commerce_prod_domain_events_bus
+  - n_aegis_commerce_prod_order_orchestrator_svc
+  backed_by:
+  - uri: //iam.googleapis.com/projects/aegis-commerce-prod/serviceAccounts/order-orchestrator-sa@aegis-commerce-prod.iam.gserviceaccount.com
+    asset_type: iam.googleapis.com/ServiceAccount
+    project_id: aegis-commerce-prod
+  backed_edge_ids:
+  - 52c53090a299816f
+  - cb3bff3ef2c3c23a
+  roles:
+  - roles/pubsub.publisher
+- id: tr_010_tax_enrichment_sa_aegis_commerce_prod_iam
+  category: IAM_SA
+  asset_type: iam.googleapis.com/ServiceAccount
+  display_name: tax-enrichment-sa@aegis-commerce-prod.iam.gserviceaccount.com
+  detail: ServiceAccount
+  project_id: aegis-commerce-prod
+  owner_container_id: proj_aegis_commerce_prod
+  attached_node_ids:
+  - n_aegis_commerce_prod_tax_enrichment_fn
+  backed_by:
+  - uri: //iam.googleapis.com/projects/aegis-commerce-prod/serviceAccounts/tax-enrichment-sa@aegis-commerce-prod.iam.gserviceaccount.com
+    asset_type: iam.googleapis.com/ServiceAccount
+    project_id: aegis-commerce-prod
+  backed_edge_ids:
+  - a32e77c67e00e491
+- id: tr_011_cloudbuild_signer_sa_aegis_delivery_sec_i
+  category: IAM_SA
+  asset_type: iam.googleapis.com/ServiceAccount
+  display_name: cloudbuild-signer-sa@aegis-delivery-sec.iam.gserviceaccount.com
+  detail: ServiceAccount
+  project_id: aegis-delivery-sec
+  owner_container_id: proj_aegis_delivery_sec
+  attached_node_ids:
+  - cohort_aegis_delivery_sec_ci_build_triggers_4x
+  - n_aegis_delivery_sec_aegis_signed_containers
+  backed_by:
+  - uri: //iam.googleapis.com/projects/aegis-delivery-sec/serviceAccounts/cloudbuild-signer-sa@aegis-delivery-sec.iam.gserviceaccount.com
+    asset_type: iam.googleapis.com/ServiceAccount
+    project_id: aegis-delivery-sec
+  backed_edge_ids:
+  - 28d27f6d9938794d
+  - 306b7814cb45a655
+  - 6318ba6f757457e0
+  - 6b0a8cf61505c810
+  - a1627abb01bcfa96
+  roles:
+  - roles/artifactregistry.writer
+- id: tr_012_clouddeploy_rollout_sa_aegis_delivery_sec
+  category: IAM_SA
+  asset_type: iam.googleapis.com/ServiceAccount
+  display_name: clouddeploy-rollout-sa@aegis-delivery-sec.iam.gserviceaccount.com
+  detail: ServiceAccount
+  project_id: aegis-delivery-sec
+  owner_container_id: proj_aegis_delivery_sec
+  attached_node_ids:
+  - n_aegis_delivery_sec_aegis_progressive_deploy
+  backed_by:
+  - uri: //iam.googleapis.com/projects/aegis-delivery-sec/serviceAccounts/clouddeploy-rollout-sa@aegis-delivery-sec.iam.gserviceaccount.com
+    asset_type: iam.googleapis.com/ServiceAccount
+    project_id: aegis-delivery-sec
+  backed_edge_ids:
+  - 740f93d9f70f4143
+- id: tr_013_montecarlo_batch_sa_aegis_risk_prod_iam_g
+  category: IAM_SA
+  asset_type: iam.googleapis.com/ServiceAccount
+  display_name: montecarlo-batch-sa@aegis-risk-prod.iam.gserviceaccount.com
+  detail: ServiceAccount
+  project_id: aegis-risk-prod
+  owner_container_id: proj_aegis_risk_prod
+  attached_node_ids:
+  - n_aegis_risk_prod_montecarlo_risk_batch
+  - n_aegis_risk_prod_risk_compliance_mart
+  backed_by:
+  - uri: //iam.googleapis.com/projects/aegis-risk-prod/serviceAccounts/montecarlo-batch-sa@aegis-risk-prod.iam.gserviceaccount.com
+    asset_type: iam.googleapis.com/ServiceAccount
+    project_id: aegis-risk-prod
+  backed_edge_ids:
+  - 65ad6fa620f13577
+  - 87d71166b90271bd
+  roles:
+  - roles/bigquery.dataEditor
+- id: tr_014_risk_policy_sa_aegis_risk_prod_iam_gservi
+  category: IAM_SA
+  asset_type: iam.googleapis.com/ServiceAccount
+  display_name: risk-policy-sa@aegis-risk-prod.iam.gserviceaccount.com
+  detail: ServiceAccount
+  project_id: aegis-risk-prod
+  owner_container_id: proj_aegis_risk_prod
+  attached_node_ids:
+  - n_aegis_risk_prod_fraud_alert_dispatcher
+  - n_aegis_risk_prod_risk_features_alloydb
+  - n_aegis_risk_prod_risk_policy_engine
+  backed_by:
+  - uri: //iam.googleapis.com/projects/aegis-risk-prod/serviceAccounts/risk-policy-sa@aegis-risk-prod.iam.gserviceaccount.com
+    asset_type: iam.googleapis.com/ServiceAccount
+    project_id: aegis-risk-prod
+  backed_edge_ids:
+  - 8b69debb7c87c848
+  - e86f5093c48201db
+  - ee8e24cec9dbbd12
+  roles:
+  - roles/alloydb.client
+- id: tr_001_commerce_sql_cmek
+  category: KMS
+  asset_type: cloudkms.googleapis.com/CryptoKey
+  display_name: commerce-sql-cmek
+  detail: europe-west1 | ENCRYPT_DECRYPT
+  project_id: aegis-commerce-prod
+  owner_container_id: proj_aegis_commerce_prod
+  attached_node_ids:
+  - n_aegis_commerce_prod_commerce_orders_sql
+  backed_by:
+  - uri: //cloudkms.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/keyRings/commerce-ring/cryptoKeys/commerce-sql-cmek
+    asset_type: cloudkms.googleapis.com/CryptoKey
+    project_id: aegis-commerce-prod
+  backed_edge_ids:
+  - dc0e2b7c8b9047cb
+- id: tr_002_binary_authz_cmek
+  category: KMS
+  asset_type: cloudkms.googleapis.com/CryptoKey
+  display_name: binary-authz-cmek
+  detail: europe-west1 | ENCRYPT_DECRYPT
+  project_id: aegis-delivery-sec
+  owner_container_id: proj_aegis_delivery_sec
+  attached_node_ids:
+  - n_aegis_delivery_sec_aegis_build_attestations
+  - n_aegis_delivery_sec_aegis_signed_containers
+  backed_by:
+  - uri: //cloudkms.googleapis.com/projects/aegis-delivery-sec/locations/europe-west1/keyRings/supplychain-ring/cryptoKeys/binary-authz-cmek
+    asset_type: cloudkms.googleapis.com/CryptoKey
+    project_id: aegis-delivery-sec
+  backed_edge_ids:
+  - b14773f4f281a09e
+  - c47b717954fa9896
+- id: tr_003_compliance_bq_cmek
+  category: KMS
+  asset_type: cloudkms.googleapis.com/CryptoKey
+  display_name: compliance-bq-cmek
+  detail: europe-west4 | ENCRYPT_DECRYPT
+  project_id: aegis-risk-prod
+  owner_container_id: proj_aegis_risk_prod
+  attached_node_ids:
+  - n_aegis_commerce_prod_commerce_audit_dw
+  - n_aegis_risk_prod_risk_compliance_mart
+  backed_by:
+  - uri: //cloudkms.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/keyRings/risk-ring/cryptoKeys/compliance-bq-cmek
+    asset_type: cloudkms.googleapis.com/CryptoKey
+    project_id: aegis-risk-prod
+  backed_edge_ids:
+  - 241473fb7ecb8130
+  - 5ab0e06cdea36fee
+- id: tr_004_risk_alloydb_cmek
+  category: KMS
+  asset_type: cloudkms.googleapis.com/CryptoKey
+  display_name: risk-alloydb-cmek
+  detail: europe-west4 | ENCRYPT_DECRYPT
+  project_id: aegis-risk-prod
+  owner_container_id: proj_aegis_risk_prod
+  attached_node_ids:
+  - n_aegis_risk_prod_risk_features_alloydb
+  backed_by:
+  - uri: //cloudkms.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/keyRings/risk-ring/cryptoKeys/risk-alloydb-cmek
+    asset_type: cloudkms.googleapis.com/CryptoKey
+    project_id: aegis-risk-prod
+  backed_edge_ids:
+  - 84f4cbc1bec93ff7
+- id: tr_005_ew1_nat_router
+  category: NAT_ROUTER
+  asset_type: compute.googleapis.com/Router
+  display_name: ew1-nat-router
+  detail: europe-west1
+  project_id: aegis-net-host
+  owner_container_id: vpc_aegis_net_host_aegis_zero_trust_vpc
+  backed_by:
+  - uri: //compute.googleapis.com/projects/aegis-net-host/regions/europe-west1/routers/ew1-nat-router
+    asset_type: compute.googleapis.com/Router
+    project_id: aegis-net-host
+  backed_edge_ids:
+  - 811332a80bfa85b5
+- id: tr_006_ew4_nat_router
+  category: NAT_ROUTER
+  asset_type: compute.googleapis.com/Router
+  display_name: ew4-nat-router
+  detail: europe-west4
+  project_id: aegis-net-host
+  owner_container_id: vpc_aegis_net_host_aegis_zero_trust_vpc
+  backed_by:
+  - uri: //compute.googleapis.com/projects/aegis-net-host/regions/europe-west4/routers/ew4-nat-router
+    asset_type: compute.googleapis.com/Router
+    project_id: aegis-net-host
+  backed_edge_ids:
+  - ce7324887c861ec3
+- id: tr_015_compliance_7yr_log_bucket
+  category: OBSERVABILITY
+  asset_type: logging.googleapis.com/LogBucket
+  display_name: compliance-7yr-log-bucket
+  detail: global
+  project_id: aegis-net-host
+  owner_container_id: proj_aegis_net_host
+  backed_by:
+  - uri: //logging.googleapis.com/projects/aegis-net-host/locations/global/buckets/compliance-7yr-log-bucket
+    asset_type: logging.googleapis.com/LogBucket
+    project_id: aegis-net-host
+  backed_edge_ids:
+  - 13cd228191764c7e
+- id: tr_016_org_siem_audit_sink
+  category: OBSERVABILITY
+  asset_type: logging.googleapis.com/LogSink
+  display_name: org-siem-audit-sink
+  detail: global
+  project_id: aegis-net-host
+  owner_container_id: proj_aegis_net_host
+  backed_by:
+  - uri: //logging.googleapis.com/projects/aegis-net-host/sinks/org-siem-audit-sink
+    asset_type: logging.googleapis.com/LogSink
+    project_id: aegis-net-host
+  backed_edge_ids:
+  - 13cd228191764c7e
+- id: tr_017_commerce_slo_burn_alert
+  category: OBSERVABILITY
+  asset_type: monitoring.googleapis.com/AlertPolicy
+  display_name: commerce-slo-burn-alert
+  detail: global
+  project_id: aegis-commerce-prod
+  owner_container_id: proj_aegis_commerce_prod
+  attached_node_ids:
+  - n_aegis_commerce_prod_commerce_gateway_api
+  backed_by:
+  - uri: //monitoring.googleapis.com/projects/aegis-commerce-prod/alertPolicies/9505001
+    asset_type: monitoring.googleapis.com/AlertPolicy
+    project_id: aegis-commerce-prod
+  backed_edge_ids:
+  - 43838d3a305913cf
+- id: tr_018_risk_dlq_backlog_alert
+  category: OBSERVABILITY
+  asset_type: monitoring.googleapis.com/AlertPolicy
+  display_name: risk-dlq-backlog-alert
+  detail: global
+  project_id: aegis-risk-prod
+  owner_container_id: proj_aegis_risk_prod
+  attached_node_ids:
+  - n_aegis_commerce_prod_domain_events_dlq
+  backed_by:
+  - uri: //monitoring.googleapis.com/projects/aegis-risk-prod/alertPolicies/9505002
+    asset_type: monitoring.googleapis.com/AlertPolicy
+    project_id: aegis-risk-prod
+  backed_edge_ids:
+  - b30f885f3c47fc10
+- id: tr_019_commerce_db_credentials
+  category: SECRET
+  asset_type: secretmanager.googleapis.com/Secret
+  display_name: commerce-db-credentials
+  detail: automatic
+  project_id: aegis-commerce-prod
+  owner_container_id: proj_aegis_commerce_prod
+  attached_node_ids:
+  - n_aegis_commerce_prod_inventory_allocator_svc
+  - n_aegis_commerce_prod_order_orchestrator_svc
+  backed_by:
+  - uri: //secretmanager.googleapis.com/projects/aegis-commerce-prod/secrets/commerce-db-credentials
+    asset_type: secretmanager.googleapis.com/Secret
+    project_id: aegis-commerce-prod
+  backed_edge_ids:
+  - 0e1e7b1ef461d22c
+  - 3d8e33bb479eaa10
+- id: tr_020_tax_provider_api_token
+  category: SECRET
+  asset_type: secretmanager.googleapis.com/Secret
+  display_name: tax-provider-api-token
+  detail: automatic
+  project_id: aegis-commerce-prod
+  owner_container_id: proj_aegis_commerce_prod
+  attached_node_ids:
+  - n_aegis_commerce_prod_tax_enrichment_fn
+  backed_by:
+  - uri: //secretmanager.googleapis.com/projects/aegis-commerce-prod/secrets/tax-provider-api-token
+    asset_type: secretmanager.googleapis.com/Secret
+    project_id: aegis-commerce-prod
+  backed_edge_ids:
+  - e65c97d468fb6ab5
+- id: tr_021_risk_model_signing_key
+  category: SECRET
+  asset_type: secretmanager.googleapis.com/Secret
+  display_name: risk-model-signing-key
+  detail: automatic
+  project_id: aegis-risk-prod
+  owner_container_id: proj_aegis_risk_prod
+  attached_node_ids:
+  - n_aegis_risk_prod_risk_policy_engine
+  backed_by:
+  - uri: //secretmanager.googleapis.com/projects/aegis-risk-prod/secrets/risk-model-signing-key
+    asset_type: secretmanager.googleapis.com/Secret
+    project_id: aegis-risk-prod
+  backed_edge_ids:
+  - 5b8981a9e6323acd
+- id: tr_022_siem_webhook_secret
+  category: SECRET
+  asset_type: secretmanager.googleapis.com/Secret
+  display_name: siem-webhook-secret
+  detail: automatic
+  project_id: aegis-risk-prod
+  owner_container_id: proj_aegis_risk_prod
+  attached_node_ids:
+  - n_aegis_risk_prod_fraud_alert_dispatcher
+  backed_by:
+  - uri: //secretmanager.googleapis.com/projects/aegis-risk-prod/secrets/siem-webhook-secret
+    asset_type: secretmanager.googleapis.com/Secret
+    project_id: aegis-risk-prod
+  backed_edge_ids:
+  - e570fcd8dbddf9de
+- id: tr_023_ew1_serverless_conn
+  category: VPC_ACCESS
+  asset_type: vpcaccess.googleapis.com/Connector
+  display_name: ew1-serverless-conn
+  detail: europe-west1
+  project_id: aegis-commerce-prod
+  owner_container_id: sub_aegis_net_host_ew1_gke_commerce_subnet
+  attached_node_ids:
+  - n_aegis_commerce_prod_tax_enrichment_fn
+  backed_by:
+  - uri: //vpcaccess.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/connectors/ew1-serverless-conn
+    asset_type: vpcaccess.googleapis.com/Connector
+    project_id: aegis-commerce-prod
+  backed_edge_ids:
+  - 1b012b668db44a15
+  - 4449114d1c4e5a5e
+structural_edges:
+- edge_id: 02ecd49b9f3f8b86
+  kind: PSA_PEERING
+  from_uri: //compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc
+  to_uri: //sqladmin.googleapis.com/projects/aegis-commerce-prod/instances/commerce-orders-sql
+  reason: psa_container_boundary
+  target_id: zone_psa_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+- edge_id: 09d2b68fb15ac50b
+  kind: K8S_INGRESS_BACKEND
+  from_uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/networking.k8s.io/ingresses/commerce-gateway-ingress
+  to_uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/commerce-gateway-api
+  reason: 1to1_plumbing_fold
+  target_id: n_aegis_commerce_prod_commerce_gateway_api
+- edge_id: 0fbf3be99c5efd2d
+  kind: CONFIG_REF
+  from_uri: //dns.googleapis.com/projects/aegis-net-host/managedZones/aegis-internal-dns
+  to_uri: //compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc
+  reason: container_attachment
+  target_id: vpc_aegis_net_host_aegis_zero_trust_vpc
+- edge_id: 2c2078bc9d9b0537
+  kind: PSA_PEERING
+  from_uri: //compute.googleapis.com/projects/aegis-net-host/global/networks/aegis-zero-trust-vpc
+  to_uri: //alloydb.googleapis.com/projects/aegis-risk-prod/locations/europe-west4/clusters/risk-features-alloydb
+  reason: psa_container_boundary
+  target_id: zone_psa_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west4
+- edge_id: 7b7d56c9bc01c849
+  kind: CONFIG_REF
+  from_uri: //pubsub.googleapis.com/projects/aegis-commerce-prod/topics/domain-events-bus
+  to_uri: //pubsub.googleapis.com/projects/aegis-commerce-prod/subscriptions/risk-events-sub
+  reason: 1to1_plumbing_fold
+  target_id: n_aegis_commerce_prod_domain_events_bus
+- edge_id: 86c78ab473647638
+  kind: K8S_SERVICE_SELECTOR
+  from_uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/inventory-allocator-svc
+  to_uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/inventory-allocator-svc
+  reason: 1to1_plumbing_fold
+  target_id: n_aegis_commerce_prod_inventory_allocator_svc
+- edge_id: 9e73df62a081e5b8
+  kind: CONFIG_REF
+  from_uri: //pubsub.googleapis.com/projects/aegis-commerce-prod/topics/domain-events-dlq
+  to_uri: //pubsub.googleapis.com/projects/aegis-commerce-prod/subscriptions/domain-dlq-sub
+  reason: 1to1_plumbing_fold
+  target_id: n_aegis_commerce_prod_domain_events_dlq
+- edge_id: d4828c6135e7df53
+  kind: K8S_SERVICE_SELECTOR
+  from_uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/commerce-gateway-api
+  to_uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/commerce-gateway-api
+  reason: 1to1_plumbing_fold
+  target_id: n_aegis_commerce_prod_commerce_gateway_api
+- edge_id: ec1dea77ec4a609d
+  kind: K8S_SERVICE_SELECTOR
+  from_uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/services/order-orchestrator-svc
+  to_uri: //container.googleapis.com/projects/aegis-commerce-prod/locations/europe-west1/clusters/gke-commerce-ew1/k8s/namespaces/commerce/apps/deployments/order-orchestrator-svc
+  reason: 1to1_plumbing_fold
+  target_id: n_aegis_commerce_prod_order_orchestrator_svc
+suppressed_plumbing_counts:
+  artifactregistry.googleapis.com/DockerImage: 184
+  bigquery.googleapis.com/Table: 40
+  cloudbuild.googleapis.com/Build: 240
+  compute.googleapis.com/BackendService: 4
+  compute.googleapis.com/Firewall: 44
+  compute.googleapis.com/Route: 18
+  compute.googleapis.com/SecurityPolicy: 3
+  container.googleapis.com/NodePool: 4
+  k8s.io/Pod: 68
+  run.googleapis.com/Revision: 22
+views:
+- id: view_0_system_index
+  title: System Architecture Overview
+  subtitle: 26 components · 32 flows · 23 governance items
+  focus_summary: Zero-trust enterprise commerce and AI-driven risk scoring platform
+    on GKE, Cloud Run, AlloyDB, Cloud SQL, and Vertex AI with attested CI/CD pipelines.
+  include_transversal_panel: true
+  archetype: layered_flow
+  accent_mode: MIXED
+  container_ids:
+  - ext_sources
+  - folder_550100
+  - folder_550200
+  - gke_aegis_commerce_prod_gke_commerce_ew1
+  - org_940400001
+  - proj_aegis_commerce_prod
+  - proj_aegis_delivery_sec
+  - proj_aegis_net_host
+  - proj_aegis_risk_prod
+  - reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+  - reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west4
+  - sub_aegis_net_host_ew1_dmz_public_subnet
+  - sub_aegis_net_host_ew1_gke_commerce_subnet
+  - sub_aegis_net_host_ew4_risk_compute_subnet
+  - vpc_aegis_net_host_aegis_zero_trust_vpc
+  - zone_exposure_zone_internal_sub_aegis_net_host_ew4_risk_compute_subnet
+  - zone_exposure_zone_private_proj_aegis_commerce_prod
+  - zone_exposure_zone_private_proj_aegis_delivery_sec
+  - zone_exposure_zone_private_proj_aegis_net_host
+  - zone_exposure_zone_private_proj_aegis_risk_prod
+  - zone_exposure_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+  - zone_exposure_zone_private_sub_aegis_net_host_ew1_gke_commerce_subnet
+  - zone_exposure_zone_private_sub_aegis_net_host_ew4_risk_compute_subnet
+  - zone_exposure_zone_public_vpc_aegis_net_host_aegis_zero_trust_vpc
+  - zone_psa_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+  - zone_psa_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west4
+  placements:
+  - component_id: n_external_github_aegis_monorepo
+    container_id: ext_sources
+    column: 0
+  - component_id: n_external_global_enterprise_clients
+    container_id: ext_sources
+    column: 0
+  - component_id: cohort_aegis_delivery_sec_ci_build_triggers_4x
+    container_id: zone_exposure_zone_private_proj_aegis_delivery_sec
+    column: 1
+  - component_id: n_aegis_net_host_aegis_internal_dns
+    container_id: zone_exposure_zone_private_proj_aegis_net_host
+    column: 1
+  - component_id: n_aegis_commerce_prod_pci_compliance_auditor
+    container_id: gke_aegis_commerce_prod_gke_commerce_ew1
+    column: 2
+  - component_id: n_aegis_commerce_prod_aegis_admin_portal
+    container_id: zone_exposure_zone_private_proj_aegis_commerce_prod
+    column: 2
+  - component_id: n_aegis_risk_prod_montecarlo_risk_batch
+    container_id: zone_exposure_zone_private_sub_aegis_net_host_ew4_risk_compute_subnet
+    column: 2
+  - component_id: n_aegis_commerce_prod_aegis_edge_waf_lb
+    container_id: zone_exposure_zone_public_vpc_aegis_net_host_aegis_zero_trust_vpc
+    column: 2
+  - component_id: n_aegis_delivery_sec_aegis_signed_containers
+    container_id: zone_exposure_zone_private_proj_aegis_delivery_sec
+    column: 3
+  - component_id: n_aegis_commerce_prod_domain_events_dlq
+    container_id: zone_exposure_zone_private_proj_aegis_commerce_prod
+    column: 4
+  - component_id: n_aegis_delivery_sec_aegis_progressive_deploy
+    container_id: zone_exposure_zone_private_proj_aegis_delivery_sec
+    column: 4
+  - component_id: n_aegis_commerce_prod_commerce_gateway_api
+    container_id: gke_aegis_commerce_prod_gke_commerce_ew1
+    column: 5
+  - component_id: n_aegis_commerce_prod_commerce_audit_dw
+    container_id: zone_exposure_zone_private_proj_aegis_commerce_prod
+    column: 5
+  - component_id: n_aegis_delivery_sec_aegis_build_attestations
+    container_id: zone_exposure_zone_private_proj_aegis_delivery_sec
+    column: 5
+  - component_id: n_aegis_commerce_prod_inventory_allocator_svc
+    container_id: gke_aegis_commerce_prod_gke_commerce_ew1
+    column: 6
+  - component_id: n_aegis_commerce_prod_order_orchestrator_svc
+    container_id: gke_aegis_commerce_prod_gke_commerce_ew1
+    column: 6
+  - component_id: n_aegis_risk_prod_risk_internal_ilb
+    container_id: zone_exposure_zone_internal_sub_aegis_net_host_ew4_risk_compute_subnet
+    column: 7
+  - component_id: n_aegis_commerce_prod_domain_events_bus
+    container_id: zone_exposure_zone_private_proj_aegis_commerce_prod
+    column: 7
+  - component_id: n_aegis_commerce_prod_shared_session_redis
+    container_id: zone_exposure_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+    column: 7
+  - component_id: n_aegis_commerce_prod_tax_enrichment_fn
+    container_id: zone_exposure_zone_private_sub_aegis_net_host_ew1_gke_commerce_subnet
+    column: 7
+  - component_id: n_aegis_commerce_prod_commerce_orders_sql
+    container_id: zone_psa_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+    column: 7
+  - component_id: n_aegis_risk_prod_fraud_alert_dispatcher
+    container_id: zone_exposure_zone_private_sub_aegis_net_host_ew4_risk_compute_subnet
+    column: 8
+  - component_id: n_aegis_risk_prod_risk_policy_engine
+    container_id: zone_exposure_zone_private_sub_aegis_net_host_ew4_risk_compute_subnet
+    column: 8
+  - component_id: n_aegis_risk_prod_risk_compliance_mart
+    container_id: zone_exposure_zone_private_proj_aegis_risk_prod
+    column: 9
+  - component_id: n_aegis_risk_prod_gemini_4_carbon
+    container_id: zone_exposure_zone_private_proj_aegis_risk_prod
+    column: 9
+  - component_id: n_aegis_risk_prod_risk_features_alloydb
+    container_id: zone_psa_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west4
+    column: 9
+  edges:
+  - from: cohort_aegis_delivery_sec_ci_build_triggers_4x
+    to: n_aegis_delivery_sec_aegis_build_attestations
+    verb: Writes attest
+    flow_kind: CICD
+    semantic_tag: cicd
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 8bf125e75912cef5
+    - 00186d82fa3e1b7c
+    - 8883b76f6baf2afd
+    - e1865d9a45516610
+  - from: cohort_aegis_delivery_sec_ci_build_triggers_4x
+    to: n_aegis_delivery_sec_aegis_signed_containers
+    verb: Pushes image
+    flow_kind: CICD
+    semantic_tag: cicd
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 6ebeb25cf80e02b9
+    - f06e9ec02aa74e84
+    - 7998ca81b3ff9eaf
+    - 841f4e2a014aa3c3
+  - from: n_aegis_commerce_prod_aegis_admin_portal
+    to: n_aegis_commerce_prod_commerce_orders_sql
+    verb: Admin SQL
+    flow_kind: ADMIN
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 8716fac03a2d3fc1
+  - from: n_aegis_commerce_prod_aegis_edge_waf_lb
+    to: n_aegis_commerce_prod_commerce_gateway_api
+    verb: NEG backend
+    flow_kind: RUNTIME
+    semantic_tag: ingress
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 8cd1e921027cece9
+  - from: n_aegis_commerce_prod_commerce_audit_dw
+    to: n_aegis_risk_prod_risk_compliance_mart
+    verb: BQ lineage
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 47d31fd3c674d0a6
+  - from: n_aegis_commerce_prod_commerce_gateway_api
+    to: n_aegis_commerce_prod_inventory_allocator_svc
+    verb: gRPC stock
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - cfc5da622ce2fe0a
+  - from: n_aegis_commerce_prod_commerce_gateway_api
+    to: n_aegis_commerce_prod_order_orchestrator_svc
+    verb: gRPC orders
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - cf41cb495f14e463
+  - from: n_aegis_commerce_prod_commerce_gateway_api
+    to: n_aegis_commerce_prod_shared_session_redis
+    verb: Reads session
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 94788057e7c6cb72
+  - from: n_aegis_commerce_prod_domain_events_bus
+    to: n_aegis_commerce_prod_domain_events_dlq
+    verb: Dead-letter
+    flow_kind: RUNTIME
+    semantic_tag: dlq
+    is_retry_or_dlq: true
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 719cf6bc54d6e8d2
+  - from: n_aegis_commerce_prod_domain_events_bus
+    to: n_aegis_risk_prod_fraud_alert_dispatcher
+    verb: Push event
+    flow_kind: RUNTIME
+    semantic_tag: async
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - ce410a0a762e06fb
+  - from: n_aegis_commerce_prod_domain_events_dlq
+    to: n_aegis_risk_prod_fraud_alert_dispatcher
+    verb: DLQ push
+    flow_kind: RUNTIME
+    semantic_tag: dlq
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - d0dd4c3e6d68bd76
+  - from: n_aegis_commerce_prod_inventory_allocator_svc
+    to: n_aegis_commerce_prod_commerce_orders_sql
+    verb: Queries SQL
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 5cb966c7021b6246
+  - from: n_aegis_commerce_prod_inventory_allocator_svc
+    to: n_aegis_commerce_prod_shared_session_redis
+    verb: Caches stock
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - a503a4b22f92045e
+  - from: n_aegis_commerce_prod_order_orchestrator_svc
+    to: n_aegis_commerce_prod_commerce_orders_sql
+    verb: Writes SQL
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 74dbfe49861bdaa7
+  - from: n_aegis_commerce_prod_order_orchestrator_svc
+    to: n_aegis_commerce_prod_domain_events_bus
+    verb: Publishes
+    flow_kind: RUNTIME
+    semantic_tag: async
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - c04024bc376acc1f
+  - from: n_aegis_commerce_prod_order_orchestrator_svc
+    to: n_aegis_commerce_prod_tax_enrichment_fn
+    verb: HTTP tax
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 381a68834771dd32
+  - from: n_aegis_commerce_prod_order_orchestrator_svc
+    to: n_aegis_risk_prod_risk_internal_ilb
+    verb: gRPC risk
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - fa225e5b45452ab2
+  - from: n_aegis_commerce_prod_pci_compliance_auditor
+    to: n_aegis_commerce_prod_commerce_audit_dw
+    verb: Exports audit
+    flow_kind: ADMIN
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 09b86fc857cf6681
+  - from: n_aegis_commerce_prod_pci_compliance_auditor
+    to: n_aegis_commerce_prod_commerce_orders_sql
+    verb: Audits SQL
+    flow_kind: ADMIN
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 7af93fc1108dbc59
+  - from: n_aegis_delivery_sec_aegis_progressive_deploy
+    to: n_aegis_commerce_prod_commerce_gateway_api
+    verb: Deploys GKE
+    flow_kind: CICD
+    semantic_tag: cicd
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - bddfbb53e117710b
+  - from: n_aegis_delivery_sec_aegis_progressive_deploy
+    to: n_aegis_risk_prod_risk_policy_engine
+    verb: Deploys Run
+    flow_kind: CICD
+    semantic_tag: cicd
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 1581f6d5dda107c0
+  - from: n_aegis_delivery_sec_aegis_signed_containers
+    to: n_aegis_delivery_sec_aegis_progressive_deploy
+    verb: Promote image
+    flow_kind: CICD
+    semantic_tag: cicd
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - cf74ba3b9a41f393
+  - from: n_aegis_net_host_aegis_internal_dns
+    to: n_aegis_commerce_prod_aegis_edge_waf_lb
+    verb: Resolves DNS
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: INFERRED
+    inference_rationale: Private DNS zone aegis-internal-dns attached to VPC aegis-zero-trust-vpc
+  - from: n_aegis_risk_prod_fraud_alert_dispatcher
+    to: n_aegis_risk_prod_risk_compliance_mart
+    verb: Logs incident
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 8014da3af01db8e5
+  - from: n_aegis_risk_prod_montecarlo_risk_batch
+    to: n_aegis_risk_prod_risk_compliance_mart
+    verb: Batch write
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - a716254fbde0c273
+  - from: n_aegis_risk_prod_montecarlo_risk_batch
+    to: n_aegis_risk_prod_risk_features_alloydb
+    verb: Batch read
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 0d25c3f9912c3fa8
+  - from: n_aegis_risk_prod_risk_internal_ilb
+    to: n_aegis_risk_prod_risk_policy_engine
+    verb: ILB backend
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - a25f8e97b666fe91
+  - from: n_aegis_risk_prod_risk_policy_engine
+    to: n_aegis_risk_prod_gemini_4_carbon
+    verb: Calls Gemini
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 2a18bdd498e17cfe
+  - from: n_aegis_risk_prod_risk_policy_engine
+    to: n_aegis_risk_prod_risk_features_alloydb
+    verb: Reads features
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 632acec3e14cbdf8
+  - from: n_external_github_aegis_monorepo
+    to: cohort_aegis_delivery_sec_ci_build_triggers_4x
+    verb: Git push
+    flow_kind: CICD
+    semantic_tag: cicd
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - bfa15b2a73d6f334
+    - fd06d99e2562c7e0
+    - e3059c88a816294a
+    - 9714caa9640452d2
+  - from: n_external_global_enterprise_clients
+    to: n_aegis_commerce_prod_aegis_admin_portal
+    verb: HTTPS admin
+    flow_kind: ADMIN
+    semantic_tag: ingress
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 5571f207dea4ba0d
+  - from: n_external_global_enterprise_clients
+    to: n_aegis_commerce_prod_aegis_edge_waf_lb
+    verb: HTTPS :443
+    flow_kind: RUNTIME
+    semantic_tag: ingress
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 689c850c78559a9f
+- id: view_1
+  title: Ingress, CI Triggers & Scheduled Batch
+  subtitle: External callers, WAF load balancing, CI triggers, and batch
+  focus_summary: Upstream client ingress, DNS, administrative entrypoints, CI build
+    triggers, and scheduled compliance/risk batch jobs.
+  include_transversal_panel: true
+  archetype: layered_flow
+  accent_mode: MIXED
+  container_ids:
+  - ext_sources
+  - folder_550100
+  - folder_550200
+  - gke_aegis_commerce_prod_gke_commerce_ew1
+  - org_940400001
+  - proj_aegis_commerce_prod
+  - proj_aegis_delivery_sec
+  - proj_aegis_net_host
+  - reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+  - reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west4
+  - sub_aegis_net_host_ew1_gke_commerce_subnet
+  - sub_aegis_net_host_ew4_risk_compute_subnet
+  - vpc_aegis_net_host_aegis_zero_trust_vpc
+  - zone_exposure_zone_private_proj_aegis_commerce_prod
+  - zone_exposure_zone_private_proj_aegis_delivery_sec
+  - zone_exposure_zone_private_proj_aegis_net_host
+  - zone_exposure_zone_private_sub_aegis_net_host_ew4_risk_compute_subnet
+  - zone_exposure_zone_public_vpc_aegis_net_host_aegis_zero_trust_vpc
+  placements:
+  - component_id: n_external_github_aegis_monorepo
+    container_id: ext_sources
+    column: 0
+  - component_id: n_external_global_enterprise_clients
+    container_id: ext_sources
+    column: 0
+  - component_id: cohort_aegis_delivery_sec_ci_build_triggers_4x
+    container_id: zone_exposure_zone_private_proj_aegis_delivery_sec
+    column: 1
+    off_page_refs:
+    - target_view_id: view_2
+      label: aegis-build-attestations (+1 in view_2)
+      direction: OUT
+  - component_id: n_aegis_net_host_aegis_internal_dns
+    container_id: zone_exposure_zone_private_proj_aegis_net_host
+    column: 1
+  - component_id: n_aegis_commerce_prod_pci_compliance_auditor
+    container_id: gke_aegis_commerce_prod_gke_commerce_ew1
+    column: 2
+    off_page_refs:
+    - target_view_id: view_2
+      label: commerce-orders-sql (+1 in view_2)
+      direction: OUT
+  - component_id: n_aegis_commerce_prod_aegis_admin_portal
+    container_id: zone_exposure_zone_private_proj_aegis_commerce_prod
+    column: 2
+    off_page_refs:
+    - target_view_id: view_2
+      label: commerce-orders-sql (view_2)
+      direction: OUT
+  - component_id: n_aegis_risk_prod_montecarlo_risk_batch
+    container_id: zone_exposure_zone_private_sub_aegis_net_host_ew4_risk_compute_subnet
+    column: 2
+    off_page_refs:
+    - target_view_id: view_2
+      label: risk-features-alloydb (+1 in view_2)
+      direction: OUT
+  - component_id: n_aegis_commerce_prod_aegis_edge_waf_lb
+    container_id: zone_exposure_zone_public_vpc_aegis_net_host_aegis_zero_trust_vpc
+    column: 2
+    off_page_refs:
+    - target_view_id: view_2
+      label: commerce-gateway-api (view_2)
+      direction: OUT
+  edges:
+  - from: n_aegis_net_host_aegis_internal_dns
+    to: n_aegis_commerce_prod_aegis_edge_waf_lb
+    verb: Resolves DNS
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: INFERRED
+    inference_rationale: Private DNS zone aegis-internal-dns attached to VPC aegis-zero-trust-vpc
+  - from: n_external_github_aegis_monorepo
+    to: cohort_aegis_delivery_sec_ci_build_triggers_4x
+    verb: Git push
+    flow_kind: CICD
+    semantic_tag: cicd
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - bfa15b2a73d6f334
+    - fd06d99e2562c7e0
+    - e3059c88a816294a
+    - 9714caa9640452d2
+  - from: n_external_global_enterprise_clients
+    to: n_aegis_commerce_prod_aegis_admin_portal
+    verb: HTTPS admin
+    flow_kind: ADMIN
+    semantic_tag: ingress
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 5571f207dea4ba0d
+  - from: n_external_global_enterprise_clients
+    to: n_aegis_commerce_prod_aegis_edge_waf_lb
+    verb: HTTPS :443
+    flow_kind: RUNTIME
+    semantic_tag: ingress
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 689c850c78559a9f
+- id: view_2
+  title: Core Microservices, Risk AI & Data Estate
+  subtitle: GKE services, Cloud Deploy, Pub/Sub, AlloyDB, SQL, and AI
+  focus_summary: Progressive delivery pipelines, GKE commerce microservices, event
+    messaging, Cloud Run risk services, Vertex AI, and transactional/analytical stores.
+  include_transversal_panel: true
+  archetype: layered_flow
+  accent_mode: MIXED
+  container_ids:
+  - folder_550100
+  - folder_550200
+  - gke_aegis_commerce_prod_gke_commerce_ew1
+  - org_940400001
+  - proj_aegis_commerce_prod
+  - proj_aegis_delivery_sec
+  - proj_aegis_net_host
+  - proj_aegis_risk_prod
+  - reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+  - reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west4
+  - sub_aegis_net_host_ew1_gke_commerce_subnet
+  - sub_aegis_net_host_ew4_risk_compute_subnet
+  - vpc_aegis_net_host_aegis_zero_trust_vpc
+  - zone_exposure_zone_internal_sub_aegis_net_host_ew4_risk_compute_subnet
+  - zone_exposure_zone_private_proj_aegis_commerce_prod
+  - zone_exposure_zone_private_proj_aegis_delivery_sec
+  - zone_exposure_zone_private_proj_aegis_risk_prod
+  - zone_exposure_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+  - zone_exposure_zone_private_sub_aegis_net_host_ew1_gke_commerce_subnet
+  - zone_exposure_zone_private_sub_aegis_net_host_ew4_risk_compute_subnet
+  - zone_psa_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+  - zone_psa_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west4
+  placements:
+  - component_id: n_aegis_delivery_sec_aegis_signed_containers
+    container_id: zone_exposure_zone_private_proj_aegis_delivery_sec
+    column: 3
+    off_page_refs:
+    - target_view_id: view_1
+      label: CI Build Triggers (4x) (view_1)
+      direction: IN
+  - component_id: n_aegis_commerce_prod_domain_events_dlq
+    container_id: zone_exposure_zone_private_proj_aegis_commerce_prod
+    column: 4
+  - component_id: n_aegis_delivery_sec_aegis_progressive_deploy
+    container_id: zone_exposure_zone_private_proj_aegis_delivery_sec
+    column: 4
+  - component_id: n_aegis_commerce_prod_commerce_gateway_api
+    container_id: gke_aegis_commerce_prod_gke_commerce_ew1
+    column: 5
+    off_page_refs:
+    - target_view_id: view_1
+      label: aegis-edge-waf-lb (view_1)
+      direction: IN
+  - component_id: n_aegis_commerce_prod_commerce_audit_dw
+    container_id: zone_exposure_zone_private_proj_aegis_commerce_prod
+    column: 5
+    off_page_refs:
+    - target_view_id: view_1
+      label: pci-compliance-auditor (view_1)
+      direction: IN
+  - component_id: n_aegis_delivery_sec_aegis_build_attestations
+    container_id: zone_exposure_zone_private_proj_aegis_delivery_sec
+    column: 5
+    off_page_refs:
+    - target_view_id: view_1
+      label: CI Build Triggers (4x) (view_1)
+      direction: IN
+  - component_id: n_aegis_commerce_prod_inventory_allocator_svc
+    container_id: gke_aegis_commerce_prod_gke_commerce_ew1
+    column: 6
+  - component_id: n_aegis_commerce_prod_order_orchestrator_svc
+    container_id: gke_aegis_commerce_prod_gke_commerce_ew1
+    column: 6
+  - component_id: n_aegis_risk_prod_risk_internal_ilb
+    container_id: zone_exposure_zone_internal_sub_aegis_net_host_ew4_risk_compute_subnet
+    column: 7
+  - component_id: n_aegis_commerce_prod_domain_events_bus
+    container_id: zone_exposure_zone_private_proj_aegis_commerce_prod
+    column: 7
+  - component_id: n_aegis_commerce_prod_shared_session_redis
+    container_id: zone_exposure_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+    column: 7
+  - component_id: n_aegis_commerce_prod_tax_enrichment_fn
+    container_id: zone_exposure_zone_private_sub_aegis_net_host_ew1_gke_commerce_subnet
+    column: 7
+  - component_id: n_aegis_commerce_prod_commerce_orders_sql
+    container_id: zone_psa_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west1
+    column: 7
+    off_page_refs:
+    - target_view_id: view_1
+      label: aegis-admin-portal (+1 in view_1)
+      direction: IN
+  - component_id: n_aegis_risk_prod_fraud_alert_dispatcher
+    container_id: zone_exposure_zone_private_sub_aegis_net_host_ew4_risk_compute_subnet
+    column: 8
+  - component_id: n_aegis_risk_prod_risk_policy_engine
+    container_id: zone_exposure_zone_private_sub_aegis_net_host_ew4_risk_compute_subnet
+    column: 8
+  - component_id: n_aegis_risk_prod_risk_compliance_mart
+    container_id: zone_exposure_zone_private_proj_aegis_risk_prod
+    column: 9
+    off_page_refs:
+    - target_view_id: view_1
+      label: montecarlo-risk-batch (view_1)
+      direction: IN
+  - component_id: n_aegis_risk_prod_gemini_4_carbon
+    container_id: zone_exposure_zone_private_proj_aegis_risk_prod
+    column: 9
+  - component_id: n_aegis_risk_prod_risk_features_alloydb
+    container_id: zone_psa_zone_private_reg_vpc_aegis_net_host_aegis_zero_trust_vpc_europe_west4
+    column: 9
+    off_page_refs:
+    - target_view_id: view_1
+      label: montecarlo-risk-batch (view_1)
+      direction: IN
+  edges:
+  - from: n_aegis_commerce_prod_commerce_audit_dw
+    to: n_aegis_risk_prod_risk_compliance_mart
+    verb: BQ lineage
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 47d31fd3c674d0a6
+  - from: n_aegis_commerce_prod_commerce_gateway_api
+    to: n_aegis_commerce_prod_inventory_allocator_svc
+    verb: gRPC stock
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - cfc5da622ce2fe0a
+  - from: n_aegis_commerce_prod_commerce_gateway_api
+    to: n_aegis_commerce_prod_order_orchestrator_svc
+    verb: gRPC orders
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - cf41cb495f14e463
+  - from: n_aegis_commerce_prod_commerce_gateway_api
+    to: n_aegis_commerce_prod_shared_session_redis
+    verb: Reads session
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 94788057e7c6cb72
+  - from: n_aegis_commerce_prod_domain_events_bus
+    to: n_aegis_commerce_prod_domain_events_dlq
+    verb: Dead-letter
+    flow_kind: RUNTIME
+    semantic_tag: dlq
+    is_retry_or_dlq: true
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 719cf6bc54d6e8d2
+  - from: n_aegis_commerce_prod_domain_events_bus
+    to: n_aegis_risk_prod_fraud_alert_dispatcher
+    verb: Push event
+    flow_kind: RUNTIME
+    semantic_tag: async
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - ce410a0a762e06fb
+  - from: n_aegis_commerce_prod_domain_events_dlq
+    to: n_aegis_risk_prod_fraud_alert_dispatcher
+    verb: DLQ push
+    flow_kind: RUNTIME
+    semantic_tag: dlq
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - d0dd4c3e6d68bd76
+  - from: n_aegis_commerce_prod_inventory_allocator_svc
+    to: n_aegis_commerce_prod_commerce_orders_sql
+    verb: Queries SQL
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 5cb966c7021b6246
+  - from: n_aegis_commerce_prod_inventory_allocator_svc
+    to: n_aegis_commerce_prod_shared_session_redis
+    verb: Caches stock
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - a503a4b22f92045e
+  - from: n_aegis_commerce_prod_order_orchestrator_svc
+    to: n_aegis_commerce_prod_commerce_orders_sql
+    verb: Writes SQL
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 74dbfe49861bdaa7
+  - from: n_aegis_commerce_prod_order_orchestrator_svc
+    to: n_aegis_commerce_prod_domain_events_bus
+    verb: Publishes
+    flow_kind: RUNTIME
+    semantic_tag: async
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - c04024bc376acc1f
+  - from: n_aegis_commerce_prod_order_orchestrator_svc
+    to: n_aegis_commerce_prod_tax_enrichment_fn
+    verb: HTTP tax
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 381a68834771dd32
+  - from: n_aegis_commerce_prod_order_orchestrator_svc
+    to: n_aegis_risk_prod_risk_internal_ilb
+    verb: gRPC risk
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - fa225e5b45452ab2
+  - from: n_aegis_delivery_sec_aegis_progressive_deploy
+    to: n_aegis_commerce_prod_commerce_gateway_api
+    verb: Deploys GKE
+    flow_kind: CICD
+    semantic_tag: cicd
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - bddfbb53e117710b
+  - from: n_aegis_delivery_sec_aegis_progressive_deploy
+    to: n_aegis_risk_prod_risk_policy_engine
+    verb: Deploys Run
+    flow_kind: CICD
+    semantic_tag: cicd
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 1581f6d5dda107c0
+  - from: n_aegis_delivery_sec_aegis_signed_containers
+    to: n_aegis_delivery_sec_aegis_progressive_deploy
+    verb: Promote image
+    flow_kind: CICD
+    semantic_tag: cicd
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - cf74ba3b9a41f393
+  - from: n_aegis_risk_prod_fraud_alert_dispatcher
+    to: n_aegis_risk_prod_risk_compliance_mart
+    verb: Logs incident
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 8014da3af01db8e5
+  - from: n_aegis_risk_prod_risk_internal_ilb
+    to: n_aegis_risk_prod_risk_policy_engine
+    verb: ILB backend
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - a25f8e97b666fe91
+  - from: n_aegis_risk_prod_risk_policy_engine
+    to: n_aegis_risk_prod_gemini_4_carbon
+    verb: Calls Gemini
+    flow_kind: RUNTIME
+    semantic_tag: traffic
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 2a18bdd498e17cfe
+  - from: n_aegis_risk_prod_risk_policy_engine
+    to: n_aegis_risk_prod_risk_features_alloydb
+    verb: Reads features
+    flow_kind: RUNTIME
+    semantic_tag: data
+    provenance: VERIFIED
+    evidence_edge_ids:
+    - 632acec3e14cbdf8

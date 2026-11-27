@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -91,6 +92,63 @@ func TestValidateViewIndexRules(t *testing.T) {
 		second.Edges = []Edge{{From: "sonarqube", To: "sonarqube_db", Verb: "SQL", FlowKind: FlowRuntime, Provenance: ProvenanceInferred, InferenceRationale: "guess"}}
 		m.Views = append(m.Views, second)
 		_ = assertHasValidationCode(t, ValidateStructure(m, reg), ErrInconsistentCrossViewEdge)
+	})
+
+	t.Run("view0 does not hide component omitted from detail views", func(t *testing.T) {
+		m, _ := baseFixture()
+		d1 := View{
+			ID:         "v1",
+			Title:      "View 1",
+			Archetype:  ArchetypeLayeredFlow,
+			AccentMode: AccentRuntime,
+			Placements: []Placement{{ComponentID: "https_lb", Column: 0}, {ComponentID: "atlantis", Column: 1}},
+		}
+		d2 := View{
+			ID:         "v2",
+			Title:      "View 2",
+			Archetype:  ArchetypeLayeredFlow,
+			AccentMode: AccentRuntime,
+			Placements: []Placement{{ComponentID: "sonarqube", Column: 1}, {ComponentID: "sonarqube_db", Column: 2}},
+		}
+		// tf_buckets is placed in View 0 ONLY, omitted from both detail views.
+		v0 := View{
+			ID:         SystemIndexViewID,
+			Title:      "Overview",
+			Archetype:  ArchetypeLayeredFlow,
+			AccentMode: AccentMixed,
+			Placements: []Placement{
+				{ComponentID: "https_lb", Column: 0},
+				{ComponentID: "atlantis", Column: 1},
+				{ComponentID: "sonarqube", Column: 1},
+				{ComponentID: "sonarqube_db", Column: 2},
+				{ComponentID: "tf_buckets", Column: 2},
+			},
+		}
+		m.Views = []View{v0, d1, d2}
+		ve := assertHasValidationCode(t, ValidateStructure(m, reg), ErrUnplacedComponent)
+		if len(ve.Issues) != 1 || ve.Issues[0].Subject != "tf_buckets" {
+			t.Fatalf("expected only tf_buckets unplaced, got %v", ve)
+		}
+
+		// View-0-only manifest (no detail views) with all components placed in View 0 must pass.
+		m.Views = []View{v0}
+		if err := ValidateStructure(m, reg); err != nil {
+			t.Fatalf("view-0-only manifest should validate: %v", err)
+		}
+	})
+
+	t.Run("acme expected v1 fixture remains valid under KnownFields", func(t *testing.T) {
+		m, err := Load(filepath.Join("..", "..", "testdata", "acme_cicd_expected.architecture.yaml"))
+		if err != nil {
+			t.Fatalf("Load acme_cicd_expected: %v", err)
+		}
+		facts, err := extract.LoadFacts(filepath.Join("..", "..", "testdata", "acme_cicd_v3.facts.json"))
+		if err != nil {
+			t.Fatalf("LoadFacts acme_cicd_v3: %v", err)
+		}
+		if err := ValidateWithFacts(m, facts, reg); err != nil {
+			t.Fatalf("ValidateWithFacts acme_cicd_expected: %v", err)
+		}
 	})
 }
 

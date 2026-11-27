@@ -291,7 +291,7 @@ views:
 
 ### Canonical Serialization (`manifest.Marshal` & `manifest.Write`)
 
-[`manifest.Marshal`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L279-L296) clones `m` (never mutating the caller's struct) and encodes deterministic **2-space indented UTF-8 YAML**. [`manifest.Write`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L299-L305) persists the output atomically ([`ioutil.WriteFileAtomic`](https://github.com/arrase/gcp-arch/blob/main/internal/ioutil/atomic.go#L19-L23)) with mode **`0644`** (creating parent directories with **`0755`**).
+[`manifest.Marshal`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L350-L367) clones `m` (never mutating the caller's struct) and encodes deterministic **2-space indented UTF-8 YAML**. [`manifest.Write`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L370-L376) persists the output atomically ([`atomicfile.Write`](https://github.com/arrase/gcp-arch/blob/main/internal/atomicfile/atomicfile.go#L21-L26)) with mode **`0644`** (creating parent directories with **`0755`**).
 
 To produce stable Git diffs while preserving meaningful visual and cryptographic ordering, [`normalizedManifestCopy`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L307-L334) sorts structural sets deterministically and explicitly preserves three ordered slices:
 
@@ -410,7 +410,7 @@ To produce stable Git diffs while preserving meaningful visual and cryptographic
 | `id` | `string` | **Yes** | Unique, non-empty view slug (`view_0_system_index` reserved for `views[0]` when `>= 2` detail views exist). |
 | `title` | `string` | **Yes** | Non-empty diagram page title. |
 | `subtitle` | `string` | Optional | One-line diagram summary (`omitempty`). |
-| `archetype` | `Archetype` | **Yes** | Visual grid archetype enum (`landscape_matrix`, `stage_pipeline`, or `hub_spoke`). |
+| `archetype` | `Archetype` | **Yes** | Visual layout archetype enum (`layered_flow`, `landscape_matrix`, `stage_pipeline`, or `hub_spoke`). |
 | `accent_mode` | `AccentMode` | **Yes** | Color palette emphasis enum (`RUNTIME`, `CICD`, or `MIXED`). |
 | `notes` | `string` | Optional | Human curation notes for the view (`omitempty`). |
 | `container_ids` | `[]string` | Optional | Active global container IDs drawn in this view; max active nesting depth `2` (`omitempty`). |
@@ -423,7 +423,7 @@ To produce stable Git diffs while preserving meaningful visual and cryptographic
 | :--- | :--- | :---: | :--- |
 | `component_id` | `string` | **Yes** | References a global `Component.ID` (on detail views) or a `Component.ID` / detail `View.ID` (on `view_0_system_index`). Unique per view. |
 | `container_id` | `string` | Optional | Active container ID; if set, MUST appear in the enclosing `view.container_ids` (`omitempty`). |
-| `column` | `int` | **Yes** | 0-based grid column index: `0..4` for `landscape_matrix`/`stage_pipeline`; `0..2` for `hub_spoke`. |
+| `column` | `int` | **Yes** | 0-based stage/column index: topological rank `0..N` for `layered_flow`; `0..4` for `landscape_matrix`/`stage_pipeline`; `0..2` for `hub_spoke`. |
 | `off_page_refs` | `[]OffPageRef` | Optional | Cross-view navigation badges displayed on the card (`omitempty`). |
 
 #### `OffPageRef`
@@ -431,7 +431,7 @@ To produce stable Git diffs while preserving meaningful visual and cryptographic
 | YAML Key | Type | Required | Description |
 | :--- | :--- | :---: | :--- |
 | `target_view_id` | `string` | **Yes** | ID of another existing view in `manifest.views` (must not equal the current view's ID). |
-| `label` | `string` | **Yes** | Non-empty concise badge label (projected as a `View 0` edge verb for `direction == "OUT"` as `dv.ID -> target_view_id`, and for `direction == "IN"` as `target_view_id -> dv.ID` when no edge already connects the two views; see [`addOffPageEdges`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/view0.go#L221-L257)). |
+| `label` | `string` | **Yes** | Non-empty concise badge label populated symmetrically across detail views by [`internal/synth/annotate.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go). |
 | `direction` | `string` | **Yes** | `"IN"` or `"OUT"`. |
 
 #### `Edge`
@@ -464,46 +464,53 @@ To produce stable Git diffs while preserving meaningful visual and cryptographic
 | `COHORT` | Grouped infrastructure or shared network/project cohorts (VPC network hubs, subnetwork cohorts). |
 | `EXTERNAL_TARGET` | Downstream out-of-scope GCP projects, external payment PSPs, BI SaaS endpoints, or third-party sinks (placed in Column `3` or `4` on `View 0`). |
 
-#### `ContainerKind` (6 Values)
+#### `ContainerKind` (12 Values)
 
 | Value | Grouping Boundary |
 | :--- | :--- |
+| `ORG` | GCP Organization root boundary. |
+| `FOLDER` | GCP Resource Manager Folder boundary. |
 | `PROJECT` | GCP Project boundary. |
-| `VPC` | VPC Network or subnet boundary. |
-| `GKE_CLUSTER` | Google Kubernetes Engine cluster boundary (commonly nested depth-2 inside a `PROJECT` container). |
+| `VPC` | VPC Network boundary (including single-host Shared VPCs). |
+| `REGION` | GCP Region boundary nested inside a VPC or Project. |
+| `SUBNET` | VPC Subnetwork boundary (with CIDR subtitle). |
+| `EXPOSURE_ZONE` | Public/Private/Internal network exposure grouping. |
+| `GKE_CLUSTER` | Google Kubernetes Engine cluster boundary. |
 | `PSA_ZONE` | Google-managed Private Service Access (PSA) tenant or Private Service Connect (PSC) zone. |
 | `EXTERNAL_ZONE` | Boundary grouping external SaaS, public internet, or out-of-scope GCP targets. |
 | `SHARED_HUB` | Shared VPC host project or centralized networking hub boundary. |
+| `HYBRID_ZONE` | On-premises / hybrid connectivity zone (Dedicated Interconnect, HA VPN, NCC transit). |
 
-#### `Archetype` (3 Values)
+#### `Archetype` (4 Values)
 
 | Value | Valid `column` Bounds | Layout Semantics |
 | :--- | :---: | :--- |
-| `landscape_matrix` | `0..4` *(max 5 columns)* | Application, ingress, and multi-tier runtime landscapes (also used by `view_0_system_index`). Unused columns collapse densely in Stage 3; 5 active columns trigger compact mode. |
-| `stage_pipeline` | `0..4` *(max 5 columns)* | Sequential left-to-right CI/CD delivery, streaming ETL, or ML pipelines. |
-| `hub_spoke` | `0..2` *(fixed 3 columns)* | Networking topologies (`spoke` col `0` -> `hub` col `1` -> `peered zone` col `2`). Stage 3 always preserves all 3 grid tracks `{0, 1, 2}`. |
+| `layered_flow` | `0..N` *(topological ranks)* | Unified nested Flexbox containment tree with left-to-right topological flow, stage banners, transversal governance panel, and DOM-measured Hanan-grid A* orthogonal routing (default emitted by Stage 2 synthesis). |
+| `landscape_matrix` | `0..4` *(max 5 columns)* | Legacy application/ingress matrix archetype. |
+| `stage_pipeline` | `0..4` *(max 5 columns)* | Legacy sequential left-to-right pipeline archetype. |
+| `hub_spoke` | `0..2` *(fixed 3 columns)* | Legacy 3-column networking archetype (`spoke` col `0` -> `hub` col `1` -> `peered zone` col `2`). |
 
 #### `AccentMode` (3 Values)
 
 | Value | Visual Emphasis |
 | :--- | :--- |
 | `RUNTIME` | Production request/data plane emphasis (default runtime visual palette). |
-| `CICD` | Delivery pipeline / automation emphasis (`View 0` off-page edges originating from a `CICD` view inherit `flow_kind: CICD`). |
-| `MIXED` | Hybrid views combining runtime and CI/CD or cross-cutting flows (fixed on `view_0_system_index`). |
+| `CICD` | Delivery pipeline / automation emphasis. |
+| `MIXED` | Views combining runtime and CI/CD or cross-cutting flows. |
 
 #### `FlowKind`, `Provenance` & `OffPageRef.Direction`
 
 | Enum | Allowed Values | Notes |
 | :--- | :--- | :--- |
-| **`FlowKind`** (3) | `RUNTIME`, `CICD`, `ADMIN` | Drives edge styling in Stage 3 and priority ranking (`RUNTIME > CICD > ADMIN`) in `View 0` external flow projection. |
+| **`FlowKind`** (3) | `RUNTIME`, `CICD`, `ADMIN` | Drives edge styling and semantic palette in Stage 3. |
 | **`Provenance`** (2) | `VERIFIED`, `INFERRED` | `VERIFIED` renders as a solid evidence-backed connector; `INFERRED` renders dashed with a numbered footnote quoting `inference_rationale`. |
-| **`OffPageRef.Direction`** (2) | `IN`, `OUT` | `OUT` badges project deterministically onto `View 0` as `dv.ID -> target_view_id`; `IN` badges also project as `target_view_id -> dv.ID` (left-to-right pass first, then remaining) whenever no edge already connects the two views ([`internal/synth/view0.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/view0.go#L221-L257)). |
+| **`OffPageRef.Direction`** (2) | `IN`, `OUT` | Symmetric cross-view navigation badges derived deterministically in [`internal/synth/annotate.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go) linking components across stage-partitioned detail views. |
 
 ---
 
 ## Stateful Datastore Homogeneity
 
-To prevent architectural diagrams from collapsing fundamentally different persistence technologies (for example, Cloud SQL + Cloud Storage + BigQuery) into a single ambiguous "Databases" box, both Stage 2 ([`internal/synth/pipeline.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/pipeline.go)) and offline validation ([`internal/manifest/validate.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L87-L103)) enforce **stateful datastore homogeneity** across the following **15** exact GCP CAI asset types (`statefulDatastoreAssetTypes`):
+To prevent architectural diagrams from collapsing fundamentally different persistence technologies (for example, Cloud SQL + Cloud Storage + BigQuery) into a single ambiguous "Databases" box, both Stage 2 ([`internal/synth/skeleton.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/skeleton.go)) and offline validation ([`internal/manifest/validate.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go)) enforce **stateful datastore homogeneity** across the following **15** exact GCP CAI asset types (`statefulDatastoreAssetTypes`):
 
 | # | Exact GCP CAI Asset Type | GCP Product |
 | :---: | :--- | :--- |
@@ -798,14 +805,14 @@ Teams are encouraged to review and polish `architecture.yaml` in Git pull reques
 | **`excluded_resources`** | Move boilerplate resources out of components into `excluded_resources` with an audit reason. | Non-empty `uri`, `asset_type`, `project_id`, and `reason`; unique URI (`DUPLICATE_ACCOUNTED_URI`); must **not** exclude any of the 15 stateful datastore asset types (`EXCLUDED_DATASTORE`); remaining components must keep `>= 1` `backed_by` resource. | **Preserved** until the resource vanishes from GCP (at which point Path B prunes it). |
 
 !!! warning "Edits That Trigger Reconciliation Deltas or Overwrites"
-    * **Do not hand-edit `view_0_system_index` expecting changes to survive drift:** On Path A (zero deltas), `view_0_system_index` is left untouched on disk. Whenever Path B (deletions) or Path C (drift patch) runs, `finalizeManifest` regenerates `view_0_system_index` deterministically from the detail views. To customize a `View 0` edge label, edit the corresponding `off_page_refs[].label` (`direction: OUT`, or `direction: IN` when no edge already connects the two views). To suppress an unwanted flow before it reaches detail views and `View 0`, tombstone the underlying top-level component pair(s) in `rejected_edges` — do **not** put detail `view.id`s in `rejected_edges`, as `validateRejectedEdges` requires declared component IDs (`UNKNOWN_PAIR_COMPONENT`).
-    * **Removing URIs from `backed_by`:** Deleting an active GCP resource URI from `components[].backed_by` without placing it in another component, a container, or `excluded_resources` will fail `validate --facts` (`UNACCOUNTED_FACT_RESOURCE`) and cause the next `--reconcile` to treat that URI as an unclaimed resource (triggering Path C).
+    * **Do not hand-edit `view_0_system_index` structure expecting layout overrides to survive drift:** On the zero-delta fast path, `view_0_system_index` is left untouched on disk. When topology or edge deltas trigger re-synthesis (`internal/synth/reconcile.go`), Go regenerates `view_0_system_index` deterministically while preserving curated `title`, `subtitle`, and `focus_summary` edits on matching views and curated `title`, `subtitle`, and `notes` on matching components.
+    * **Removing URIs from `backed_by`:** Deleting an active GCP resource URI from `components[].backed_by` without placing it in another component, a container, `transversal_items`, or `excluded_resources` will fail `validate --facts` (`UNACCOUNTED_FACT_RESOURCE`) and cause the next `--reconcile` to detect a delta.
 
 ---
 
 ## Next Steps
 
-* **Stage 2 Pipeline Internals:** Understand short-ID interning, two-pass Gemini 4 schemas, `View 0` projection, and Day-2 `--reconcile` paths in [Stage 2 — Gemini 4 Synthesis & Day-2 Reconciliation](synthesis.md).
-* **Stage 3 Offline Rendering:** See how `architecture.yaml` drives `1040px` CSS Grid archetypes, barycenter row ordering, and zero-collision orthogonal edge routing in [Stage 3 — Offline Rendering & Routing](rendering.md).
-* **Visual Reference Bundles:** Inspect complete real-world `architecture.yaml` manifests and their `3x` rendered diagrams in [Examples & Visual Gallery](examples.md).
+* **Stage 2 Pipeline Internals:** Understand the deterministic containment skeleton, single bounded Vertex AI call, conservation gate, and Day-2 `--reconcile` in [Stage 2 — Gemini 4 Synthesis & Day-2 Reconciliation](synthesis.md).
+* **Stage 3 Offline Rendering:** See how `architecture.yaml` drives nested Flexbox containers, Hanan-grid A* orthogonal routing, streaming PNG verification, and 1:1 vector PDF pagination in [Stage 3 — Offline Rendering & Routing](rendering.md).
+* **Visual Reference Bundles:** Inspect complete real-world `architecture.yaml` manifests and their Retina rendered diagrams in [Examples & Visual Gallery](examples.md).
 * **CLI & Configuration:** Review all flags, exit codes, and `config.yaml` defaults in [CLI & Configuration](cli_configuration.md).

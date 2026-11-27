@@ -53,7 +53,7 @@ CGO_ENABLED=0 go build \
 
 ## Core Dependencies ([`go.mod`](https://github.com/arrase/gcp-arch/blob/main/go.mod))
 
-Every direct dependency in [`go.mod`](https://github.com/arrase/gcp-arch/blob/main/go.mod#L5-L26) maps cleanly to one stage of the pipeline:
+Every direct dependency in [`go.mod`](https://github.com/arrase/gcp-arch/blob/main/go.mod#L5-L22) maps cleanly to one stage of the pipeline:
 
 | Module | Version | Role in `gcp-arch` |
 | :--- | :--- | :--- |
@@ -61,14 +61,10 @@ Every direct dependency in [`go.mod`](https://github.com/arrase/gcp-arch/blob/ma
 | `github.com/spf13/pflag` | `v1.1.0` | POSIX flag parsing and `--project` → `--projects` flag normalization |
 | `cloud.google.com/go/asset` | `v1.30.1` | Cloud Asset Inventory (`assetpb`) `ListAssets` gRPC streaming (`RESOURCE` & `IAM_POLICY`) |
 | `cloud.google.com/go/monitoring` | `v1.32.1` | Cloud Monitoring (`monitoringpb`) 7-day `consumed_api` and Vertex `PublisherModel` queries |
-| `cloud.google.com/go/auth` | `v0.24.4` | Explicit ADC credential loading (`cloud-platform` scope for Vertex AI) |
+| `cloud.google.com/go/auth` | `v0.24.4` | ADC credential loading and `grpctransport` / `httptransport` (isolated `cloud-platform.read-only` for extraction & `cloud-platform` for direct Vertex AI REST calls) |
 | `cloud.google.com/go/iam` | `v1.15.1` | IAM policy protobuf structures attached to CAI `IAM_POLICY` responses |
-| `google.golang.org/api` | `v0.316.0` | BigQuery v2 (`jobs.list`), Dataflow v1b3 (`Projects.Locations.Jobs.List` / `projects.locations.jobs.list` with wildcard location `"-"`, and `Projects.Locations.Jobs.Get`), and gRPC/HTTP transport options |
-| `google.golang.org/genai` | `v1.79.1` | Official Vertex AI Gemini 4 structured JSON generation (`Schema`, `ThinkingLevel`) |
-| `golang.org/x/oauth2` | `v0.38.0` | Isolated `cloud-platform.read-only` ADC token source and quota-project resolution |
-| `golang.org/x/sync` | `v0.25.0` | Bounded concurrency via `errgroup` (Stage 1 enricher workers & Stage 2 Pass-2 view synthesis) |
+| `golang.org/x/sync` | `v0.25.0` | Bounded concurrency via `errgroup` (Stage 1 enricher workers) |
 | `golang.org/x/time` | `v0.16.0` | Token-bucket `rate.Limiter` enforcing `80` RPM CAI and `10` QPS Monitoring/enricher caps |
-| `github.com/tidwall/gjson` | `v1.20.4` | Fast, zero-struct JSON extraction for REST preflight probes and error payloads |
 | `google.golang.org/grpc` | `v1.85.0` | gRPC dial options, status code inspection, and `32 MiB` max recv message sizing |
 | `google.golang.org/protobuf` | `v1.36.12` | `structpb.Struct` / `timestamppb.Timestamp` decoding for CAI assets and `ReadTime` pinning |
 | `google.golang.org/genproto` / `googleapis/api` / `googleapis/rpc` | pinned commits | Structured `errdetails.ErrorInfo` unpacking (`QUOTA_FATAL`, `VPC_SC_BLOCKED`, `SERVICE_DISABLED`) |
@@ -100,8 +96,10 @@ go tool cover -func=coverage.out | tail -n 25
 
 | Fixture File | Format | Contents & Usage |
 | :--- | :---: | :--- |
-| [`testdata/acme_cicd_v3.facts.json`](https://github.com/arrase/gcp-arch/blob/main/testdata/acme_cicd_v3.facts.json) | `v3` JSON | Synthetic sanitized `acme-cicd` snapshot (**44** `FactResource` entries, **93** `FactEdge` entries) driving offline synthesis, validation, and E2E pipeline tests. |
-| [`testdata/acme_cicd_expected.architecture.yaml`](https://github.com/arrase/gcp-arch/blob/main/testdata/acme_cicd_expected.architecture.yaml) | `v1` YAML | Canonical 4-view, 14-component manifest kept identical to [`examples/platform-cicd/architecture.yaml`](https://github.com/arrase/gcp-arch/blob/main/examples/platform-cicd/architecture.yaml), validating Pass 1/Pass 2 mocks, Day-2 `--reconcile`, and real headless Chrome export. |
+| [`testdata/acme_cicd_v3.facts.json`](https://github.com/arrase/gcp-arch/blob/main/testdata/acme_cicd_v3.facts.json) | `v3` JSON | Synthetic sanitized `acme-cicd` snapshot (**44** `FactResource` entries, **93** `FactEdge` entries) driving offline synthesis, validation, E2E pipeline tests, and [`examples/platform-cicd/`](https://github.com/arrase/gcp-arch/tree/main/examples/platform-cicd). |
+| [`testdata/acme_cicd_expected.architecture.yaml`](https://github.com/arrase/gcp-arch/blob/main/testdata/acme_cicd_expected.architecture.yaml) | `v1` YAML | Frozen 4-view, 14-component reference manifest validating Day-2 `--reconcile` backward compatibility and real headless Chrome export. |
+| [`testdata/examples/*.facts.json`](https://github.com/arrase/gcp-arch/tree/main/testdata/examples) | `v3` JSON | **5** synthetic multi-project `v3` fixtures backing [`examples/retail-cloud-native/`](https://github.com/arrase/gcp-arch/tree/main/examples/retail-cloud-native), [`examples/fintech-global-payments/`](https://github.com/arrase/gcp-arch/tree/main/examples/fintech-global-payments), [`examples/enterprise-lakehouse-mlops/`](https://github.com/arrase/gcp-arch/tree/main/examples/enterprise-lakehouse-mlops), [`examples/agentic-ai-document-platform/`](https://github.com/arrase/gcp-arch/tree/main/examples/agentic-ai-document-platform), and [`examples/enterprise-zero-trust-mesh/`](https://github.com/arrase/gcp-arch/tree/main/examples/enterprise-zero-trust-mesh). |
+| [`testdata/catalog/*.facts.json`](https://github.com/arrase/gcp-arch/tree/main/testdata/catalog) | `v3` JSON | **10** synthetic catalog fixtures covering simple 3-tier workloads through 24-service meshes and IAM explosions, driving deterministic skeleton tests (`internal/synth/synth_test.go`) and live Vertex AI + Chrome E2E tests (`e2e/catalog_e2e_test.go`). |
 
 ### Real Headless Chrome Render Tests
 
@@ -114,14 +112,16 @@ The real Chrome suites in [`internal/render/render_test.go`](https://github.com/
 
 | Test Function | Verification Scope |
 | :--- | :--- |
-| [`TestHeadlessChromeAcmeCICDGoldenSuite`](https://github.com/arrase/gcp-arch/blob/main/internal/render/render_test.go) | Renders all 4 golden `acme-cicd` views: checks `data-gcp-arch-routed="1"` idempotency guard, `4` injected `connector-layer` SVGs, `3120px` (`3x`) PNG width and single-A4 height (`<= 718*3` px), valid `%PDF-` header, exact `/Type /Page` count (`4`), and non-empty zlib-decompressed vector text streams (`BT`/`Tj`). |
-| [`TestHeadlessChromeBipartiteCrossingsAndHaloBridges`](https://github.com/arrase/gcp-arch/blob/main/internal/render/render_test.go) | Renders irreducible bipartite graphs **K<sub>2,2</sub>** (`K2,2`) and **K<sub>3,3</sub>** (`K3,3`), asserting zero collisions, `data-bridge="1"` + `data-bridge-halo="1"` jump-arc paths, and strict SVG paint order (every `<line>` precedes the first white halo path). |
-| [`TestHeadlessChromeHubSpokeBidirectionalViaBusAndMinRow1NestedContainers`](https://github.com/arrase/gcp-arch/blob/main/internal/render/render_test.go) | Verifies directional splitting (`-1` and `+1`) of a single `via_bus_id` fanning out from a central `hub_spoke` hub, plus depth-2 container nesting starting on row `1` (`52px` corridor reservation and badge anchoring). |
-| [`TestHeadlessChromeCorridorWidening8ParallelLanes`](https://github.com/arrase/gcp-arch/blob/main/internal/render/render_test.go) | Routes 8 unmerged parallel lanes across Corridor `0` (`4 RUNTIME` + `4 CICD`) and asserts automatic `--corridor-col-0` CSS custom property widening clears all collisions. |
-| [`TestHeadlessChromeForcedCollisionsReturnLayoutCollisionError`](https://github.com/arrase/gcp-arch/blob/main/internal/render/render_test.go#L900-L965) | Invokes `ChromeDPRunner.Render` directly to verify both (1) a forced `.arch-card` obstacle injected mid-corridor and (2) 26 saturated standalone lanes in a `160px`-capped corridor return `*LayoutCollisionError` (`card_segment_collision` and `collinear_collision`). *(Zero-files-written enforcement on collision is verified separately by [`testRenderLayoutCollisionError`](https://github.com/arrase/gcp-arch/blob/main/internal/render/render_test.go#L342-L373) using `mockBrowserRunner`.)* |
-| [`TestHeadlessChromeStructuralDepthStyling`](https://github.com/arrase/gcp-arch/blob/main/internal/render/layout_test.go#L321-L345) | Renders nested VPC -> GKE and PSA containers (`data-depth="1"|"2"`) and asserts computed CSS `marginTop`, background fills, and dashed inner borders. |
-| [`TestHeadlessChromeCollisionKeepsConnectorsInStandaloneHTML`](https://github.com/arrase/gcp-arch/blob/main/internal/render/layout_test.go#L347-L372) | Injects a mid-corridor `.arch-card` blocker and verifies standalone HTML preserves the rendered `svg.connector-layer` strokes while still reporting `ok: false` and omitting `data-gcp-arch-routed`. |
-| [`TestHeadlessChromePrintScaleFitsWideContent`](https://github.com/arrase/gcp-arch/blob/main/internal/render/layout_test.go#L374-L409) | Renders a wide (`>= 1500px`) view grid and asserts full-width `3x` PNG capture, `--print-scale` width scaling (`~1040 / rect.Width`), and single-page PDF output. |
+| [`TestHeadlessChromeAcmeCICDGoldenSuite`](https://github.com/arrase/gcp-arch/blob/main/internal/render/render_test.go#L544) | Renders all 4 golden `acme-cicd` views: checks `data-gcp-arch-routed="1"` idempotency guard, `4` injected `connector-layer` SVGs, passing geometry & streaming PNG checks, valid `%PDF-` header, exact `/Type /Page` count (`4`), and non-empty zlib-decompressed vector text streams (`BT`/`Tj`). |
+| [`TestHeadlessChromeBipartiteCrossingsAndHaloBridges`](https://github.com/arrase/gcp-arch/blob/main/internal/render/render_test.go#L663) | Renders irreducible bipartite graphs **K<sub>2,2</sub>** (`K2,2`) and **K<sub>3,3</sub>** (`K3,3`), asserting zero collisions, `data-bridge="1"` + `data-bridge-halo="1"` jump-arc paths, and strict SVG paint order. |
+| [`TestHeadlessChromeHighFanInHybridManifestAndGeometryReport`](https://github.com/arrase/gcp-arch/blob/main/internal/render/render_test.go#L708) | Renders a high-fan-in multi-container `layered_flow` manifest with `--geometry-report` enabled, verifying zero collisions, non-empty `NodeBoxes`/`ContainerBoxes`/`BadgeBoxes`, and passing streaming pixel checks. |
+| [`TestHeadlessChromeForcedCollisionsReturnLayoutCollisionError`](https://github.com/arrase/gcp-arch/blob/main/internal/render/render_test.go#L829) | Invokes `ChromeDPRunner.Render` directly to verify both forced card overlaps and `text-overflow: ellipsis` truncation return `*LayoutCollisionError`. *(Zero-files-written enforcement on collision is verified separately by [`testRenderLayoutCollisionError`](https://github.com/arrase/gcp-arch/blob/main/internal/render/render_test.go#L323) using `mockBrowserRunner`.)* |
+| [`TestHeadlessChromeLargeScaleAreaCapAndPDFPagination`](https://github.com/arrase/gcp-arch/blob/main/internal/render/render_test.go#L1060) | Verifies adaptive Retina DPI clamping under the `8,192px` max-dim / `28M` px area cap and exact 1:1 per-view vector PDF pagination. |
+| [`TestPixelVerificationRejectsBlankAndSolidPNGs`](https://github.com/arrase/gcp-arch/blob/main/internal/render/render_test.go#L1157) | Verifies blank, solid, monochrome, edge-clipped, and blank-box PNGs fail with `*GeometryReportError`. |
+| [`TestHeadlessChromeNestedFlexboxContainerStyling`](https://github.com/arrase/gcp-arch/blob/main/internal/render/layout_test.go#L277) | Renders a 7-level nested Flexbox hierarchy (`Org -> Folder -> Project -> VPC -> Region -> Subnet -> GKE` + `PSA`) and asserts computed CSS border styles, fills, and `data-depth="7"`. |
+| [`TestHeadlessChromeCollisionKeepsConnectorsInStandaloneHTML`](https://github.com/arrase/gcp-arch/blob/main/internal/render/layout_test.go#L317) | Injects a mid-corridor `.arch-card` blocker and verifies standalone HTML preserves the rendered `svg.connector-layer` strokes while still reporting `ok: false` and omitting `data-gcp-arch-routed`. |
+| [`TestHeadlessChromePrintScaleFitsWideContent`](https://github.com/arrase/gcp-arch/blob/main/internal/render/layout_test.go#L344) | Renders a wide (`>= 1500px`) view stage and asserts full-width `2.0x` PNG capture, `--print-scale` width scaling (`~1040 / rect.Width`), and single-page PDF output. |
+| [`TestHeadlessChromeContainerPiercingAvoidance`](https://github.com/arrase/gcp-arch/blob/main/internal/render/layout_test.go#L545) | Verifies the Hanan-grid A* router avoids piercing intermediate containers and cards across complex multi-tier layouts. |
 
 ---
 
@@ -202,29 +202,43 @@ Every GitHub Actions workflow pins actions to immutable full commit SHAs and dec
 
 - **Allowlisted Asset Attribute Projector ([`internal/extract/sanitize.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go)):**
   1. Write a focused `project<Service>Attrs(p *attrProjector, data *structpb.Struct)` function extracting *only* non-sensitive architectural metadata using `p.setStr`, `p.setBool`, `p.setInt`, and `p.setURI` (never forwarding raw `env`, `args`, `command`, `script`, or `ConfigMap` payload keys).
-  2. Register the `asset_type` key in the `assetAttrProjectors` map in [`internal/extract/sanitize.go#L449-L525`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L449-L525).
+  2. Register the `asset_type` key in the `assetAttrProjectors` map in [`internal/extract/sanitize.go#L469-L554`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L469-L554).
   3. Add unit tests in [`internal/extract/extract_test.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/extract_test.go) covering both extracted attributes and secret scrubbing guarantees.
 - **Runtime API Enricher ([`internal/extract/enrichers.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go)):**
-  1. Gate the new enricher on `st.enabledProjects(candidates, "<service>.googleapis.com")`, share the `fetchProjectItemsConcurrently` worker helper (`maxEnrichWorkers = 8`), and follow the per-enricher rate-limiter pattern on `Clients` (`clients.BQLimiter`, `clients.DataflowLimiter`, `clients.MonitoringLimiter` — each initialized at `DefaultEnricherQPS = 10` / `DefaultMonitoringQPS = 10` in [`internal/extract/client.go#L374-L392`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L374-L392), [`#L480-L497`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L480-L497)).
+  1. Gate the new enricher on `st.enabledProjects(candidates, "<service>.googleapis.com")`, share the `fetchProjectItemsConcurrently` worker helper (`maxEnrichWorkers = 8`), and follow the per-enricher rate-limiter pattern on `Clients` (`clients.BQLimiter`, `clients.DataflowLimiter`, `clients.MonitoringLimiter` — each initialized at `DefaultEnricherQPS = 10` / `DefaultMonitoringQPS = 10` in [`internal/extract/client.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go)).
   2. Record degraded outcomes (`IAM_DENIED`, `VPC_SC_BLOCKED`, `SERVICE_DISABLED`, `TRUNCATING_CAP`) in `CoverageLedger` rather than aborting the entire extraction on non-fatal target permissions.
-  3. Wire an optional readiness probe in `RunPreflight` ([`internal/extract/client.go#L857-L883`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L857-L883)) and document the minimum read-only IAM role in [Security, IAM & Preflight](security_iam.md).
+  3. Wire an optional readiness probe in `RunPreflight` ([`internal/extract/client.go#L971`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L971)) and document the minimum read-only IAM role in [Security, IAM & Preflight](security_iam.md).
 
-### 3. Regenerating Reference Examples
+### 3. Regenerating Reference Examples & Running Live Catalog E2E
 
-After modifying [`diagram.css`](https://github.com/arrase/gcp-arch/blob/main/internal/render/assets/diagram.css), [`router.js`](https://github.com/arrase/gcp-arch/blob/main/internal/render/assets/router.js), [`prepare.go`](https://github.com/arrase/gcp-arch/blob/main/internal/render/prepare.go), [`icons.yaml`](https://github.com/arrase/gcp-arch/blob/main/internal/icons/assets/icons.yaml), or either example manifest, regenerate and verify both bundles offline:
+After modifying [`diagram.css`](https://github.com/arrase/gcp-arch/blob/main/internal/render/assets/diagram.css), [`router.js`](https://github.com/arrase/gcp-arch/blob/main/internal/render/assets/router.js), [`prepare.go`](https://github.com/arrase/gcp-arch/blob/main/internal/render/prepare.go), [`icons.yaml`](https://github.com/arrase/gcp-arch/blob/main/internal/icons/assets/icons.yaml), or any example manifest/fixture, regenerate and verify all 6 bundles offline:
 
 ```bash
 CGO_ENABLED=0 go build -o ./bin/gcp-arch ./cmd/gcp-arch
 
-./bin/gcp-arch validate examples/platform-cicd/architecture.yaml --facts testdata/acme_cicd_v3.facts.json
-./bin/gcp-arch render examples/platform-cicd/architecture.yaml --format pdf,png,html -o examples/platform-cicd/
+for pair in \
+  "platform-cicd:testdata/acme_cicd_v3.facts.json" \
+  "retail-cloud-native:testdata/examples/retail_cloud_native_v3.facts.json" \
+  "fintech-global-payments:testdata/examples/fintech_global_payments_v3.facts.json" \
+  "enterprise-lakehouse-mlops:testdata/examples/enterprise_lakehouse_mlops_v3.facts.json" \
+  "agentic-ai-document-platform:testdata/examples/agentic_ai_document_platform_v3.facts.json" \
+  "enterprise-zero-trust-mesh:testdata/examples/enterprise_zero_trust_mesh_v3.facts.json"
+do
+  slug="${pair%%:*}"
+  facts="${pair#*:}"
+  ./bin/gcp-arch validate "examples/$slug/architecture.yaml" --facts "$facts"
+  ./bin/gcp-arch render "examples/$slug/architecture.yaml" --facts "$facts" --format pdf,png,html -o "examples/$slug/"
+done
 
-./bin/gcp-arch validate examples/retail-cloud-native/architecture.yaml
-./bin/gcp-arch render examples/retail-cloud-native/architecture.yaml --format pdf,png,html -o examples/retail-cloud-native/
+# Verify streaming PNG pixel & geometry checks across all 6 bundles
+go test -v -run TestExamplesPNGStreamingRegression ./e2e
+
+# Optional: run full live Vertex AI + Chrome E2E across testdata/catalog/
+GCP_ARCH_E2E=1 GCP_ARCH_VERTEX_PROJECT=my-vertex-project go test -v ./e2e
 ```
 
 !!! tip "Keeping Gallery Assets Synchronized"
-    When refreshing the `examples/*/views/*.png` outputs, copy the updated PNGs into `gh-pages/assets/img/platform-cicd/` and `gh-pages/assets/img/retail-cloud-native/` so the [Examples & Visual Gallery](examples.md) reflects the latest renderer output.
+    When refreshing the `examples/*/views/*.png` outputs, copy the updated PNGs into `gh-pages/assets/img/<slug>/` so the [Examples & Visual Gallery](examples.md) reflects the latest renderer output.
 
 ### 4. Previewing & Building Documentation Locally
 

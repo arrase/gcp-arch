@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/arrase/gcp-arch/internal/atomicfile"
 	"github.com/arrase/gcp-arch/internal/icons"
-	"github.com/arrase/gcp-arch/internal/ioutil"
 	"github.com/arrase/gcp-arch/internal/manifest"
 	"github.com/arrase/gcp-arch/internal/render"
 )
@@ -19,11 +19,13 @@ import (
 const wroteLineFmt = "Wrote %s\n"
 
 type renderCmdOpts struct {
-	formatSpec       string
-	outDir           string
-	chromePath       string
-	configChromePath string
-	quiet            bool
+	formatSpec          string
+	outDir              string
+	factsPath           string
+	chromePath          string
+	configChromePath    string
+	writeGeometryReport bool
+	quiet               bool
 }
 
 type renderContext struct {
@@ -49,11 +51,11 @@ func newRenderCmd(stdout, stderr io.Writer, deps appDeps, cfg *appConfig) *cobra
 
 	cmd := &cobra.Command{
 		Use:   "render <architecture.yaml>",
-		Short: "Render architecture.yaml offline into vector PDF, 3x PNG, and standalone HTML",
+		Short: "Render architecture.yaml offline into vector PDF, high-DPI PNG, and standalone HTML",
 		Long: `Validate architecture.yaml structurally and render vector architecture.pdf,
-3x high-resolution per-view PNGs (out/views/00..NN-<view_id>.png), and standalone
+high-resolution per-view PNGs (out/views/00..NN-<view_id>.png), and standalone
 offline architecture.html using local headless Chrome/Chromium with automated
-zero-collision verification.
+zero-collision and pixel-integrity verification.
 
 Requires no facts.json and makes zero external network calls. When --format html
 is requested alone and Chrome/Chromium is absent, writes self-contained HTML with
@@ -77,6 +79,8 @@ were skipped.`,
 	cmd.Flags().SortFlags = false
 	cmd.Flags().StringVar(&opts.formatSpec, "format", "pdf,png,html", "Comma-separated output formats (pdf, png, html)")
 	cmd.Flags().StringVarP(&opts.outDir, "out", "o", "out", "Output directory `DIR`")
+	cmd.Flags().StringVar(&opts.factsPath, "facts", "", "Optional facts.json `FILE` to include conservation status in geometry verification")
+	cmd.Flags().BoolVar(&opts.writeGeometryReport, "geometry-report", false, "Write machine-readable geometry_report.json alongside rendered PNGs")
 	cmd.Flags().StringVar(&opts.chromePath, "chrome-path", "", "Explicit path to Chrome or Chromium `BINARY`")
 	cmd.Flags().BoolVarP(&opts.quiet, "quiet", "q", false, "Suppress informational stdout summary")
 	return cmd
@@ -99,8 +103,15 @@ func (rc renderContext) execute(ctx context.Context, manifestPath string) error 
 	if err != nil {
 		return runtimeErr(err)
 	}
-	if err := manifest.ValidateStructure(m, reg); err != nil {
-		return err
+
+	var conservation *manifest.ConservationReport
+	if fp := strings.TrimSpace(rc.opts.factsPath); fp != "" {
+		facts, err := loadFacts(fp)
+		if err != nil {
+			return err
+		}
+		rep := manifest.VerifyConservation(m, facts)
+		conservation = &rep
 	}
 
 	runner, fallbackDone, err := rc.resolveRunner(m, reg, formats.htmlOnly())
@@ -109,12 +120,14 @@ func (rc renderContext) execute(ctx context.Context, manifestPath string) error 
 	}
 
 	summary, err := render.Render(ctx, m, reg, render.RenderOptions{
-		Formats:          formats.list,
-		OutputDir:        rc.opts.outDir,
-		ChromePath:       rc.opts.chromePath,
-		ConfigChromePath: rc.opts.configChromePath,
-		Runner:           runner,
-		WarningWriter:    rc.stderr,
+		Formats:             formats.list,
+		OutputDir:           rc.opts.outDir,
+		ChromePath:          rc.opts.chromePath,
+		ConfigChromePath:    rc.opts.configChromePath,
+		Runner:              runner,
+		WarningWriter:       rc.stderr,
+		Conservation:        conservation,
+		WriteGeometryReport: rc.opts.writeGeometryReport,
 	})
 	if err != nil {
 		return classifyRenderError(err)
@@ -134,6 +147,9 @@ func (rc renderContext) resolveRunner(m *manifest.Manifest, reg *icons.Registry,
 	if findErr == nil {
 		return r, false, nil
 	}
+	if err := manifest.ValidateStructure(m, reg); err != nil {
+		return nil, false, err
+	}
 	if strings.TrimSpace(rc.opts.chromePath) != "" {
 		return nil, false, runtimeErr(findErr)
 	}
@@ -142,10 +158,10 @@ func (rc renderContext) resolveRunner(m *manifest.Manifest, reg *icons.Registry,
 	}
 	rawHTML, htmlErr := render.BuildHTML(m, reg)
 	if htmlErr != nil {
-		return nil, false, runtimeErr(htmlErr)
+		return nil, false, classifyRenderError(htmlErr)
 	}
 	htmlPath := filepath.Join(rc.opts.outDir, "architecture.html")
-	if writeErr := ioutil.WriteFileAtomic(htmlPath, rawHTML, 0o644, 0o755); writeErr != nil {
+	if writeErr := atomicfile.Write(htmlPath, rawHTML, 0o644, 0o755); writeErr != nil {
 		return nil, false, runtimeErr(writeErr)
 	}
 	_, _ = fmt.Fprintf(rc.stderr, "warning: Chrome/Chromium not found (%v); wrote self-contained %s without CLI collision verification\n", findErr, htmlPath)
@@ -158,7 +174,8 @@ func (rc renderContext) resolveRunner(m *manifest.Manifest, reg *icons.Registry,
 func classifyRenderError(err error) error {
 	var ve *manifest.ValidationError
 	var lce *render.LayoutCollisionError
-	if errors.As(err, &ve) || errors.As(err, &lce) {
+	var gre *render.GeometryReportError
+	if errors.As(err, &ve) || errors.As(err, &lce) || errors.As(err, &gre) {
 		return err
 	}
 	return runtimeErr(err)
@@ -199,5 +216,8 @@ func writeRenderSummary(w io.Writer, summary *render.RenderSummary) {
 	}
 	if summary.HTMLPath != "" {
 		_, _ = fmt.Fprintf(w, wroteLineFmt, summary.HTMLPath)
+	}
+	if summary.GeometryPath != "" {
+		_, _ = fmt.Fprintf(w, wroteLineFmt, summary.GeometryPath)
 	}
 }

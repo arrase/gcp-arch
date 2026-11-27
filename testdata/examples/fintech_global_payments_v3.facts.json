@@ -1,0 +1,1227 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-27T00:00:00Z",
+  "scopes": [
+    "organizations/910100001"
+  ],
+  "hierarchy": {
+    "organizations": [
+      {
+        "org_id": "910100001",
+        "display_name": "Meridian FinTech Corp"
+      }
+    ],
+    "folders": [
+      {
+        "folder_id": "520100",
+        "display_name": "network-backbone",
+        "parent": "organizations/910100001"
+      },
+      {
+        "folder_id": "520200",
+        "display_name": "payments-core",
+        "parent": "organizations/910100001"
+      }
+    ],
+    "projects": [
+      {
+        "project_id": "meridian-edge-prod",
+        "project_number": "5202001001",
+        "display_name": "Meridian Edge Prod",
+        "parent": "folders/520200"
+      },
+      {
+        "project_id": "meridian-fraud-prod",
+        "project_number": "5202001003",
+        "display_name": "Meridian Fraud Prod",
+        "parent": "folders/520200"
+      },
+      {
+        "project_id": "meridian-ledger-prod",
+        "project_number": "5202001002",
+        "display_name": "Meridian Ledger Prod",
+        "parent": "folders/520200"
+      },
+      {
+        "project_id": "meridian-ncc-hub",
+        "project_number": "5201001001",
+        "display_name": "Meridian NCC Hub",
+        "parent": "folders/520100"
+      },
+      {
+        "project_id": "meridian-ops-sec",
+        "project_number": "5201001002",
+        "display_name": "Meridian Ops Sec",
+        "parent": "folders/520100"
+      },
+      {
+        "project_id": "p910100abcdef12-tp",
+        "display_name": "Google PSA Tenant",
+        "is_psa_tenant": true
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//alloydb.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/cardholder-vault-alloydb",
+      "asset_type": "alloydb.googleapis.com/Cluster",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "cardholder-vault-alloydb",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc",
+      "attributes": {
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/keyRings/hsm-keyring/cryptoKeys/pci-vault-hsm-cmek",
+        "private_ip": "10.62.16.10",
+        "psa_tenant_project": "p910100abcdef12-tp",
+        "vpc": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc"
+      }
+    },
+    {
+      "uri": "//apigateway.googleapis.com/projects/meridian-edge-prod/locations/europe-west1/gateways/openbanking-api-gw",
+      "asset_type": "apigateway.googleapis.com/Gateway",
+      "project_id": "meridian-edge-prod",
+      "location": "europe-west1",
+      "display_name": "openbanking-api-gw",
+      "attributes": {
+        "state": "ACTIVE"
+      }
+    },
+    {
+      "uri": "//artifactregistry.googleapis.com/projects/meridian-ops-sec/locations/europe-west1/repositories/payments-container-repo",
+      "asset_type": "artifactregistry.googleapis.com/Repository",
+      "project_id": "meridian-ops-sec",
+      "location": "europe-west1",
+      "display_name": "payments-container-repo",
+      "attributes": {
+        "format": "DOCKER",
+        "mode": "STANDARD_REPOSITORY"
+      }
+    },
+    {
+      "uri": "//bigtableadmin.googleapis.com/projects/meridian-fraud-prod/instances/fraud-telemetry-bigtable",
+      "asset_type": "bigtableadmin.googleapis.com/Instance",
+      "project_id": "meridian-fraud-prod",
+      "location": "europe-west1",
+      "display_name": "fraud-telemetry-bigtable",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/meridian-fraud-prod/locations/europe-west1/keyRings/fraud-keyring/cryptoKeys/bigtable-fraud-cmek",
+        "storage_type": "SSD"
+      }
+    },
+    {
+      "uri": "//cloudfunctions.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/functions/settlement-dlq-replay-fn",
+      "asset_type": "cloudfunctions.googleapis.com/CloudFunction",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "settlement-dlq-replay-fn",
+      "attributes": {
+        "ingress": "ALLOW_INTERNAL_ONLY",
+        "runtime": "go122",
+        "service_account": "ledger-posting-sa@meridian-ledger-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/meridian-fraud-prod/locations/europe-west1/keyRings/fraud-keyring/cryptoKeys/bigtable-fraud-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "meridian-fraud-prod",
+      "location": "europe-west1",
+      "display_name": "bigtable-fraud-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/keyRings/hsm-keyring/cryptoKeys/pci-vault-hsm-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "pci-vault-hsm-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/keyRings/hsm-keyring/cryptoKeys/spanner-ledger-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "spanner-ledger-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-edge-prod/global/forwardingRules/pay-global-waf-lb",
+      "asset_type": "compute.googleapis.com/GlobalForwardingRule",
+      "project_id": "meridian-edge-prod",
+      "location": "global",
+      "display_name": "pay-global-waf-lb",
+      "attributes": {
+        "ingress_hosts": [
+          "api.meridian.example.com"
+        ],
+        "ip_address": "198.51.100.10",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "EXTERNAL_MANAGED",
+        "port_range": "443-443",
+        "tls": true
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-edge-prod/global/networks/pay-edge-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "meridian-edge-prod",
+      "location": "global",
+      "display_name": "pay-edge-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "GLOBAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/forwardingRules/ledger-psc-ep",
+      "asset_type": "compute.googleapis.com/ForwardingRule",
+      "project_id": "meridian-edge-prod",
+      "location": "europe-west1",
+      "display_name": "ledger-psc-ep",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/subnetworks/pay-app-subnet",
+      "attributes": {
+        "ip_address": "10.20.16.50",
+        "load_balancing_scheme": "INTERNAL",
+        "subnet": "//compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/subnetworks/pay-app-subnet",
+        "vpc": "//compute.googleapis.com/projects/meridian-edge-prod/global/networks/pay-edge-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/routers/pay-edge-nat",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "meridian-edge-prod",
+      "location": "europe-west1",
+      "display_name": "pay-edge-nat",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-edge-prod/global/networks/pay-edge-vpc",
+      "attributes": {
+        "nat_count": 1,
+        "vpc": "//compute.googleapis.com/projects/meridian-edge-prod/global/networks/pay-edge-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/subnetworks/pay-app-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "meridian-edge-prod",
+      "location": "europe-west1",
+      "display_name": "pay-app-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-edge-prod/global/networks/pay-edge-vpc",
+      "attributes": {
+        "cidr": "10.20.16.0/22",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/meridian-edge-prod/global/networks/pay-edge-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/subnetworks/pay-dmz-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "meridian-edge-prod",
+      "location": "europe-west1",
+      "display_name": "pay-dmz-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-edge-prod/global/networks/pay-edge-vpc",
+      "attributes": {
+        "cidr": "10.20.0.0/24",
+        "exposure": "public_ingress",
+        "vpc": "//compute.googleapis.com/projects/meridian-edge-prod/global/networks/pay-edge-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "meridian-ledger-prod",
+      "location": "global",
+      "display_name": "pay-core-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "GLOBAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/forwardingRules/ledger-internal-ilb",
+      "asset_type": "compute.googleapis.com/ForwardingRule",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "ledger-internal-ilb",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/subnetworks/pay-gke-subnet",
+      "attributes": {
+        "ip_address": "10.30.0.25",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "INTERNAL_MANAGED",
+        "port_range": "8443-8443",
+        "subnet": "//compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/subnetworks/pay-gke-subnet",
+        "vpc": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/serviceAttachments/ledger-psc-attachment",
+      "asset_type": "compute.googleapis.com/ServiceAttachment",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "ledger-psc-attachment",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc",
+      "attributes": {
+        "connection_preference": "ACCEPT_MANUAL",
+        "vpc": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/subnetworks/pay-gke-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "pay-gke-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc",
+      "attributes": {
+        "cidr": "10.30.0.0/20",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/subnetworks/pay-hsm-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "pay-hsm-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc",
+      "attributes": {
+        "cidr": "10.30.32.0/24",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-ledger-prod/zones/europe-west1-b/instanceGroupManagers/hsm-signing-mig",
+      "asset_type": "compute.googleapis.com/InstanceGroupManager",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1-b",
+      "display_name": "hsm-signing-mig",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/subnetworks/pay-hsm-subnet",
+      "attributes": {
+        "subnet": "//compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/subnetworks/pay-hsm-subnet",
+        "target_size": 3,
+        "vpc": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-ncc-hub/global/networks/ncc-transit-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "meridian-ncc-hub",
+      "location": "global",
+      "display_name": "ncc-transit-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "GLOBAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-ncc-hub/regions/europe-west1/interconnectAttachments/dc-frankfurt-interconnect",
+      "asset_type": "compute.googleapis.com/InterconnectAttachment",
+      "project_id": "meridian-ncc-hub",
+      "location": "europe-west1",
+      "display_name": "dc-frankfurt-interconnect",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-ncc-hub/global/networks/ncc-transit-vpc",
+      "attributes": {
+        "bandwidth": "BPS_10G",
+        "type": "DEDICATED",
+        "vpc": "//compute.googleapis.com/projects/meridian-ncc-hub/global/networks/ncc-transit-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-ncc-hub/regions/europe-west1/routers/ncc-bgp-router",
+      "asset_type": "compute.googleapis.com/Router",
+      "project_id": "meridian-ncc-hub",
+      "location": "europe-west1",
+      "display_name": "ncc-bgp-router",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-ncc-hub/global/networks/ncc-transit-vpc",
+      "attributes": {
+        "bgp_asn": 64512,
+        "vpc": "//compute.googleapis.com/projects/meridian-ncc-hub/global/networks/ncc-transit-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-ncc-hub/regions/europe-west1/subnetworks/ncc-transit-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "meridian-ncc-hub",
+      "location": "europe-west1",
+      "display_name": "ncc-transit-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-ncc-hub/global/networks/ncc-transit-vpc",
+      "attributes": {
+        "cidr": "10.10.0.0/24",
+        "vpc": "//compute.googleapis.com/projects/meridian-ncc-hub/global/networks/ncc-transit-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-ncc-hub/regions/europe-west1/vpnGateways/partner-ha-vpn",
+      "asset_type": "compute.googleapis.com/VpnGateway",
+      "project_id": "meridian-ncc-hub",
+      "location": "europe-west1",
+      "display_name": "partner-ha-vpn",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-ncc-hub/global/networks/ncc-transit-vpc",
+      "attributes": {
+        "vpc": "//compute.googleapis.com/projects/meridian-ncc-hub/global/networks/ncc-transit-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-ops-sec/global/networks/ops-mgmt-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "meridian-ops-sec",
+      "location": "global",
+      "display_name": "ops-mgmt-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-ops-sec/regions/europe-west1/subnetworks/ops-mgmt-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "meridian-ops-sec",
+      "location": "europe-west1",
+      "display_name": "ops-mgmt-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-ops-sec/global/networks/ops-mgmt-vpc",
+      "attributes": {
+        "cidr": "10.11.0.0/24",
+        "vpc": "//compute.googleapis.com/projects/meridian-ops-sec/global/networks/ops-mgmt-vpc"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/meridian-ops-sec/zones/europe-west1-b/instances/ops-jumpbox-vm",
+      "asset_type": "compute.googleapis.com/Instance",
+      "project_id": "meridian-ops-sec",
+      "location": "europe-west1-b",
+      "display_name": "ops-jumpbox-vm",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-ops-sec/regions/europe-west1/subnetworks/ops-mgmt-subnet",
+      "attributes": {
+        "service_account": "ops-bastion-sa@meridian-ops-sec.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/meridian-ops-sec/regions/europe-west1/subnetworks/ops-mgmt-subnet",
+        "vpc": "//compute.googleapis.com/projects/meridian-ops-sec/global/networks/ops-mgmt-vpc"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core",
+      "asset_type": "container.googleapis.com/Cluster",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "gke-payments-core",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/subnetworks/pay-gke-subnet",
+      "attributes": {
+        "private_nodes": true,
+        "subnet": "//compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/subnetworks/pay-gke-subnet",
+        "vpc": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/ledger-posting-svc",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "ledger-posting-svc",
+      "parent_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core",
+      "attributes": {
+        "namespace": "payments",
+        "service_account": "ledger-posting-sa@meridian-ledger-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/payments-auth-api",
+      "asset_type": "apps.k8s.io/Deployment",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "payments-auth-api",
+      "parent_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core",
+      "attributes": {
+        "namespace": "payments",
+        "service_account": "payments-auth-sa@meridian-ledger-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/batch/cronjobs/clearing-reconciler-cron",
+      "asset_type": "batch.k8s.io/CronJob",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "clearing-reconciler-cron",
+      "parent_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core",
+      "attributes": {
+        "namespace": "payments",
+        "schedule": "0 * * * *"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/services/ledger-posting-svc",
+      "asset_type": "k8s.io/Service",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "ledger-posting-svc",
+      "parent_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core",
+      "attributes": {
+        "namespace": "payments"
+      }
+    },
+    {
+      "uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/services/payments-auth-api",
+      "asset_type": "k8s.io/Service",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "payments-auth-api",
+      "parent_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core",
+      "attributes": {
+        "namespace": "payments"
+      }
+    },
+    {
+      "uri": "//dns.googleapis.com/projects/meridian-ops-sec/managedZones/meridian-corp-dns",
+      "asset_type": "dns.googleapis.com/ManagedZone",
+      "project_id": "meridian-ops-sec",
+      "location": "global",
+      "display_name": "meridian-corp-dns",
+      "attributes": {
+        "dns_name": "corp.meridian.example.net.",
+        "visibility": "private"
+      }
+    },
+    {
+      "uri": "//external.http/endpoints/card-network-acquirer",
+      "asset_type": "external.http/Endpoint",
+      "project_id": "external",
+      "location": "global",
+      "display_name": "card-network-acquirer",
+      "is_external": true,
+      "attributes": {
+        "host": "iso8583.acquirer.example.net"
+      }
+    },
+    {
+      "uri": "//external.internet/clients/global-merchant-clients",
+      "asset_type": "external.internet/ClientGroup",
+      "project_id": "external",
+      "location": "global",
+      "display_name": "global-merchant-clients",
+      "is_external": true
+    },
+    {
+      "uri": "//external.onprem/datacenters/core-banking-dc",
+      "asset_type": "external.onprem/Datacenter",
+      "project_id": "external",
+      "location": "global",
+      "display_name": "core-banking-dc",
+      "is_external": true,
+      "attributes": {
+        "site": "Frankfurt DC-1"
+      }
+    },
+    {
+      "uri": "//file.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1-b/instances/clearing-files-filestore",
+      "asset_type": "file.googleapis.com/Instance",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1-b",
+      "display_name": "clearing-files-filestore",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc",
+      "attributes": {
+        "tier": "HIGH_SCALE_SSD",
+        "vpc": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/meridian-edge-prod/serviceAccounts/merchant-bff-sa@meridian-edge-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "meridian-edge-prod",
+      "display_name": "merchant-bff-sa@meridian-edge-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "merchant-bff-sa@meridian-edge-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/meridian-fraud-prod/serviceAccounts/fraud-scoring-sa@meridian-fraud-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "meridian-fraud-prod",
+      "display_name": "fraud-scoring-sa@meridian-fraud-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "fraud-scoring-sa@meridian-fraud-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/meridian-ledger-prod/serviceAccounts/ledger-posting-sa@meridian-ledger-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "meridian-ledger-prod",
+      "display_name": "ledger-posting-sa@meridian-ledger-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "ledger-posting-sa@meridian-ledger-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/meridian-ledger-prod/serviceAccounts/payments-auth-sa@meridian-ledger-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "meridian-ledger-prod",
+      "display_name": "payments-auth-sa@meridian-ledger-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "payments-auth-sa@meridian-ledger-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/meridian-ncc-hub/serviceAccounts/ncc-net-sa@meridian-ncc-hub.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "meridian-ncc-hub",
+      "display_name": "ncc-net-sa@meridian-ncc-hub.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "ncc-net-sa@meridian-ncc-hub.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/meridian-ops-sec/serviceAccounts/ops-bastion-sa@meridian-ops-sec.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "meridian-ops-sec",
+      "display_name": "ops-bastion-sa@meridian-ops-sec.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "ops-bastion-sa@meridian-ops-sec.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/meridian-ops-sec/locations/global/buckets/pci-immutable-log-bucket",
+      "asset_type": "logging.googleapis.com/LogBucket",
+      "project_id": "meridian-ops-sec",
+      "location": "global",
+      "display_name": "pci-immutable-log-bucket",
+      "attributes": {
+        "retention_days": 2555
+      }
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/meridian-ops-sec/sinks/pci-central-audit-sink",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "meridian-ops-sec",
+      "location": "global",
+      "display_name": "pci-central-audit-sink"
+    },
+    {
+      "uri": "//monitoring.googleapis.com/projects/meridian-ops-sec/alertPolicies/9202001",
+      "asset_type": "monitoring.googleapis.com/AlertPolicy",
+      "project_id": "meridian-ops-sec",
+      "location": "global",
+      "display_name": "pci-latency-slo-alert",
+      "attributes": {
+        "enabled": true
+      }
+    },
+    {
+      "uri": "//networkconnectivity.googleapis.com/projects/meridian-ncc-hub/locations/global/hubs/enterprise-ncc-hub",
+      "asset_type": "networkconnectivity.googleapis.com/Hub",
+      "project_id": "meridian-ncc-hub",
+      "location": "global",
+      "display_name": "enterprise-ncc-hub",
+      "attributes": {
+        "spoke_count": 4
+      }
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/meridian-ledger-prod/subscriptions/settlement-dlq-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "meridian-ledger-prod",
+      "location": "global",
+      "display_name": "settlement-dlq-sub"
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/meridian-ledger-prod/subscriptions/settlement-eod-sub",
+      "asset_type": "pubsub.googleapis.com/Subscription",
+      "project_id": "meridian-ledger-prod",
+      "location": "global",
+      "display_name": "settlement-eod-sub"
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/meridian-ledger-prod/topics/settlement-events-dlq",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "meridian-ledger-prod",
+      "location": "global",
+      "display_name": "settlement-events-dlq"
+    },
+    {
+      "uri": "//pubsub.googleapis.com/projects/meridian-ledger-prod/topics/settlement-events-topic",
+      "asset_type": "pubsub.googleapis.com/Topic",
+      "project_id": "meridian-ledger-prod",
+      "location": "global",
+      "display_name": "settlement-events-topic"
+    },
+    {
+      "uri": "//redis.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/idempotency-redis-cluster",
+      "asset_type": "redis.googleapis.com/Cluster",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "idempotency-redis-cluster",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc",
+      "attributes": {
+        "redis_version": "REDIS_7_2",
+        "vpc": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/meridian-edge-prod/locations/europe-west1/services/merchant-bff-run",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "meridian-edge-prod",
+      "location": "europe-west1",
+      "display_name": "merchant-bff-run",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/subnetworks/pay-app-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "service_account": "merchant-bff-sa@meridian-edge-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/subnetworks/pay-app-subnet",
+        "vpc": "//compute.googleapis.com/projects/meridian-edge-prod/global/networks/pay-edge-vpc"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/meridian-edge-prod/locations/europe-west1/services/merchant-webhook-run",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "meridian-edge-prod",
+      "location": "europe-west1",
+      "display_name": "merchant-webhook-run",
+      "parent_uri": "//compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/subnetworks/pay-app-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_ONLY",
+        "service_account": "merchant-bff-sa@meridian-edge-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/subnetworks/pay-app-subnet",
+        "vpc": "//compute.googleapis.com/projects/meridian-edge-prod/global/networks/pay-edge-vpc"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/meridian-fraud-prod/locations/europe-west1/services/fraud-scoring-svc",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "meridian-fraud-prod",
+      "location": "europe-west1",
+      "display_name": "fraud-scoring-svc",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_ONLY",
+        "service_account": "fraud-scoring-sa@meridian-fraud-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/jobs/eod-settlement-job",
+      "asset_type": "run.googleapis.com/Job",
+      "project_id": "meridian-ledger-prod",
+      "location": "europe-west1",
+      "display_name": "eod-settlement-job",
+      "attributes": {
+        "service_account": "ledger-posting-sa@meridian-ledger-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/meridian-edge-prod/secrets/openbanking-jwks-key",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "meridian-edge-prod",
+      "display_name": "openbanking-jwks-key",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/meridian-ledger-prod/secrets/acquirer-mtls-cert",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "meridian-ledger-prod",
+      "display_name": "acquirer-mtls-cert",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/meridian-ledger-prod/secrets/hsm-signing-pin",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "meridian-ledger-prod",
+      "display_name": "hsm-signing-pin",
+      "attributes": {
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//spanner.googleapis.com/projects/meridian-ledger-prod/instances/global-payments-spanner",
+      "asset_type": "spanner.googleapis.com/Instance",
+      "project_id": "meridian-ledger-prod",
+      "location": "eur3",
+      "display_name": "global-payments-spanner",
+      "attributes": {
+        "config": "eur3",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/keyRings/hsm-keyring/cryptoKeys/spanner-ledger-cmek",
+        "processing_units": 3000
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/meridian-audit-vault",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "meridian-ops-sec",
+      "location": "EU",
+      "display_name": "meridian-audit-vault",
+      "attributes": {
+        "storage_class": "ARCHIVE",
+        "uniform_bucket_level_access": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "c43f277418cf4405",
+      "from_uri": "//alloydb.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/cardholder-vault-alloydb",
+      "to_uri": "//cloudkms.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/keyRings/hsm-keyring/cryptoKeys/pci-vault-hsm-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "fec7542e4e6e09ee",
+      "from_uri": "//apigateway.googleapis.com/projects/meridian-edge-prod/locations/europe-west1/gateways/openbanking-api-gw",
+      "to_uri": "//run.googleapis.com/projects/meridian-edge-prod/locations/europe-west1/services/merchant-bff-run",
+      "kind": "CONFIG_REF",
+      "detail": "https:auth_route"
+    },
+    {
+      "id": "451a7774e08dfa48",
+      "from_uri": "//artifactregistry.googleapis.com/projects/meridian-ops-sec/locations/europe-west1/repositories/payments-container-repo",
+      "to_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/ledger-posting-svc",
+      "kind": "CONFIG_REF",
+      "detail": "pull_image"
+    },
+    {
+      "id": "0763ce0fbf5e3806",
+      "from_uri": "//artifactregistry.googleapis.com/projects/meridian-ops-sec/locations/europe-west1/repositories/payments-container-repo",
+      "to_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/payments-auth-api",
+      "kind": "CONFIG_REF",
+      "detail": "pull_image"
+    },
+    {
+      "id": "e7ec462d3f556b63",
+      "from_uri": "//bigtableadmin.googleapis.com/projects/meridian-fraud-prod/instances/fraud-telemetry-bigtable",
+      "to_uri": "//cloudkms.googleapis.com/projects/meridian-fraud-prod/locations/europe-west1/keyRings/fraud-keyring/cryptoKeys/bigtable-fraud-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "a0e5bc75ce4cb2a3",
+      "from_uri": "//cloudfunctions.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/functions/settlement-dlq-replay-fn",
+      "to_uri": "//pubsub.googleapis.com/projects/meridian-ledger-prod/topics/settlement-events-topic",
+      "kind": "CONFIG_REF",
+      "detail": "republish_retry"
+    },
+    {
+      "id": "43d507ee2dfa14ef",
+      "from_uri": "//compute.googleapis.com/projects/meridian-edge-prod/global/forwardingRules/pay-global-waf-lb",
+      "to_uri": "//apigateway.googleapis.com/projects/meridian-edge-prod/locations/europe-west1/gateways/openbanking-api-gw",
+      "kind": "CONFIG_REF",
+      "detail": "https:openbanking"
+    },
+    {
+      "id": "4d5ae1c3ba3f2bb3",
+      "from_uri": "//compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/forwardingRules/ledger-psc-ep",
+      "to_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/serviceAttachments/ledger-psc-attachment",
+      "kind": "CONFIG_REF",
+      "detail": "psc_service_attachment"
+    },
+    {
+      "id": "efb1f6ec8d867da6",
+      "from_uri": "//compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/routers/pay-edge-nat",
+      "to_uri": "//compute.googleapis.com/projects/meridian-edge-prod/global/networks/pay-edge-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "cloud_nat"
+    },
+    {
+      "id": "2dcb1df403a88622",
+      "from_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc",
+      "to_uri": "//alloydb.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/cardholder-vault-alloydb",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com"
+    },
+    {
+      "id": "0bca804a974bc2e3",
+      "from_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/forwardingRules/ledger-internal-ilb",
+      "to_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/services/payments-auth-api",
+      "kind": "K8S_NEG_BACKEND",
+      "detail": "neg_backend"
+    },
+    {
+      "id": "8fcfb71faec3e41e",
+      "from_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/serviceAttachments/ledger-psc-attachment",
+      "to_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/forwardingRules/ledger-internal-ilb",
+      "kind": "CONFIG_REF",
+      "detail": "ilb_target"
+    },
+    {
+      "id": "62a3c67bf798581c",
+      "from_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/zones/europe-west1-b/instanceGroupManagers/hsm-signing-mig",
+      "to_uri": "//secretmanager.googleapis.com/projects/meridian-ledger-prod/secrets/hsm-signing-pin",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "a7532927da7d474a",
+      "from_uri": "//compute.googleapis.com/projects/meridian-ncc-hub/regions/europe-west1/interconnectAttachments/dc-frankfurt-interconnect",
+      "to_uri": "//networkconnectivity.googleapis.com/projects/meridian-ncc-hub/locations/global/hubs/enterprise-ncc-hub",
+      "kind": "CONFIG_REF",
+      "detail": "ncc_hybrid_spoke"
+    },
+    {
+      "id": "de09680b2bc753d3",
+      "from_uri": "//compute.googleapis.com/projects/meridian-ncc-hub/regions/europe-west1/routers/ncc-bgp-router",
+      "to_uri": "//compute.googleapis.com/projects/meridian-ncc-hub/global/networks/ncc-transit-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "bgp_router"
+    },
+    {
+      "id": "478213af02f4485b",
+      "from_uri": "//compute.googleapis.com/projects/meridian-ncc-hub/regions/europe-west1/vpnGateways/partner-ha-vpn",
+      "to_uri": "//networkconnectivity.googleapis.com/projects/meridian-ncc-hub/locations/global/hubs/enterprise-ncc-hub",
+      "kind": "CONFIG_REF",
+      "detail": "ncc_hybrid_spoke"
+    },
+    {
+      "id": "b12ea1f4c8860252",
+      "from_uri": "//compute.googleapis.com/projects/meridian-ops-sec/zones/europe-west1-b/instances/ops-jumpbox-vm",
+      "to_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/regions/europe-west1/forwardingRules/ledger-internal-ilb",
+      "kind": "CONFIG_REF",
+      "detail": "mgmt_transit"
+    },
+    {
+      "id": "577f148c481f8d16",
+      "from_uri": "//compute.googleapis.com/projects/meridian-ops-sec/zones/europe-west1-b/instances/ops-jumpbox-vm",
+      "to_uri": "//iam.googleapis.com/projects/meridian-ops-sec/serviceAccounts/ops-bastion-sa@meridian-ops-sec.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "43bbda6a8f9a2e09",
+      "from_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/ledger-posting-svc",
+      "to_uri": "//alloydb.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/cardholder-vault-alloydb",
+      "kind": "CONFIG_REF",
+      "detail": "vault_sql"
+    },
+    {
+      "id": "532c9dbceaa86f65",
+      "from_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/ledger-posting-svc",
+      "to_uri": "//iam.googleapis.com/projects/meridian-ledger-prod/serviceAccounts/ledger-posting-sa@meridian-ledger-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "k8s-wi:payments/ledger"
+    },
+    {
+      "id": "3050a3c3b82ed31a",
+      "from_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/ledger-posting-svc",
+      "to_uri": "//pubsub.googleapis.com/projects/meridian-ledger-prod/topics/settlement-events-topic",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub_publish"
+    },
+    {
+      "id": "a3ac01dbb119528c",
+      "from_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/ledger-posting-svc",
+      "to_uri": "//spanner.googleapis.com/projects/meridian-ledger-prod/instances/global-payments-spanner",
+      "kind": "CONFIG_REF",
+      "detail": "spanner_tx"
+    },
+    {
+      "id": "32163e2a18270cbc",
+      "from_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/payments-auth-api",
+      "to_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/zones/europe-west1-b/instanceGroupManagers/hsm-signing-mig",
+      "kind": "CONFIG_REF",
+      "detail": "hsm_sign"
+    },
+    {
+      "id": "de00c0581474238e",
+      "from_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/payments-auth-api",
+      "to_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/services/ledger-posting-svc",
+      "kind": "CONFIG_REF",
+      "detail": "grpc_post"
+    },
+    {
+      "id": "a36349d56a3cf1b2",
+      "from_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/payments-auth-api",
+      "to_uri": "//external.http/endpoints/card-network-acquirer",
+      "kind": "CONFIG_REF",
+      "detail": "iso8583_mtls"
+    },
+    {
+      "id": "2d6a17e0d97b358a",
+      "from_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/payments-auth-api",
+      "to_uri": "//iam.googleapis.com/projects/meridian-ledger-prod/serviceAccounts/payments-auth-sa@meridian-ledger-prod.iam.gserviceaccount.com",
+      "kind": "WORKLOAD_IDENTITY",
+      "detail": "k8s-wi:payments/auth"
+    },
+    {
+      "id": "1d8d6192664fc560",
+      "from_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/payments-auth-api",
+      "to_uri": "//redis.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/idempotency-redis-cluster",
+      "kind": "CONFIG_REF",
+      "detail": "idempotency_cache"
+    },
+    {
+      "id": "259bec6bf0863579",
+      "from_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/payments-auth-api",
+      "to_uri": "//run.googleapis.com/projects/meridian-fraud-prod/locations/europe-west1/services/fraud-scoring-svc",
+      "kind": "CONFIG_REF",
+      "detail": "grpc_score"
+    },
+    {
+      "id": "f2cef0f40717c9f6",
+      "from_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/payments-auth-api",
+      "to_uri": "//secretmanager.googleapis.com/projects/meridian-ledger-prod/secrets/acquirer-mtls-cert",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "06bc5b930d5dd749",
+      "from_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/batch/cronjobs/clearing-reconciler-cron",
+      "to_uri": "//file.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1-b/instances/clearing-files-filestore",
+      "kind": "CONFIG_REF",
+      "detail": "nfs_reconcile"
+    },
+    {
+      "id": "e0608ff1442e8564",
+      "from_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/batch/cronjobs/clearing-reconciler-cron",
+      "to_uri": "//storage.googleapis.com/meridian-audit-vault",
+      "kind": "CONFIG_REF",
+      "detail": "gcs_regulatory"
+    },
+    {
+      "id": "928e1301d7f11c2b",
+      "from_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/services/ledger-posting-svc",
+      "to_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/ledger-posting-svc",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "selector"
+    },
+    {
+      "id": "3e08ee95fc72871c",
+      "from_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/services/payments-auth-api",
+      "to_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/payments-auth-api",
+      "kind": "K8S_SERVICE_SELECTOR",
+      "detail": "selector"
+    },
+    {
+      "id": "5187c5eab6641e98",
+      "from_uri": "//dns.googleapis.com/projects/meridian-ops-sec/managedZones/meridian-corp-dns",
+      "to_uri": "//compute.googleapis.com/projects/meridian-ops-sec/global/networks/ops-mgmt-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "private_zone"
+    },
+    {
+      "id": "43ebb0535f553a42",
+      "from_uri": "//external.internet/clients/global-merchant-clients",
+      "to_uri": "//compute.googleapis.com/projects/meridian-edge-prod/global/forwardingRules/pay-global-waf-lb",
+      "kind": "CONFIG_REF",
+      "detail": "https:443"
+    },
+    {
+      "id": "7f05725a832d5f13",
+      "from_uri": "//external.onprem/datacenters/core-banking-dc",
+      "to_uri": "//compute.googleapis.com/projects/meridian-ncc-hub/regions/europe-west1/interconnectAttachments/dc-frankfurt-interconnect",
+      "kind": "CONFIG_REF",
+      "detail": "dedicated_10g"
+    },
+    {
+      "id": "220d77136301f54c",
+      "from_uri": "//external.onprem/datacenters/core-banking-dc",
+      "to_uri": "//compute.googleapis.com/projects/meridian-ncc-hub/regions/europe-west1/vpnGateways/partner-ha-vpn",
+      "kind": "CONFIG_REF",
+      "detail": "ipsec_bgp"
+    },
+    {
+      "id": "45786f8afa4e0689",
+      "from_uri": "//iam.googleapis.com/projects/meridian-fraud-prod/serviceAccounts/fraud-scoring-sa@meridian-fraud-prod.iam.gserviceaccount.com",
+      "to_uri": "//bigtableadmin.googleapis.com/projects/meridian-fraud-prod/instances/fraud-telemetry-bigtable",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/bigtable.user"
+    },
+    {
+      "id": "d66a8909ae5ce06b",
+      "from_uri": "//iam.googleapis.com/projects/meridian-ledger-prod/serviceAccounts/ledger-posting-sa@meridian-ledger-prod.iam.gserviceaccount.com",
+      "to_uri": "//spanner.googleapis.com/projects/meridian-ledger-prod/instances/global-payments-spanner",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/spanner.databaseUser"
+    },
+    {
+      "id": "1646377733195ca0",
+      "from_uri": "//iam.googleapis.com/projects/meridian-ncc-hub/serviceAccounts/ncc-net-sa@meridian-ncc-hub.iam.gserviceaccount.com",
+      "to_uri": "//networkconnectivity.googleapis.com/projects/meridian-ncc-hub/locations/global/hubs/enterprise-ncc-hub",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/networkconnectivity.hubAdmin"
+    },
+    {
+      "id": "05db7b6756cacaef",
+      "from_uri": "//logging.googleapis.com/projects/meridian-ops-sec/sinks/pci-central-audit-sink",
+      "to_uri": "//logging.googleapis.com/projects/meridian-ops-sec/locations/global/buckets/pci-immutable-log-bucket",
+      "kind": "CONFIG_REF",
+      "detail": "audit_sink"
+    },
+    {
+      "id": "7c712e2fb86b3718",
+      "from_uri": "//logging.googleapis.com/projects/meridian-ops-sec/sinks/pci-central-audit-sink",
+      "to_uri": "//storage.googleapis.com/meridian-audit-vault",
+      "kind": "CONFIG_REF",
+      "detail": "audit_sink"
+    },
+    {
+      "id": "6056d8198803b2a0",
+      "from_uri": "//monitoring.googleapis.com/projects/meridian-ops-sec/alertPolicies/9202001",
+      "to_uri": "//container.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/clusters/gke-payments-core/k8s/namespaces/payments/apps/deployments/payments-auth-api",
+      "kind": "CONFIG_REF",
+      "detail": "slo_alert"
+    },
+    {
+      "id": "abb0dd71c67d8e0e",
+      "from_uri": "//networkconnectivity.googleapis.com/projects/meridian-ncc-hub/locations/global/hubs/enterprise-ncc-hub",
+      "to_uri": "//compute.googleapis.com/projects/meridian-edge-prod/global/networks/pay-edge-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "ncc_spoke"
+    },
+    {
+      "id": "46cf0799519f8e38",
+      "from_uri": "//networkconnectivity.googleapis.com/projects/meridian-ncc-hub/locations/global/hubs/enterprise-ncc-hub",
+      "to_uri": "//compute.googleapis.com/projects/meridian-ledger-prod/global/networks/pay-core-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "ncc_spoke"
+    },
+    {
+      "id": "de9ad7c4946585f9",
+      "from_uri": "//networkconnectivity.googleapis.com/projects/meridian-ncc-hub/locations/global/hubs/enterprise-ncc-hub",
+      "to_uri": "//compute.googleapis.com/projects/meridian-ops-sec/global/networks/ops-mgmt-vpc",
+      "kind": "CONFIG_REF",
+      "detail": "ncc_spoke"
+    },
+    {
+      "id": "d05184cffc0dc36f",
+      "from_uri": "//pubsub.googleapis.com/projects/meridian-ledger-prod/subscriptions/settlement-dlq-sub",
+      "to_uri": "//cloudfunctions.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/functions/settlement-dlq-replay-fn",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "ef40c498c90a3af5",
+      "from_uri": "//pubsub.googleapis.com/projects/meridian-ledger-prod/subscriptions/settlement-eod-sub",
+      "to_uri": "//pubsub.googleapis.com/projects/meridian-ledger-prod/topics/settlement-events-dlq",
+      "kind": "CONFIG_REF",
+      "detail": "dead_letter"
+    },
+    {
+      "id": "e520c6f94a32088a",
+      "from_uri": "//pubsub.googleapis.com/projects/meridian-ledger-prod/subscriptions/settlement-eod-sub",
+      "to_uri": "//run.googleapis.com/projects/meridian-edge-prod/locations/europe-west1/services/merchant-webhook-run",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.push"
+    },
+    {
+      "id": "1f0801ba6e5bff4f",
+      "from_uri": "//pubsub.googleapis.com/projects/meridian-ledger-prod/subscriptions/settlement-eod-sub",
+      "to_uri": "//run.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/jobs/eod-settlement-job",
+      "kind": "CONFIG_REF",
+      "detail": "pubsub.pull"
+    },
+    {
+      "id": "7756a6a12b12aa8b",
+      "from_uri": "//pubsub.googleapis.com/projects/meridian-ledger-prod/topics/settlement-events-dlq",
+      "to_uri": "//pubsub.googleapis.com/projects/meridian-ledger-prod/subscriptions/settlement-dlq-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "469b04db3c5c7e20",
+      "from_uri": "//pubsub.googleapis.com/projects/meridian-ledger-prod/topics/settlement-events-topic",
+      "to_uri": "//pubsub.googleapis.com/projects/meridian-ledger-prod/subscriptions/settlement-eod-sub",
+      "kind": "CONFIG_REF",
+      "detail": "subscription"
+    },
+    {
+      "id": "a8ea257db3a3eed2",
+      "from_uri": "//run.googleapis.com/projects/meridian-edge-prod/locations/europe-west1/services/merchant-bff-run",
+      "to_uri": "//compute.googleapis.com/projects/meridian-edge-prod/regions/europe-west1/forwardingRules/ledger-psc-ep",
+      "kind": "CONFIG_REF",
+      "detail": "psc_connect"
+    },
+    {
+      "id": "350f692d5d924868",
+      "from_uri": "//run.googleapis.com/projects/meridian-edge-prod/locations/europe-west1/services/merchant-bff-run",
+      "to_uri": "//iam.googleapis.com/projects/meridian-edge-prod/serviceAccounts/merchant-bff-sa@meridian-edge-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "4a26ea50558967ee",
+      "from_uri": "//run.googleapis.com/projects/meridian-edge-prod/locations/europe-west1/services/merchant-bff-run",
+      "to_uri": "//secretmanager.googleapis.com/projects/meridian-edge-prod/secrets/openbanking-jwks-key",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "58974212583ecb2b",
+      "from_uri": "//run.googleapis.com/projects/meridian-edge-prod/locations/europe-west1/services/merchant-webhook-run",
+      "to_uri": "//external.http/endpoints/card-network-acquirer",
+      "kind": "CONFIG_REF",
+      "detail": "https_callback"
+    },
+    {
+      "id": "bfb5978cb9235026",
+      "from_uri": "//run.googleapis.com/projects/meridian-fraud-prod/locations/europe-west1/services/fraud-scoring-svc",
+      "to_uri": "//bigtableadmin.googleapis.com/projects/meridian-fraud-prod/instances/fraud-telemetry-bigtable",
+      "kind": "CONFIG_REF",
+      "detail": "bt_features"
+    },
+    {
+      "id": "ac1a7d296346bcac",
+      "from_uri": "//run.googleapis.com/projects/meridian-fraud-prod/locations/europe-west1/services/fraud-scoring-svc",
+      "to_uri": "//iam.googleapis.com/projects/meridian-fraud-prod/serviceAccounts/fraud-scoring-sa@meridian-fraud-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "00fa18454f5acf4b",
+      "from_uri": "//run.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/jobs/eod-settlement-job",
+      "to_uri": "//file.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1-b/instances/clearing-files-filestore",
+      "kind": "CONFIG_REF",
+      "detail": "nfs_clearing"
+    },
+    {
+      "id": "f4846cb47b03c57b",
+      "from_uri": "//spanner.googleapis.com/projects/meridian-ledger-prod/instances/global-payments-spanner",
+      "to_uri": "//cloudkms.googleapis.com/projects/meridian-ledger-prod/locations/europe-west1/keyRings/hsm-keyring/cryptoKeys/spanner-ledger-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "bigtableadmin.googleapis.com/Table": 12,
+    "compute.googleapis.com/BackendService": 5,
+    "compute.googleapis.com/Firewall": 36,
+    "compute.googleapis.com/Route": 22,
+    "compute.googleapis.com/SecurityPolicy": 4,
+    "container.googleapis.com/NodePool": 3,
+    "networkconnectivity.googleapis.com/Spoke": 4,
+    "spanner.googleapis.com/Database": 3
+  },
+  "coverage_ledger": [
+    {
+      "scope": "organizations/910100001",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/910100001",
+      "source": "cai_iam",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/910100001",
+      "source": "cai_resources",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/910100001",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "organizations/910100001",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}

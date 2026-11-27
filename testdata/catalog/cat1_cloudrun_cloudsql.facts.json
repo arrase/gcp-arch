@@ -1,0 +1,350 @@
+{
+  "schema_version": "v3",
+  "read_time": "2026-11-26T00:00:00Z",
+  "scopes": [
+    "projects/shop-api-prod"
+  ],
+  "hierarchy": {
+    "projects": [
+      {
+        "project_id": "p200100abcdef12-tp",
+        "display_name": "Google PSA Tenant",
+        "is_psa_tenant": true
+      },
+      {
+        "project_id": "shop-api-prod",
+        "project_number": "200100100101",
+        "display_name": "Shop API Prod"
+      }
+    ]
+  },
+  "resources": [
+    {
+      "uri": "//artifactregistry.googleapis.com/projects/shop-api-prod/locations/europe-west1/repositories/shop-containers",
+      "asset_type": "artifactregistry.googleapis.com/Repository",
+      "project_id": "shop-api-prod",
+      "location": "europe-west1",
+      "display_name": "shop-containers",
+      "attributes": {
+        "format": "DOCKER",
+        "mode": "STANDARD_REPOSITORY"
+      }
+    },
+    {
+      "uri": "//cloudkms.googleapis.com/projects/shop-api-prod/locations/europe-west1/keyRings/shop-keyring/cryptoKeys/shop-data-cmek",
+      "asset_type": "cloudkms.googleapis.com/CryptoKey",
+      "project_id": "shop-api-prod",
+      "location": "europe-west1",
+      "display_name": "shop-data-cmek",
+      "attributes": {
+        "purpose": "ENCRYPT_DECRYPT"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/shop-api-prod/global/forwardingRules/shop-api-https-fr",
+      "asset_type": "compute.googleapis.com/GlobalForwardingRule",
+      "project_id": "shop-api-prod",
+      "location": "global",
+      "display_name": "shop-api-https-fr",
+      "attributes": {
+        "ingress_hosts": [
+          "api.shop-example.com"
+        ],
+        "ip_address": "34.110.12.40",
+        "ip_protocol": "TCP",
+        "load_balancing_scheme": "EXTERNAL_MANAGED",
+        "port_range": "443-443",
+        "tls": true
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/shop-api-prod/global/networks/shop-vpc",
+      "asset_type": "compute.googleapis.com/Network",
+      "project_id": "shop-api-prod",
+      "location": "global",
+      "display_name": "shop-vpc",
+      "attributes": {
+        "auto_create_subnetworks": false,
+        "routing_mode": "REGIONAL"
+      }
+    },
+    {
+      "uri": "//compute.googleapis.com/projects/shop-api-prod/regions/europe-west1/subnetworks/shop-run-subnet",
+      "asset_type": "compute.googleapis.com/Subnetwork",
+      "project_id": "shop-api-prod",
+      "location": "europe-west1",
+      "display_name": "shop-run-subnet",
+      "parent_uri": "//compute.googleapis.com/projects/shop-api-prod/global/networks/shop-vpc",
+      "attributes": {
+        "cidr": "10.20.0.0/24",
+        "private_ip_google_access": true,
+        "vpc": "//compute.googleapis.com/projects/shop-api-prod/global/networks/shop-vpc"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/shop-api-prod/serviceAccounts/shop-api-sa@shop-api-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "shop-api-prod",
+      "display_name": "shop-api-sa@shop-api-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "shop-api-sa@shop-api-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//iam.googleapis.com/projects/shop-api-prod/serviceAccounts/shop-migrate-sa@shop-api-prod.iam.gserviceaccount.com",
+      "asset_type": "iam.googleapis.com/ServiceAccount",
+      "project_id": "shop-api-prod",
+      "display_name": "shop-migrate-sa@shop-api-prod.iam.gserviceaccount.com",
+      "attributes": {
+        "disabled": false,
+        "email": "shop-migrate-sa@shop-api-prod.iam.gserviceaccount.com"
+      }
+    },
+    {
+      "uri": "//logging.googleapis.com/projects/shop-api-prod/sinks/shop-audit-sink",
+      "asset_type": "logging.googleapis.com/LogSink",
+      "project_id": "shop-api-prod",
+      "display_name": "shop-audit-sink"
+    },
+    {
+      "uri": "//run.googleapis.com/projects/shop-api-prod/locations/europe-west1/jobs/shop-db-migrate",
+      "asset_type": "run.googleapis.com/Job",
+      "project_id": "shop-api-prod",
+      "location": "europe-west1",
+      "display_name": "shop-db-migrate",
+      "parent_uri": "//compute.googleapis.com/projects/shop-api-prod/regions/europe-west1/subnetworks/shop-run-subnet",
+      "attributes": {
+        "service_account": "shop-migrate-sa@shop-api-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/shop-api-prod/regions/europe-west1/subnetworks/shop-run-subnet",
+        "vpc": "//compute.googleapis.com/projects/shop-api-prod/global/networks/shop-vpc",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/shop-api-prod/locations/europe-west1/connectors/shop-vpc-connector"
+      }
+    },
+    {
+      "uri": "//run.googleapis.com/projects/shop-api-prod/locations/europe-west1/services/shop-api-service",
+      "asset_type": "run.googleapis.com/Service",
+      "project_id": "shop-api-prod",
+      "location": "europe-west1",
+      "display_name": "shop-api-service",
+      "parent_uri": "//compute.googleapis.com/projects/shop-api-prod/regions/europe-west1/subnetworks/shop-run-subnet",
+      "attributes": {
+        "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/shop-api-prod/locations/europe-west1/keyRings/shop-keyring/cryptoKeys/shop-data-cmek",
+        "service_account": "shop-api-sa@shop-api-prod.iam.gserviceaccount.com",
+        "subnet": "//compute.googleapis.com/projects/shop-api-prod/regions/europe-west1/subnetworks/shop-run-subnet",
+        "url": "https://shop-api-service-abc123-ew.a.run.app",
+        "vpc": "//compute.googleapis.com/projects/shop-api-prod/global/networks/shop-vpc",
+        "vpc_connector": "//vpcaccess.googleapis.com/projects/shop-api-prod/locations/europe-west1/connectors/shop-vpc-connector"
+      }
+    },
+    {
+      "uri": "//secretmanager.googleapis.com/projects/shop-api-prod/secrets/shop-db-credentials",
+      "asset_type": "secretmanager.googleapis.com/Secret",
+      "project_id": "shop-api-prod",
+      "display_name": "shop-db-credentials",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/shop-api-prod/locations/europe-west1/keyRings/shop-keyring/cryptoKeys/shop-data-cmek",
+        "replication": "automatic"
+      }
+    },
+    {
+      "uri": "//sqladmin.googleapis.com/projects/shop-api-prod/instances/shop-orders-pg",
+      "asset_type": "sqladmin.googleapis.com/Instance",
+      "project_id": "shop-api-prod",
+      "location": "europe-west1",
+      "display_name": "shop-orders-pg",
+      "parent_uri": "//compute.googleapis.com/projects/shop-api-prod/global/networks/shop-vpc",
+      "attributes": {
+        "availability_type": "REGIONAL",
+        "database_version": "POSTGRES_16",
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/shop-api-prod/locations/europe-west1/keyRings/shop-keyring/cryptoKeys/shop-data-cmek",
+        "private_ip": "10.20.16.5",
+        "psa_tenant_project": "p200100abcdef12-tp",
+        "public_ip_enabled": false,
+        "tier": "db-custom-4-15360",
+        "vpc": "//compute.googleapis.com/projects/shop-api-prod/global/networks/shop-vpc"
+      }
+    },
+    {
+      "uri": "//storage.googleapis.com/shop-api-media-assets",
+      "asset_type": "storage.googleapis.com/Bucket",
+      "project_id": "shop-api-prod",
+      "location": "europe-west1",
+      "display_name": "shop-api-media-assets",
+      "attributes": {
+        "kms_key_uri": "//cloudkms.googleapis.com/projects/shop-api-prod/locations/europe-west1/keyRings/shop-keyring/cryptoKeys/shop-data-cmek",
+        "location_type": "REGION",
+        "storage_class": "STANDARD",
+        "uniform_bucket_level_access": true
+      }
+    },
+    {
+      "uri": "//vpcaccess.googleapis.com/projects/shop-api-prod/locations/europe-west1/connectors/shop-vpc-connector",
+      "asset_type": "vpcaccess.googleapis.com/Connector",
+      "project_id": "shop-api-prod",
+      "location": "europe-west1",
+      "display_name": "shop-vpc-connector",
+      "parent_uri": "//compute.googleapis.com/projects/shop-api-prod/regions/europe-west1/subnetworks/shop-run-subnet",
+      "attributes": {
+        "cidr": "10.20.8.0/28",
+        "machine_type": "e2-micro",
+        "subnet": "//compute.googleapis.com/projects/shop-api-prod/regions/europe-west1/subnetworks/shop-run-subnet",
+        "vpc": "//compute.googleapis.com/projects/shop-api-prod/global/networks/shop-vpc"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "5cb65a7e9051d5a6",
+      "from_uri": "//compute.googleapis.com/projects/shop-api-prod/global/forwardingRules/shop-api-https-fr",
+      "to_uri": "//run.googleapis.com/projects/shop-api-prod/locations/europe-west1/services/shop-api-service",
+      "kind": "CONFIG_REF",
+      "detail": "backend_service"
+    },
+    {
+      "id": "087dc9f02ae7ac56",
+      "from_uri": "//compute.googleapis.com/projects/shop-api-prod/global/networks/shop-vpc",
+      "to_uri": "//sqladmin.googleapis.com/projects/shop-api-prod/instances/shop-orders-pg",
+      "kind": "PSA_PEERING",
+      "detail": "servicenetworking-googleapis-com (p200100abcdef12-tp)"
+    },
+    {
+      "id": "2632e068e2f32e1e",
+      "from_uri": "//iam.googleapis.com/projects/shop-api-prod/serviceAccounts/shop-api-sa@shop-api-prod.iam.gserviceaccount.com",
+      "to_uri": "//secretmanager.googleapis.com/projects/shop-api-prod/secrets/shop-db-credentials",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/secretmanager.secretAccessor"
+    },
+    {
+      "id": "0326431a2c241d7a",
+      "from_uri": "//iam.googleapis.com/projects/shop-api-prod/serviceAccounts/shop-api-sa@shop-api-prod.iam.gserviceaccount.com",
+      "to_uri": "//sqladmin.googleapis.com/projects/shop-api-prod/instances/shop-orders-pg",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/cloudsql.client"
+    },
+    {
+      "id": "7e0d68d8de526c23",
+      "from_uri": "//iam.googleapis.com/projects/shop-api-prod/serviceAccounts/shop-api-sa@shop-api-prod.iam.gserviceaccount.com",
+      "to_uri": "//storage.googleapis.com/shop-api-media-assets",
+      "kind": "IAM_RESOURCE_BINDING",
+      "detail": "roles/storage.objectAdmin"
+    },
+    {
+      "id": "aaca66ca59f5a011",
+      "from_uri": "//run.googleapis.com/projects/shop-api-prod/locations/europe-west1/jobs/shop-db-migrate",
+      "to_uri": "//iam.googleapis.com/projects/shop-api-prod/serviceAccounts/shop-migrate-sa@shop-api-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "593e73ce29439809",
+      "from_uri": "//run.googleapis.com/projects/shop-api-prod/locations/europe-west1/jobs/shop-db-migrate",
+      "to_uri": "//sqladmin.googleapis.com/projects/shop-api-prod/instances/shop-orders-pg",
+      "kind": "CONFIG_REF",
+      "detail": "10.20.16.5"
+    },
+    {
+      "id": "d2cde823abac81bd",
+      "from_uri": "//run.googleapis.com/projects/shop-api-prod/locations/europe-west1/jobs/shop-db-migrate",
+      "to_uri": "//vpcaccess.googleapis.com/projects/shop-api-prod/locations/europe-west1/connectors/shop-vpc-connector",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "a85378e748f0503b",
+      "from_uri": "//run.googleapis.com/projects/shop-api-prod/locations/europe-west1/services/shop-api-service",
+      "to_uri": "//artifactregistry.googleapis.com/projects/shop-api-prod/locations/europe-west1/repositories/shop-containers",
+      "kind": "CONFIG_REF",
+      "detail": "container_image"
+    },
+    {
+      "id": "f51ba4b3c70ebbf8",
+      "from_uri": "//run.googleapis.com/projects/shop-api-prod/locations/europe-west1/services/shop-api-service",
+      "to_uri": "//iam.googleapis.com/projects/shop-api-prod/serviceAccounts/shop-api-sa@shop-api-prod.iam.gserviceaccount.com",
+      "kind": "CONFIG_REF",
+      "detail": "service_account"
+    },
+    {
+      "id": "e3b68d002415052b",
+      "from_uri": "//run.googleapis.com/projects/shop-api-prod/locations/europe-west1/services/shop-api-service",
+      "to_uri": "//secretmanager.googleapis.com/projects/shop-api-prod/secrets/shop-db-credentials",
+      "kind": "CONFIG_REF",
+      "detail": "secret_ref"
+    },
+    {
+      "id": "db5a448fe2dba492",
+      "from_uri": "//run.googleapis.com/projects/shop-api-prod/locations/europe-west1/services/shop-api-service",
+      "to_uri": "//sqladmin.googleapis.com/projects/shop-api-prod/instances/shop-orders-pg",
+      "kind": "CONFIG_REF",
+      "detail": "10.20.16.5"
+    },
+    {
+      "id": "79164092681af7b8",
+      "from_uri": "//run.googleapis.com/projects/shop-api-prod/locations/europe-west1/services/shop-api-service",
+      "to_uri": "//storage.googleapis.com/shop-api-media-assets",
+      "kind": "CONFIG_REF",
+      "detail": "gs://shop-api-media-assets"
+    },
+    {
+      "id": "fa206b7795285b21",
+      "from_uri": "//run.googleapis.com/projects/shop-api-prod/locations/europe-west1/services/shop-api-service",
+      "to_uri": "//vpcaccess.googleapis.com/projects/shop-api-prod/locations/europe-west1/connectors/shop-vpc-connector",
+      "kind": "CONFIG_REF",
+      "detail": "vpc_connector"
+    },
+    {
+      "id": "cba2e91e169e253e",
+      "from_uri": "//sqladmin.googleapis.com/projects/shop-api-prod/instances/shop-orders-pg",
+      "to_uri": "//cloudkms.googleapis.com/projects/shop-api-prod/locations/europe-west1/keyRings/shop-keyring/cryptoKeys/shop-data-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    },
+    {
+      "id": "cfb7d467f6f974ca",
+      "from_uri": "//storage.googleapis.com/shop-api-media-assets",
+      "to_uri": "//cloudkms.googleapis.com/projects/shop-api-prod/locations/europe-west1/keyRings/shop-keyring/cryptoKeys/shop-data-cmek",
+      "kind": "CONFIG_REF",
+      "detail": "cmek"
+    }
+  ],
+  "suppressed_plumbing_counts": {
+    "artifactregistry.googleapis.com/DockerImage": 42,
+    "compute.googleapis.com/BackendService": 1,
+    "compute.googleapis.com/Firewall": 8,
+    "compute.googleapis.com/NetworkEndpointGroup": 1,
+    "compute.googleapis.com/Route": 6,
+    "compute.googleapis.com/TargetHttpsProxy": 1,
+    "compute.googleapis.com/UrlMap": 1,
+    "run.googleapis.com/Revision": 14,
+    "servicenetworking.googleapis.com/Connection": 1,
+    "sqladmin.googleapis.com/BackupRun": 7
+  },
+  "coverage_ledger": [
+    {
+      "scope": "projects/shop-api-prod",
+      "source": "bq_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/shop-api-prod",
+      "source": "cai_iam_policy",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/shop-api-prod",
+      "source": "cai_resource",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/shop-api-prod",
+      "source": "dataflow_jobs",
+      "state": "OK"
+    },
+    {
+      "scope": "projects/shop-api-prod",
+      "source": "monitoring",
+      "state": "OK"
+    }
+  ]
+}

@@ -19,13 +19,10 @@ import (
 	"time"
 
 	"cloud.google.com/go/asset/apiv1/assetpb"
+	"cloud.google.com/go/auth"
 	"cloud.google.com/go/iam/apiv1/iampb"
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
-	"golang.org/x/oauth2/google"
 	"golang.org/x/time/rate"
-	"google.golang.org/api/bigquery/v2"
-	"google.golang.org/api/dataflow/v1b3"
-	"google.golang.org/api/googleapi"
 	"google.golang.org/genproto/googleapis/api/metric"
 	"google.golang.org/genproto/googleapis/api/monitoredres"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -267,17 +264,12 @@ func assertDegradedAndAuthErrors(t *testing.T) {
 		},
 		{
 			name: "REST VPC-SC",
-			err: &googleapi.Error{
-				Code:    http.StatusForbidden,
-				Message: "blocked",
-				Details: []any{
-					map[string]any{
-						"@type":    "type.googleapis.com/google.rpc.ErrorInfo",
-						"reason":   "VPC_SERVICE_CONTROLS",
-						"domain":   "googleapis.com",
-						"metadata": map[string]any{"vpcServiceControlsUniqueIdentifier": "rest-uuid-9"},
-					},
-				},
+			err: &httpStatusError{
+				Code:     http.StatusForbidden,
+				Message:  "blocked",
+				Reason:   "VPC_SERVICE_CONTROLS",
+				Domain:   "googleapis.com",
+				Metadata: map[string]string{"vpcServiceControlsUniqueIdentifier": "rest-uuid-9"},
 			},
 			target:    "child-a",
 			wantState: CoverageVPCSCBlocked,
@@ -285,14 +277,14 @@ func assertDegradedAndAuthErrors(t *testing.T) {
 		},
 		{
 			name: "REST body fallback",
-			err: &googleapi.Error{
+			err: &httpStatusError{
 				Code: http.StatusForbidden,
 				Body: `{"error":{"details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"IAM_PERMISSION_DENIED","domain":"iam.googleapis.com","metadata":{"vpcServiceControlsUniqueIdentifier":""}}]}}`,
 			},
 			target:    "child-a",
 			wantState: CoverageIAMDenied,
 		},
-		{name: "REST 401", err: &googleapi.Error{Code: http.StatusUnauthorized}, wantKind: ErrorKindUnauthenticated},
+		{name: "REST 401", err: &httpStatusError{Code: http.StatusUnauthorized}, wantKind: ErrorKindUnauthenticated},
 		{name: "gRPC Unauthenticated", err: status.Error(codes.Unauthenticated, "expired"), wantKind: ErrorKindUnauthenticated},
 		{name: "raw PermissionDenied", err: status.Error(codes.PermissionDenied, "403"), wantState: CoverageIAMDenied},
 		{name: "network timeout", err: errors.New("network timeout"), wantKind: ErrorKindOther},
@@ -326,15 +318,15 @@ func assertRateLimitAndRetry(t *testing.T) {
 	}
 	if !isRateLimitError(status.Error(codes.ResourceExhausted, "quota")) ||
 		!isRateLimitError(grpcErrorWithInfo(codes.Unavailable, "rl", "RATE_LIMIT_EXCEEDED", "googleapis.com", nil)) ||
-		!isRateLimitError(&googleapi.Error{Code: http.StatusTooManyRequests}) ||
-		!isRateLimitError(&googleapi.Error{Code: http.StatusForbidden, Errors: []googleapi.ErrorItem{{Reason: "rateLimitExceeded"}}}) {
+		!isRateLimitError(&httpStatusError{Code: http.StatusTooManyRequests}) ||
+		!isRateLimitError(&httpStatusError{Code: http.StatusForbidden, Body: `{"error":{"errors":[{"reason":"rateLimitExceeded"}]}}`}) {
 		t.Fatal("failed to detect rate limit errors")
 	}
 	attempts := 0
 	err := retryOnRateLimit(context.Background(), time.Millisecond, func() error {
 		attempts++
 		if attempts < 3 {
-			return &googleapi.Error{Code: http.StatusTooManyRequests}
+			return &httpStatusError{Code: http.StatusTooManyRequests}
 		}
 		return nil
 	})
@@ -352,14 +344,17 @@ func assertRateLimitAndRetry(t *testing.T) {
 
 func assertQuotaProjectAndProgress(t *testing.T) {
 	t.Helper()
-	creds := &google.Credentials{JSON: []byte(`{"type":"authorized_user","quota_project_id":"adc-qp"}`)}
+	t.Setenv("GOOGLE_CLOUD_QUOTA_PROJECT", "")
+	creds := auth.NewCredentials(&auth.CredentialsOptions{
+		JSON: []byte(`{"type":"authorized_user","quota_project_id":"adc-qp"}`),
+	})
 	if got := ResolveQuotaProject(creds, ""); got != "adc-qp" {
 		t.Fatalf("ResolveQuotaProject(adc, \"\") = %q, want adc-qp", got)
 	}
 	if got := ResolveQuotaProject(creds, "override-qp"); got != "override-qp" {
 		t.Fatalf("ResolveQuotaProject(adc, override) = %q, want override-qp", got)
 	}
-	if got := ResolveQuotaProject(&google.Credentials{}, ""); got != "" {
+	if got := ResolveQuotaProject(&auth.Credentials{}, ""); got != "" {
 		t.Fatalf("ResolveQuotaProject(empty) = %q, want empty", got)
 	}
 
@@ -440,7 +435,7 @@ func setupPreflightProbeClients(t *testing.T) (*Clients, *httptest.Server, *pref
 	}
 
 	httpMux := http.NewServeMux()
-	httpMux.HandleFunc("/projects/app-prod/jobs", func(w http.ResponseWriter, r *http.Request) {
+	httpMux.HandleFunc("/bigquery/v2/projects/app-prod/jobs", func(w http.ResponseWriter, r *http.Request) {
 		counters.bqCalls.Add(1)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"jobs":[]}`))
@@ -525,7 +520,7 @@ func assertCustomModelDeniedPreflight(t *testing.T, clients *Clients) {
 			if proj != "ai-sandbox" || loc != "europe-west1" || model != "gemini-4-custom" {
 				t.Errorf("unexpected ModelProbe args: %s %s %s", proj, loc, model)
 			}
-			return &googleapi.Error{Code: http.StatusForbidden, Message: "model denied"}
+			return &httpStatusError{Code: http.StatusForbidden, Message: "model denied"}
 		},
 	})
 	if err != nil {
@@ -818,7 +813,7 @@ func assertProjectedAttrsClean(t *testing.T, assetType, wantKey string, poison, 
 		}
 	}
 	for k := range attrs {
-		if IsSensitiveKey(k) {
+		if _, leaked := poison[k]; leaked || strings.Contains(strings.ToLower(k), "last-applied-configuration") {
 			t.Errorf("%s: sensitive key %q appeared in allowlisted attrs", assetType, k)
 		}
 	}
@@ -1842,23 +1837,23 @@ func newEnricherMonitoringHandler(t *testing.T, sawResourceMethodGroup *atomic.B
 
 func newEnricherBQDataflowMux() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/projects/data-p/jobs", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/bigquery/v2/projects/data-p/jobs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		resp := &bigquery.JobList{
-			Jobs: []*bigquery.JobListJobs{{
-				Id:               "job-elt-1",
-				PrincipalSubject: "serviceAccount:worker@data-p.iam.gserviceaccount.com",
-				Statistics: &bigquery.JobStatistics{
-					Query: &bigquery.JobStatistics2{
-						ReferencedTables: []*bigquery.TableReference{
-							{ProjectId: "data-p", DatasetId: "raw_ds", TableId: "events"},
-							{ProjectId: "data-p", DatasetId: "_temp", TableId: "anon12345678"},
+		resp := map[string]any{
+			"jobs": []map[string]any{{
+				"id":                "job-elt-1",
+				"principal_subject": "serviceAccount:worker@data-p.iam.gserviceaccount.com",
+				"statistics": map[string]any{
+					"query": map[string]any{
+						"referencedTables": []map[string]any{
+							{"projectId": "data-p", "datasetId": "raw_ds", "tableId": "events"},
+							{"projectId": "data-p", "datasetId": "_temp", "tableId": "anon12345678"},
 						},
 					},
 				},
-				Configuration: &bigquery.JobConfiguration{
-					Query: &bigquery.JobConfigurationQuery{
-						DestinationTable: &bigquery.TableReference{ProjectId: "data-p", DatasetId: "gold_ds", TableId: "agg"},
+				"configuration": map[string]any{
+					"query": map[string]any{
+						"destinationTable": map[string]any{"projectId": "data-p", "datasetId": "gold_ds", "tableId": "agg"},
 					},
 				},
 			}},
@@ -1867,25 +1862,25 @@ func newEnricherBQDataflowMux() *http.ServeMux {
 	})
 	mux.HandleFunc("/v1b3/projects/data-p/locations/-/jobs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(&dataflow.ListJobsResponse{
-			Jobs: []*dataflow.Job{{Id: "df-1", Name: "stream-orders", Location: "us-central1"}},
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"jobs": []map[string]any{{"id": "df-1", "name": "stream-orders", "location": "us-central1"}},
 		})
 	})
 	mux.HandleFunc("/v1b3/projects/data-p/locations/us-central1/jobs/df-1", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(&dataflow.Job{
-			Id:           "df-1",
-			Name:         "stream-orders",
-			Type:         "JOB_TYPE_STREAMING",
-			CurrentState: "JOB_STATE_RUNNING",
-			Environment: &dataflow.Environment{
-				ServiceAccountEmail: "df-worker@data-p.iam.gserviceaccount.com",
-				TempStoragePrefix:   "gs://landing-bkt/tmp",
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id":           "df-1",
+			"name":         "stream-orders",
+			"type":         "JOB_TYPE_STREAMING",
+			"currentState": "JOB_STATE_RUNNING",
+			"environment": map[string]any{
+				"serviceAccountEmail": "df-worker@data-p.iam.gserviceaccount.com",
+				"tempStoragePrefix":   "gs://landing-bkt/tmp",
 			},
-			PipelineDescription: &dataflow.PipelineDescription{
-				DisplayData: []*dataflow.DisplayData{
-					{StrValue: "projects/data-p/subscriptions/events-sub"},
-					{StrValue: "data-p.gold_ds.stream_out"},
+			"pipelineDescription": map[string]any{
+				"displayData": []map[string]any{
+					{"strValue": "projects/data-p/subscriptions/events-sub"},
+					{"strValue": "data-p.gold_ds.stream_out"},
 				},
 			},
 		})
@@ -2218,11 +2213,19 @@ func assertFixtureGraphIntegrity(t *testing.T, facts *FactsFile) {
 
 func collectResourceURIsAndCheckSensitiveKeys(t *testing.T, resources []FactResource) map[string]bool {
 	t.Helper()
+	forbiddenAttrKeys := map[string]bool{
+		"startup-script": true, "startup-script-url": true, "shutdown-script": true, "user-data": true,
+		"env": true, "envvariables": true, "secretenv": true, "environmentvariables": true,
+		"buildenvironmentvariables": true, "args": true, "command": true, "script": true,
+		"data": true, "binarydata": true, "stringdata": true, "substitutions": true,
+		"query": true, "rawquery": true, "schema": true, "webhookconfig": true,
+		"kubectl.kubernetes.io/last-applied-configuration": true, "last-applied-configuration": true,
+	}
 	resURIs := make(map[string]bool, len(resources))
 	for _, r := range resources {
 		resURIs[r.URI] = true
 		for k := range r.Attributes {
-			if IsSensitiveKey(k) {
+			if forbiddenAttrKeys[strings.ToLower(strings.TrimSpace(k))] {
 				t.Errorf("fixture resource %s contains sensitive key %q", r.URI, k)
 			}
 		}
@@ -2590,32 +2593,32 @@ func setupEnricherErrorTestClients(t *testing.T) (*Clients, *httptest.Server) {
 
 	var bqPage atomic.Int32
 	mux := http.NewServeMux()
-	mux.HandleFunc("/projects/p-err/jobs", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/bigquery/v2/projects/p-err/jobs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if bqPage.Add(1) == 1 {
-			_ = json.NewEncoder(w).Encode(&bigquery.JobList{
-				NextPageToken: "page2",
-				Jobs: []*bigquery.JobListJobs{{
-					JobReference: &bigquery.JobReference{JobId: "copy-1"},
-					UserEmail:    "svc@p-err.iam.gserviceaccount.com",
-					Configuration: &bigquery.JobConfiguration{
-						Copy: &bigquery.JobConfigurationTableCopy{
-							SourceTable:      &bigquery.TableReference{ProjectId: "p-err", DatasetId: "src_ds", TableId: "t1"},
-							SourceTables:     []*bigquery.TableReference{{ProjectId: "p-err", DatasetId: "src_ds", TableId: "t2"}},
-							DestinationTable: &bigquery.TableReference{ProjectId: "p-err", DatasetId: "dst_ds", TableId: "t3"},
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"nextPageToken": "page2",
+				"jobs": []map[string]any{{
+					"jobReference": map[string]any{"jobId": "copy-1"},
+					"user_email":   "svc@p-err.iam.gserviceaccount.com",
+					"configuration": map[string]any{
+						"copy": map[string]any{
+							"sourceTable":      map[string]any{"projectId": "p-err", "datasetId": "src_ds", "tableId": "t1"},
+							"sourceTables":     []map[string]any{{"projectId": "p-err", "datasetId": "src_ds", "tableId": "t2"}},
+							"destinationTable": map[string]any{"projectId": "p-err", "datasetId": "dst_ds", "tableId": "t3"},
 						},
 					},
 				}},
 			})
 			return
 		}
-		_ = json.NewEncoder(w).Encode(&bigquery.JobList{
-			Jobs: []*bigquery.JobListJobs{{
-				Id:        "load-1",
-				UserEmail: "svc@p-err.iam.gserviceaccount.com",
-				Configuration: &bigquery.JobConfiguration{
-					Load: &bigquery.JobConfigurationLoad{
-						DestinationTable: &bigquery.TableReference{ProjectId: "p-err", DatasetId: "dst_ds", TableId: "t4"},
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"jobs": []map[string]any{{
+				"id":         "load-1",
+				"user_email": "svc@p-err.iam.gserviceaccount.com",
+				"configuration": map[string]any{
+					"load": map[string]any{
+						"destinationTable": map[string]any{"projectId": "p-err", "datasetId": "dst_ds", "tableId": "t4"},
 					},
 				},
 			}},
@@ -3021,21 +3024,21 @@ func TestExtractInboundCrossProjectEdges(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{}`))
 	})
-	mux.HandleFunc("/projects/sub-p/jobs", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/bigquery/v2/projects/sub-p/jobs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(&bigquery.JobList{
-			Jobs: []*bigquery.JobListJobs{{
-				Id: "bq-cross-1",
-				Statistics: &bigquery.JobStatistics{
-					Query: &bigquery.JobStatistics2{
-						ReferencedTables: []*bigquery.TableReference{
-							{ProjectId: "ext-bq", DatasetId: "raw_ext", TableId: "t1"},
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"jobs": []map[string]any{{
+				"id": "bq-cross-1",
+				"statistics": map[string]any{
+					"query": map[string]any{
+						"referencedTables": []map[string]any{
+							{"projectId": "ext-bq", "datasetId": "raw_ext", "tableId": "t1"},
 						},
 					},
 				},
-				Configuration: &bigquery.JobConfiguration{
-					Query: &bigquery.JobConfigurationQuery{
-						DestinationTable: &bigquery.TableReference{ProjectId: "sub-p", DatasetId: "gold_ds", TableId: "out"},
+				"configuration": map[string]any{
+					"query": map[string]any{
+						"destinationTable": map[string]any{"projectId": "sub-p", "datasetId": "gold_ds", "tableId": "out"},
 					},
 				},
 			}},

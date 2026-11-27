@@ -1,9 +1,11 @@
 # Examples & Visual Gallery
 
-`gcp-arch` ships two complete, end-to-end reference bundles under [`examples/`](https://github.com/arrase/gcp-arch/tree/main/examples), each containing a hand-verifiable `architecture.yaml` (`schema_version: v1`) manifest alongside its offline-rendered vector `.pdf`, self-contained `.html` dossier, and `3x` high-DPI (`3120px` wide) per-view `.png` diagrams.
+`gcp-arch` ships **6** complete, end-to-end reference bundles under [`examples/`](https://github.com/arrase/gcp-arch/tree/main/examples), each synthesized from a paired Stage 1 `v3` facts fixture (`testdata/acme_cicd_v3.facts.json` or `testdata/examples/*.facts.json`) using the unified `layered_flow` pipeline. Every bundle includes a strict `architecture.yaml` (`schema_version: v1`) manifest, 1:1 per-view vector `.pdf`, self-contained `.html` dossier, and adaptive up to `2.0x` Retina per-view `.png` diagrams (20 rendered views total).
+
+Across all 6 architectures, the gallery covers **75 unique asset types** across **49 Google Cloud APIs** plus Kubernetes and external systems, with `100%` Stage 1 primary-resource and edge conservation (`conservation=PASS`, `view0=1.00`) and streaming PNG pixel verification in [`e2e/geometry_test.go`](https://github.com/arrase/gcp-arch/blob/main/e2e/geometry_test.go).
 
 !!! info "Synthetic Reference Data Notice"
-    All GCP project IDs (`acme-*`, `nova-*`), domain names (`example.com`, `example.net` per **RFC 2606**), public IPv4 addresses (`203.0.113.0/24` per **RFC 5737**), and Private Services Access tenant identifiers (`p1234567890abcdef-tp`, `p9876543210fedcba-tp`) in these bundles are 100% synthetic.
+    All GCP organization/folder/project IDs (`acme-*`, `nova-*`, `meridian-*`, `stratos-*`, `lumina-*`, `aegis-*`), domain names (`example.com`, `example.net` per **RFC 2606**), public IPv4 addresses (`198.51.100.0/24`, `203.0.113.0/24` per **RFC 5737**), and Private Services Access tenant identifiers (`p*-tp`) in these bundles are 100% synthetic.
 
 ---
 
@@ -16,54 +18,38 @@
 | Metric | Value |
 | :--- | :--- |
 | **Scanned Scope** | `projects/acme-cicd` → out-of-scope deployment targets `acme-dev`, `acme-prod` |
-| **Components** | **14** logical components covering **43** underlying `FactResource` records (plus the 44th, `container.googleapis.com/Cluster` `cicd`, owned by resource-backed container `gke_cicd` — totaling 44 across components + containers in [`testdata/acme_cicd_v3.facts.json`](https://github.com/arrase/gcp-arch/blob/main/testdata/acme_cicd_v3.facts.json)) |
-| **Containers** | **5** containers (`proj_acme_cicd`, nested `gke_cicd`, `psa_tenant`, `ext_source`, `ext_deploy_targets`) |
-| **Views** | **4** views (`1` deterministic `View 0` + `3` detail views covering all three archetypes) |
-| **Manifest Source** | [`examples/platform-cicd/architecture.yaml`](https://github.com/arrase/gcp-arch/blob/main/examples/platform-cicd/architecture.yaml) *(identical to [`testdata/acme_cicd_expected.architecture.yaml`](https://github.com/arrase/gcp-arch/blob/main/testdata/acme_cicd_expected.architecture.yaml))* |
-| **Delivered Artifacts** | [`architecture.pdf`](https://github.com/arrase/gcp-arch/blob/main/examples/platform-cicd/architecture.pdf) · [`architecture.html`](https://github.com/arrase/gcp-arch/blob/main/examples/platform-cicd/architecture.html) · [`views/`](https://github.com/arrase/gcp-arch/tree/main/examples/platform-cicd/views) |
+| **Facts Fixture** | [`testdata/acme_cicd_v3.facts.json`](https://github.com/arrase/gcp-arch/blob/main/testdata/acme_cicd_v3.facts.json) (**44** resources, **93** edges) |
+| **Components / Governance** | **17** logical components (`39/39` primary resources, `conservation=PASS`, `view0=1.00`) · **10** containers · **5** transversal governance items |
+| **Views** | **3** `layered_flow` views (`View 0` System Architecture Overview + `2` focused detail views) |
+| **Delivered Artifacts** | [`architecture.yaml`](https://github.com/arrase/gcp-arch/blob/main/examples/platform-cicd/architecture.yaml) · [`architecture.pdf`](https://github.com/arrase/gcp-arch/blob/main/examples/platform-cicd/architecture.pdf) · [`architecture.html`](https://github.com/arrase/gcp-arch/blob/main/examples/platform-cicd/architecture.html) |
 
 ### Key Architectural Highlights
 
-- **All Three Layout Archetypes:** Combines `landscape_matrix` (`View 0` and GKE platform), `stage_pipeline` (CI/CD delivery with automatic stage banners), and `hub_spoke` (VPC-to-PSA peering).
-- **Depth-2 Container Nesting:** Places `GKE Cluster: cicd` (`gke_cicd`, `depth=2`) inside `Project: acme-cicd` (`proj_acme_cicd`, `depth=1`) with stacked top badges and `52px` reserved row corridors.
-- **20-Trigger Cloud Build Folding & 5-Branch Fan-Out Bus:** Folds 20 `cloudbuild.googleapis.com/BuildTrigger` resources plus the `cloudbuild-runner` Service Account into a single `cloudbuild_triggers` component (`inline_meta`: 10 Image Builds, 6 App Deploys, 4 Terraform) connected to **5** `CICD` branches via an explicit `via_bus_id: cb_outputs` bus spine (**3** datastores: `acme_artifact_registry`, `acme_private_modules`, `acme_tfstate` + **2** out-of-scope target projects: `acme_dev`, `acme_prod`), alongside a standalone `ADMIN` edge (`verb: write access`, no `via_bus_id`) to the 4th datastore (`cloudbuild_staging_bucket`).
-- **Mixed `CICD`, `RUNTIME` & `ADMIN` Flows:** Distinguishes amber `CICD` edges (`#B45309` — GitHub webhooks, builds, Terraform state/module locking), blue `RUNTIME` edges (`#1D4ED8` — Global HTTPS Load Balancers to GKE NEGs, private IP SQL over PSA), and slate `ADMIN` edges (`#475569` — `cloudbuild_triggers -> cloudbuild_staging_bucket` `write access`).
-- **Google-Managed PSA Peering:** Isolates `Cloud SQL (sonarqube)` (`POSTGRES_16 / 10.100.0.5`) inside a dashed `PSA_ZONE` (`p1234567890abcdef-tp`).
+- **Homogeneous Cloud Build Trigger Cohorts:** Automatically folds all 20 `cloudbuild.googleapis.com/BuildTrigger` resources into 5 role-based cohorts (`CI Build Triggers (10x)`, `Dev/Prod App Deploy Triggers (3x)`, `Dev/Prod Terraform Triggers (2x)`) while preserving every individual trigger member inside the card.
+- **Full VPC → Subnet → GKE & PSA Hierarchy:** Nests `Public Edge Ingress` (2 Global HTTPS LBs), `Region: europe-southwest1` → `Subnet: cicd-k8s` → `GKE Cluster: cicd` (`atlantis`, `sonarqube`), and `PSA Private Service Access` (`Cloud SQL POSTGRES_16`) inside `VPC: cicd`.
+- **Governance & Transversal Control Plane:** Separates IAM Service Accounts (`atlantis`, `cloudbuild-runner`, `sonarqube`) and Secret Manager secrets (`github-webhook-secret`, `sonarqube-db-password`) into the right-hand governance panel while annotating attachment badges directly on workload cards.
 
 ### View Summary
 
-| # | View ID | Archetype | Accent | Blocks | Edges | Highlights |
-| :---: | :--- | :--- | :---: | :---: | :---: | :--- |
-| `00` | `view_0_system_index` | `landscape_matrix` | `MIXED` | 6 | 5 | Deterministic Go-projected system map spanning 5 columns (`0..4`) from `github_acme` through all 3 detail views to `acme_dev` / `acme_prod`. |
-| `01` | `cicd_delivery_pipeline` | `stage_pipeline` | `CICD` | 8 | 7 | 4-stage CI/CD flow with auto stage banners, `cb_outputs` 5-branch `CICD` fan-out bus + standalone `ADMIN` staging-bucket edge, and `→ Terraform state` off-page pills. |
-| `02` | `gke_developer_platform` | `landscape_matrix` | `RUNTIME` | 7 | 5 | Depth-2 `gke_cicd` inside `proj_acme_cicd`, mixed `CICD` (`atlantis_gcs` bus) + `RUNTIME` ingress/SQL flows, and dashed `psa_tenant`. |
-| `03` | `shared_network_psa` | `hub_spoke` | `RUNTIME` | 4 | 2 | Locked 3-column `hub_spoke` topology centering `VPC Network: cicd` (`10.10.0.0/20`) between GKE workloads and PSA Cloud SQL. |
+| # | View ID | Title | Components | Flows | Dimensions (Retina PNG) |
+| :---: | :--- | :--- | :---: | :---: | :---: |
+| `00` | `view_0_system_index` | System Architecture Overview | 17 | 27 | `6278 × 4445` |
+| `01` | `view_1` | Source Control, Ingress & CI/CD Runtime | 10 | 7 | `4164 × 4082` |
+| `02` | `view_2` | Artifacts, State Storage & Target Projects | 7 | 1 | `3400 × 2650` |
 
-### Rendered Views (`3x` High-DPI PNGs)
+### Rendered Views
 
-#### `00` — System Index Map (`view_0_system_index`)
+#### `00` — System Architecture Overview (`view_0_system_index`)
 
-![Platform CI/CD — View 0 System Index Map](assets/img/platform-cicd/00-view_0_system_index.png)
+![Platform CI/CD — System Architecture Overview](assets/img/platform-cicd/00-view_0_system_index.png)
 
-*Deterministic `View 0` index projected in Go ([`internal/synth/view0.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/view0.go)): places external source `github_acme` in column `0`, maps `cicd_delivery_pipeline` (`stage_pipeline` → col `1`), `gke_developer_platform` (`landscape_matrix` → col `2`), and `shared_network_psa` (`hub_spoke` → col `3`), and terminates at out-of-scope deployment projects `acme_dev` and `acme_prod` in column `4` (`data-cols="5"` compact mode).*
+#### `01` — Source Control, Ingress & CI/CD Runtime (`view_1`)
 
-#### `01` — CI/CD Delivery Pipeline (`cicd_delivery_pipeline`)
+![Platform CI/CD — Source Control, Ingress & CI/CD Runtime](assets/img/platform-cicd/01-view_1.png)
 
-![Platform CI/CD — CI/CD Delivery Pipeline](assets/img/platform-cicd/01-cicd_delivery_pipeline.png)
+#### `02` — Artifacts, State Storage & Target Projects (`view_2`)
 
-*Four-column `stage_pipeline` view with automatic column stage banners (`Stage 1 · Source` through `Stage 4 · Deploy Targets`), `64px` default corridors, 20 folded Cloud Build triggers fanning out over the explicit `cb_outputs` `CICD` bus (5 branches: 3 datastores `acme_artifact_registry`, `acme_private_modules`, `acme_tfstate` + 2 out-of-scope target projects `acme_dev`, `acme_prod`) alongside a standalone slate `ADMIN` edge (`write access`, `#475569`) to `cloudbuild_staging_bucket`, plus `→ Terraform state` off-page references linking into the GKE view.*
-
-#### `02` — GKE Developer Platform & Ingress (`gke_developer_platform`)
-
-![Platform CI/CD — GKE Developer Platform & Ingress](assets/img/platform-cicd/02-gke_developer_platform.png)
-
-*`landscape_matrix` view demonstrating depth-2 `GKE Cluster: cicd` nested inside `Project: acme-cicd`, Global HTTPS Load Balancers folding `GlobalForwardingRule` + K8s `Ingress` + `Service`, mixed blue `RUNTIME` and amber `CICD` (`atlantis_gcs` bus) connectors, bidirectional off-page pills (`← CI/CD state`, `→ PSA topology`), and dashed `Google PSA Backing Zone`.*
-
-#### `03` — Shared Network & PSA Topology (`shared_network_psa`)
-
-![Platform CI/CD — Shared Network & PSA Topology](assets/img/platform-cicd/03-shared_network_psa.png)
-
-*Locked 3-column `hub_spoke` network view centering `VPC Network: cicd` (`REGIONAL`, PGA enabled) between GKE workloads (`atlantis`, `sonarqube`) on the left and PSA-hosted `Cloud SQL (sonarqube)` on the right, showing a multi-column `private IP SQL` route cleanly bypassing the center hub card via a badge-free horizontal waypoint corridor.*
+![Platform CI/CD — Artifacts, State Storage & Target Projects](assets/img/platform-cicd/02-view_2.png)
 
 ---
 
@@ -75,81 +61,250 @@
 
 | Metric | Value |
 | :--- | :--- |
-| **Scanned Scopes** | `projects/nova-ai-prod`, `projects/nova-data-prod`, `projects/nova-retail-prod`, `projects/nova-shared-net` |
-| **Components** | **15** logical components spanning Cloud Run, Global HTTPS LB + Cloud Armor, AlloyDB, Memorystore Redis, Pub/Sub, Dataflow, Cloud Storage, BigQuery, Vertex AI, Cloud NAT, Shared VPC, and external endpoints |
-| **Containers** | **8** containers (`4` GCP `PROJECT` / `SHARED_HUB` containers, `2` `PSA_ZONE` containers for AlloyDB PSA & Redis PSC, `2` `EXTERNAL_ZONE` containers) |
-| **Views** | **4** views (`1` deterministic `View 0` + `3` detail views) |
-| **Governance & Day-2 Features** | **2** `excluded_resources` (default VPC + `_Default` log sink), **1** `rejected_edges` tombstone (`storefront_api -> raw_events_bucket`), **2** `INFERRED` edges with `[1]` footer footnotes, and curated Day-2 `notes` on `storefront_api` |
-| **Manifest Source** | [`examples/retail-cloud-native/architecture.yaml`](https://github.com/arrase/gcp-arch/blob/main/examples/retail-cloud-native/architecture.yaml) |
-| **Delivered Artifacts** | [`architecture.pdf`](https://github.com/arrase/gcp-arch/blob/main/examples/retail-cloud-native/architecture.pdf) · [`architecture.html`](https://github.com/arrase/gcp-arch/blob/main/examples/retail-cloud-native/architecture.html) · [`views/`](https://github.com/arrase/gcp-arch/tree/main/examples/retail-cloud-native/views) |
+| **Scanned Scope** | `folders/510100` (`retail-prod` under `Nova Retail Group`: `nova-shared-net` Shared VPC Host + `nova-retail-prod`, `nova-data-prod`, `nova-ai-prod`) |
+| **Facts Fixture** | [`testdata/examples/retail_cloud_native_v3.facts.json`](https://github.com/arrase/gcp-arch/blob/main/testdata/examples/retail_cloud_native_v3.facts.json) (**37** resources, **45** edges) |
+| **Components / Governance** | **18** logical components (`25/25` primary resources, `conservation=PASS`, `view0=1.00`) · **20** containers · **14** transversal governance items |
+| **Views** | **3** `layered_flow` views (`View 0` + `2` focused detail views) |
+| **Delivered Artifacts** | [`architecture.yaml`](https://github.com/arrase/gcp-arch/blob/main/examples/retail-cloud-native/architecture.yaml) · [`architecture.pdf`](https://github.com/arrase/gcp-arch/blob/main/examples/retail-cloud-native/architecture.pdf) · [`architecture.html`](https://github.com/arrase/gcp-arch/blob/main/examples/retail-cloud-native/architecture.html) |
 
 ### Key Architectural Highlights
 
-- **5-Column Compact Mode (`data-cols="5"`):** Both `view_0_system_index` and `storefront_runtime` span columns `0..4`, engaging compact typography and tighter padding so all five tiers fit cleanly within `1040px`.
-- **Fan-In + Fan-Out Bus Composition:** `shared_vpc_connectivity` pairs an incoming fan-in bus (`vpc_egress_in`: two Cloud Run services → `shared_vpc_hub`) with an outgoing 3-branch fan-out bus (`vpc_hub_out`: `shared_vpc_hub` → `cloud_nat_egress`, `orders_alloydb`, `session_cache`).
-- **Private Service Connectivity (PSA + PSC + Cloud NAT):** Models Direct VPC egress through `Shared VPC: nova-shared-net` (`SHARED_HUB`) to `Orders AlloyDB` (`PSA_ZONE`, `10.60.0.0/24`), `Session Cache` (`redis 7.2 / PSC`, backed by a PSC forwarding rule), and `Cloud NAT Egress`.
-- **Streaming Data & AI Pipeline:** Traces `Order Events Topic` (Pub/Sub) → `Order Stream ETL` (Dataflow Streaming Engine) → `Raw Events Data Lake` (GCS) & `Orders Analytics Warehouse` (BigQuery) → `Vertex AI Recs Endpoint` (`INFERRED` `[1]`) & `Looker BI Dashboards`.
-- **Day-2 Curation & Provenance Footnotes:** Demonstrates preserved `notes` on `storefront_api`, `excluded_resources` suppression of boilerplate GCP defaults, `rejected_edges` enforcement blocking a spurious direct `storefront_api -> raw_events_bucket` edge, and dashed `INFERRED` edges with numbered `[1]` rationales in the sheet footers.
+- **Single-Host Shared VPC Topology:** Renders `VPC: nova-shared` once inside `nova-shared-net` (with Cloud NAT and Serverless VPC Access Connector badges) while tagging service-project workloads across `nova-retail-prod`, `nova-data-prod`, and `nova-ai-prod`.
+- **Resilient Streaming & DLQ Replay:** Traces Pub/Sub `retail-orders-v1` → Dataflow `orders-stream-enrich-v2` → GCS + BigQuery (`retail_dw`, `merchandising_mart`) → Looker BI and Vertex AI (`recs-ranker-v4`, `gemini-4-carbon`), with explicit red DLQ and amber retry-publish flows via Cloud Functions (`orders-dlq-replay-fn`).
+- **PSA Transactional Datastores & External PSP Egress:** Isolates `orders-alloydb` and `retail-session-redis` inside `PSA Private Service Access` (`p9876543210fedcba-tp`) and models mTLS checkout egress to `payment-psp-gateway`.
 
 ### View Summary
 
-| # | View ID | Archetype | Accent | Blocks | Edges | Highlights |
-| :---: | :--- | :--- | :---: | :---: | :---: | :--- |
-| `00` | `view_0_system_index` | `landscape_matrix` | `MIXED` | 6 | 5 | 5-column `View 0` system map linking `web_mobile_clients` through `storefront_runtime`, `data_ai_pipeline`, and `shared_vpc_connectivity` to `bi_looker_dashboards` and `payment_gateway_ext`. |
-| `01` | `data_ai_pipeline` | `stage_pipeline` | `MIXED` | 6 | 5 | 4-stage streaming & AI pipeline (`Pub/Sub → Dataflow → GCS/BQ → Vertex AI/Looker`) with `dataflow_sinks` + `bq_consumers` buses and `INFERRED` footnote `[1]`. |
-| `02` | `shared_vpc_connectivity` | `hub_spoke` | `RUNTIME` | 6 | 5 | 3-column `hub_spoke` Shared VPC hub combining left fan-in bus (`vpc_egress_in`) and right 3-branch fan-out bus (`vpc_hub_out`) across PSA, PSC, and Cloud NAT. |
-| `03` | `storefront_runtime` | `landscape_matrix` | `RUNTIME` | 8 | 8 | 5-column compact mode (`data-cols="5"`) runtime flow with `lb_backends` + `checkout_out` buses, multi-column dashed `INFERRED` edge `[1]` to external PSP, and off-page refs. |
+| # | View ID | Title | Components | Flows | Dimensions (Retina PNG) |
+| :---: | :--- | :--- | :---: | :---: | :---: |
+| `00` | `view_0_system_index` | System Architecture Overview | 18 | 20 | `7797 × 3555` |
+| `01` | `view_1` | Storefront Ingress & Core Runtime | 4 | 3 | `3970 × 2428` |
+| `02` | `view_2` | Event Streaming, Datastores & AI | 14 | 10 | `6954 × 3642` |
 
-### Rendered Views (`3x` High-DPI PNGs)
+### Rendered Views
 
-#### `00` — System Index Map (`view_0_system_index`)
+#### `00` — System Architecture Overview (`view_0_system_index`)
 
-![Retail Cloud-Native — View 0 System Index Map](assets/img/retail-cloud-native/00-view_0_system_index.png)
+![Retail Cloud-Native — System Architecture Overview](assets/img/retail-cloud-native/00-view_0_system_index.png)
 
-*Multi-project `View 0` index unifying 15 components across 4 GCP projects (`nova-retail-prod`, `nova-data-prod`, `nova-ai-prod`, `nova-shared-net`) and 2 external zones, showing multi-column cross-view connectors routed through badge-free horizontal waypoint corridors.*
+#### `01` — Storefront Ingress & Core Runtime (`view_1`)
 
-#### `01` — Streaming Analytics & Vertex AI Recommendations (`data_ai_pipeline`)
+![Retail Cloud-Native — Storefront Ingress & Core Runtime](assets/img/retail-cloud-native/01-view_1.png)
 
-![Retail Cloud-Native — Data & AI Pipeline](assets/img/retail-cloud-native/01-data_ai_pipeline.png)
+#### `02` — Event Streaming, Datastores & AI (`view_2`)
 
-*Four-stage `stage_pipeline` flow spanning 4 distinct project/external containers, featuring two chained fan-out buses (`dataflow_sinks` and `bq_consumers`), a `← Order events` off-page reference back to the storefront view, and a dashed `INFERRED` edge (`trains features [1]`) with its rationale rendered in the footer.*
-
-#### `02` — Shared VPC & Private Service Connectivity (`shared_vpc_connectivity`)
-
-![Retail Cloud-Native — Shared VPC & Private Service Connectivity](assets/img/retail-cloud-native/02-shared_vpc_connectivity.png)
-
-*`hub_spoke` topology demonstrating simultaneous fan-in (`vpc_egress_in`) and 3-branch fan-out (`vpc_hub_out`) buses meeting on opposite sides of `Shared VPC Hub`, cleanly distinguishing the host network project (`SHARED_HUB`), AlloyDB `PSA_ZONE`, and Memorystore Redis PSC zone.*
-
-#### `03` — Storefront & Checkout Runtime (`storefront_runtime`)
-
-![Retail Cloud-Native — Storefront & Checkout Runtime](assets/img/retail-cloud-native/03-storefront_runtime.png)
-
-*Five-column (`data-cols="5"`) compact `landscape_matrix` illustrating Global HTTPS LB (with Cloud Armor WAF) fanning out to `Storefront API` and `Checkout Service`, perpendicular bridge halos where catalog/session/order connectors cross cleanly, off-page links (`→ Order stream`, `→ PSA network`), and a dashed multi-column `INFERRED` payment authorization route (`[1]`) to `External Payment PSP`.*
+![Retail Cloud-Native — Event Streaming, Datastores & AI](assets/img/retail-cloud-native/02-view_2.png)
 
 ---
 
-## Validate & Regenerate Both Bundles Offline
+## Bundle 3 — Global FinTech Payments, Hybrid NCC Transit & Multi-Engine Ledger
 
-Both bundles can be validated ([`cmd/gcp-arch/validate.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go)) and regenerated ([`cmd/gcp-arch/render.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/render.go), [`internal/render/`](https://github.com/arrase/gcp-arch/tree/main/internal/render)) completely offline from a clean repository checkout (zero GCP credentials and zero external network calls). Local Chrome or Chromium is required for `pdf` and `png` export; `--format html` alone works even without Chrome when `--chrome-path` is unset.
+**Directory:** [`examples/fintech-global-payments/`](https://github.com/arrase/gcp-arch/tree/main/examples/fintech-global-payments)
+
+### Scope & Inventory Summary
+
+| Metric | Value |
+| :--- | :--- |
+| **Scanned Scope** | `organizations/910100001` (`Meridian FinTech Corp`: `network-backbone` & `payments-core` folders across `meridian-ncc-hub`, `meridian-ops-sec`, `meridian-edge-prod`, `meridian-fraud-prod`, `meridian-ledger-prod`) |
+| **Facts Fixture** | [`testdata/examples/fintech_global_payments_v3.facts.json`](https://github.com/arrase/gcp-arch/blob/main/testdata/examples/fintech_global_payments_v3.facts.json) (**63** resources, **60** edges) |
+| **Components / Governance** | **31** logical components (`49/49` primary resources, `conservation=PASS`, `view0=1.00`) · **39** containers · **17** transversal governance items |
+| **Views** | **4** `layered_flow` views (`View 0` + `3` focused detail views) |
+| **Delivered Artifacts** | [`architecture.yaml`](https://github.com/arrase/gcp-arch/blob/main/examples/fintech-global-payments/architecture.yaml) · [`architecture.pdf`](https://github.com/arrase/gcp-arch/blob/main/examples/fintech-global-payments/architecture.pdf) · [`architecture.html`](https://github.com/arrase/gcp-arch/blob/main/examples/fintech-global-payments/architecture.html) |
+
+### Key Architectural Highlights
+
+- **Hybrid Connectivity & NCC Hub-and-Spoke:** Terminates 10G Dedicated Interconnect (`dc-frankfurt-interconnect`) and IPsec BGP HA VPN (`partner-ha-vpn`) from `core-banking-dc` inside a `HYBRID ZONE` into `Network Connectivity Center` (`enterprise-ncc-hub`), interconnecting 3 spoke VPCs alongside private Cloud DNS (`meridian-corp-dns`).
+- **Private Service Connect (PSC) Isolation:** Bridges `meridian-edge-prod` (`ledger-psc-ep`) across VPC boundaries to `meridian-ledger-prod` (`ledger-psc-attachment` → `ledger-internal-ilb` → private GKE cluster `gke-payments-core`).
+- **Five Purpose-Built Data & Security Engines:** Combines Cloud Spanner (`global-payments-spanner`), PSA AlloyDB (`cardholder-vault-alloydb`), Cloud Bigtable (`fraud-telemetry-bigtable`), Memorystore Cluster (`idempotency-redis-cluster`), Filestore (`clearing-files-filestore`), Compute Engine HSM signing MIG (`hsm-signing-mig`), Cloud Run EOD Job, and Cloud KMS CMEK across all sensitive stores.
+
+### View Summary
+
+| # | View ID | Title | Components | Flows | Dimensions (Retina PNG) |
+| :---: | :--- | :--- | :---: | :---: | :---: |
+| `00` | `view_0_system_index` | System Architecture Overview | 31 | 36 | `7105 × 3894` |
+| `01` | `view_1` | Edge Ingress, Hybrid Transit & Scheduled Reconcilers | 9 | 6 | `5576 × 2956` |
+| `02` | `view_2` | Core Ledger Services, PSC Fabrics & Event Pipelines | 14 | 14 | `6192 × 4507` |
+| `03` | `view_3` | Ledger Persistence, Vaults, Registries & Acquirer Targets | 8 | 0 *(off-page linked)* | `6554 × 3122` |
+
+### Rendered Views
+
+#### `00` — System Architecture Overview (`view_0_system_index`)
+
+![FinTech Global Payments — System Architecture Overview](assets/img/fintech-global-payments/00-view_0_system_index.png)
+
+#### `01` — Edge Ingress, Hybrid Transit & Scheduled Reconcilers (`view_1`)
+
+![FinTech Global Payments — Edge Ingress, Hybrid Transit & Scheduled Reconcilers](assets/img/fintech-global-payments/01-view_1.png)
+
+#### `02` — Core Ledger Services, PSC Fabrics & Event Pipelines (`view_2`)
+
+![FinTech Global Payments — Core Ledger Services, PSC Fabrics & Event Pipelines](assets/img/fintech-global-payments/02-view_2.png)
+
+#### `03` — Ledger Persistence, Vaults, Registries & Acquirer Targets (`view_3`)
+
+![FinTech Global Payments — Ledger Persistence, Vaults, Registries & Acquirer Targets](assets/img/fintech-global-payments/03-view_3.png)
+
+---
+
+## Bundle 4 — Enterprise CDC Lakehouse, Analytics Mesh & MLOps Platform
+
+**Directory:** [`examples/enterprise-lakehouse-mlops/`](https://github.com/arrase/gcp-arch/tree/main/examples/enterprise-lakehouse-mlops)
+
+### Scope & Inventory Summary
+
+| Metric | Value |
+| :--- | :--- |
+| **Scanned Scope** | `organizations/920200001` (`Stratos Analytics Corp`: `data-ingestion-lakehouse` & `mlops-bi-serving` folders across `stratos-ingest-prod`, `stratos-lakehouse-prod`, `stratos-mlops-prod`) |
+| **Facts Fixture** | [`testdata/examples/enterprise_lakehouse_mlops_v3.facts.json`](https://github.com/arrase/gcp-arch/blob/main/testdata/examples/enterprise_lakehouse_mlops_v3.facts.json) (**52** resources, **61** edges) |
+| **Components / Governance** | **30** logical components (`39/39` primary resources, `conservation=PASS`, `view0=1.00`) · **26** containers · **15** transversal governance items |
+| **Views** | **4** `layered_flow` views (`View 0` + `3` focused detail views) |
+| **Delivered Artifacts** | [`architecture.yaml`](https://github.com/arrase/gcp-arch/blob/main/examples/enterprise-lakehouse-mlops/architecture.yaml) · [`architecture.pdf`](https://github.com/arrase/gcp-arch/blob/main/examples/enterprise-lakehouse-mlops/architecture.pdf) · [`architecture.html`](https://github.com/arrase/gcp-arch/blob/main/examples/enterprise-lakehouse-mlops/architecture.html) |
+
+### Key Architectural Highlights
+
+- **Complete Modern GCP Data Estate:** Showcases Managed Service for Apache Kafka (`telemetry-managed-kafka`), Cloud Data Fusion (`erp-datafusion-etl`), Datastream CDC from PSA AlloyDB & Cloud SQL, Pub/Sub CDC bus, Cloud Composer (`enterprise-airflow`), Streaming Dataflow (`cdc-lakehouse-dataflow`), Serverless Dataproc Spark + Dataproc Metastore, Dataform SQLX (`warehouse-dataform-repo`), and Dataplex governance (`enterprise-dataplex-lake`).
+- **Federated BigQuery Warehouse to BI & Online ML:** Links BigQuery `raw_cdc` → `curated_enterprise_dw` (with AlloyDB federated connection) → `ml_feature_mart` (BigQuery Data Transfer), feeding both Looker (`executive-looker-bi`) and Vertex AI (`realtime-customer-fos` Feature Online Store, `churn-predictor-v4` Endpoint, and `gemini-4-carbon`) behind `ml-serving-https-lb` and Cloud Run `ml-inference-gateway`.
+- **Two-Folder Peered VPC Separation:** Separates ingestion & lakehouse (`ingest-vpc` ↔ `lakehouse-vpc`) on the left from MLOps & BI serving (`mlops-vpc`) on the right for balanced landscape legibility.
+
+### View Summary
+
+| # | View ID | Title | Components | Flows | Dimensions (Retina PNG) |
+| :---: | :--- | :--- | :---: | :---: | :---: |
+| `00` | `view_0_system_index` | System Architecture Overview | 30 | 35 | `6425 × 4329` |
+| `01` | `view_1` | Edge Ingress & ML Serving Gateway | 5 | 2 | `3974 × 2294` |
+| `02` | `view_2` | Streaming Ingestion & Lakehouse Pipelines | 12 | 5 | `3988 × 4892` |
+| `03` | `view_3` | OLTP Databases, Lakehouse Storage & Vertex AI | 13 | 6 | `5822 × 4386` |
+
+### Rendered Views
+
+#### `00` — System Architecture Overview (`view_0_system_index`)
+
+![Enterprise Lakehouse & MLOps — System Architecture Overview](assets/img/enterprise-lakehouse-mlops/00-view_0_system_index.png)
+
+#### `01` — Edge Ingress & ML Serving Gateway (`view_1`)
+
+![Enterprise Lakehouse & MLOps — Edge Ingress & ML Serving Gateway](assets/img/enterprise-lakehouse-mlops/01-view_1.png)
+
+#### `02` — Streaming Ingestion & Lakehouse Pipelines (`view_2`)
+
+![Enterprise Lakehouse & MLOps — Streaming Ingestion & Lakehouse Pipelines](assets/img/enterprise-lakehouse-mlops/02-view_2.png)
+
+#### `03` — OLTP Databases, Lakehouse Storage & Vertex AI (`view_3`)
+
+![Enterprise Lakehouse & MLOps — OLTP Databases, Lakehouse Storage & Vertex AI](assets/img/enterprise-lakehouse-mlops/03-view_3.png)
+
+---
+
+## Bundle 5 — Agentic AI, Enterprise RAG & Document OCR Platform
+
+**Directory:** [`examples/agentic-ai-document-platform/`](https://github.com/arrase/gcp-arch/tree/main/examples/agentic-ai-document-platform)
+
+### Scope & Inventory Summary
+
+| Metric | Value |
+| :--- | :--- |
+| **Scanned Scope** | `folders/540300` (`genai-prod` under `Lumina AI Systems`: `lumina-edge-net` Shared VPC Host + `lumina-agents-prod`, `lumina-knowledge-prod`) |
+| **Facts Fixture** | [`testdata/examples/agentic_ai_document_platform_v3.facts.json`](https://github.com/arrase/gcp-arch/blob/main/testdata/examples/agentic_ai_document_platform_v3.facts.json) (**45** resources, **51** edges) |
+| **Components / Governance** | **25** logical components (`32/32` primary resources, `conservation=PASS`, `view0=1.00`) · **16** containers · **15** transversal governance items |
+| **Views** | **3** `layered_flow` views (`View 0` + `2` focused detail views) |
+| **Delivered Artifacts** | [`architecture.yaml`](https://github.com/arrase/gcp-arch/blob/main/examples/agentic-ai-document-platform/architecture.yaml) · [`architecture.pdf`](https://github.com/arrase/gcp-arch/blob/main/examples/agentic-ai-document-platform/architecture.pdf) · [`architecture.html`](https://github.com/arrase/gcp-arch/blob/main/examples/agentic-ai-document-platform/architecture.html) |
+
+### Key Architectural Highlights
+
+- **Full Vertex AI Agentic Stack:** Combines Global HTTPS Load Balancing, API Gateway, Dialogflow CX (`support-dialogflow-cx`), Cloud Run orchestrator (`agent-orchestrator-api`) and private MCP tool gateway (`mcp-tool-gateway`), Vertex AI Reasoning Engine (`enterprise-rag-agent`), Gemini 4 (`gemini-4-carbon`), Vertex AI Search (`enterprise-search-engine` + `enterprise-docs-datastore`), Vertex Vector Search (`embeddings-vector-idx`), Firestore session memory, Memorystore semantic cache, and BigQuery eval telemetry.
+- **Event-Driven OCR & Embedding Pipeline:** Connects raw GCS documents via Eventarc (`doc-upload-eventarc`) and nightly Cloud Scheduler into Cloud Workflows (`doc-ingestion-workflow`) → Document AI OCR (`contracts-docai-ocr`) → Cloud Tasks retry queue (`doc-ocr-retry-tasks`) → Cloud Functions chunker/embedder (`doc-chunk-embed-fn`) → Pub/Sub (`doc-embed-events`) + dead-letter replay (`doc-embed-dlq` → `doc-dlq-replay-fn`).
+
+### View Summary
+
+| # | View ID | Title | Components | Flows | Dimensions (Retina PNG) |
+| :---: | :--- | :--- | :---: | :---: | :---: |
+| `00` | `view_0_system_index` | System Architecture Overview | 25 | 29 | `6780 × 4117` |
+| `01` | `view_1` | Edge Ingress & Ingestion Triggers | 7 | 3 | `4582 × 2944` |
+| `02` | `view_2` | Agentic AI Runtime, OCR Pipeline & Datastores | 18 | 19 | `6112 × 3704` |
+
+### Rendered Views
+
+#### `00` — System Architecture Overview (`view_0_system_index`)
+
+![Agentic AI & Document Platform — System Architecture Overview](assets/img/agentic-ai-document-platform/00-view_0_system_index.png)
+
+#### `01` — Edge Ingress & Ingestion Triggers (`view_1`)
+
+![Agentic AI & Document Platform — Edge Ingress & Ingestion Triggers](assets/img/agentic-ai-document-platform/01-view_1.png)
+
+#### `02` — Agentic AI Runtime, OCR Pipeline & Datastores (`view_2`)
+
+![Agentic AI & Document Platform — Agentic AI Runtime, OCR Pipeline & Datastores](assets/img/agentic-ai-document-platform/02-view_2.png)
+
+---
+
+## Bundle 6 — Multi-Region Zero-Trust Mesh, Progressive Delivery & Risk AI
+
+**Directory:** [`examples/enterprise-zero-trust-mesh/`](https://github.com/arrase/gcp-arch/tree/main/examples/enterprise-zero-trust-mesh)
+
+### Scope & Inventory Summary
+
+| Metric | Value |
+| :--- | :--- |
+| **Scanned Scope** | `organizations/940400001` (`Aegis Cloud Enterprise`: `platform-shared` & `prod-domains` folders across `aegis-delivery-sec`, `aegis-net-host`, `aegis-commerce-prod`, `aegis-risk-prod` in `europe-west1` + `europe-west4`) |
+| **Facts Fixture** | [`testdata/examples/enterprise_zero_trust_mesh_v3.facts.json`](https://github.com/arrase/gcp-arch/blob/main/testdata/examples/enterprise_zero_trust_mesh_v3.facts.json) (**63** resources, **83** edges) |
+| **Components / Governance** | **26** logical components (`44/44` primary resources, `conservation=PASS`, `view0=1.00`) · **26** containers · **23** transversal governance items |
+| **Views** | **3** `layered_flow` views (`View 0` + `2` focused detail views) |
+| **Delivered Artifacts** | [`architecture.yaml`](https://github.com/arrase/gcp-arch/blob/main/examples/enterprise-zero-trust-mesh/architecture.yaml) · [`architecture.pdf`](https://github.com/arrase/gcp-arch/blob/main/examples/enterprise-zero-trust-mesh/architecture.pdf) · [`architecture.html`](https://github.com/arrase/gcp-arch/blob/main/examples/enterprise-zero-trust-mesh/architecture.html) |
+
+### Key Architectural Highlights
+
+- **Dual-Region Shared VPC Segmentation:** Separates `Region: europe-west1` (Private GKE commerce microservices, CronJob PCI auditor, Cloud Functions tax enrichment, Memorystore Cluster, PSA Cloud SQL) from `Region: europe-west4` (Internal Regional ILB, Cloud Batch Monte Carlo simulation, Cloud Run risk policy engine & alert dispatcher, PSA AlloyDB) under a single zero-trust Shared VPC (`aegis-zero-trust-vpc`) with private Cloud DNS and per-region Cloud NAT.
+- **Attested Supply Chain & Multi-Runtime Footprint:** Demonstrates Cloud Build cohorts (`CI Build Triggers (4x)`) → Artifact Registry (`aegis-signed-containers`) + GCS attestations → Cloud Deploy (`aegis-progressive-deploy`) deploying to both GKE and Cloud Run, alongside App Engine (`aegis-admin-portal`), Cloud Batch, Pub/Sub domain bus + DLQ, BigQuery compliance datasets, and Gemini 4 risk reasoning.
+- **Rich Security & Compliance Control Plane:** Surfaces 23 transversal resources (8 IAM Service Accounts, 4 Cloud KMS keys, 4 Secret Manager secrets, 2 Cloud Routers/NATs, Serverless VPC Access, 7-year compliance Log Bucket, org SIEM Log Sink, and SLO/DLQ Monitoring Alert Policies).
+
+### View Summary
+
+| # | View ID | Title | Components | Flows | Dimensions (Retina PNG) |
+| :---: | :--- | :--- | :---: | :---: | :---: |
+| `00` | `view_0_system_index` | System Architecture Overview | 26 | 32 | `7780 × 3565` |
+| `01` | `view_1` | Ingress, CI Triggers & Scheduled Batch | 8 | 4 | `6448 × 3104` |
+| `02` | `view_2` | Core Microservices, Risk AI & Data Estate | 18 | 20 | `7372 × 3780` |
+
+### Rendered Views
+
+#### `00` — System Architecture Overview (`view_0_system_index`)
+
+![Enterprise Zero-Trust Mesh — System Architecture Overview](assets/img/enterprise-zero-trust-mesh/00-view_0_system_index.png)
+
+#### `01` — Ingress, CI Triggers & Scheduled Batch (`view_1`)
+
+![Enterprise Zero-Trust Mesh — Ingress, CI Triggers & Scheduled Batch](assets/img/enterprise-zero-trust-mesh/01-view_1.png)
+
+#### `02` — Core Microservices, Risk AI & Data Estate (`view_2`)
+
+![Enterprise Zero-Trust Mesh — Core Microservices, Risk AI & Data Estate](assets/img/enterprise-zero-trust-mesh/02-view_2.png)
+
+---
+
+## Validate & Regenerate All 6 Bundles Offline
+
+All 6 bundles can be validated ([`cmd/gcp-arch/validate.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go)) and regenerated ([`cmd/gcp-arch/render.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/render.go), [`internal/render/`](https://github.com/arrase/gcp-arch/tree/main/internal/render)) completely offline from a clean repository checkout (zero GCP credentials and zero external network calls). Local Chrome or Chromium is required for `pdf` and `png` export (pass `--geometry-report` to also emit `geometry_report.json`).
 
 ```bash
 # 1. Build the static gcp-arch binary
 CGO_ENABLED=0 go build -o ./bin/gcp-arch ./cmd/gcp-arch
 
-# 2. Validate & regenerate Bundle 1 (platform-cicd)
-#    Includes --facts provenance check against the paired synthetic v3 facts fixture
-./bin/gcp-arch validate examples/platform-cicd/architecture.yaml \
-  --facts testdata/acme_cicd_v3.facts.json
-./bin/gcp-arch render examples/platform-cicd/architecture.yaml \
-  --format pdf,png,html \
-  -o examples/platform-cicd/
-
-# 3. Validate & regenerate Bundle 2 (retail-cloud-native)
-./bin/gcp-arch validate examples/retail-cloud-native/architecture.yaml
-./bin/gcp-arch render examples/retail-cloud-native/architecture.yaml \
-  --format pdf,png,html \
-  -o examples/retail-cloud-native/
+# 2. Validate (including 100% --facts conservation) & render all 6 reference bundles
+for pair in \
+  "platform-cicd:testdata/acme_cicd_v3.facts.json" \
+  "retail-cloud-native:testdata/examples/retail_cloud_native_v3.facts.json" \
+  "fintech-global-payments:testdata/examples/fintech_global_payments_v3.facts.json" \
+  "enterprise-lakehouse-mlops:testdata/examples/enterprise_lakehouse_mlops_v3.facts.json" \
+  "agentic-ai-document-platform:testdata/examples/agentic_ai_document_platform_v3.facts.json" \
+  "enterprise-zero-trust-mesh:testdata/examples/enterprise_zero_trust_mesh_v3.facts.json"
+do
+  slug="${pair%%:*}"
+  facts="${pair#*:}"
+  ./bin/gcp-arch validate "examples/$slug/architecture.yaml" --facts "$facts"
+  ./bin/gcp-arch render "examples/$slug/architecture.yaml" --facts "$facts" --format pdf,png,html -o "examples/$slug/"
+done
 ```
 
-!!! tip "Inspecting JSON Validation Output"
-    Append `--json` to either `validate` command ([`cmd/gcp-arch/validate.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L71-L76)) to emit a machine-readable `ValidationReport` suitable for Git pull-request checks: Bundle 1 (`platform-cicd`, `0` exclusions) emits `{"valid": true}`, while Bundle 2 (`retail-cloud-native`, `2` `excluded_resources`) emits `{"valid": true, "excluded_count": 2}`. See [Manifest Schema & Validation](manifest_schema.md) and [Stage 3 — Offline Rendering & Routing](rendering.md) for full details.
+!!! tip "Automated Geometry & Streaming Pixel Quality Gate"
+    Run `go test -v -run TestExamplesPNGStreamingRegression ./e2e` to execute [`TestExamplesPNGStreamingRegression`](https://github.com/arrase/gcp-arch/blob/main/e2e/geometry_test.go#L501-L530) across all 6 bundles, verifying dimensions, aspect ratio bounds, contrast/chroma diversity, and 1px border-clipping guards on all 20 PNGs via streaming scanline decoding (`< 1 MB` Go RAM). For live Vertex AI + Chrome verification across the synthetic catalog, run `GCP_ARCH_E2E=1 GCP_ARCH_VERTEX_PROJECT=my-vertex-project go test -v ./e2e`.
