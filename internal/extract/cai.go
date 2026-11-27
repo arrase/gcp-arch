@@ -32,8 +32,8 @@ type ExtractOptions struct {
 // iamPolicyAssetTypes restricts CAI IAM_POLICY listing to organizational hierarchy and
 // architectural resource types relevant for workload identity and resource-level edge attribution.
 var iamPolicyAssetTypes = []string{
-	"cloudresourcemanager.googleapis.com/Organization",
-	"cloudresourcemanager.googleapis.com/Folder",
+	assetTypeOrganization,
+	assetTypeFolder,
 	assetTypeProject,
 	assetTypeServiceAccount,
 	assetTypeSubnetwork,
@@ -557,8 +557,7 @@ func (st *extractState) ingestIAMPolicyAsset(a *assetpb.Asset) {
 	}
 	assetType := a.GetAssetType()
 	isSubnetwork := assetType == assetTypeSubnetwork
-	isOrgOrFolder := assetType == "cloudresourcemanager.googleapis.com/Organization" ||
-		assetType == "cloudresourcemanager.googleapis.com/Folder"
+	isOrgOrFolder := assetType == assetTypeOrganization || assetType == assetTypeFolder
 	resURI := CanonicalizeAIP122(a.GetName(), st.projIdx)
 	projID := extractProjectID(resURI, a.GetAncestors(), st.projIdx)
 	for _, b := range pol.GetBindings() {
@@ -667,9 +666,9 @@ func (st *extractState) ingestAsset(asset *assetpb.Asset) {
 
 func (st *extractState) ingestHierarchyAsset(assetType, rawName string, res *assetpb.Resource, data *structpb.Struct, ancestors []string) bool {
 	switch assetType {
-	case "cloudresourcemanager.googleapis.com/Organization":
+	case assetTypeOrganization:
 		st.ingestOrganization(rawName, data)
-	case "cloudresourcemanager.googleapis.com/Folder":
+	case assetTypeFolder:
 		st.ingestFolder(rawName, res, data, ancestors)
 	case assetTypeProject:
 		st.ingestProject(rawName, data, ancestors)

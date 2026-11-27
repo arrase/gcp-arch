@@ -60,6 +60,13 @@ func (v *svgValidator) handleStart(elem xml.StartElement) error {
 	return nil
 }
 
+func (v *svgValidator) handleEnd(elem xml.EndElement) {
+	if strings.EqualFold(elem.Name.Local, "style") && v.inStyle > 0 {
+		v.inStyle--
+	}
+	v.depth--
+}
+
 func (v *svgValidator) handleCharData(data xml.CharData) error {
 	if v.depth == 0 {
 		if strings.TrimSpace(string(data)) != "" {
@@ -98,39 +105,42 @@ func parseAndValidateSVG(svg string, comp *symbolCompiler) error {
 		if err != nil {
 			return fmt.Errorf("inline SVG is not well-formed XML: %w", err)
 		}
-
-		switch t := tok.(type) {
-		case xml.Directive:
-			return fmt.Errorf("inline SVG must not contain XML directives")
-		case xml.ProcInst:
-			return fmt.Errorf("inline SVG must not contain XML processing instructions")
-		case xml.StartElement:
-			if err := v.handleStart(t); err != nil {
-				return err
-			}
-			if comp != nil {
-				comp.handleStart(t)
-			}
-		case xml.EndElement:
-			if strings.EqualFold(t.Name.Local, "style") && v.inStyle > 0 {
-				v.inStyle--
-			}
-			v.depth--
-			if comp != nil {
-				comp.handleEnd(t)
-			}
-		case xml.CharData:
-			if err := v.handleCharData(t); err != nil {
-				return err
-			}
-			if comp != nil {
-				comp.handleCharData(t)
-			}
+		if err := processSVGToken(tok, &v, comp); err != nil {
+			return err
 		}
 	}
 
 	if !v.rootSeen || v.depth != 0 {
 		return fmt.Errorf("inline SVG must contain a complete <svg> root element")
+	}
+	return nil
+}
+
+func processSVGToken(tok xml.Token, v *svgValidator, comp *symbolCompiler) error {
+	switch t := tok.(type) {
+	case xml.Directive:
+		return fmt.Errorf("inline SVG must not contain XML directives")
+	case xml.ProcInst:
+		return fmt.Errorf("inline SVG must not contain XML processing instructions")
+	case xml.StartElement:
+		if err := v.handleStart(t); err != nil {
+			return err
+		}
+		if comp != nil {
+			comp.handleStart(t)
+		}
+	case xml.EndElement:
+		v.handleEnd(t)
+		if comp != nil {
+			comp.handleEnd(t)
+		}
+	case xml.CharData:
+		if err := v.handleCharData(t); err != nil {
+			return err
+		}
+		if comp != nil {
+			comp.handleCharData(t)
+		}
 	}
 	return nil
 }

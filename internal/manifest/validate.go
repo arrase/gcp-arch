@@ -238,29 +238,25 @@ func componentInsideBackedURIs(c Component, containerURIs map[string]bool, paren
 
 func forEachAccountedURI(m *Manifest, fn func(uri, owner string)) {
 	for _, c := range m.Components {
-		for _, br := range c.BackedBy {
-			if br.URI != "" {
-				fn(br.URI, "component "+c.ID)
-			}
-		}
+		forEachBackedURI(c.BackedBy, "component "+c.ID, fn)
 	}
 	for _, ct := range m.Containers {
-		for _, br := range ct.BackedBy {
-			if br.URI != "" {
-				fn(br.URI, "container "+ct.ID)
-			}
-		}
+		forEachBackedURI(ct.BackedBy, "container "+ct.ID, fn)
 	}
 	for _, ti := range m.TransversalItems {
-		for _, br := range ti.BackedBy {
-			if br.URI != "" {
-				fn(br.URI, "transversal "+ti.ID)
-			}
-		}
+		forEachBackedURI(ti.BackedBy, "transversal "+ti.ID, fn)
 	}
 	for _, ex := range m.ExcludedResources {
 		if ex.URI != "" {
 			fn(ex.URI, "excluded_resources")
+		}
+	}
+}
+
+func forEachBackedURI(backed []BackedResource, owner string, fn func(uri, owner string)) {
+	for _, br := range backed {
+		if br.URI != "" {
+			fn(br.URI, owner)
 		}
 	}
 }

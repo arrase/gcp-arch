@@ -1106,8 +1106,8 @@ func (st *extractState) resolveIAMBindings() {
 	}
 
 	for _, b := range st.iamBindings {
-		isAncestor := b.assetType == "cloudresourcemanager.googleapis.com/Organization" ||
-			b.assetType == "cloudresourcemanager.googleapis.com/Folder" ||
+		isAncestor := b.assetType == assetTypeOrganization ||
+			b.assetType == assetTypeFolder ||
 			b.assetType == assetTypeProject
 		for _, email := range b.saEmails {
 			st.resolveSingleIAMBindingMember(b, email, isAncestor, byProjType)

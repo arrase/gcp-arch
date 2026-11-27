@@ -571,34 +571,9 @@ func (c *bgSampleCollector) add(px color.NRGBA) {
 }
 
 func (c *bgSampleCollector) sampleRow(y int, cur []byte, hdr *pngHeader) {
-	// Outer ring.
-	if y == 0 || y == c.h-1 {
-		for x := 0; x < c.w; x += c.stepX0 {
-			c.add(decodeRowPixel(cur, x, hdr))
-		}
-	}
-	if y%c.stepY0 == 0 {
-		c.add(decodeRowPixel(cur, 0, hdr))
-		c.add(decodeRowPixel(cur, c.w-1, hdr))
-	}
-	if y == c.h-1 {
-		c.add(decodeRowPixel(cur, c.w-1, hdr))
-	}
-
-	// 2px inset ring.
+	c.sampleRing(y, cur, hdr, 0, c.stepX0, c.stepY0)
 	if c.w > 4 && c.h > 4 {
-		if y == 2 || y == c.h-3 {
-			for x := 2; x < c.w-2; x += c.stepX2 {
-				c.add(decodeRowPixel(cur, x, hdr))
-			}
-		}
-		if y >= 2 && y < c.h-2 && (y-2)%c.stepY2 == 0 {
-			c.add(decodeRowPixel(cur, 2, hdr))
-			c.add(decodeRowPixel(cur, c.w-3, hdr))
-		}
-		if y == c.h-3 {
-			c.add(decodeRowPixel(cur, c.w-3, hdr))
-		}
+		c.sampleRing(y, cur, hdr, 2, c.stepX2, c.stepY2)
 	}
 
 	// 16x16 interior grid.
@@ -608,6 +583,23 @@ func (c *bgSampleCollector) sampleRow(y int, cur []byte, hdr *pngHeader) {
 				c.add(decodeRowPixel(cur, gx, hdr))
 			}
 		}
+	}
+}
+
+func (c *bgSampleCollector) sampleRing(y int, cur []byte, hdr *pngHeader, inset, stepX, stepY int) {
+	maxX := c.w - 1 - inset
+	maxY := c.h - 1 - inset
+	if y == inset || y == maxY {
+		for x := inset; x <= maxX; x += stepX {
+			c.add(decodeRowPixel(cur, x, hdr))
+		}
+	}
+	if y >= inset && y <= maxY && (y-inset)%stepY == 0 {
+		c.add(decodeRowPixel(cur, inset, hdr))
+		c.add(decodeRowPixel(cur, maxX, hdr))
+	}
+	if y == maxY {
+		c.add(decodeRowPixel(cur, maxX, hdr))
 	}
 }
 
@@ -728,66 +720,67 @@ func (a *pngRowAnalyzer) consumeRow(y int, cur []byte, hdr *pngHeader) {
 }
 
 func (a *pngRowAnalyzer) scanRowContent(cur []byte, hdr *pngHeader) {
-	bg := a.bg
-	step := a.stride
-	var sampled, nonBG, highContrast, chromatic, distinct int
-	seen := &a.seen
-
 	switch {
 	case hdr.colorType == 6:
-		byteStep := step * 4
-		for i := 0; i < len(cur); i += byteStep {
-			sampled++
-			r, g, b, al := cur[i], cur[i+1], cur[i+2], cur[i+3]
-			if r == bg.R && g == bg.G && b == bg.B && al == bg.A {
-				continue
-			}
-			accumulateRowPixel(color.NRGBA{R: r, G: g, B: b, A: al}, bg, seen, &nonBG, &highContrast, &chromatic, &distinct)
-		}
+		a.scanRowContentRGBA(cur)
 	case hdr.colorType == 2 && !hdr.hasTRNS:
-		byteStep := step * 3
-		for i := 0; i < len(cur); i += byteStep {
-			sampled++
-			r, g, b := cur[i], cur[i+1], cur[i+2]
-			if bg.A == 255 && r == bg.R && g == bg.G && b == bg.B {
-				continue
-			}
-			accumulateRowPixel(color.NRGBA{R: r, G: g, B: b, A: 255}, bg, seen, &nonBG, &highContrast, &chromatic, &distinct)
-		}
+		a.scanRowContentRGB(cur)
 	default:
-		for x := 0; x < a.w; x += step {
-			sampled++
-			c := decodeRowPixel(cur, x, hdr)
-			if c == bg {
-				continue
-			}
-			accumulateRowPixel(c, bg, seen, &nonBG, &highContrast, &chromatic, &distinct)
-		}
+		a.scanRowContentGeneric(cur, hdr)
 	}
-
-	a.sampled += sampled
-	a.nonBG += nonBG
-	a.highContrast += highContrast
-	a.chromatic += chromatic
-	a.distinct += distinct
 }
 
-func accumulateRowPixel(c, bg color.NRGBA, seen *[4096]bool, nonBG, highContrast, chromatic, distinct *int) {
-	diff := pngColorDiff(c, bg)
+func (a *pngRowAnalyzer) scanRowContentRGBA(cur []byte) {
+	bg := a.bg
+	byteStep := a.stride * 4
+	for i := 0; i < len(cur); i += byteStep {
+		a.sampled++
+		c := color.NRGBA{R: cur[i], G: cur[i+1], B: cur[i+2], A: cur[i+3]}
+		if c != bg {
+			a.accumulatePixel(c)
+		}
+	}
+}
+
+func (a *pngRowAnalyzer) scanRowContentRGB(cur []byte) {
+	bg := a.bg
+	byteStep := a.stride * 3
+	for i := 0; i < len(cur); i += byteStep {
+		a.sampled++
+		c := color.NRGBA{R: cur[i], G: cur[i+1], B: cur[i+2], A: 255}
+		if c != bg {
+			a.accumulatePixel(c)
+		}
+	}
+}
+
+func (a *pngRowAnalyzer) scanRowContentGeneric(cur []byte, hdr *pngHeader) {
+	bg := a.bg
+	for x := 0; x < a.w; x += a.stride {
+		a.sampled++
+		c := decodeRowPixel(cur, x, hdr)
+		if c != bg {
+			a.accumulatePixel(c)
+		}
+	}
+}
+
+func (a *pngRowAnalyzer) accumulatePixel(c color.NRGBA) {
+	diff := pngColorDiff(c, a.bg)
 	if diff <= pngBGColorDelta {
 		return
 	}
-	*nonBG++
+	a.nonBG++
 	q := packPNGQuantized4(c)
-	if !seen[q] {
-		seen[q] = true
-		*distinct++
+	if !a.seen[q] {
+		a.seen[q] = true
+		a.distinct++
 	}
 	if pngColorChroma(c) >= pngChromaDelta {
-		*chromatic++
+		a.chromatic++
 	}
 	if diff >= pngHighContrastDelta {
-		*highContrast++
+		a.highContrast++
 	}
 }
 

@@ -146,9 +146,17 @@ func PrepareDocument(m *manifest.Manifest, reg *icons.Registry) (*PreparedDocume
 	}
 
 	usedIcons := make(map[string]bool)
+	dp := &docPreparer{
+		m:          m,
+		reg:        reg,
+		compByID:   compByID,
+		contByID:   contByID,
+		detailByID: detailByID,
+		usedIcons:  usedIcons,
+	}
 	views := make([]PreparedView, 0, len(m.Views))
 	for i, v := range m.Views {
-		views = append(views, prepareView(i, v, m, compByID, contByID, detailByID, reg, usedIcons))
+		views = append(views, dp.prepareView(i, v))
 	}
 
 	if len(views) > 0 && len(m.ExcludedResources) > 0 {
@@ -171,43 +179,41 @@ func PrepareDocument(m *manifest.Manifest, reg *icons.Registry) (*PreparedDocume
 	}, nil
 }
 
-func prepareView(
-	index int,
-	v manifest.View,
-	m *manifest.Manifest,
-	compByID map[string]manifest.Component,
-	contByID map[string]manifest.Container,
-	detailByID map[string]manifest.View,
-	reg *icons.Registry,
-	usedIcons map[string]bool,
-) PreparedView {
-	isOverview := index == 0 || v.ID == manifest.SystemIndexViewID
-	viewParent := buildViewParents(v.ContainerIDs, contByID)
+type docPreparer struct {
+	m          *manifest.Manifest
+	reg        *icons.Registry
+	compByID   map[string]manifest.Component
+	contByID   map[string]manifest.Container
+	detailByID map[string]manifest.View
+	usedIcons  map[string]bool
+}
 
-	placedSet, activeContainers, directCardsByCont, uncontainedCards := collectViewPlacements(
-		v, compByID, contByID, detailByID, viewParent, reg, usedIcons,
-	)
-	activateEdgeContainers(v.Edges, contByID, viewParent, activeContainers)
+func (dp *docPreparer) prepareView(index int, v manifest.View) PreparedView {
+	isOverview := index == 0 || v.ID == manifest.SystemIndexViewID
+	viewParent := buildViewParents(v.ContainerIDs, dp.contByID)
+
+	placedSet, activeContainers, directCardsByCont, uncontainedCards := dp.collectViewPlacements(v, viewParent)
+	activateEdgeContainers(v.Edges, dp.contByID, viewParent, activeContainers)
 
 	maxCardsPerLane := 4
 	if len(v.Placements) > 28 {
 		maxCardsPerLane = 6
 	}
 
-	rootContainers := buildContainerTree(v.ContainerIDs, activeContainers, viewParent, contByID, directCardsByCont, maxCardsPerLane)
+	rootContainers := buildContainerTree(v.ContainerIDs, activeContainers, viewParent, dp.contByID, directCardsByCont, maxCardsPerLane)
 	leftLanes, rightLanes := splitUncontainedLanes(uncontainedCards, maxCardsPerLane)
-	routingEdges, footnotes := buildPreparedEdges(v.Edges, placedSet, activeContainers, compByID)
-	banners := buildStageBanners(v.Archetype, v.Placements, compByID)
+	routingEdges, footnotes := buildPreparedEdges(v.Edges, placedSet, activeContainers, dp.compByID)
+	banners := buildStageBanners(v.Archetype, v.Placements, dp.compByID)
 
-	includePanel := v.IncludeTransversalPanel || (isOverview && (len(m.TransversalItems) > 0 || len(m.SuppressedPlumbingCounts) > 0))
+	includePanel := v.IncludeTransversalPanel || (isOverview && (len(dp.m.TransversalItems) > 0 || len(dp.m.SuppressedPlumbingCounts) > 0))
 	var transGroups []PreparedTransversalGroup
 	var transCount, suppressedTotal, suppressedTypes int
 	var suppressedSummary string
 	if includePanel {
-		transGroups, transCount = buildTransversalGroups(m.TransversalItems, placedSet, activeContainers, isOverview)
-		if isOverview && len(m.SuppressedPlumbingCounts) > 0 {
-			suppressedTypes = len(m.SuppressedPlumbingCounts)
-			suppressedSummary = formatSuppressedSummary(m.SuppressedPlumbingCounts, &suppressedTotal)
+		transGroups, transCount = buildTransversalGroups(dp.m.TransversalItems, placedSet, activeContainers, isOverview)
+		if isOverview && len(dp.m.SuppressedPlumbingCounts) > 0 {
+			suppressedTypes = len(dp.m.SuppressedPlumbingCounts)
+			suppressedSummary = formatSuppressedSummary(dp.m.SuppressedPlumbingCounts, &suppressedTotal)
 		}
 	}
 
@@ -233,17 +239,11 @@ func prepareView(
 	}
 }
 
-func collectViewPlacements(
+func (dp *docPreparer) collectViewPlacements(
 	v manifest.View,
-	compByID map[string]manifest.Component,
-	contByID map[string]manifest.Container,
-	detailByID map[string]manifest.View,
 	viewParent map[string]string,
-	reg *icons.Registry,
-	usedIcons map[string]bool,
 ) (
-	placedSet map[string]bool,
-	activeContainers map[string]bool,
+	placedSet, activeContainers map[string]bool,
 	directCardsByCont map[string][]PreparedCard,
 	uncontainedCards []PreparedCard,
 ) {
@@ -253,11 +253,11 @@ func collectViewPlacements(
 
 	for pIdx, p := range v.Placements {
 		placedSet[p.ComponentID] = true
-		card := resolveCard(v.ID, p, pIdx, compByID, detailByID, reg)
-		usedIcons[card.IconKey] = true
+		card := dp.resolveCard(v.ID, p, pIdx)
+		dp.usedIcons[card.IconKey] = true
 
 		if p.ContainerID != "" {
-			if _, ok := contByID[p.ContainerID]; ok {
+			if _, ok := dp.contByID[p.ContainerID]; ok {
 				directCardsByCont[p.ContainerID] = append(directCardsByCont[p.ContainerID], card)
 				for cur := p.ContainerID; cur != ""; cur = viewParent[cur] {
 					activeContainers[cur] = true
@@ -542,37 +542,43 @@ func configureOrgContainerLayout(
 	}
 }
 
+func externalZoneSide(ct manifest.Container) int {
+	if ct.Kind != manifest.ContainerExternalZone {
+		return 0
+	}
+	if ct.OrderHint < 0 {
+		return -1
+	}
+	if ct.OrderHint >= 500 {
+		return 1
+	}
+	return 0
+}
+
+func compareFolderVPC(a, b manifest.Container, children map[string][]manifest.Container, vpcCache map[string]bool) int {
+	if a.Kind != manifest.ContainerFolder || b.Kind != manifest.ContainerFolder {
+		return 0
+	}
+	aHasVPC := hasVPCDescendant(a.ID, children, vpcCache)
+	bHasVPC := hasVPCDescendant(b.ID, children, vpcCache)
+	if aHasVPC == bHasVPC {
+		return 0
+	}
+	if aHasVPC {
+		return -1
+	}
+	return 1
+}
+
 func sortContainersForLayout(list []manifest.Container, children map[string][]manifest.Container, vpcCache map[string]bool) {
 	slices.SortStableFunc(list, func(a, b manifest.Container) int {
-		// External source zones always far left; external target zones always far right.
-		aExtLeft := a.Kind == manifest.ContainerExternalZone && a.OrderHint < 0
-		bExtLeft := b.Kind == manifest.ContainerExternalZone && b.OrderHint < 0
-		if aExtLeft != bExtLeft {
-			if aExtLeft {
-				return -1
-			}
-			return 1
-		}
-		aExtRight := a.Kind == manifest.ContainerExternalZone && a.OrderHint >= 500
-		bExtRight := b.Kind == manifest.ContainerExternalZone && b.OrderHint >= 500
-		if aExtRight != bExtRight {
-			if aExtRight {
-				return 1
-			}
-			return -1
-		}
-		// Inside ORG, folders hosting VPCs come before non-VPC folders.
-		if a.Kind == manifest.ContainerFolder && b.Kind == manifest.ContainerFolder {
-			aHasVPC := hasVPCDescendant(a.ID, children, vpcCache)
-			bHasVPC := hasVPCDescendant(b.ID, children, vpcCache)
-			if aHasVPC != bHasVPC {
-				if aHasVPC {
-					return -1
-				}
-				return 1
-			}
-		}
-		return cmp.Or(cmp.Compare(a.OrderHint, b.OrderHint), cmp.Compare(a.Title, b.Title), cmp.Compare(a.ID, b.ID))
+		return cmp.Or(
+			cmp.Compare(externalZoneSide(a), externalZoneSide(b)),
+			compareFolderVPC(a, b, children, vpcCache),
+			cmp.Compare(a.OrderHint, b.OrderHint),
+			cmp.Compare(a.Title, b.Title),
+			cmp.Compare(a.ID, b.ID),
+		)
 	})
 }
 
@@ -653,20 +659,13 @@ func groupCardsIntoLanes(cards []PreparedCard, maxCardsPerLane int) []PreparedLa
 	return lanes
 }
 
-func resolveCard(
-	viewID string,
-	p manifest.Placement,
-	placementIdx int,
-	compByID map[string]manifest.Component,
-	detailByID map[string]manifest.View,
-	reg *icons.Registry,
-) PreparedCard {
-	if c, ok := compByID[p.ComponentID]; ok {
+func (dp *docPreparer) resolveCard(viewID string, p manifest.Placement, placementIdx int) PreparedCard {
+	if c, ok := dp.compByID[p.ComponentID]; ok {
 		return resolveComponentCard(c, p, placementIdx)
 	}
 	if viewID == manifest.SystemIndexViewID {
-		if dv, ok := detailByID[p.ComponentID]; ok {
-			return resolveDetailViewCard(dv, p, placementIdx, reg)
+		if dv, ok := dp.detailByID[p.ComponentID]; ok {
+			return resolveDetailViewCard(dv, p, placementIdx, dp.reg)
 		}
 	}
 	return PreparedCard{
@@ -835,8 +834,7 @@ func systemIndexViewIcon(dv manifest.View, reg *icons.Registry) string {
 
 func buildPreparedEdges(
 	edges []manifest.Edge,
-	placedSet map[string]bool,
-	activeContainers map[string]bool,
+	placedSet, activeContainers map[string]bool,
 	compByID map[string]manifest.Component,
 ) ([]RoutingEdge, []PreparedFootnote) {
 	routingEdges := make([]RoutingEdge, 0, len(edges))
@@ -924,12 +922,14 @@ func buildStageBanners(archetype manifest.Archetype, placements []manifest.Place
 	return banners
 }
 
+const stageBannerPipelinesETL = "Pipelines & ETL"
+
 func stageBannerLabel(stageIdx int, comps []manifest.Component) string {
 	counts := make(map[string]int)
 	for _, c := range comps {
 		switch c.IconKey {
 		case "dataflow", "datastream", "cloud_composer", "dataproc", "workflows", "data_transfer":
-			counts["Pipelines & ETL"]++
+			counts[stageBannerPipelinesETL]++
 		case "vertexai", "vertex_agent_engine", "vertex_search", "foundation_model", "vertex_vector_search":
 			counts["AI & ML"]++
 		case "artifact_registry":
@@ -943,7 +943,7 @@ func stageBannerLabel(stageIdx int, comps []manifest.Component) string {
 			case manifest.KindIngress:
 				counts["Ingress"]++
 			case manifest.KindPipeline:
-				counts["Pipelines & ETL"]++
+				counts[stageBannerPipelinesETL]++
 			case manifest.KindWorkload:
 				counts["Workloads"]++
 			case manifest.KindMessaging:
@@ -960,7 +960,7 @@ func stageBannerLabel(stageIdx int, comps []manifest.Component) string {
 	bestRole := ""
 	bestCount := 0
 	for _, role := range []string{
-		"Source", "Ingress", "Build & CI", "Pipelines & ETL",
+		"Source", "Ingress", "Build & CI", stageBannerPipelinesETL,
 		"Workloads", "Messaging", "AI & ML", "Artifacts & Registry",
 		"Data & Storage", "Services", "Deploy Targets",
 	} {
@@ -990,8 +990,7 @@ var transversalCategoryOrder = []struct {
 
 func buildTransversalGroups(
 	items []manifest.TransversalItem,
-	placedSet map[string]bool,
-	activeContainers map[string]bool,
+	placedSet, activeContainers map[string]bool,
 	isOverview bool,
 ) ([]PreparedTransversalGroup, int) {
 	if len(items) == 0 {
@@ -1013,8 +1012,7 @@ func buildTransversalGroups(
 
 func isTransversalItemRelevant(
 	item manifest.TransversalItem,
-	placedSet map[string]bool,
-	activeContainers map[string]bool,
+	placedSet, activeContainers map[string]bool,
 	isOverview bool,
 ) bool {
 	if isOverview || (len(item.AttachedNodeIDs) == 0 && item.OwnerContainerID == "") {

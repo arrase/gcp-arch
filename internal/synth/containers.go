@@ -11,6 +11,12 @@ import (
 	"github.com/arrase/gcp-arch/internal/manifest"
 )
 
+const (
+	assetComputeNetwork  = "compute.googleapis.com/Network"
+	orgResourcePrefix    = "organizations/"
+	folderResourcePrefix = "folders/"
+)
+
 type containerBuilder struct {
 	resByURI             map[string]extract.FactResource
 	containers           []*manifest.Container
@@ -74,7 +80,7 @@ func (cb *containerBuilder) indexStructuralAssets(resByURI map[string]extract.Fa
 			continue
 		}
 		switch r.AssetType {
-		case "compute.googleapis.com/Network":
+		case assetComputeNetwork:
 			vpcs = append(vpcs, r)
 			if cb.vpcURIByProj[r.ProjectID] == "" || r.URI < cb.vpcURIByProj[r.ProjectID] {
 				cb.vpcURIByProj[r.ProjectID] = r.URI
@@ -102,7 +108,7 @@ func (cb *containerBuilder) addHierarchyContainers(h extract.Hierarchy, serviceP
 			ID:        "org_" + sanitizeID(o.OrgID),
 			Kind:      manifest.ContainerOrg,
 			Title:     "Org: " + cmp.Or(o.DisplayName, o.OrgID),
-			Subtitle:  "organizations/" + o.OrgID,
+			Subtitle:  orgResourcePrefix + o.OrgID,
 			OrderHint: 10,
 		})
 	}
@@ -111,7 +117,7 @@ func (cb *containerBuilder) addHierarchyContainers(h extract.Hierarchy, serviceP
 			ID:                "folder_" + sanitizeID(f.FolderID),
 			Kind:              manifest.ContainerFolder,
 			Title:             "Folder: " + cmp.Or(f.DisplayName, f.FolderID),
-			Subtitle:          "folders/" + f.FolderID,
+			Subtitle:          folderResourcePrefix + f.FolderID,
 			ParentContainerID: cb.resolveHierarchyParent(f.Parent),
 			OrderHint:         20,
 		})
@@ -157,15 +163,15 @@ func (cb *containerBuilder) addContainer(c manifest.Container) *manifest.Contain
 }
 
 func (cb *containerBuilder) resolveHierarchyParent(raw string) string {
-	if strings.HasPrefix(raw, "organizations/") {
-		id := "org_" + sanitizeID(strings.TrimPrefix(raw, "organizations/"))
-		if _, ok := cb.byID[id]; ok {
+	if orgID, ok := strings.CutPrefix(raw, orgResourcePrefix); ok {
+		id := "org_" + sanitizeID(orgID)
+		if _, exists := cb.byID[id]; exists {
 			return id
 		}
 	}
-	if strings.HasPrefix(raw, "folders/") {
-		id := "folder_" + sanitizeID(strings.TrimPrefix(raw, "folders/"))
-		if _, ok := cb.byID[id]; ok {
+	if folderID, ok := strings.CutPrefix(raw, folderResourcePrefix); ok {
+		id := "folder_" + sanitizeID(folderID)
+		if _, exists := cb.byID[id]; exists {
 			return id
 		}
 	}
@@ -403,7 +409,7 @@ func (cb *containerBuilder) placeHybridGatewayOrHub(r extract.FactResource) (str
 		r.AssetType == "compute.googleapis.com/VpnTunnel" ||
 		r.AssetType == "compute.googleapis.com/InterconnectAttachment" {
 		vpcURI := cmp.Or(attrStr(r.Attributes, "vpc"), r.ParentURI)
-		if vpcRes, ok := cb.resByURI[vpcURI]; ok && vpcRes.AssetType == "compute.googleapis.com/Network" {
+		if vpcRes, ok := cb.resByURI[vpcURI]; ok && vpcRes.AssetType == assetComputeNetwork {
 			vpcCID := cb.ensureVPC(vpcRes, nil)
 			regCID := cb.ensureRegion(vpcCID, regionFromLocation(r.Location))
 			return cb.ensureZone(regCID, manifest.ContainerHybridZone, "PRIVATE", "", "Hybrid Connectivity (VPN / Interconnect)", "", 58), "PRIVATE", true
@@ -483,7 +489,7 @@ func (cb *containerBuilder) placeLoadBalancerResource(r extract.FactResource) (s
 
 func (cb *containerBuilder) placeVPCScopedResource(r extract.FactResource) (string, string, bool) {
 	vpcURI := cmp.Or(attrStr(r.Attributes, "vpc"), r.ParentURI)
-	if vpcRes, ok := cb.resByURI[vpcURI]; ok && vpcRes.AssetType == "compute.googleapis.com/Network" {
+	if vpcRes, ok := cb.resByURI[vpcURI]; ok && vpcRes.AssetType == assetComputeNetwork {
 		parentCID := cb.ensureVPCRegionOrProject(vpcURI, vpcRes.ProjectID, regionFromLocation(r.Location))
 		return cb.ensureZone(parentCID, manifest.ContainerExposureZone, "PRIVATE", "", "Private VPC Services", "", 72), "PRIVATE", true
 	}
@@ -523,7 +529,7 @@ func (cb *containerBuilder) findProjectVPC(projectID string) string {
 }
 
 func (cb *containerBuilder) ensureVPCRegionOrProject(vpcURI, projectID, region string) string {
-	if vpcRes, ok := cb.resByURI[vpcURI]; ok && vpcRes.AssetType == "compute.googleapis.com/Network" {
+	if vpcRes, ok := cb.resByURI[vpcURI]; ok && vpcRes.AssetType == assetComputeNetwork {
 		vpcCID := cb.ensureVPC(vpcRes, nil)
 		return cb.ensureRegion(vpcCID, region)
 	}

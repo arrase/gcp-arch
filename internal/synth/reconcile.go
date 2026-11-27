@@ -125,25 +125,13 @@ func resourcesMatch(m *manifest.Manifest, facts *extract.FactsFile) bool {
 func accountedURISet(m *manifest.Manifest) map[string]bool {
 	out := make(map[string]bool)
 	for _, c := range m.Components {
-		for _, br := range c.BackedBy {
-			if br.URI != "" {
-				out[br.URI] = true
-			}
-		}
+		addBackedURIs(out, c.BackedBy)
 	}
 	for _, ct := range m.Containers {
-		for _, br := range ct.BackedBy {
-			if br.URI != "" {
-				out[br.URI] = true
-			}
-		}
+		addBackedURIs(out, ct.BackedBy)
 	}
 	for _, ti := range m.TransversalItems {
-		for _, br := range ti.BackedBy {
-			if br.URI != "" {
-				out[br.URI] = true
-			}
-		}
+		addBackedURIs(out, ti.BackedBy)
 	}
 	for _, ex := range m.ExcludedResources {
 		if ex.URI != "" {
@@ -151,6 +139,14 @@ func accountedURISet(m *manifest.Manifest) map[string]bool {
 		}
 	}
 	return out
+}
+
+func addBackedURIs(dst map[string]bool, backed []manifest.BackedResource) {
+	for _, br := range backed {
+		if br.URI != "" {
+			dst[br.URI] = true
+		}
+	}
 }
 
 func hasUnsettledProjectedPair(m *manifest.Manifest, idx *manifest.EvidenceIndex) bool {
@@ -215,26 +211,27 @@ func refreshedEdge(e manifest.Edge, idx *manifest.EvidenceIndex) manifest.Edge {
 }
 
 func preserveCuratedEdits(dst, existing *manifest.Manifest) {
-	prevComp := make(map[string]manifest.Component, len(existing.Components))
-	for _, c := range existing.Components {
+	preserveCuratedComponentEdits(dst.Components, existing.Components)
+	preserveCuratedViewEdits(dst, existing)
+}
+
+func preserveCuratedComponentEdits(dst, existing []manifest.Component) {
+	prevComp := make(map[string]manifest.Component, len(existing))
+	for _, c := range existing {
 		prevComp[c.ID] = c
 	}
-	for i := range dst.Components {
-		prev, ok := prevComp[dst.Components[i].ID]
+	for i := range dst {
+		prev, ok := prevComp[dst[i].ID]
 		if !ok {
 			continue
 		}
-		if strings.TrimSpace(prev.Title) != "" {
-			dst.Components[i].Title = prev.Title
-		}
-		if strings.TrimSpace(prev.Subtitle) != "" {
-			dst.Components[i].Subtitle = prev.Subtitle
-		}
-		if strings.TrimSpace(prev.Notes) != "" {
-			dst.Components[i].Notes = prev.Notes
-		}
+		preserveNonEmpty(&dst[i].Title, prev.Title)
+		preserveNonEmpty(&dst[i].Subtitle, prev.Subtitle)
+		preserveNonEmpty(&dst[i].Notes, prev.Notes)
 	}
+}
 
+func preserveCuratedViewEdits(dst, existing *manifest.Manifest) {
 	prevView := make(map[string]manifest.View, len(existing.Views))
 	for _, v := range existing.Views {
 		prevView[v.ID] = v
@@ -249,17 +246,17 @@ func preserveCuratedEdits(dst, existing *manifest.Manifest) {
 		if !ok {
 			continue
 		}
-		if strings.TrimSpace(prev.Title) != "" {
-			dst.Views[i].Title = prev.Title
+		preserveNonEmpty(&dst.Views[i].Title, prev.Title)
+		if dst.Views[i].ID != manifest.SystemIndexViewID || prev.Subtitle != prevAutoOverviewSub {
+			preserveNonEmpty(&dst.Views[i].Subtitle, prev.Subtitle)
 		}
-		if strings.TrimSpace(prev.Subtitle) != "" {
-			if dst.Views[i].ID != manifest.SystemIndexViewID || prev.Subtitle != prevAutoOverviewSub {
-				dst.Views[i].Subtitle = prev.Subtitle
-			}
-		}
-		if strings.TrimSpace(prev.Notes) != "" {
-			dst.Views[i].Notes = prev.Notes
-		}
+		preserveNonEmpty(&dst.Views[i].Notes, prev.Notes)
+	}
+}
+
+func preserveNonEmpty(dst *string, prev string) {
+	if strings.TrimSpace(prev) != "" {
+		*dst = prev
 	}
 }
 

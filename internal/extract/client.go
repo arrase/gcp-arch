@@ -721,37 +721,49 @@ func (ps *preflightState) probeCAIScopes(ctx context.Context, sortedScopes []str
 			projectIDs = append(projectIDs, proj)
 			targetProj = proj
 		}
-		isOrgOrFolder := strings.HasPrefix(scope, prefixOrganizations) || strings.HasPrefix(scope, prefixFolders)
-
-		if err := waitLimiter(ctx, ps.clients.CAILimiter); err != nil {
+		sampled, err := ps.probeCAIScope(ctx, scope, targetProj, sampleProject == "")
+		if err != nil {
 			return nil, err
 		}
-		req := &assetpb.ListAssetsRequest{
-			Parent:      scope,
-			ContentType: assetpb.ContentType_RESOURCE,
-			PageSize:    1,
-		}
-		if isOrgOrFolder {
-			req.AssetTypes = []string{assetTypeProject}
-		}
-		resp, err := ps.clients.Asset.ListAssets(ctx, req)
-		ps.recordProbe(scope, targetProj, "cloudasset.googleapis.com", "roles/cloudasset.viewer", err)
-		if err == nil && sampleProject == "" {
-			sampleProject, err = ps.sampleProjectFromScope(ctx, scope, isOrgOrFolder, resp.GetAssets())
-			if err != nil {
-				return nil, err
-			}
-		}
-		if isOrgOrFolder {
-			if err := ps.probeCAIFolderAccess(ctx, scope); err != nil {
-				return nil, err
-			}
+		if sampled != "" {
+			sampleProject = sampled
 		}
 	}
 	if len(projectIDs) == 0 && sampleProject != "" {
 		projectIDs = append(projectIDs, sampleProject)
 	}
 	return projectIDs, nil
+}
+
+func (ps *preflightState) probeCAIScope(ctx context.Context, scope, targetProj string, needSample bool) (string, error) {
+	isOrgOrFolder := strings.HasPrefix(scope, prefixOrganizations) || strings.HasPrefix(scope, prefixFolders)
+	if err := waitLimiter(ctx, ps.clients.CAILimiter); err != nil {
+		return "", err
+	}
+	req := &assetpb.ListAssetsRequest{
+		Parent:      scope,
+		ContentType: assetpb.ContentType_RESOURCE,
+		PageSize:    1,
+	}
+	if isOrgOrFolder {
+		req.AssetTypes = []string{assetTypeProject}
+	}
+	resp, err := ps.clients.Asset.ListAssets(ctx, req)
+	ps.recordProbe(scope, targetProj, "cloudasset.googleapis.com", "roles/cloudasset.viewer", err)
+
+	var sampleProject string
+	if err == nil && needSample {
+		sampleProject, err = ps.sampleProjectFromScope(ctx, scope, isOrgOrFolder, resp.GetAssets())
+		if err != nil {
+			return "", err
+		}
+	}
+	if isOrgOrFolder {
+		if err := ps.probeCAIFolderAccess(ctx, scope); err != nil {
+			return "", err
+		}
+	}
+	return sampleProject, nil
 }
 
 func (ps *preflightState) sampleProjectFromScope(ctx context.Context, scope string, isOrgOrFolder bool, assets []*assetpb.Asset) (string, error) {
@@ -774,20 +786,27 @@ func (ps *preflightState) sampleProjectFromScope(ctx context.Context, scope stri
 
 func firstProjectFromAssets(assets []*assetpb.Asset, aliases map[string]string) string {
 	for _, a := range assets {
-		if a.GetAssetType() == assetTypeProject {
-			if pid := strings.TrimSpace(getStringField(a.GetResource().GetData(), "projectId")); pid != "" {
-				return pid
-			}
+		if proj := projectFromAsset(a, aliases); proj != "" {
+			return proj
 		}
-		for _, anc := range a.GetAncestors() {
-			if strings.HasPrefix(anc, prefixProjects) {
-				return mapProject(strings.TrimPrefix(anc, prefixProjects), aliases)
-			}
+	}
+	return ""
+}
+
+func projectFromAsset(a *assetpb.Asset, aliases map[string]string) string {
+	if a.GetAssetType() == assetTypeProject {
+		if pid := strings.TrimSpace(getStringField(a.GetResource().GetData(), "projectId")); pid != "" {
+			return pid
 		}
-		if a.GetAssetType() == assetTypeProject {
-			if last := shortResourceName(a.GetName()); last != "" {
-				return mapProject(last, aliases)
-			}
+	}
+	for _, anc := range a.GetAncestors() {
+		if proj, ok := strings.CutPrefix(anc, prefixProjects); ok {
+			return mapProject(proj, aliases)
+		}
+	}
+	if a.GetAssetType() == assetTypeProject {
+		if last := shortResourceName(a.GetName()); last != "" {
+			return mapProject(last, aliases)
 		}
 	}
 	return ""
@@ -799,7 +818,7 @@ func (ps *preflightState) probeCAIFolderAccess(ctx context.Context, scope string
 	}
 	folderResp, folderErr := ps.clients.Asset.ListAssets(ctx, &assetpb.ListAssetsRequest{
 		Parent:      scope,
-		AssetTypes:  []string{"cloudresourcemanager.googleapis.com/Folder"},
+		AssetTypes:  []string{assetTypeFolder},
 		ContentType: assetpb.ContentType_RESOURCE,
 		PageSize:    1,
 	})

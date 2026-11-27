@@ -299,33 +299,36 @@ func buildConservationManifestIndex(m *Manifest, fi conservationFactsIndex) cons
 		validTransversals:      make(map[string]bool, len(m.TransversalItems)),
 	}
 	for _, c := range m.Components {
-		for _, br := range c.BackedBy {
-			if br.URI != "" {
-				mi.compOwnerByURI[br.URI] = c.ID
-			}
-			recordConservedURI(br.URI, uriOwnerComponent, fi, &mi)
-		}
+		mi.recordBackedBy(c.BackedBy, uriOwnerComponent, c.ID, fi)
 	}
 	for _, ct := range m.Containers {
 		if ct.ID != "" {
 			mi.validContainers[ct.ID] = true
 		}
-		for _, br := range ct.BackedBy {
-			recordConservedURI(br.URI, uriOwnerContainer, fi, &mi)
-		}
+		mi.recordBackedBy(ct.BackedBy, uriOwnerContainer, "", fi)
 	}
 	for _, ti := range m.TransversalItems {
 		if ti.ID != "" {
 			mi.validTransversals[ti.ID] = true
 		}
-		for _, br := range ti.BackedBy {
-			recordConservedURI(br.URI, uriOwnerTransversal, fi, &mi)
-			if br.URI != "" {
-				mi.transversalURIs[br.URI] = true
-			}
-		}
+		mi.recordBackedBy(ti.BackedBy, uriOwnerTransversal, "", fi)
 	}
 	return mi
+}
+
+func (mi *conservationManifestIndex) recordBackedBy(backed []BackedResource, owner uriOwnerKind, ownerID string, fi conservationFactsIndex) {
+	for _, br := range backed {
+		if br.URI == "" {
+			continue
+		}
+		switch owner {
+		case uriOwnerComponent:
+			mi.compOwnerByURI[br.URI] = ownerID
+		case uriOwnerTransversal:
+			mi.transversalURIs[br.URI] = true
+		}
+		recordConservedURI(br.URI, owner, fi, mi)
+	}
 }
 
 func recordConservedURI(uri string, owner uriOwnerKind, fi conservationFactsIndex, mi *conservationManifestIndex) {
@@ -374,22 +377,29 @@ func collectAccountedView0Edges(
 		if code, _ := evIdx.WalkIssue(e); code != "" {
 			continue
 		}
-		for _, eid := range e.EvidenceEdgeIDs {
-			fe, ok := factEdgeByID[eid]
-			if !ok {
-				continue
-			}
-			compFrom := compOwnerByURI[fe.FromURI]
-			compTo := compOwnerByURI[fe.ToURI]
-			if compFrom != "" && compTo != "" && compFrom != compTo {
-				if e.From != compFrom || e.To != compTo {
-					continue
-				}
-			}
-			accounted[eid] = true
-		}
+		recordView0EdgeEvidence(e, factEdgeByID, compOwnerByURI, accounted)
 	}
 	return accounted
+}
+
+func recordView0EdgeEvidence(
+	e Edge,
+	factEdgeByID map[string]extract.FactEdge,
+	compOwnerByURI map[string]string,
+	accounted map[string]bool,
+) {
+	for _, eid := range e.EvidenceEdgeIDs {
+		fe, ok := factEdgeByID[eid]
+		if !ok {
+			continue
+		}
+		compFrom := compOwnerByURI[fe.FromURI]
+		compTo := compOwnerByURI[fe.ToURI]
+		if compFrom != "" && compTo != "" && compFrom != compTo && (e.From != compFrom || e.To != compTo) {
+			continue
+		}
+		accounted[eid] = true
+	}
 }
 
 func collectAccountedStructuralEdges(
@@ -474,15 +484,17 @@ func isValidStructuralEdge(se StructuralEdge, fi conservationFactsIndex, mi cons
 		return false
 	}
 	if se.Reason == "structural_link" {
-		if se.TargetID == "" || (!mi.validContainers[se.TargetID] && !mi.validTransversals[se.TargetID]) {
-			return false
-		}
-		if fi.transversalURIs[fe.FromURI] || fi.transversalURIs[fe.ToURI] ||
-			mi.transversalURIs[fe.FromURI] || mi.transversalURIs[fe.ToURI] {
-			return false
-		}
+		return isValidStructuralLink(se, fe, fi, mi)
 	}
 	return true
+}
+
+func isValidStructuralLink(se StructuralEdge, fe extract.FactEdge, fi conservationFactsIndex, mi conservationManifestIndex) bool {
+	if se.TargetID == "" || (!mi.validContainers[se.TargetID] && !mi.validTransversals[se.TargetID]) {
+		return false
+	}
+	return !fi.transversalURIs[fe.FromURI] && !fi.transversalURIs[fe.ToURI] &&
+		!mi.transversalURIs[fe.FromURI] && !mi.transversalURIs[fe.ToURI]
 }
 
 func collectAccountedTransEdges(

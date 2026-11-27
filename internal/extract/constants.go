@@ -15,6 +15,8 @@ const (
 	googleapisSuffix = ".googleapis.com"
 
 	// Asset types.
+	assetTypeOrganization   = "cloudresourcemanager.googleapis.com/Organization"
+	assetTypeFolder         = "cloudresourcemanager.googleapis.com/Folder"
 	assetTypeProject        = "cloudresourcemanager.googleapis.com/Project"
 	assetTypeServiceAccount = "iam.googleapis.com/ServiceAccount"
 	assetTypeSubnetwork     = "compute.googleapis.com/Subnetwork"

@@ -322,63 +322,74 @@ func buildBQEnrichResult(lineageSet map[bqDatasetEdgeKey]struct{}, principalSet 
 	}
 }
 
+type bqProjectFetch struct {
+	clients       *Clients
+	proj          string
+	projNum       string
+	scope         string
+	minCreationMs uint64
+	lineage       map[bqDatasetEdgeKey]struct{}
+	principals    map[bqPrincipalDSKey]struct{}
+}
+
 func (st *extractState) fetchProjectBigQueryJobs(
 	ctx context.Context,
 	clients *Clients,
 	proj string,
 	minCreationMs uint64,
 ) (map[bqDatasetEdgeKey]struct{}, map[bqPrincipalDSKey]struct{}, error) {
-	scope := prefixProjects + proj
-	projNum := st.projectNumberFor(proj)
+	fetch := &bqProjectFetch{
+		clients:       clients,
+		proj:          proj,
+		projNum:       st.projectNumberFor(proj),
+		scope:         prefixProjects + proj,
+		minCreationMs: minCreationMs,
+		lineage:       make(map[bqDatasetEdgeKey]struct{}),
+		principals:    make(map[bqPrincipalDSKey]struct{}),
+	}
 	pageToken := ""
-	localLineage := make(map[bqDatasetEdgeKey]struct{})
-	localPrincipal := make(map[bqPrincipalDSKey]struct{})
 
 	for page := 1; page <= maxBQJobPages; page++ {
-		nextToken, degraded, err := st.fetchProjectBigQueryPage(ctx, clients, proj, projNum, scope, minCreationMs, pageToken, localLineage, localPrincipal)
+		nextToken, degraded, err := st.fetchProjectBigQueryPage(ctx, fetch, pageToken)
 		if err != nil {
 			return nil, nil, err
 		}
 		if degraded {
-			return localLineage, localPrincipal, nil
+			return fetch.lineage, fetch.principals, nil
 		}
 		pageToken = nextToken
 		if pageToken == "" {
-			st.addCoverage(CoverageEntry{Scope: scope, Source: sourceBQJobs, State: CoverageOK})
-			return localLineage, localPrincipal, nil
+			st.addCoverage(CoverageEntry{Scope: fetch.scope, Source: sourceBQJobs, State: CoverageOK})
+			return fetch.lineage, fetch.principals, nil
 		}
 	}
 	st.addCoverage(CoverageEntry{
-		Scope:  scope,
+		Scope:  fetch.scope,
 		Source: sourceBQJobs,
 		State:  CoverageTruncatingCap,
 		Detail: fmt.Sprintf("reached %d-page BigQuery jobs.list cap within 7-day window", maxBQJobPages),
 	})
-	return localLineage, localPrincipal, nil
+	return fetch.lineage, fetch.principals, nil
 }
 
 func (st *extractState) fetchProjectBigQueryPage(
 	ctx context.Context,
-	clients *Clients,
-	proj, projNum, scope string,
-	minCreationMs uint64,
+	fetch *bqProjectFetch,
 	pageToken string,
-	localLineage map[bqDatasetEdgeKey]struct{},
-	localPrincipal map[bqPrincipalDSKey]struct{},
 ) (nextToken string, degraded bool, err error) {
-	resp, listErr := listBigQueryJobsPage(ctx, clients, proj, minCreationMs, pageToken)
+	resp, listErr := listBigQueryJobsPage(ctx, fetch.clients, fetch.proj, fetch.minCreationMs, pageToken)
 	if listErr != nil {
-		deg, fatalErr := st.handleEnrichError(listErr, clients, proj, projNum, scope, sourceBQJobs)
+		deg, fatalErr := st.handleEnrichError(listErr, fetch.clients, fetch.proj, fetch.projNum, fetch.scope, sourceBQJobs)
 		if fatalErr != nil {
 			return "", false, fatalErr
 		}
 		if deg {
 			return "", true, nil
 		}
-		return "", false, fmt.Errorf("bigquery jobs.list(%s): %w", proj, listErr)
+		return "", false, fmt.Errorf("bigquery jobs.list(%s): %w", fetch.proj, listErr)
 	}
 	for _, job := range resp.Jobs {
-		recordBQJob(job, st.projIdx, localLineage, localPrincipal)
+		recordBQJob(job, st.projIdx, fetch.lineage, fetch.principals)
 	}
 	return resp.NextPageToken, false, nil
 }
@@ -415,16 +426,7 @@ func recordBQJob(
 	if job == nil {
 		return
 	}
-	var refDatasets []string
-	if job.Statistics != nil && job.Statistics.Query != nil {
-		for _, tr := range job.Statistics.Query.ReferencedTables {
-			appendUnique(&refDatasets, canonicalBQDatasetRef(tr, projIdx))
-		}
-	}
-	destDS, copyRefs := extractBQJobConfigDatasets(job.Configuration, projIdx)
-	for _, ds := range copyRefs {
-		appendUnique(&refDatasets, ds)
-	}
+	destDS, refDatasets := extractBQJobDatasets(job, projIdx)
 	if len(refDatasets) == 0 && destDS == "" {
 		return
 	}
@@ -441,6 +443,20 @@ func recordBQJob(
 	if destDS != "" && email != "" {
 		principals[bqPrincipalDSKey{email: email, dsURI: destDS}] = struct{}{}
 	}
+}
+
+func extractBQJobDatasets(job *bigquery.JobListJobs, projIdx map[string]string) (string, []string) {
+	var refDatasets []string
+	if job.Statistics != nil && job.Statistics.Query != nil {
+		for _, tr := range job.Statistics.Query.ReferencedTables {
+			appendUnique(&refDatasets, canonicalBQDatasetRef(tr, projIdx))
+		}
+	}
+	destDS, copyRefs := extractBQJobConfigDatasets(job.Configuration, projIdx)
+	for _, ds := range copyRefs {
+		appendUnique(&refDatasets, ds)
+	}
+	return destDS, refDatasets
 }
 
 func extractBQJobConfigDatasets(cfg *bigquery.JobConfiguration, projIdx map[string]string) (string, []string) {

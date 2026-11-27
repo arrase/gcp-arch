@@ -13,6 +13,11 @@ import (
 	"github.com/arrase/gcp-arch/internal/manifest"
 )
 
+const (
+	assetK8sDeployment     = "apps.k8s.io/Deployment"
+	assetCloudBuildTrigger = "cloudbuild.googleapis.com/BuildTrigger"
+)
+
 type skeletonNode struct {
 	ID               string
 	Title            string
@@ -77,19 +82,33 @@ func buildSkeleton(facts *extract.FactsFile, reg *icons.Registry) *skeleton {
 	candContainerID, candExposure := placePrimaryCandidates(cb, primaryCandidates, reg)
 
 	cohorts, nonCohorts := buildHomogeneousCohorts(primaryCandidates, sortedEdges, candContainerID, resByURI)
-	nodes, uriToNodeID, structuralEdges := materializeSkeletonNodes(
-		cohorts, nonCohorts, foldedChildrenByRep, foldedEdgesByRep,
-		candContainerID, candExposure, cb, reg,
-	)
+	nm := &nodeMaterializer{
+		foldedChildrenByRep: foldedChildrenByRep,
+		foldedEdgesByRep:    foldedEdgesByRep,
+		candContainerID:     candContainerID,
+		candExposure:        candExposure,
+		cb:                  cb,
+		reg:                 reg,
+		uriToNodeID:         make(map[string]string),
+		emittedNodeIDs:      make(map[string]bool),
+	}
+	nodes, structuralEdges := nm.materialize(cohorts, nonCohorts)
 
 	nodeIdxByID := indexNodePositions(nodes)
 	transversalItems, transversalIdxByURI := buildSkeletonTransversalItems(sortedRes, transversalCatByURI, cb)
 
-	edges, structuralEdges := buildSkeletonEdges(
-		sortedEdges, structuralEdges,
-		transversalItems, transversalIdxByURI, uriToNodeID, nodeIdxByID, nodes, cb, resByURI, resolveRep,
-	)
-	edges = connectOrphanSkeletonNodes(nodes, edges, sortedEdges, transversalItems, uriToNodeID, nodeIdxByID, cb, resByURI, resolveRep)
+	eb := &edgeBuilder{
+		transversalItems:    transversalItems,
+		transversalIdxByURI: transversalIdxByURI,
+		uriToNodeID:         nm.uriToNodeID,
+		nodeIdxByID:         nodeIdxByID,
+		nodes:               nodes,
+		cb:                  cb,
+		resByURI:            resByURI,
+		resolveRep:          resolveRep,
+	}
+	edges, structuralEdges := eb.buildSkeletonEdges(sortedEdges, structuralEdges)
+	edges = eb.connectOrphanSkeletonNodes(edges, sortedEdges)
 
 	attachResourceBadges(nodes, resByURI)
 	markIngressBuckets(nodes, edges)
@@ -217,40 +236,43 @@ func placePrimaryCandidates(cb *containerBuilder, candidates []extract.FactResou
 	return candContainerID, candExposure
 }
 
-func materializeSkeletonNodes(
+type nodeMaterializer struct {
+	foldedChildrenByRep map[string][]extract.FactResource
+	foldedEdgesByRep    map[string][]extract.FactEdge
+	candContainerID     map[string]string
+	candExposure        map[string]string
+	cb                  *containerBuilder
+	reg                 *icons.Registry
+	uriToNodeID         map[string]string
+	emittedNodeIDs      map[string]bool
+}
+
+func (nm *nodeMaterializer) nextNodeID(prefix, proj, name string) string {
+	base := fmt.Sprintf("%s_%s_%s", prefix, sanitizeID(proj), sanitizeID(name))
+	if len(base) > 72 {
+		base = strings.TrimRight(base[:72], "_")
+	}
+	return uniqueID(base, nm.emittedNodeIDs)
+}
+
+func (nm *nodeMaterializer) materialize(
 	cohorts []cohortGroup,
 	nonCohorts []extract.FactResource,
-	foldedChildrenByRep map[string][]extract.FactResource,
-	foldedEdgesByRep map[string][]extract.FactEdge,
-	candContainerID map[string]string,
-	candExposure map[string]string,
-	cb *containerBuilder,
-	reg *icons.Registry,
-) ([]skeletonNode, map[string]string, []manifest.StructuralEdge) {
+) ([]skeletonNode, []manifest.StructuralEdge) {
 	var nodes []skeletonNode
-	uriToNodeID := make(map[string]string)
 	var structuralEdges []manifest.StructuralEdge
-	emittedNodeIDs := make(map[string]bool)
-
-	nextNodeID := func(prefix, proj, name string) string {
-		base := fmt.Sprintf("%s_%s_%s", prefix, sanitizeID(proj), sanitizeID(name))
-		if len(base) > 72 {
-			base = strings.TrimRight(base[:72], "_")
-		}
-		return uniqueID(base, emittedNodeIDs)
-	}
 
 	for _, coh := range cohorts {
-		node, edges := buildCohortNode(coh, foldedChildrenByRep, foldedEdgesByRep, candContainerID, candExposure, cb, reg, nextNodeID, uriToNodeID)
+		node, edges := nm.buildCohortNode(coh)
 		nodes = append(nodes, node)
 		structuralEdges = append(structuralEdges, edges...)
 	}
 	for _, r := range nonCohorts {
-		node, edges := buildSingleNode(r, foldedChildrenByRep[r.URI], foldedEdgesByRep[r.URI], candContainerID[r.URI], candExposure[r.URI], cb, reg, nextNodeID, uriToNodeID)
+		node, edges := nm.buildSingleNode(r)
 		nodes = append(nodes, node)
 		structuralEdges = append(structuralEdges, edges...)
 	}
-	return nodes, uriToNodeID, structuralEdges
+	return nodes, structuralEdges
 }
 
 func uniqueID(base string, emitted map[string]bool) string {
@@ -262,19 +284,10 @@ func uniqueID(base string, emitted map[string]bool) string {
 	return id
 }
 
-func buildCohortNode(
-	coh cohortGroup,
-	foldedChildrenByRep map[string][]extract.FactResource,
-	foldedEdgesByRep map[string][]extract.FactEdge,
-	candContainerID, candExposure map[string]string,
-	cb *containerBuilder,
-	reg *icons.Registry,
-	nextNodeID func(prefix, proj, name string) string,
-	uriToNodeID map[string]string,
-) (skeletonNode, []manifest.StructuralEdge) {
+func (nm *nodeMaterializer) buildCohortNode(coh cohortGroup) (skeletonNode, []manifest.StructuralEdge) {
 	first := coh.members[0]
-	spec := classifyAssetSpec(first, reg)
-	nid := nextNodeID("cohort", first.ProjectID, coh.title)
+	spec := classifyAssetSpec(first, nm.reg)
+	nid := nm.nextNodeID("cohort", first.ProjectID, coh.title)
 
 	backed := make([]manifest.BackedResource, 0, len(coh.members))
 	memberNames := make([]string, 0, len(coh.members))
@@ -283,13 +296,13 @@ func buildCohortNode(
 	for _, m := range coh.members {
 		backed = append(backed, manifest.BackedResource{URI: m.URI, AssetType: m.AssetType, ProjectID: m.ProjectID})
 		memberNames = append(memberNames, m.DisplayName)
-		uriToNodeID[m.URI] = nid
-		for _, child := range foldedChildrenByRep[m.URI] {
+		nm.uriToNodeID[m.URI] = nid
+		for _, child := range nm.foldedChildrenByRep[m.URI] {
 			backed = append(backed, manifest.BackedResource{URI: child.URI, AssetType: child.AssetType, ProjectID: child.ProjectID})
 			memberNames = append(memberNames, child.DisplayName)
-			uriToNodeID[child.URI] = nid
+			nm.uriToNodeID[child.URI] = nid
 		}
-		for _, fe := range foldedEdgesByRep[m.URI] {
+		for _, fe := range nm.foldedEdgesByRep[m.URI] {
 			foldedEdgeIDs = append(foldedEdgeIDs, fe.ID)
 			structEdges = append(structEdges, manifest.StructuralEdge{
 				EdgeID:   fe.ID,
@@ -305,7 +318,7 @@ func buildCohortNode(
 	memberNames = slices.Compact(memberNames)
 
 	var badges []manifest.ComponentBadge
-	svcProj := cb.serviceProjectID(first.ProjectID)
+	svcProj := nm.cb.serviceProjectID(first.ProjectID)
 	if svcProj != "" {
 		badges = append(badges, manifest.ComponentBadge{Kind: "project", Label: svcProj})
 	}
@@ -320,8 +333,8 @@ func buildCohortNode(
 		AssetType:        first.AssetType,
 		ProjectID:        first.ProjectID,
 		ServiceProjectID: svcProj,
-		ContainerID:      candContainerID[first.URI],
-		Exposure:         candExposure[first.URI],
+		ContainerID:      nm.candContainerID[first.URI],
+		Exposure:         nm.candExposure[first.URI],
 		TopoRank:         spec.baseLayer,
 		CohortCount:      len(coh.members),
 		Members:          memberNames,
@@ -334,22 +347,18 @@ func buildCohortNode(
 	}, structEdges
 }
 
-func buildSingleNode(
-	r extract.FactResource,
-	foldedChildren []extract.FactResource,
-	foldedEdges []extract.FactEdge,
-	containerID, exposure string,
-	cb *containerBuilder,
-	reg *icons.Registry,
-	nextNodeID func(prefix, proj, name string) string,
-	uriToNodeID map[string]string,
-) (skeletonNode, []manifest.StructuralEdge) {
-	spec := classifyAssetSpec(r, reg)
-	nid := nextNodeID("n", r.ProjectID, r.DisplayName)
+func (nm *nodeMaterializer) buildSingleNode(r extract.FactResource) (skeletonNode, []manifest.StructuralEdge) {
+	foldedChildren := nm.foldedChildrenByRep[r.URI]
+	foldedEdges := nm.foldedEdgesByRep[r.URI]
+	containerID := nm.candContainerID[r.URI]
+	exposure := nm.candExposure[r.URI]
+
+	spec := classifyAssetSpec(r, nm.reg)
+	nid := nm.nextNodeID("n", r.ProjectID, r.DisplayName)
 
 	backed := []manifest.BackedResource{{URI: r.URI, AssetType: r.AssetType, ProjectID: r.ProjectID}}
 	memberNames := []string{r.DisplayName}
-	uriToNodeID[r.URI] = nid
+	nm.uriToNodeID[r.URI] = nid
 
 	var badges []manifest.ComponentBadge
 	if r.IsExternal {
@@ -358,7 +367,7 @@ func buildSingleNode(
 		badges = append(badges, manifest.ComponentBadge{Kind: "exposure", Label: exposure})
 	}
 
-	svcProj := cb.serviceProjectID(r.ProjectID)
+	svcProj := nm.cb.serviceProjectID(r.ProjectID)
 	if svcProj != "" {
 		badges = append(badges, manifest.ComponentBadge{Kind: "project", Label: svcProj})
 	}
@@ -366,7 +375,7 @@ func buildSingleNode(
 	for _, child := range foldedChildren {
 		backed = append(backed, manifest.BackedResource{URI: child.URI, AssetType: child.AssetType, ProjectID: child.ProjectID})
 		memberNames = append(memberNames, child.DisplayName)
-		uriToNodeID[child.URI] = nid
+		nm.uriToNodeID[child.URI] = nid
 		if badge, ok := foldedChildBadge(child); ok {
 			badges = append(badges, badge)
 		}
@@ -498,22 +507,34 @@ func markIngressBuckets(nodes []skeletonNode, edges []skeletonEdge) {
 	nodeIdxByID := indexNodePositions(nodes)
 	for i := range nodes {
 		n := &nodes[i]
-		if n.AssetType != "storage.googleapis.com/Bucket" {
+		if !isIngressBucketCandidate(*n) {
 			continue
 		}
-		low := strings.ToLower(n.Title)
-		if strings.Contains(low, "dlq") || strings.Contains(low, "archive") || strings.Contains(low, "backup") {
-			continue
-		}
-		for _, e := range outEdges[n.ID] {
-			if toIdx, ok := nodeIdxByID[e.ToNodeID]; ok {
-				if nodes[toIdx].AssetType == "eventarc.googleapis.com/Trigger" || slices.Contains(e.Details, "eventarc.bucket") {
-					n.TopoRank = 1
-					break
-				}
-			}
+		if hasEventarcTriggerTarget(outEdges[n.ID], nodes, nodeIdxByID) {
+			n.TopoRank = 1
 		}
 	}
+}
+
+func isIngressBucketCandidate(n skeletonNode) bool {
+	if n.AssetType != "storage.googleapis.com/Bucket" {
+		return false
+	}
+	low := strings.ToLower(n.Title)
+	return !strings.Contains(low, "dlq") && !strings.Contains(low, "archive") && !strings.Contains(low, "backup")
+}
+
+func hasEventarcTriggerTarget(outEdges []skeletonEdge, nodes []skeletonNode, nodeIdxByID map[string]int) bool {
+	for _, e := range outEdges {
+		toIdx, ok := nodeIdxByID[e.ToNodeID]
+		if !ok {
+			continue
+		}
+		if nodes[toIdx].AssetType == "eventarc.googleapis.com/Trigger" || slices.Contains(e.Details, "eventarc.bucket") {
+			return true
+		}
+	}
+	return false
 }
 
 func detectOneToOneFolds(
@@ -546,7 +567,7 @@ func foldK8sServicesToDeployments(
 		}
 		fr, okF := resByURI[e.FromURI]
 		to, okT := resByURI[e.ToURI]
-		if okF && okT && fr.AssetType == "k8s.io/Service" && to.AssetType == "apps.k8s.io/Deployment" {
+		if okF && okT && fr.AssetType == "k8s.io/Service" && to.AssetType == assetK8sDeployment {
 			svcToDeps[fr.URI] = append(svcToDeps[fr.URI], e)
 		}
 	}
@@ -582,7 +603,7 @@ func foldK8sIngressToWorkloads(
 		if depURI, ok := foldTarget[targetURI]; ok {
 			foldTarget[ingURI] = depURI
 			foldedEdges[depURI] = append(foldedEdges[depURI], es[0])
-		} else if toR, ok := resByURI[targetURI]; ok && toR.AssetType == "apps.k8s.io/Deployment" {
+		} else if toR, ok := resByURI[targetURI]; ok && toR.AssetType == assetK8sDeployment {
 			foldTarget[ingURI] = targetURI
 			foldedEdges[targetURI] = append(foldedEdges[targetURI], es[0])
 		}
@@ -681,57 +702,16 @@ func buildHomogeneousCohorts(
 	candContainerID map[string]string,
 	resByURI map[string]extract.FactResource,
 ) ([]cohortGroup, []extract.FactResource) {
-	inSig := make(map[string][]string)
-	outSig := make(map[string][]string)
-	for _, e := range edges {
-		if e.Heuristic {
-			continue
-		}
-		if _, isTransTo := classifyTransversalAsset(resByURI[e.ToURI].AssetType); !isTransTo {
-			outSig[e.FromURI] = append(outSig[e.FromURI], string(e.Kind)+":"+e.ToURI)
-		}
-		if _, isTransFrom := classifyTransversalAsset(resByURI[e.FromURI].AssetType); !isTransFrom {
-			inSig[e.ToURI] = append(inSig[e.ToURI], string(e.Kind)+":"+e.FromURI)
-		}
-	}
-	sigOf := func(r extract.FactResource) string {
-		ins := slices.Clone(inSig[r.URI])
-		outs := slices.Clone(outSig[r.URI])
-		slices.Sort(ins)
-		slices.Sort(outs)
-		ins = slices.Compact(ins)
-		outs = slices.Compact(outs)
-		return fmt.Sprintf("%s|%s|%s|in=%s|out=%s",
-			r.ProjectID, r.AssetType, candContainerID[r.URI],
-			strings.Join(ins, ","), strings.Join(outs, ","))
-	}
+	inSig, outSig := buildCohortEdgeSignatures(edges, resByURI)
 
 	triggerCountByProj := make(map[string]int)
 	for _, r := range candidates {
-		if r.AssetType == "cloudbuild.googleapis.com/BuildTrigger" {
+		if r.AssetType == assetCloudBuildTrigger {
 			triggerCountByProj[r.ProjectID]++
 		}
 	}
 
-	groups := make(map[string][]extract.FactResource)
-	var passthrough []extract.FactResource
-	for _, r := range candidates {
-		if r.IsExternal {
-			passthrough = append(passthrough, r)
-			continue
-		}
-		switch r.AssetType {
-		case "cloudbuild.googleapis.com/BuildTrigger",
-			"apps.k8s.io/Deployment",
-			"run.googleapis.com/Service",
-			"run.googleapis.com/Job",
-			"cloudfunctions.googleapis.com/CloudFunction",
-			"batch.k8s.io/CronJob":
-			groups[sigOf(r)] = append(groups[sigOf(r)], r)
-		default:
-			passthrough = append(passthrough, r)
-		}
-	}
+	groups, passthrough := groupCohortCandidates(candidates, candContainerID, inSig, outSig)
 
 	var cohorts []cohortGroup
 	for _, k := range slices.Sorted(maps.Keys(groups)) {
@@ -741,7 +721,7 @@ func buildHomogeneousCohorts(
 		})
 		first := members[0]
 		minCohort := 3
-		if first.AssetType == "cloudbuild.googleapis.com/BuildTrigger" && triggerCountByProj[first.ProjectID] >= 3 {
+		if first.AssetType == assetCloudBuildTrigger && triggerCountByProj[first.ProjectID] >= 3 {
 			minCohort = 2
 		}
 		if len(members) < minCohort {
@@ -758,8 +738,75 @@ func buildHomogeneousCohorts(
 	return cohorts, passthrough
 }
 
+func buildCohortEdgeSignatures(
+	edges []extract.FactEdge,
+	resByURI map[string]extract.FactResource,
+) (map[string][]string, map[string][]string) {
+	inSig := make(map[string][]string)
+	outSig := make(map[string][]string)
+	for _, e := range edges {
+		if e.Heuristic {
+			continue
+		}
+		if _, isTransTo := classifyTransversalAsset(resByURI[e.ToURI].AssetType); !isTransTo {
+			outSig[e.FromURI] = append(outSig[e.FromURI], string(e.Kind)+":"+e.ToURI)
+		}
+		if _, isTransFrom := classifyTransversalAsset(resByURI[e.FromURI].AssetType); !isTransFrom {
+			inSig[e.ToURI] = append(inSig[e.ToURI], string(e.Kind)+":"+e.FromURI)
+		}
+	}
+	return inSig, outSig
+}
+
+func groupCohortCandidates(
+	candidates []extract.FactResource,
+	candContainerID map[string]string,
+	inSig, outSig map[string][]string,
+) (map[string][]extract.FactResource, []extract.FactResource) {
+	groups := make(map[string][]extract.FactResource)
+	var passthrough []extract.FactResource
+	for _, r := range candidates {
+		if !isCohortEligibleResource(r) {
+			passthrough = append(passthrough, r)
+			continue
+		}
+		sig := cohortSignature(r, candContainerID[r.URI], inSig[r.URI], outSig[r.URI])
+		groups[sig] = append(groups[sig], r)
+	}
+	return groups, passthrough
+}
+
+func isCohortEligibleResource(r extract.FactResource) bool {
+	if r.IsExternal {
+		return false
+	}
+	switch r.AssetType {
+	case assetCloudBuildTrigger,
+		assetK8sDeployment,
+		"run.googleapis.com/Service",
+		"run.googleapis.com/Job",
+		"cloudfunctions.googleapis.com/CloudFunction",
+		"batch.k8s.io/CronJob":
+		return true
+	default:
+		return false
+	}
+}
+
+func cohortSignature(r extract.FactResource, containerID string, inEdges, outEdges []string) string {
+	ins := slices.Clone(inEdges)
+	outs := slices.Clone(outEdges)
+	slices.Sort(ins)
+	slices.Sort(outs)
+	ins = slices.Compact(ins)
+	outs = slices.Compact(outs)
+	return fmt.Sprintf("%s|%s|%s|in=%s|out=%s",
+		r.ProjectID, r.AssetType, containerID,
+		strings.Join(ins, ","), strings.Join(outs, ","))
+}
+
 func buildCohortTitle(first extract.FactResource, members []extract.FactResource, outSigs []string, resByURI map[string]extract.FactResource) string {
-	if first.AssetType == "cloudbuild.googleapis.com/BuildTrigger" {
+	if first.AssetType == assetCloudBuildTrigger {
 		prefix := "Build"
 		lowerName := strings.ToLower(first.DisplayName)
 		if strings.Contains(lowerName, "deploy") {
@@ -843,22 +890,12 @@ func extractInlineMeta(r extract.FactResource, folded []extract.FactResource) []
 	}
 	switch r.AssetType {
 	case "compute.googleapis.com/GlobalForwardingRule", "compute.googleapis.com/ForwardingRule":
-		if ip := attrStr(r.Attributes, "ip_address"); ip != "" {
-			if port := attrStr(r.Attributes, "port_range"); port != "" {
-				add("VIP", ip+":"+port)
-			} else {
-				add("VIP", ip)
-			}
-		}
-		if scheme := attrStr(r.Attributes, "load_balancing_scheme"); scheme != "" {
-			add("Scheme", scheme)
-		}
-	case "apps.k8s.io/Deployment":
+		add("VIP", forwardingRuleVIP(r.Attributes))
+		add("Scheme", attrStr(r.Attributes, "load_balancing_scheme"))
+	case assetK8sDeployment:
 		add("Namespace", attrStr(r.Attributes, "namespace"))
 	case "run.googleapis.com/Service":
-		if ing := attrStr(r.Attributes, "ingress"); ing != "" {
-			add("Ingress", strings.TrimPrefix(ing, "INGRESS_TRAFFIC_"))
-		}
+		add("Ingress", strings.TrimPrefix(attrStr(r.Attributes, "ingress"), "INGRESS_TRAFFIC_"))
 	case "cloudfunctions.googleapis.com/CloudFunction":
 		add("Runtime", attrStr(r.Attributes, "runtime"))
 	case "sqladmin.googleapis.com/Instance", "alloydb.googleapis.com/Cluster":
@@ -878,6 +915,17 @@ func extractInlineMeta(r extract.FactResource, folded []extract.FactResource) []
 		}
 	}
 	return meta
+}
+
+func forwardingRuleVIP(attrs map[string]any) string {
+	ip := attrStr(attrs, "ip_address")
+	if ip == "" {
+		return ""
+	}
+	if port := attrStr(attrs, "port_range"); port != "" {
+		return ip + ":" + port
+	}
+	return ip
 }
 
 func summarizeTransversal(r extract.FactResource) string {

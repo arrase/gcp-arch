@@ -129,60 +129,69 @@ func splitSCCFeedbackEdge(
 	return breakEdgeIdx, slices.Delete(compEdges, breakPos, breakPos+1)
 }
 
+type tarjanState struct {
+	adj     map[string][]string
+	index   int
+	indices map[string]int
+	lowlink map[string]int
+	onStack map[string]bool
+	stack   []string
+	cyclic  [][]string
+}
+
 func tarjanCyclicSCCs(nodeIDs []string, edges []indexedEdge) [][]string {
 	adj := make(map[string][]string, len(nodeIDs))
 	for _, ie := range edges {
 		adj[ie.edge.FromNodeID] = append(adj[ie.edge.FromNodeID], ie.edge.ToNodeID)
 	}
-	index := 0
-	indices := make(map[string]int, len(nodeIDs))
-	lowlink := make(map[string]int, len(nodeIDs))
-	onStack := make(map[string]bool, len(nodeIDs))
-	var stack []string
-	var cyclic [][]string
-
-	var strongConnect func(v string)
-	strongConnect = func(v string) {
-		index++
-		indices[v] = index
-		lowlink[v] = index
-		stack = append(stack, v)
-		onStack[v] = true
-
-		for _, w := range adj[v] {
-			if indices[w] == 0 {
-				strongConnect(w)
-				if lowlink[w] < lowlink[v] {
-					lowlink[v] = lowlink[w]
-				}
-			} else if onStack[w] && indices[w] < lowlink[v] {
-				lowlink[v] = indices[w]
-			}
-		}
-
-		if lowlink[v] == indices[v] {
-			var comp []string
-			for {
-				w := stack[len(stack)-1]
-				stack = stack[:len(stack)-1]
-				onStack[w] = false
-				comp = append(comp, w)
-				if w == v {
-					break
-				}
-			}
-			if len(comp) > 1 {
-				cyclic = append(cyclic, comp)
-			}
-		}
+	st := &tarjanState{
+		adj:     adj,
+		indices: make(map[string]int, len(nodeIDs)),
+		lowlink: make(map[string]int, len(nodeIDs)),
+		onStack: make(map[string]bool, len(nodeIDs)),
 	}
-
 	for _, id := range nodeIDs {
-		if indices[id] == 0 {
-			strongConnect(id)
+		if st.indices[id] == 0 {
+			st.strongConnect(id)
 		}
 	}
-	return cyclic
+	return st.cyclic
+}
+
+func (s *tarjanState) strongConnect(v string) {
+	s.index++
+	s.indices[v] = s.index
+	s.lowlink[v] = s.index
+	s.stack = append(s.stack, v)
+	s.onStack[v] = true
+
+	for _, w := range s.adj[v] {
+		if s.indices[w] == 0 {
+			s.strongConnect(w)
+			s.lowlink[v] = min(s.lowlink[v], s.lowlink[w])
+		} else if s.onStack[w] {
+			s.lowlink[v] = min(s.lowlink[v], s.indices[w])
+		}
+	}
+
+	if s.lowlink[v] == s.indices[v] {
+		if comp := s.popComponent(v); len(comp) > 1 {
+			s.cyclic = append(s.cyclic, comp)
+		}
+	}
+}
+
+func (s *tarjanState) popComponent(root string) []string {
+	var comp []string
+	for {
+		w := s.stack[len(s.stack)-1]
+		s.stack = s.stack[:len(s.stack)-1]
+		s.onStack[w] = false
+		comp = append(comp, w)
+		if w == root {
+			return comp
+		}
+	}
 }
 
 func betterFeedbackEdge(cand, best skeletonEdge, nodeByID map[string]skeletonNode, baseRank map[string]int) bool {

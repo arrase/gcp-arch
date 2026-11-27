@@ -512,16 +512,7 @@ func partitionDetailViewNodes(
 	assigned := make(map[string]bool, len(orderedNodes))
 	for i := range targetViews {
 		slotID := fmt.Sprintf("view_%d", i+1)
-		lv := llmBySlot[slotID]
-
-		seen := make(map[string]bool)
-		var picked []string
-		for _, nid := range lv.NodeIDs {
-			if _, ok := nodeByID[nid]; ok && !seen[nid] {
-				seen[nid] = true
-				picked = append(picked, nid)
-			}
-		}
+		picked := filterValidNodeIDs(llmBySlot[slotID].NodeIDs, nodeByID)
 		if len(picked) < 2 {
 			picked = slices.Clone(fallbackSlices[i])
 		}
@@ -541,6 +532,18 @@ func partitionDetailViewNodes(
 		assigned[n.ID] = true
 	}
 	return pickedByView
+}
+
+func filterValidNodeIDs(nodeIDs []string, nodeByID map[string]skeletonNode) []string {
+	seen := make(map[string]bool, len(nodeIDs))
+	var picked []string
+	for _, nid := range nodeIDs {
+		if _, ok := nodeByID[nid]; ok && !seen[nid] {
+			seen[nid] = true
+			picked = append(picked, nid)
+		}
+	}
+	return picked
 }
 
 func buildDetailPlacements(

@@ -10,29 +10,34 @@ import (
 	"github.com/arrase/gcp-arch/internal/manifest"
 )
 
+const labelVPCPeering = "VPC Peering"
+
 type edgePairKey struct {
 	from string
 	to   string
 }
 
-func nodeAt(nodes []skeletonNode, nodeIdxByID map[string]int, id string) *skeletonNode {
-	if idx, ok := nodeIdxByID[id]; ok {
-		return &nodes[idx]
+type edgeBuilder struct {
+	transversalItems    []manifest.TransversalItem
+	transversalIdxByURI map[string]int
+	uriToNodeID         map[string]string
+	nodeIdxByID         map[string]int
+	nodes               []skeletonNode
+	cb                  *containerBuilder
+	resByURI            map[string]extract.FactResource
+	resolveRep          func(string) string
+}
+
+func (eb *edgeBuilder) nodeAt(id string) *skeletonNode {
+	if idx, ok := eb.nodeIdxByID[id]; ok {
+		return &eb.nodes[idx]
 	}
 	return nil
 }
 
-func buildSkeletonEdges(
+func (eb *edgeBuilder) buildSkeletonEdges(
 	sortedEdges []extract.FactEdge,
 	initialStructural []manifest.StructuralEdge,
-	transversalItems []manifest.TransversalItem,
-	transversalIdxByURI map[string]int,
-	uriToNodeID map[string]string,
-	nodeIdxByID map[string]int,
-	nodes []skeletonNode,
-	cb *containerBuilder,
-	resByURI map[string]extract.FactResource,
-	resolveRep func(string) string,
 ) ([]skeletonEdge, []manifest.StructuralEdge) {
 	foldedEdgeSet := make(map[string]bool, len(initialStructural))
 	for _, se := range initialStructural {
@@ -47,34 +52,44 @@ func buildSkeletonEdges(
 		if foldedEdgeSet[e.ID] {
 			continue
 		}
-		if handleTransversalFactEdge(e, transversalItems, transversalIdxByURI, uriToNodeID, nodeIdxByID, nodes, cb) {
-			continue
-		}
-		if se, handled := handleSpecialStructuralEdge(e, uriToNodeID, nodeIdxByID, nodes, cb, resByURI, resolveRep); handled {
-			structuralOut = append(structuralOut, se)
-			continue
-		}
-
-		fromNID := uriToNodeID[resolveRep(e.FromURI)]
-		toNID := uriToNodeID[resolveRep(e.ToURI)]
-		if fromNID != "" && toNID != "" && fromNID == toNID {
-			if fn := nodeAt(nodes, nodeIdxByID, fromNID); fn != nil {
-				appendUniqueStr(&fn.FoldedEdgeIDs, e.ID)
-			}
-			structuralOut = append(structuralOut, manifest.StructuralEdge{
-				EdgeID: e.ID, Kind: string(e.Kind), FromURI: e.FromURI, ToURI: e.ToURI, Reason: "intra_component_fold", TargetID: fromNID,
-			})
-			continue
-		}
-		if fromNID == "" || toNID == "" {
-			structuralOut = append(structuralOut, handleUnmappedEndpointEdge(e, fromNID, toNID, nodeIdxByID, nodes, cb, resByURI, resolveRep))
-			continue
-		}
-		if se, isHeuristic := accumulateSkeletonEdge(e, fromNID, toNID, edgeAgg, &edgeOrder, nodeIdxByID, nodes, resByURI); isHeuristic {
+		if se, hasStructural := eb.processFactEdge(e, edgeAgg, &edgeOrder); hasStructural {
 			structuralOut = append(structuralOut, se)
 		}
 	}
 
+	return finalizeSkeletonEdges(edgeAgg, edgeOrder), structuralOut
+}
+
+func (eb *edgeBuilder) processFactEdge(
+	e extract.FactEdge,
+	edgeAgg map[edgePairKey]*skeletonEdge,
+	edgeOrder *[]edgePairKey,
+) (manifest.StructuralEdge, bool) {
+	if eb.handleTransversalFactEdge(e) {
+		return manifest.StructuralEdge{}, false
+	}
+	if se, handled := eb.handleSpecialStructuralEdge(e); handled {
+		return se, true
+	}
+
+	fromNID := eb.uriToNodeID[eb.resolveRep(e.FromURI)]
+	toNID := eb.uriToNodeID[eb.resolveRep(e.ToURI)]
+	if fromNID != "" && fromNID == toNID {
+		if fn := eb.nodeAt(fromNID); fn != nil {
+			appendUniqueStr(&fn.FoldedEdgeIDs, e.ID)
+		}
+		return manifest.StructuralEdge{
+			EdgeID: e.ID, Kind: string(e.Kind), FromURI: e.FromURI, ToURI: e.ToURI,
+			Reason: "intra_component_fold", TargetID: fromNID,
+		}, true
+	}
+	if fromNID == "" || toNID == "" {
+		return eb.handleUnmappedEndpointEdge(e, fromNID, toNID), true
+	}
+	return eb.accumulateSkeletonEdge(e, fromNID, toNID, edgeAgg, edgeOrder)
+}
+
+func finalizeSkeletonEdges(edgeAgg map[edgePairKey]*skeletonEdge, edgeOrder []edgePairKey) []skeletonEdge {
 	edges := make([]skeletonEdge, 0, len(edgeOrder))
 	for i, key := range edgeOrder {
 		agg := edgeAgg[key]
@@ -87,64 +102,55 @@ func buildSkeletonEdges(
 		}
 		edges = append(edges, *agg)
 	}
-	return edges, structuralOut
+	return edges
 }
 
-func handleTransversalFactEdge(
-	e extract.FactEdge,
-	transversalItems []manifest.TransversalItem,
-	transversalIdxByURI map[string]int,
-	uriToNodeID map[string]string,
-	nodeIdxByID map[string]int,
-	nodes []skeletonNode,
-	cb *containerBuilder,
-) bool {
-	fromIdx, hasFrom := transversalIdxByURI[e.FromURI]
-	toIdx, hasTo := transversalIdxByURI[e.ToURI]
+func (eb *edgeBuilder) handleTransversalFactEdge(e extract.FactEdge) bool {
+	fromIdx, hasFrom := eb.transversalIdxByURI[e.FromURI]
+	toIdx, hasTo := eb.transversalIdxByURI[e.ToURI]
 	if !hasFrom && !hasTo {
 		return false
 	}
 	if hasTo {
-		attachTransversalEdge(&transversalItems[toIdx], e, e.FromURI, uriToNodeID, nodeIdxByID, nodes)
-		if srcCID := cb.containerByBackedURI[e.FromURI]; srcCID != "" {
-			if ct, ok := cb.byID[srcCID]; ok {
-				appendUniqueStr(&ct.FoldedEdgeIDs, e.ID)
-			}
-		}
+		eb.attachTransversalEdge(&eb.transversalItems[toIdx], e, e.FromURI)
+		eb.foldContainerEdge(e.FromURI, e.ID, "")
 	}
 	if hasFrom {
-		fromTI := &transversalItems[fromIdx]
-		attachTransversalEdge(fromTI, e, e.ToURI, uriToNodeID, nodeIdxByID, nodes)
-		if dstCID := cb.containerByBackedURI[e.ToURI]; dstCID != "" {
-			if ct, ok := cb.byID[dstCID]; ok {
-				appendUniqueStr(&ct.FoldedEdgeIDs, e.ID)
-				if fromTI.Category == "NAT_ROUTER" {
-					appendUniqueStr(&ct.Badges, "NAT: "+fromTI.DisplayName)
-				}
-			}
+		fromTI := &eb.transversalItems[fromIdx]
+		eb.attachTransversalEdge(fromTI, e, e.ToURI)
+		natBadge := ""
+		if fromTI.Category == "NAT_ROUTER" {
+			natBadge = "NAT: " + fromTI.DisplayName
 		}
+		eb.foldContainerEdge(e.ToURI, e.ID, natBadge)
 	}
 	return true
 }
 
-func attachTransversalEdge(
+func (eb *edgeBuilder) foldContainerEdge(uri, edgeID, badge string) {
+	if cid := eb.cb.containerByBackedURI[uri]; cid != "" {
+		if ct, ok := eb.cb.byID[cid]; ok {
+			appendUniqueStr(&ct.FoldedEdgeIDs, edgeID)
+			appendUniqueStr(&ct.Badges, badge)
+		}
+	}
+}
+
+func (eb *edgeBuilder) attachTransversalEdge(
 	ti *manifest.TransversalItem,
 	e extract.FactEdge,
 	otherURI string,
-	uriToNodeID map[string]string,
-	nodeIdxByID map[string]int,
-	nodes []skeletonNode,
 ) {
 	appendUniqueStr(&ti.BackedEdgeIDs, e.ID)
 	if strings.HasPrefix(e.Detail, "roles/") {
 		appendUniqueStr(&ti.Roles, e.Detail)
 	}
-	nid, ok := uriToNodeID[otherURI]
+	nid, ok := eb.uriToNodeID[otherURI]
 	if !ok {
 		return
 	}
 	appendUniqueStr(&ti.AttachedNodeIDs, nid)
-	cn := nodeAt(nodes, nodeIdxByID, nid)
+	cn := eb.nodeAt(nid)
 	if cn == nil {
 		return
 	}
@@ -175,31 +181,19 @@ func transversalBadge(ti *manifest.TransversalItem) (manifest.ComponentBadge, bo
 	return manifest.ComponentBadge{}, false
 }
 
-func handleSpecialStructuralEdge(
-	e extract.FactEdge,
-	uriToNodeID map[string]string,
-	nodeIdxByID map[string]int,
-	nodes []skeletonNode,
-	cb *containerBuilder,
-	resByURI map[string]extract.FactResource,
-	resolveRep func(string) string,
-) (manifest.StructuralEdge, bool) {
+func (eb *edgeBuilder) handleSpecialStructuralEdge(e extract.FactEdge) (manifest.StructuralEdge, bool) {
 	if e.Kind == extract.EdgePSAPeering {
-		targetNID := uriToNodeID[resolveRep(e.ToURI)]
+		targetNID := eb.uriToNodeID[eb.resolveRep(e.ToURI)]
 		targetCID := ""
-		if tn := nodeAt(nodes, nodeIdxByID, targetNID); tn != nil {
+		if tn := eb.nodeAt(targetNID); tn != nil {
 			targetCID = tn.ContainerID
 			addUniqueBadge(tn, manifest.ComponentBadge{Kind: "psa", Label: "PSA Peering"})
 		}
-		if ct, ok := cb.byID[targetCID]; ok {
+		if ct, ok := eb.cb.byID[targetCID]; ok {
 			appendUniqueStr(&ct.FoldedEdgeIDs, e.ID)
 			appendUniqueStr(&ct.Badges, "PSA Peering")
 		}
-		if srcCID := cb.containerByBackedURI[e.FromURI]; srcCID != "" {
-			if srcCt, ok := cb.byID[srcCID]; ok {
-				appendUniqueStr(&srcCt.FoldedEdgeIDs, e.ID)
-			}
-		}
+		eb.foldContainerEdge(e.FromURI, e.ID, "")
 		return manifest.StructuralEdge{
 			EdgeID: e.ID, Kind: string(e.Kind), FromURI: e.FromURI, ToURI: e.ToURI,
 			Reason: "psa_container_boundary", TargetID: cmp.Or(targetCID, targetNID),
@@ -208,17 +202,17 @@ func handleSpecialStructuralEdge(
 	if e.Kind != extract.EdgeVPCPeering {
 		return manifest.StructuralEdge{}, false
 	}
-	fromR, toR := resByURI[e.FromURI], resByURI[e.ToURI]
-	srcCID, dstCID := cb.containerByBackedURI[e.FromURI], cb.containerByBackedURI[e.ToURI]
-	fromNID, targetNID := uriToNodeID[resolveRep(e.FromURI)], uriToNodeID[resolveRep(e.ToURI)]
-	if tn := nodeAt(nodes, nodeIdxByID, targetNID); tn != nil {
-		addUniqueBadge(tn, manifest.ComponentBadge{Kind: "peering", Label: "VPC Peering"})
+	fromR, toR := eb.resByURI[e.FromURI], eb.resByURI[e.ToURI]
+	srcCID, dstCID := eb.cb.containerByBackedURI[e.FromURI], eb.cb.containerByBackedURI[e.ToURI]
+	fromNID, targetNID := eb.uriToNodeID[eb.resolveRep(e.FromURI)], eb.uriToNodeID[eb.resolveRep(e.ToURI)]
+	if tn := eb.nodeAt(targetNID); tn != nil {
+		addUniqueBadge(tn, manifest.ComponentBadge{Kind: "peering", Label: labelVPCPeering})
 	}
-	if fn := nodeAt(nodes, nodeIdxByID, fromNID); fn != nil {
-		addUniqueBadge(fn, manifest.ComponentBadge{Kind: "peering", Label: "VPC Peering"})
+	if fn := eb.nodeAt(fromNID); fn != nil {
+		addUniqueBadge(fn, manifest.ComponentBadge{Kind: "peering", Label: labelVPCPeering})
 	}
-	attachVPCPeeringContainer(cb, srcCID, toR.DisplayName, e.ID)
-	attachVPCPeeringContainer(cb, dstCID, fromR.DisplayName, e.ID)
+	eb.attachVPCPeeringContainer(srcCID, toR.DisplayName, e.ID)
+	eb.attachVPCPeeringContainer(dstCID, fromR.DisplayName, e.ID)
 	reason := "vpc_peering"
 	targetID := cmp.Or(targetNID, dstCID, srcCID)
 	if srcCID != "" && dstCID != "" && targetNID == "" {
@@ -231,29 +225,24 @@ func handleSpecialStructuralEdge(
 	}, true
 }
 
-func attachVPCPeeringContainer(cb *containerBuilder, cid, peerName, edgeID string) {
-	if ct, ok := cb.byID[cid]; ok {
+func (eb *edgeBuilder) attachVPCPeeringContainer(cid, peerName, edgeID string) {
+	if ct, ok := eb.cb.byID[cid]; ok {
 		appendUniqueStr(&ct.FoldedEdgeIDs, edgeID)
 		if peerName != "" {
 			appendUniqueStr(&ct.Badges, "Peering: "+peerName)
 		} else {
-			appendUniqueStr(&ct.Badges, "VPC Peering")
+			appendUniqueStr(&ct.Badges, labelVPCPeering)
 		}
 	}
 }
 
-func handleUnmappedEndpointEdge(
+func (eb *edgeBuilder) handleUnmappedEndpointEdge(
 	e extract.FactEdge,
 	fromNID, toNID string,
-	nodeIdxByID map[string]int,
-	nodes []skeletonNode,
-	cb *containerBuilder,
-	resByURI map[string]extract.FactResource,
-	resolveRep func(string) string,
 ) manifest.StructuralEdge {
-	fromCID := cmp.Or(cb.containerByBackedURI[resolveRep(e.FromURI)], cb.containerByBackedURI[e.FromURI])
-	toCID := cmp.Or(cb.containerByBackedURI[resolveRep(e.ToURI)], cb.containerByBackedURI[e.ToURI])
-	attachContainerEndpointEdge(cb, e, resByURI[e.FromURI], resByURI[e.ToURI], nodeAt(nodes, nodeIdxByID, fromNID), nodeAt(nodes, nodeIdxByID, toNID), fromCID, toCID)
+	fromCID := cmp.Or(eb.cb.containerByBackedURI[eb.resolveRep(e.FromURI)], eb.cb.containerByBackedURI[e.FromURI])
+	toCID := cmp.Or(eb.cb.containerByBackedURI[eb.resolveRep(e.ToURI)], eb.cb.containerByBackedURI[e.ToURI])
+	eb.attachContainerEndpointEdge(e, eb.nodeAt(fromNID), eb.nodeAt(toNID), fromCID, toCID)
 	reason := "structural_link"
 	if fromCID != "" || toCID != "" {
 		reason = "container_attachment"
@@ -264,16 +253,15 @@ func handleUnmappedEndpointEdge(
 	}
 }
 
-func attachContainerEndpointEdge(
-	cb *containerBuilder,
+func (eb *edgeBuilder) attachContainerEndpointEdge(
 	e extract.FactEdge,
-	fromR, toR extract.FactResource,
 	fromNode, toNode *skeletonNode,
 	fromCID, toCID string,
 ) {
+	fromR, toR := eb.resByURI[e.FromURI], eb.resByURI[e.ToURI]
 	det := strings.ToLower(e.Detail)
 	attachToContainer := func(cid string, peerR extract.FactResource) {
-		ct, ok := cb.byID[cid]
+		ct, ok := eb.cb.byID[cid]
 		if !ok {
 			return
 		}
@@ -321,46 +309,22 @@ func attachContainerEndpointEdge(
 	}
 }
 
-func accumulateSkeletonEdge(
+func (eb *edgeBuilder) accumulateSkeletonEdge(
 	e extract.FactEdge,
 	fromNID, toNID string,
 	edgeAgg map[edgePairKey]*skeletonEdge,
 	edgeOrder *[]edgePairKey,
-	nodeIdxByID map[string]int,
-	nodes []skeletonNode,
-	resByURI map[string]extract.FactResource,
 ) (manifest.StructuralEdge, bool) {
 	key := edgePairKey{from: fromNID, to: toNID}
 	agg, exists := edgeAgg[key]
-	fromR, toR := resByURI[e.FromURI], resByURI[e.ToURI]
+	fromR, toR := eb.resByURI[e.FromURI], eb.resByURI[e.ToURI]
 	retryDLQ := isRetryOrDLQEdge(e, fromR, toR)
 	if !exists {
-		verb, semTag, flowKind := defaultEdgeAnnotation(e, nodeAt(nodes, nodeIdxByID, fromNID), nodeAt(nodes, nodeIdxByID, toNID), retryDLQ)
-		prov := manifest.ProvenanceVerified
-		rationale := ""
-		if e.Heuristic {
-			prov = manifest.ProvenanceInferred
-			rationale = buildInferenceRationale(e)
-		}
-		agg = &skeletonEdge{
-			FromNodeID: fromNID, ToNodeID: toNID, Verb: verb, FlowKind: flowKind, SemanticTag: semTag,
-			Provenance: prov, InferenceRationale: rationale, IsRetryOrDLQ: retryDLQ,
-		}
+		agg = eb.newSkeletonEdge(e, fromNID, toNID, retryDLQ)
 		edgeAgg[key] = agg
 		*edgeOrder = append(*edgeOrder, key)
 	} else {
-		if !e.Heuristic && agg.Provenance == manifest.ProvenanceInferred {
-			agg.Provenance = manifest.ProvenanceVerified
-			agg.InferenceRationale = ""
-		}
-		if retryDLQ {
-			agg.IsRetryOrDLQ = true
-			if strings.Contains(strings.ToLower(e.Detail), "dead_letter") || strings.Contains(strings.ToLower(toR.DisplayName), "dlq") {
-				agg.SemanticTag = "dlq"
-			} else if agg.SemanticTag != "dlq" {
-				agg.SemanticTag = "retry"
-			}
-		}
+		mergeSkeletonEdge(agg, e, toR, retryDLQ)
 	}
 	if !slices.Contains(agg.Kinds, e.Kind) {
 		agg.Kinds = append(agg.Kinds, e.Kind)
@@ -377,66 +341,71 @@ func accumulateSkeletonEdge(
 	}, true
 }
 
+func (eb *edgeBuilder) newSkeletonEdge(e extract.FactEdge, fromNID, toNID string, retryDLQ bool) *skeletonEdge {
+	verb, semTag, flowKind := defaultEdgeAnnotation(e, eb.nodeAt(fromNID), eb.nodeAt(toNID), retryDLQ)
+	prov := manifest.ProvenanceVerified
+	rationale := ""
+	if e.Heuristic {
+		prov = manifest.ProvenanceInferred
+		rationale = buildInferenceRationale(e)
+	}
+	return &skeletonEdge{
+		FromNodeID: fromNID, ToNodeID: toNID, Verb: verb, FlowKind: flowKind, SemanticTag: semTag,
+		Provenance: prov, InferenceRationale: rationale, IsRetryOrDLQ: retryDLQ,
+	}
+}
+
+func mergeSkeletonEdge(agg *skeletonEdge, e extract.FactEdge, toR extract.FactResource, retryDLQ bool) {
+	if !e.Heuristic && agg.Provenance == manifest.ProvenanceInferred {
+		agg.Provenance = manifest.ProvenanceVerified
+		agg.InferenceRationale = ""
+	}
+	if !retryDLQ {
+		return
+	}
+	agg.IsRetryOrDLQ = true
+	if strings.Contains(strings.ToLower(e.Detail), "dead_letter") || strings.Contains(strings.ToLower(toR.DisplayName), "dlq") {
+		agg.SemanticTag = "dlq"
+	} else if agg.SemanticTag != "dlq" {
+		agg.SemanticTag = "retry"
+	}
+}
+
 // connectOrphanSkeletonNodes adds evidence-backed INFERRED edges for container-bridged
 // resources (VPC peering hybrid gateways, Private DNS zones, NCC hub spokes, and shared-SA
 // build staging buckets) so zero primary nodes float disconnected.
-func connectOrphanSkeletonNodes(
-	nodes []skeletonNode,
+func (eb *edgeBuilder) connectOrphanSkeletonNodes(
 	edges []skeletonEdge,
 	sortedEdges []extract.FactEdge,
-	transversalItems []manifest.TransversalItem,
-	uriToNodeID map[string]string,
-	nodeIdxByID map[string]int,
-	cb *containerBuilder,
-	resByURI map[string]extract.FactResource,
-	resolveRep func(string) string,
 ) []skeletonEdge {
-	adder := newOrphanEdgeAdder(nodes, edges, uriToNodeID, nodeIdxByID, cb, resByURI, resolveRep)
+	adder := newOrphanEdgeAdder(eb, edges)
 	adder.connectContainerBridgedEdges(sortedEdges)
-	adder.connectSharedSAOrphans(nodes, transversalItems)
+	adder.connectSharedSAOrphans()
 	return adder.edges
 }
 
 type orphanEdgeAdder struct {
+	eb          *edgeBuilder
 	edges       []skeletonEdge
 	pairSeen    map[edgePairKey]bool
 	deg         map[string]int
-	uriToNodeID map[string]string
-	nodeIdxByID map[string]int
-	nodes       []skeletonNode
-	cb          *containerBuilder
-	resByURI    map[string]extract.FactResource
-	resolveRep  func(string) string
 	nodesInCont map[string][]skeletonNode
 }
 
-func newOrphanEdgeAdder(
-	nodes []skeletonNode,
-	edges []skeletonEdge,
-	uriToNodeID map[string]string,
-	nodeIdxByID map[string]int,
-	cb *containerBuilder,
-	resByURI map[string]extract.FactResource,
-	resolveRep func(string) string,
-) *orphanEdgeAdder {
+func newOrphanEdgeAdder(eb *edgeBuilder, edges []skeletonEdge) *orphanEdgeAdder {
 	pairSeen := make(map[edgePairKey]bool, len(edges))
-	deg := make(map[string]int, len(nodes))
+	deg := make(map[string]int, len(eb.nodes))
 	for _, e := range edges {
 		pairSeen[edgePairKey{from: e.FromNodeID, to: e.ToNodeID}] = true
 		deg[e.FromNodeID]++
 		deg[e.ToNodeID]++
 	}
 	return &orphanEdgeAdder{
+		eb:          eb,
 		edges:       edges,
 		pairSeen:    pairSeen,
 		deg:         deg,
-		uriToNodeID: uriToNodeID,
-		nodeIdxByID: nodeIdxByID,
-		nodes:       nodes,
-		cb:          cb,
-		resByURI:    resByURI,
-		resolveRep:  resolveRep,
-		nodesInCont: indexNodesUnderContainers(nodes, cb),
+		nodesInCont: indexNodesUnderContainers(eb.nodes, eb.cb),
 	}
 }
 
@@ -478,20 +447,20 @@ func (a *orphanEdgeAdder) connectContainerBridgedEdges(sortedEdges []extract.Fac
 }
 
 func (a *orphanEdgeAdder) connectNCCSpoke(e extract.FactEdge) {
-	fromNID := a.uriToNodeID[a.resolveRep(e.FromURI)]
-	toCID := a.cb.containerByBackedURI[e.ToURI]
+	fromNID := a.eb.uriToNodeID[a.eb.resolveRep(e.FromURI)]
+	toCID := a.eb.cb.containerByBackedURI[e.ToURI]
 	if fromNID == "" || toCID == "" {
 		return
 	}
 	if rep := pickRepresentativeNode(a.nodesInCont[toCID], fromNID); rep != nil {
 		a.addInferred(fromNID, rep.ID, "NCC spoke", "peering", manifest.FlowRuntime,
-			fmt.Sprintf("NCC hub spoke attachment to VPC %s", a.resByURI[e.ToURI].DisplayName))
+			fmt.Sprintf("NCC hub spoke attachment to VPC %s", a.eb.resByURI[e.ToURI].DisplayName))
 	}
 }
 
 func (a *orphanEdgeAdder) connectVPCPeeringGateways(e extract.FactEdge) {
-	fromCID := a.cb.containerByBackedURI[e.FromURI]
-	toNID := a.uriToNodeID[a.resolveRep(e.ToURI)]
+	fromCID := a.eb.cb.containerByBackedURI[e.FromURI]
+	toNID := a.eb.uriToNodeID[a.eb.resolveRep(e.ToURI)]
 	if fromCID == "" || toNID == "" {
 		return
 	}
@@ -501,13 +470,13 @@ func (a *orphanEdgeAdder) connectVPCPeeringGateways(e extract.FactEdge) {
 			verb = "Interconnect"
 		}
 		a.addInferred(hn.ID, toNID, verb, "hybrid", manifest.FlowRuntime,
-			fmt.Sprintf("Hybrid gateway %s in peered VPC %s (%s)", hn.Title, a.resByURI[e.FromURI].DisplayName, cmp.Or(e.Detail, "vpc_peering")))
+			fmt.Sprintf("Hybrid gateway %s in peered VPC %s (%s)", hn.Title, a.eb.resByURI[e.FromURI].DisplayName, cmp.Or(e.Detail, "vpc_peering")))
 	}
 }
 
 func (a *orphanEdgeAdder) connectPrivateDNSZone(e extract.FactEdge) {
-	zoneNID := a.uriToNodeID[a.resolveRep(e.FromURI)]
-	vpcCID := a.cb.containerByBackedURI[e.ToURI]
+	zoneNID := a.eb.uriToNodeID[a.eb.resolveRep(e.FromURI)]
+	vpcCID := a.eb.cb.containerByBackedURI[e.ToURI]
 	if zoneNID == "" || vpcCID == "" || a.deg[zoneNID] > 0 {
 		return
 	}
@@ -515,7 +484,7 @@ func (a *orphanEdgeAdder) connectPrivateDNSZone(e extract.FactEdge) {
 	if rep == nil {
 		return
 	}
-	zoneNode := nodeAt(a.nodes, a.nodeIdxByID, zoneNID)
+	zoneNode := a.eb.nodeAt(zoneNID)
 	if zoneNode == nil {
 		return
 	}
@@ -524,33 +493,37 @@ func (a *orphanEdgeAdder) connectPrivateDNSZone(e extract.FactEdge) {
 		fromID, toID = rep.ID, zoneNID
 	}
 	a.addInferred(fromID, toID, "Private DNS", "traffic", manifest.FlowRuntime,
-		fmt.Sprintf("Private DNS zone %s attached to VPC %s", zoneNode.Title, a.resByURI[e.ToURI].DisplayName))
+		fmt.Sprintf("Private DNS zone %s attached to VPC %s", zoneNode.Title, a.eb.resByURI[e.ToURI].DisplayName))
 }
 
-func (a *orphanEdgeAdder) connectSharedSAOrphans(nodes []skeletonNode, transversalItems []manifest.TransversalItem) {
+func (a *orphanEdgeAdder) connectSharedSAOrphans() {
 	tiByNode := make(map[string][]manifest.TransversalItem)
-	for _, ti := range transversalItems {
+	for _, ti := range a.eb.transversalItems {
 		for _, nid := range ti.AttachedNodeIDs {
 			tiByNode[nid] = append(tiByNode[nid], ti)
 		}
 	}
-	for _, n := range nodes {
+	for _, n := range a.eb.nodes {
 		if a.deg[n.ID] > 0 {
 			continue
 		}
-		for _, ti := range tiByNode[n.ID] {
-			for _, peerID := range ti.AttachedNodeIDs {
-				peer := nodeAt(a.nodes, a.nodeIdxByID, peerID)
-				if peerID == n.ID || peer == nil {
-					continue
-				}
-				fk, tag, verb := manifest.FlowRuntime, "traffic", "Shared SA"
-				if peer.RoleTag == "cicd" {
-					fk, tag, verb = manifest.FlowCICD, "cicd", "Build staging"
-				}
-				a.addInferred(peerID, n.ID, verb, tag, fk,
-					fmt.Sprintf("Shared service account %s connects %s to %s", ti.DisplayName, peer.Title, n.Title))
+		a.connectOrphanViaSharedSA(n, tiByNode[n.ID])
+	}
+}
+
+func (a *orphanEdgeAdder) connectOrphanViaSharedSA(n skeletonNode, items []manifest.TransversalItem) {
+	for _, ti := range items {
+		for _, peerID := range ti.AttachedNodeIDs {
+			peer := a.eb.nodeAt(peerID)
+			if peerID == n.ID || peer == nil {
+				continue
 			}
+			fk, tag, verb := manifest.FlowRuntime, "traffic", "Shared SA"
+			if peer.RoleTag == "cicd" {
+				fk, tag, verb = manifest.FlowCICD, "cicd", "Build staging"
+			}
+			a.addInferred(peerID, n.ID, verb, tag, fk,
+				fmt.Sprintf("Shared service account %s connects %s to %s", ti.DisplayName, peer.Title, n.Title))
 		}
 	}
 }

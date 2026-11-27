@@ -104,7 +104,16 @@ func Render(ctx context.Context, m *manifest.Manifest, reg *icons.Registry, opts
 	}
 
 	summary := &RenderSummary{UsedChrome: true}
-	if err := writeRenderArtifacts(outDir, rawHTML, out, &streamed, opts, wantHTML, wantPNG, wantPDF, summary); err != nil {
+	if err := writeRenderArtifacts(&renderArtifactContext{
+		outDir:   outDir,
+		rawHTML:  rawHTML,
+		out:      out,
+		streamed: &streamed,
+		opts:     opts,
+		wantHTML: wantHTML,
+		wantPNG:  wantPNG,
+		wantPDF:  wantPDF,
+	}, summary); err != nil {
 		return nil, err
 	}
 	if summary.GeometryReport != nil && !summary.GeometryReport.AllPass() {
@@ -201,41 +210,44 @@ func writeHTMLOnlyFallback(outDir string, rawHTML []byte, warnW io.Writer, findE
 	return &RenderSummary{HTMLPath: htmlPath, UsedChrome: false}, nil
 }
 
-func writeRenderArtifacts(
-	outDir string,
-	rawHTML []byte,
-	out *BrowserOutput,
-	streamed *pngStreamCollector,
-	opts RenderOptions,
-	wantHTML, wantPNG, wantPDF bool,
-	summary *RenderSummary,
-) error {
-	if wantHTML {
-		htmlBytes := []byte(out.Result.HTML)
+type renderArtifactContext struct {
+	outDir   string
+	rawHTML  []byte
+	out      *BrowserOutput
+	streamed *pngStreamCollector
+	opts     RenderOptions
+	wantHTML bool
+	wantPNG  bool
+	wantPDF  bool
+}
+
+func writeRenderArtifacts(a *renderArtifactContext, summary *RenderSummary) error {
+	if a.wantHTML {
+		htmlBytes := []byte(a.out.Result.HTML)
 		if len(htmlBytes) == 0 {
-			htmlBytes = rawHTML
+			htmlBytes = a.rawHTML
 		}
-		htmlPath := filepath.Join(outDir, "architecture.html")
+		htmlPath := filepath.Join(a.outDir, "architecture.html")
 		if err := atomicfile.Write(htmlPath, htmlBytes, 0o644, 0o755); err != nil {
 			return err
 		}
 		summary.HTMLPath = htmlPath
-		out.Result.HTML = ""
+		a.out.Result.HTML = ""
 	}
 
-	if wantPNG {
-		if err := finalizePNGAndGeometry(outDir, out, streamed, opts.Conservation, opts.WriteGeometryReport, summary); err != nil {
+	if a.wantPNG {
+		if err := finalizePNGAndGeometry(a.outDir, a.out, a.streamed, a.opts.Conservation, a.opts.WriteGeometryReport, summary); err != nil {
 			return err
 		}
 	}
 
-	if wantPDF {
-		pdfPath := filepath.Join(outDir, "architecture.pdf")
-		if err := atomicfile.Write(pdfPath, out.PDF, 0o644, 0o755); err != nil {
+	if a.wantPDF {
+		pdfPath := filepath.Join(a.outDir, "architecture.pdf")
+		if err := atomicfile.Write(pdfPath, a.out.PDF, 0o644, 0o755); err != nil {
 			return err
 		}
 		summary.PDFPath = pdfPath
-		out.PDF = nil
+		a.out.PDF = nil
 	}
 	return nil
 }

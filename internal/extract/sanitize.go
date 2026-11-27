@@ -328,17 +328,7 @@ func scanRegistryAndCLIFlagRefs(s string, projIdx map[string]string, c *refColle
 }
 
 func scanURIAndEndpointRefs(s string, projIdx map[string]string, c *refCollector) {
-	if strings.Contains(s, "googleapis.com/") {
-		for _, idx := range aip122URIRe.FindAllStringIndex(s, -1) {
-			if idx[0] > 0 && s[idx[0]-1] == ':' {
-				continue
-			}
-			c.addCanonical(CanonicalizeAIP122(s[idx[0]:idx[1]], projIdx))
-		}
-		for _, m := range googleapisURLRe.FindAllString(s, -1) {
-			c.addCanonical(CanonicalizeAIP122(SanitizeURL(m), projIdx))
-		}
-	}
+	scanGoogleAPIsRefs(s, projIdx, c)
 	if strings.Contains(s, "gs://") {
 		for _, m := range gcsBucketRe.FindAllStringSubmatch(s, -1) {
 			c.addEnv("gs://" + m[1])
@@ -349,44 +339,63 @@ func scanURIAndEndpointRefs(s string, projIdx map[string]string, c *refCollector
 			c.addEnv(prefixHTTPS + strings.ToLower(m[1]))
 		}
 	}
-	if strings.Contains(s, ".cloudfunctions.net") {
-		for _, m := range cloudFuncURLRe.FindAllStringSubmatch(s, -1) {
-			ref := prefixHTTPS + strings.ToLower(m[1])
-			if m[2] != "" {
-				ref += "/" + m[2]
-			}
-			c.addEnv(ref)
-		}
-	}
-	if strings.Contains(s, "projects/") {
+	scanCloudFuncRefs(s, c)
+	if strings.Contains(s, prefixProjects) {
 		for _, m := range relResourceRe.FindAllString(s, -1) {
 			c.addCanonical(CanonicalizeAIP122(m, projIdx))
 		}
 	}
 }
 
-func scanNetworkAndDatasetRefs(s string, projIdx map[string]string, c *refCollector) {
-	if strings.Contains(s, "://") {
-		for _, m := range connURLRe.FindAllString(s, -1) {
-			if u, err := url.Parse(SanitizeURL(m)); err == nil {
-				if ip := parsePrivateIPv4(u.Hostname()); ip != "" {
-					c.addEnv(ip)
-				}
-			}
-		}
+func scanGoogleAPIsRefs(s string, projIdx map[string]string, c *refCollector) {
+	if !strings.Contains(s, "googleapis.com/") {
+		return
 	}
+	for _, idx := range aip122URIRe.FindAllStringIndex(s, -1) {
+		if idx[0] > 0 && s[idx[0]-1] == ':' {
+			continue
+		}
+		c.addCanonical(CanonicalizeAIP122(s[idx[0]:idx[1]], projIdx))
+	}
+	for _, m := range googleapisURLRe.FindAllString(s, -1) {
+		c.addCanonical(CanonicalizeAIP122(SanitizeURL(m), projIdx))
+	}
+}
+
+func scanCloudFuncRefs(s string, c *refCollector) {
+	if !strings.Contains(s, ".cloudfunctions.net") {
+		return
+	}
+	for _, m := range cloudFuncURLRe.FindAllStringSubmatch(s, -1) {
+		ref := prefixHTTPS + strings.ToLower(m[1])
+		if m[2] != "" {
+			ref += "/" + m[2]
+		}
+		c.addEnv(ref)
+	}
+}
+
+func scanNetworkAndDatasetRefs(s string, projIdx map[string]string, c *refCollector) {
+	scanConnURLPrivateIPs(s, c)
 	if strings.ContainsRune(s, '.') {
 		for _, m := range ipv4Re.FindAllString(s, -1) {
-			if ip := parsePrivateIPv4(m); ip != "" {
-				c.addEnv(ip)
-			}
+			c.addEnv(parsePrivateIPv4(m))
 		}
 	}
 	if strings.ContainsAny(s, ".:") {
-		if m := projDatasetRe.FindStringSubmatch(s); len(m) == 3 {
-			if !excludedDatasetSuffixes[strings.ToLower(m[2])] {
-				c.addEnv(mapProject(m[1], projIdx) + "." + m[2])
-			}
+		if m := projDatasetRe.FindStringSubmatch(s); len(m) == 3 && !excludedDatasetSuffixes[strings.ToLower(m[2])] {
+			c.addEnv(mapProject(m[1], projIdx) + "." + m[2])
+		}
+	}
+}
+
+func scanConnURLPrivateIPs(s string, c *refCollector) {
+	if !strings.Contains(s, "://") {
+		return
+	}
+	for _, m := range connURLRe.FindAllString(s, -1) {
+		if u, err := url.Parse(SanitizeURL(m)); err == nil {
+			c.addEnv(parsePrivateIPv4(u.Hostname()))
 		}
 	}
 }

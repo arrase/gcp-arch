@@ -114,17 +114,23 @@ func CheckViewGeometry(vr *ViewReport) []string {
 	if len(vr.UnplacedLabels) > 0 {
 		issues = append(issues, fmt.Sprintf("unplaced_labels=%d", len(vr.UnplacedLabels)))
 	}
-	if vr.WidthPx > 0 || vr.HeightPx > 0 {
-		ar := vr.AspectRatio
-		if ar == 0 && vr.HeightPx > 0 {
-			ar = math.Round((float64(vr.WidthPx)/float64(vr.HeightPx))*1000) / 1000
-		}
-		if vr.WidthPx < PNGMinWidth || vr.HeightPx < PNGMinHeight {
-			issues = append(issues, fmt.Sprintf("png_dimensions %dx%d below %dx%d", vr.WidthPx, vr.HeightPx, PNGMinWidth, PNGMinHeight))
-		}
-		if ar < PNGMinAspectRatio || ar > PNGMaxAspectRatio {
-			issues = append(issues, fmt.Sprintf("aspect_ratio %.3f outside [%.2f, %.2f]", ar, PNGMinAspectRatio, PNGMaxAspectRatio))
-		}
+	return append(issues, checkViewDimensions(vr)...)
+}
+
+func checkViewDimensions(vr *ViewReport) []string {
+	if vr.WidthPx <= 0 && vr.HeightPx <= 0 {
+		return nil
+	}
+	ar := vr.AspectRatio
+	if ar == 0 && vr.HeightPx > 0 {
+		ar = math.Round((float64(vr.WidthPx)/float64(vr.HeightPx))*1000) / 1000
+	}
+	var issues []string
+	if vr.WidthPx < PNGMinWidth || vr.HeightPx < PNGMinHeight {
+		issues = append(issues, fmt.Sprintf("png_dimensions %dx%d below %dx%d", vr.WidthPx, vr.HeightPx, PNGMinWidth, PNGMinHeight))
+	}
+	if ar < PNGMinAspectRatio || ar > PNGMaxAspectRatio {
+		issues = append(issues, fmt.Sprintf("aspect_ratio %.3f outside [%.2f, %.2f]", ar, PNGMinAspectRatio, PNGMaxAspectRatio))
 	}
 	return issues
 }
