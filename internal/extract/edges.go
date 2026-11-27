@@ -352,15 +352,14 @@ func (st *extractState) indexSingleVPCPeering(a *ingestedAsset, peer vpcPeeringI
 
 	st.addVPCPeer(a.uri, peerURI)
 	if st.assetsByURI[peerURI] != nil {
-		src, dst := a.uri, peerURI
-		if src > dst {
-			src, dst = dst, src
-		}
-		st.addEdge(src, dst, EdgeVPCPeering, peer.name)
-	} else if peerProj != "" && !st.inScopeProjects[peerProj] {
-		if stubURI := st.registerOutOfScopeProject(peerProj, a.uri, oosConfigRefCrossProject); stubURI != "" {
-			st.addEdge(a.uri, stubURI, EdgeVPCPeering, peer.name)
-		}
+		st.addEdge(min(a.uri, peerURI), max(a.uri, peerURI), EdgeVPCPeering, peer.name)
+		return
+	}
+	if peerProj == "" || st.inScopeProjects[peerProj] {
+		return
+	}
+	if stubURI := st.registerOutOfScopeProject(peerProj, a.uri, oosConfigRefCrossProject); stubURI != "" {
+		st.addEdge(a.uri, stubURI, EdgeVPCPeering, peer.name)
 	}
 }
 
