@@ -50,7 +50,7 @@ hide:
     <div>
       <i class="fa-solid fa-wand-magic-sparkles feature-icon" aria-hidden="true"></i>
       <h3>Deterministic Skeleton + Gemini 4 Annotation</h3>
-      <p>Builds a deterministic GCP containment skeleton in Go (<code>&le; 500</code> active resources) and enriches it via a single bounded Vertex AI REST call—enforcing 100% resource/edge conservation and directed-walk provenance on every <code>VERIFIED</code> edge.</p>
+      <p>Builds a deterministic GCP containment skeleton in Go (<code>&le; 500</code> active resources) and enriches it via a single bounded Vertex AI Gemini 4 SDK call—enforcing 100% resource/edge conservation and directed-walk provenance on every <code>VERIFIED</code> edge.</p>
     </div>
   </div>
   <div class="feature-card">
@@ -206,7 +206,7 @@ flowchart LR
     GCP["Target GCP Scopes\n(Org / Folder / Projects)"] -->|"read-only OAuth\nCAI, IAM, GKE, Monitoring, BQ, Dataflow"| Extract["Stage 1: extract"]
     Extract -->|"0600 gitignored"| Facts["facts.json (v3)"]
     Facts -->|"<= 500 active resources\ndeterministic skeleton"| Synth["Stage 2: synthesize"]
-    Vertex["Vertex AI Gemini 4\n(--vertex-project, REST)"] <-->|"Single bounded call\nor --reconcile delta"| Synth
+    Vertex["Vertex AI Gemini 4\n(--vertex-project, google.golang.org/genai)"] <-->|"Single bounded call\nor --reconcile delta"| Synth
     Synth -->|"Conservation gate\nValidateWithFacts"| Manifest["architecture.yaml (v1)\nGit-tracked"]
     Manifest -->|"offline, zero network"| Validate["validate"]
     Manifest -->|"offline, embedded fonts & icons"| Render["Stage 3: render\n(Headless Chrome + router.js)"]
@@ -215,7 +215,7 @@ flowchart LR
 
 1. **Preflight (`gcp-arch preflight` — [`cmd/gcp-arch/preflight.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/preflight.go)):** Probes read-only target permissions (`cloudasset`, folder display names, `monitoring`, `bigquery`, `dataflow`) and runs zero-token Vertex AI IAM & model availability checks with copy-pasteable `gcloud` remediations.
 2. **Stage 1 — Extract (`gcp-arch extract` — [`cmd/gcp-arch/extract.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/extract.go), [`internal/extract/`](https://github.com/arrase/gcp-arch/tree/main/internal/extract)):** Streams `ReadTime`-pinned CAI resources and scoped IAM policies, folds noisy sub-resources, resolves GKE/Cloud Build/network relationships, runs concurrent 7-day enrichers, and scrubs secrets into a deterministic `v3` `facts.json`.
-3. **Stage 2 — Synthesize (`gcp-arch synthesize` — [`cmd/gcp-arch/synthesize.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go), [`internal/synth/`](https://github.com/arrase/gcp-arch/tree/main/internal/synth)):** Builds a deterministic containment skeleton in Go, enriches it with a single bounded Vertex AI Gemini 4 REST call (`cloud.google.com/go/auth`), assembles `View 0` plus stage-partitioned detail views, and validates 100% resource/edge conservation and directed-walk provenance.
+3. **Stage 2 — Synthesize (`gcp-arch synthesize` — [`cmd/gcp-arch/synthesize.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go), [`internal/synth/`](https://github.com/arrase/gcp-arch/tree/main/internal/synth)):** Builds a deterministic containment skeleton in Go, enriches it with a single bounded Vertex AI Gemini 4 call (`google.golang.org/genai` with `cloud.google.com/go/auth`), assembles `View 0` plus stage-partitioned detail views, and validates 100% resource/edge conservation and directed-walk provenance.
 4. **Validate (`gcp-arch validate` — [`cmd/gcp-arch/validate.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go), [`internal/manifest/`](https://github.com/arrase/gcp-arch/tree/main/internal/manifest)):** Enforces strict `KnownFields(true)` YAML decoding and structural rules offline in Git PR CI, or full resource accounting, conservation, and directed-walk provenance with `--facts`.
 5. **Stage 3 — Render (`gcp-arch render` — [`cmd/gcp-arch/render.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/render.go), [`internal/render/`](https://github.com/arrase/gcp-arch/tree/main/internal/render), [`internal/icons/`](https://github.com/arrase/gcp-arch/tree/main/internal/icons)):** Compiles a strict-CSP self-contained HTML document with embedded `Inter`/`JetBrains Mono` fonts and 85 SVG icons, runs the Hanan-grid A* orthogonal router with zero-collision and streaming PNG pixel verification (`< 1 MB` Go RAM) inside isolated headless Chrome, and exports 1:1 per-view vector `.pdf`, adaptive up to `2.0x` Retina `.png`s (`8,192px` max dim / `28M` px cap), pre-routed `.html`, and opt-in `geometry_report.json` (`--geometry-report`).
 
@@ -325,7 +325,7 @@ Root CLI entrypoint, config loader, and atomic I/O live in [`cmd/gcp-arch/main.g
         <span class="card-badge">Read →</span>
       </div>
       <h3>Stage 2 — Gemini 4 Synthesis</h3>
-      <p>500-resource guardrail, deterministic containment skeleton, single bounded Vertex AI REST call, conservation gate, and Day-2 <code>--reconcile</code>.</p>
+      <p>500-resource guardrail, deterministic containment skeleton, single bounded Vertex AI Gemini 4 SDK call, conservation gate, and Day-2 <code>--reconcile</code>.</p>
     </div>
   </a>
   <a href="rendering/" class="feature-card">

@@ -23,9 +23,9 @@ Centralized CI/CD and developer tooling platform folding 20 Cloud Build triggers
 
 - **Deliverables:** [`architecture.yaml`](platform-cicd/architecture.yaml) · [`architecture.html`](platform-cicd/architecture.html) · [`architecture.pdf`](platform-cicd/architecture.pdf)
 - **Rendered Views (Retina PNG):**
-  - [`00-view_0_system_index.png`](platform-cicd/views/00-view_0_system_index.png) (`6278×4445` px) — System Architecture Overview (`17` components, `27` flows)
-  - [`01-view_1.png`](platform-cicd/views/01-view_1.png) (`4164×4082` px) — Source Control, Ingress & CI/CD Runtime (`10` components, `7` flows)
-  - [`02-view_2.png`](platform-cicd/views/02-view_2.png) (`3400×2650` px) — Artifacts, State Storage & Target Projects (`7` components, `1` flow)
+  - [`00-view_0_system_index.png`](platform-cicd/views/00-view_0_system_index.png) (`6240×4446` px) — System Architecture Overview (`17` components, `27` flows)
+  - [`01-view_1.png`](platform-cicd/views/01-view_1.png) (`4164×4134` px) — Source Control, CI/CD Triggers & GKE Tooling (`10` components, `7` flows)
+  - [`02-view_2.png`](platform-cicd/views/02-view_2.png) (`3400×2718` px) — Artifact Storage, State Backends & Target Envs (`7` components, `1` flow)
 
 ![Platform CI/CD — System Architecture Overview](platform-cicd/views/00-view_0_system_index.png)
 
@@ -39,9 +39,9 @@ Multi-project Shared VPC e-commerce storefront and checkout runtime on Cloud Run
 
 - **Deliverables:** [`architecture.yaml`](retail-cloud-native/architecture.yaml) · [`architecture.html`](retail-cloud-native/architecture.html) · [`architecture.pdf`](retail-cloud-native/architecture.pdf)
 - **Rendered Views (Retina PNG):**
-  - [`00-view_0_system_index.png`](retail-cloud-native/views/00-view_0_system_index.png) (`7797×3555` px) — System Architecture Overview (`18` components, `20` flows)
-  - [`01-view_1.png`](retail-cloud-native/views/01-view_1.png) (`3970×2428` px) — Storefront Ingress & Core Runtime (`4` components, `3` flows)
-  - [`02-view_2.png`](retail-cloud-native/views/02-view_2.png) (`6954×3642` px) — Event Streaming, Datastores & AI (`14` components, `10` flows)
+  - [`00-view_0_system_index.png`](retail-cloud-native/views/00-view_0_system_index.png) (`7797×3585` px) — System Architecture Overview (`18` components, `20` flows)
+  - [`01-view_1.png`](retail-cloud-native/views/01-view_1.png) (`3970×2454` px) — Edge Ingress & Storefront Compute (`4` components, `3` flows)
+  - [`02-view_2.png`](retail-cloud-native/views/02-view_2.png) (`6954×3668` px) — Async Messaging, Data Platform & AI (`14` components, `10` flows)
 
 ![Retail Cloud-Native — System Architecture Overview](retail-cloud-native/views/00-view_0_system_index.png)
 
@@ -55,10 +55,10 @@ Regulated multi-folder global payments architecture uniting Dedicated Interconne
 
 - **Deliverables:** [`architecture.yaml`](fintech-global-payments/architecture.yaml) · [`architecture.html`](fintech-global-payments/architecture.html) · [`architecture.pdf`](fintech-global-payments/architecture.pdf)
 - **Rendered Views (Retina PNG):**
-  - [`00-view_0_system_index.png`](fintech-global-payments/views/00-view_0_system_index.png) (`7105×3894` px) — System Architecture Overview (`31` components, `36` flows)
-  - [`01-view_1.png`](fintech-global-payments/views/01-view_1.png) (`5576×2956` px) — Edge Ingress, Hybrid Transit & Scheduled Reconcilers (`9` components, `6` flows)
-  - [`02-view_2.png`](fintech-global-payments/views/02-view_2.png) (`6192×4507` px) — Core Ledger Services, PSC Fabrics & Event Pipelines (`14` components, `14` flows)
-  - [`03-view_3.png`](fintech-global-payments/views/03-view_3.png) (`6554×3122` px) — Ledger Persistence, Vaults, Registries & Acquirer Targets (`8` components, off-page linked)
+  - [`00-view_0_system_index.png`](fintech-global-payments/views/00-view_0_system_index.png) (`7105×3914` px) — System Architecture Overview (`31` components, `36` flows)
+  - [`01-view_1.png`](fintech-global-payments/views/01-view_1.png) (`5576×3036` px) — Edge Ingress, Hybrid Transit & Scheduled Reconciler (`9` components, `6` flows)
+  - [`02-view_2.png`](fintech-global-payments/views/02-view_2.png) (`6124×4527` px) — Core Payment Services, PSC Routing & Settlement Pipelines (`14` components, `14` flows)
+  - [`03-view_3.png`](fintech-global-payments/views/03-view_3.png) (`6554×3148` px) — Financial Ledger Stores, Vaults & Card Network Egress (`8` components, off-page linked)
 
 ![FinTech Global Payments — System Architecture Overview](fintech-global-payments/views/00-view_0_system_index.png)
 
@@ -72,10 +72,10 @@ End-to-end enterprise data lakehouse and MLOps estate combining Managed Service 
 
 - **Deliverables:** [`architecture.yaml`](enterprise-lakehouse-mlops/architecture.yaml) · [`architecture.html`](enterprise-lakehouse-mlops/architecture.html) · [`architecture.pdf`](enterprise-lakehouse-mlops/architecture.pdf)
 - **Rendered Views (Retina PNG):**
-  - [`00-view_0_system_index.png`](enterprise-lakehouse-mlops/views/00-view_0_system_index.png) (`6425×4329` px) — System Architecture Overview (`30` components, `35` flows)
-  - [`01-view_1.png`](enterprise-lakehouse-mlops/views/01-view_1.png) (`3974×2294` px) — Edge Ingress & ML Serving Gateway (`5` components, `2` flows)
-  - [`02-view_2.png`](enterprise-lakehouse-mlops/views/02-view_2.png) (`3988×4892` px) — Streaming Ingestion & Lakehouse Pipelines (`12` components, `5` flows)
-  - [`03-view_3.png`](enterprise-lakehouse-mlops/views/03-view_3.png) (`5822×4386` px) — OLTP Databases, Lakehouse Storage & Vertex AI (`13` components, `6` flows)
+  - [`00-view_0_system_index.png`](enterprise-lakehouse-mlops/views/00-view_0_system_index.png) (`6249×4425` px) — System Architecture Overview (`30` components, `35` flows)
+  - [`01-view_1.png`](enterprise-lakehouse-mlops/views/01-view_1.png) (`3974×2346` px) — External Ingress & Inference Gateway (`5` components, `2` flows)
+  - [`02-view_2.png`](enterprise-lakehouse-mlops/views/02-view_2.png) (`3988×4790` px) — Streaming CDC, ETL & Orchestration Pipelines (`10` components, `5` flows)
+  - [`03-view_3.png`](enterprise-lakehouse-mlops/views/03-view_3.png) (`6450×4323` px) — OLTP, Lakehouse Storage, Analytics & Vertex AI (`15` components, `10` flows)
 
 ![Enterprise Lakehouse & MLOps — System Architecture Overview](enterprise-lakehouse-mlops/views/00-view_0_system_index.png)
 
@@ -89,9 +89,9 @@ Production Generative AI and agentic workflow platform integrating Global HTTPS 
 
 - **Deliverables:** [`architecture.yaml`](agentic-ai-document-platform/architecture.yaml) · [`architecture.html`](agentic-ai-document-platform/architecture.html) · [`architecture.pdf`](agentic-ai-document-platform/architecture.pdf)
 - **Rendered Views (Retina PNG):**
-  - [`00-view_0_system_index.png`](agentic-ai-document-platform/views/00-view_0_system_index.png) (`6780×4117` px) — System Architecture Overview (`25` components, `29` flows)
+  - [`00-view_0_system_index.png`](agentic-ai-document-platform/views/00-view_0_system_index.png) (`6809×4092` px) — System Architecture Overview (`25` components, `29` flows)
   - [`01-view_1.png`](agentic-ai-document-platform/views/01-view_1.png) (`4582×2944` px) — Edge Ingress & Ingestion Triggers (`7` components, `3` flows)
-  - [`02-view_2.png`](agentic-ai-document-platform/views/02-view_2.png) (`6112×3704` px) — Agentic AI Runtime, OCR Pipeline & Datastores (`18` components, `19` flows)
+  - [`02-view_2.png`](agentic-ai-document-platform/views/02-view_2.png) (`6400×4126` px) — RAG Agents, Document Pipelines & Datastores (`18` components, `19` flows)
 
 ![Agentic AI & Document Platform — System Architecture Overview](agentic-ai-document-platform/views/00-view_0_system_index.png)
 
@@ -105,9 +105,9 @@ Multi-region zero-trust enterprise mesh spanning a dual-region Shared VPC (`euro
 
 - **Deliverables:** [`architecture.yaml`](enterprise-zero-trust-mesh/architecture.yaml) · [`architecture.html`](enterprise-zero-trust-mesh/architecture.html) · [`architecture.pdf`](enterprise-zero-trust-mesh/architecture.pdf)
 - **Rendered Views (Retina PNG):**
-  - [`00-view_0_system_index.png`](enterprise-zero-trust-mesh/views/00-view_0_system_index.png) (`7780×3565` px) — System Architecture Overview (`26` components, `32` flows)
-  - [`01-view_1.png`](enterprise-zero-trust-mesh/views/01-view_1.png) (`6448×3104` px) — Ingress, CI Triggers & Scheduled Batch (`8` components, `4` flows)
-  - [`02-view_2.png`](enterprise-zero-trust-mesh/views/02-view_2.png) (`7372×3780` px) — Core Microservices, Risk AI & Data Estate (`18` components, `20` flows)
+  - [`00-view_0_system_index.png`](enterprise-zero-trust-mesh/views/00-view_0_system_index.png) (`7785×3566` px) — System Architecture Overview (`26` components, `32` flows)
+  - [`01-view_1.png`](enterprise-zero-trust-mesh/views/01-view_1.png) (`6448×3156` px) — Edge Ingress, CI Triggers & Scheduled Batch (`8` components, `4` flows)
+  - [`02-view_2.png`](enterprise-zero-trust-mesh/views/02-view_2.png) (`7326×3798` px) — Commerce Runtime, AI Risk Engine & Datastores (`18` components, `20` flows)
 
 ![Enterprise Zero-Trust Mesh — System Architecture Overview](enterprise-zero-trust-mesh/views/00-view_0_system_index.png)
 

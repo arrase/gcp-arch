@@ -61,8 +61,8 @@ Stage 2A: Go Deterministic Containment Skeleton
    ▼
 Stage 2B: Bounded Vertex AI Annotator
 (internal/synth/{annotate,client,reconcile}.go)
-   ├─ Direct Vertex AI REST over cloud.google.com/go/auth (gemini-4-carbon, location=global,
-   │  Temperature=0.1, ResponseSchema, 240s per-attempt timeout + up to 2 transient retries)
+   ├─ Official Google GenAI Go SDK (google.golang.org/genai, BackendVertexAI) over cloud.google.com/go/auth
+   │  (gemini-4-carbon, location=global, Temperature=0.1, *genai.Schema, 240s timeout + up to 2 transient retries)
    ├─ Emits ONLY: focus_summary, stage-partitioned detail_views, node subtitles, edge verb/flow_kind/semantic_tag
    ├─ Go locks node titles, view IDs, hierarchy, and populates symmetric cross-view OffPageRefs
    └─ Sanitization rejects/strips "...", U+2026 ("…"), and stray trailing quotes/punctuation

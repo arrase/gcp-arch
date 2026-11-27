@@ -1,7 +1,6 @@
 package extract
 
 import (
-	"bytes"
 	"cmp"
 	"context"
 	"encoding/json"
@@ -9,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"slices"
 	"strings"
 	"sync"
@@ -18,10 +16,15 @@ import (
 	"cloud.google.com/go/asset/apiv1/assetpb"
 	"cloud.google.com/go/auth"
 	"cloud.google.com/go/auth/credentials"
-	"cloud.google.com/go/auth/grpctransport"
-	"cloud.google.com/go/auth/httptransport"
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 	"golang.org/x/time/rate"
+	"google.golang.org/api/bigquery/v2"
+	"google.golang.org/api/cloudresourcemanager/v1"
+	"google.golang.org/api/dataflow/v1b3"
+	"google.golang.org/api/googleapi"
+	"google.golang.org/api/option"
+	gtransport "google.golang.org/api/transport/grpc"
+	htransport "google.golang.org/api/transport/http"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -50,12 +53,8 @@ const (
 
 	cloudPlatformReadOnlyScope = "https://www.googleapis.com/auth/cloud-platform.read-only"
 	cloudPlatformScope         = "https://www.googleapis.com/auth/cloud-platform"
-	quotaProjectHeader         = "X-goog-user-project"
 	defaultAssetEndpoint       = "cloudasset.googleapis.com:443"
 	defaultMonitoringEndpoint  = "monitoring.googleapis.com:443"
-	defaultBigQueryEndpoint    = "https://bigquery.googleapis.com"
-	defaultDataflowEndpoint    = "https://dataflow.googleapis.com"
-	defaultCRMEndpoint         = "https://cloudresourcemanager.googleapis.com"
 	defaultGlobalVertexBase    = "https://aiplatform.googleapis.com"
 )
 
@@ -128,97 +127,7 @@ func (e *QuotaProjectError) Error() string {
 
 func (e *QuotaProjectError) Unwrap() error { return e.Classified.Err }
 
-type httpStatusError struct {
-	Code     int
-	Message  string
-	Body     string
-	Reason   string
-	Domain   string
-	Metadata map[string]string
-}
-
-func (e *httpStatusError) Error() string {
-	if e.Message != "" {
-		return fmt.Sprintf("http %d: %s", e.Code, e.Message)
-	}
-	return fmt.Sprintf("http %d", e.Code)
-}
-
-type gcpErrorPayload struct {
-	Error struct {
-		Message string `json:"message"`
-		Errors  []struct {
-			Reason string `json:"reason"`
-		} `json:"errors"`
-		Details []struct {
-			Type     string         `json:"@type"`
-			Reason   string         `json:"reason"`
-			Domain   string         `json:"domain"`
-			Metadata map[string]any `json:"metadata"`
-		} `json:"details"`
-	} `json:"error"`
-}
-
-func parseGCPErrorBody(body []byte, dst *httpStatusError) {
-	if len(body) == 0 {
-		return
-	}
-	var payload gcpErrorPayload
-	if json.Unmarshal(body, &payload) != nil {
-		return
-	}
-	if payload.Error.Message != "" {
-		dst.Message = payload.Error.Message
-	}
-	for _, d := range payload.Error.Details {
-		if !strings.HasSuffix(d.Type, "google.rpc.ErrorInfo") {
-			continue
-		}
-		dst.Reason = d.Reason
-		dst.Domain = d.Domain
-		if len(d.Metadata) > 0 {
-			dst.Metadata = extractStringAnyMap(d.Metadata)
-		}
-		return
-	}
-	if dst.Reason == "" && len(payload.Error.Errors) > 0 {
-		dst.Reason = payload.Error.Errors[0].Reason
-	}
-}
-
-func extractStringAnyMap(meta map[string]any) map[string]string {
-	out := make(map[string]string, len(meta))
-	for k, v := range meta {
-		if s, ok := v.(string); ok {
-			out[k] = s
-		}
-	}
-	return out
-}
-
-func extractHTTPStatusErrorInfo(herr *httpStatusError, out *ClassifiedError) {
-	if herr.Message != "" {
-		out.Message = herr.Message
-	}
-	if herr.Reason != "" || herr.Domain != "" || len(herr.Metadata) > 0 {
-		out.Reason = herr.Reason
-		out.Domain = herr.Domain
-		out.Metadata = herr.Metadata
-		return
-	}
-	if herr.Body != "" {
-		var parsed httpStatusError
-		parseGCPErrorBody([]byte(herr.Body), &parsed)
-		if parsed.Message != "" && herr.Message == "" {
-			out.Message = parsed.Message
-		}
-		out.Reason = parsed.Reason
-		out.Domain = parsed.Domain
-		out.Metadata = parsed.Metadata
-	}
-}
-
-// ClassifyGCPError inspects both REST HTTP errors and gRPC status details (*errdetails.ErrorInfo)
+// ClassifyGCPError inspects both REST *googleapi.Error and gRPC status details (*errdetails.ErrorInfo)
 // to distinguish fatal caller quota-project failures from target-scope degradations.
 func ClassifyGCPError(err error, callerQuotaProject, targetProjectID, targetProjectNumber string) ClassifiedError {
 	if err == nil {
@@ -231,10 +140,13 @@ func ClassifyGCPError(err error, callerQuotaProject, targetProjectID, targetProj
 		Err:     err,
 	}
 
-	var herr *httpStatusError
-	if errors.As(err, &herr) {
-		extractHTTPStatusErrorInfo(herr, &out)
-		classifyFromReasonAndCode(&out, codes.OK, herr.Code, callerQuotaProject, targetProjectID, targetProjectNumber)
+	var gerr *googleapi.Error
+	if errors.As(err, &gerr) {
+		if gerr.Message != "" {
+			out.Message = gerr.Message
+		}
+		extractRESTErrorInfo(gerr, &out)
+		classifyFromReasonAndCode(&out, codes.OK, gerr.Code, callerQuotaProject, targetProjectID, targetProjectNumber)
 		return out
 	}
 
@@ -253,6 +165,87 @@ func ClassifyGCPError(err error, callerQuotaProject, targetProjectID, targetProj
 	}
 
 	return out
+}
+
+func extractRESTErrorInfo(gerr *googleapi.Error, out *ClassifiedError) {
+	if extractErrorInfoFromDetails(gerr.Details, out) {
+		return
+	}
+	if extractErrorInfoFromBody(gerr.Body, out) {
+		return
+	}
+	if out.Reason == "" && len(gerr.Errors) > 0 {
+		out.Reason = gerr.Errors[0].Reason
+	}
+}
+
+func extractErrorInfoFromDetails(details []any, out *ClassifiedError) bool {
+	for _, raw := range details {
+		m, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		typeURL, _ := m["@type"].(string)
+		if !strings.HasSuffix(typeURL, "google.rpc.ErrorInfo") {
+			continue
+		}
+		applyErrorInfoMap(m, out)
+		return true
+	}
+	return false
+}
+
+func applyErrorInfoMap(m map[string]any, out *ClassifiedError) {
+	if r, ok := m["reason"].(string); ok {
+		out.Reason = r
+	}
+	if d, ok := m["domain"].(string); ok {
+		out.Domain = d
+	}
+	if meta, ok := m["metadata"].(map[string]any); ok {
+		out.Metadata = extractStringAnyMap(meta)
+	}
+}
+
+func extractStringAnyMap(meta map[string]any) map[string]string {
+	out := make(map[string]string, len(meta))
+	for k, v := range meta {
+		if s, ok := v.(string); ok {
+			out[k] = s
+		}
+	}
+	return out
+}
+
+func extractErrorInfoFromBody(body string, out *ClassifiedError) bool {
+	if body == "" {
+		return false
+	}
+	var payload struct {
+		Error struct {
+			Details []struct {
+				Type     string         `json:"@type"`
+				Reason   string         `json:"reason"`
+				Domain   string         `json:"domain"`
+				Metadata map[string]any `json:"metadata"`
+			} `json:"details"`
+		} `json:"error"`
+	}
+	if json.Unmarshal([]byte(body), &payload) != nil {
+		return false
+	}
+	for _, d := range payload.Error.Details {
+		if !strings.HasSuffix(d.Type, "google.rpc.ErrorInfo") {
+			continue
+		}
+		out.Reason = d.Reason
+		out.Domain = d.Domain
+		if len(d.Metadata) > 0 {
+			out.Metadata = extractStringAnyMap(d.Metadata)
+		}
+		return true
+	}
+	return false
 }
 
 func trimProjectPrefix(s string) string {
@@ -340,13 +333,13 @@ func isRateLimitError(err error) bool {
 			}
 		}
 	}
-	var herr *httpStatusError
-	if errors.As(err, &herr) {
-		if herr.Code == http.StatusTooManyRequests {
+	var gerr *googleapi.Error
+	if errors.As(err, &gerr) {
+		if gerr.Code == http.StatusTooManyRequests {
 			return true
 		}
 		var ce ClassifiedError
-		extractHTTPStatusErrorInfo(herr, &ce)
+		extractRESTErrorInfo(gerr, &ce)
 		if ce.Reason == "RATE_LIMIT_EXCEEDED" || ce.Reason == "rateLimitExceeded" {
 			return true
 		}
@@ -410,6 +403,8 @@ type Clients struct {
 	ProjectAliases    map[string]string
 	Asset             assetpb.AssetServiceClient
 	Monitoring        monitoringpb.MetricServiceClient
+	BigQuery          *bigquery.Service
+	Dataflow          *dataflow.Service
 	HTTPClient        *http.Client
 	CAILimiter        *rate.Limiter
 	MonitoringLimiter *rate.Limiter
@@ -417,26 +412,10 @@ type Clients struct {
 	DataflowLimiter   *rate.Limiter
 	ProgressWriter    io.Writer
 
-	bigQueryEndpoint string
-	dataflowEndpoint string
-	retryBackoff     time.Duration
-	progressMu       sync.Mutex
-	lastProgress     time.Time
-	closers          []io.Closer
-}
-
-func (c *Clients) bigQueryBaseURL() string {
-	if base := strings.TrimRight(strings.TrimSpace(c.bigQueryEndpoint), "/"); base != "" {
-		return base
-	}
-	return defaultBigQueryEndpoint
-}
-
-func (c *Clients) dataflowBaseURL() string {
-	if base := strings.TrimRight(strings.TrimSpace(c.dataflowEndpoint), "/"); base != "" {
-		return base
-	}
-	return defaultDataflowEndpoint
+	retryBackoff time.Duration
+	progressMu   sync.Mutex
+	lastProgress time.Time
+	closers      []io.Closer
 }
 
 // ReportProgress writes a formatted progress line to ProgressWriter, throttled to at most once
@@ -489,39 +468,29 @@ func ResolveQuotaProject(creds *auth.Credentials, explicitQuotaProject string) s
 func NewClients(ctx context.Context, opts ClientOptions) (*Clients, error) {
 	c := newClientsWithLimiters(opts)
 
-	creds, qp, err := resolveReadOnlyCredentials(opts)
+	baseOpts, qp, err := resolveReadOnlyBaseOptions(opts)
 	if err != nil {
 		return nil, err
 	}
 	c.QuotaProject = qp
 
-	assetConn, err := dialOrReuse(ctx, opts.AssetConn, defaultAssetEndpoint, creds, qp, &c.closers)
+	assetConn, err := dialOrReuse(ctx, opts.AssetConn, defaultAssetEndpoint, baseOpts, &c.closers)
 	if err != nil {
 		_ = c.Close()
 		return nil, fmt.Errorf("dial Cloud Asset Inventory: %w", err)
 	}
 	c.Asset = assetpb.NewAssetServiceClient(assetConn)
 
-	monConn, err := dialOrReuse(ctx, opts.MonitoringConn, defaultMonitoringEndpoint, creds, qp, &c.closers)
+	monConn, err := dialOrReuse(ctx, opts.MonitoringConn, defaultMonitoringEndpoint, baseOpts, &c.closers)
 	if err != nil {
 		_ = c.Close()
 		return nil, fmt.Errorf("dial Cloud Monitoring: %w", err)
 	}
 	c.Monitoring = monitoringpb.NewMetricServiceClient(monConn)
 
-	if opts.HTTPClient != nil {
-		c.HTTPClient = opts.HTTPClient
-	} else {
-		hc, err := newAuthHTTPClient(creds, qp)
-		if err != nil {
-			_ = c.Close()
-			return nil, fmt.Errorf("create oauth2 HTTP client: %w", err)
-		}
-		c.HTTPClient = hc
-		c.closers = append(c.closers, closerFunc(func() error {
-			hc.CloseIdleConnections()
-			return nil
-		}))
+	if err := initRESTServices(ctx, c, opts, baseOpts); err != nil {
+		_ = c.Close()
+		return nil, err
 	}
 
 	return c, nil
@@ -552,13 +521,11 @@ func newClientsWithLimiters(opts ClientOptions) *Clients {
 		BQLimiter:         bqLimiter,
 		DataflowLimiter:   dfLimiter,
 		ProgressWriter:    opts.ProgressWriter,
-		bigQueryEndpoint:  opts.BigQueryEndpoint,
-		dataflowEndpoint:  opts.DataflowEndpoint,
 		retryBackoff:      opts.RetryBackoff,
 	}
 }
 
-func resolveReadOnlyCredentials(opts ClientOptions) (*auth.Credentials, string, error) {
+func resolveReadOnlyBaseOptions(opts ClientOptions) ([]option.ClientOption, string, error) {
 	if opts.AssetConn != nil && opts.MonitoringConn != nil && opts.HTTPClient != nil {
 		return nil, strings.TrimSpace(opts.QuotaProject), nil
 	}
@@ -568,77 +535,76 @@ func resolveReadOnlyCredentials(opts ClientOptions) (*auth.Credentials, string, 
 	if err != nil {
 		return nil, "", fmt.Errorf("load Application Default Credentials: %w", err)
 	}
-	return creds, ResolveQuotaProject(creds, opts.QuotaProject), nil
+	qp := ResolveQuotaProject(creds, opts.QuotaProject)
+	baseOpts := []option.ClientOption{
+		option.WithAuthCredentials(creds),
+		option.WithTelemetryDisabled(),
+	}
+	if qp != "" {
+		baseOpts = append(baseOpts, option.WithQuotaProject(qp))
+	}
+	return baseOpts, qp, nil
 }
 
-func newAuthHTTPClient(creds *auth.Credentials, quotaProject string) (*http.Client, error) {
-	var headers http.Header
-	if quotaProject != "" {
-		headers = http.Header{quotaProjectHeader: {quotaProject}}
+func initRESTServices(ctx context.Context, c *Clients, opts ClientOptions, baseOpts []option.ClientOption) error {
+	if opts.HTTPClient != nil {
+		c.HTTPClient = opts.HTTPClient
+	} else {
+		hc, _, err := htransport.NewClient(ctx, baseOpts...)
+		if err != nil {
+			return fmt.Errorf("create oauth2 HTTP client: %w", err)
+		}
+		hc.Timeout = defaultHTTPTimeout
+		c.HTTPClient = hc
+		c.closers = append(c.closers, closerFunc(func() error {
+			hc.CloseIdleConnections()
+			return nil
+		}))
 	}
-	hc, err := httptransport.NewClient(&httptransport.Options{
-		Credentials:      creds,
-		Headers:          headers,
-		DisableTelemetry: true,
-	})
+
+	bqSvc, err := bigquery.NewService(ctx, restClientOptions(c.HTTPClient, opts.BigQueryEndpoint)...)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("init BigQuery client: %w", err)
 	}
-	hc.Timeout = defaultHTTPTimeout
-	return hc, nil
+	c.BigQuery = bqSvc
+
+	dfSvc, err := dataflow.NewService(ctx, restClientOptions(c.HTTPClient, opts.DataflowEndpoint)...)
+	if err != nil {
+		return fmt.Errorf("init Dataflow client: %w", err)
+	}
+	c.Dataflow = dfSvc
+
+	return nil
+}
+
+func restClientOptions(hc *http.Client, endpoint string) []option.ClientOption {
+	opts := []option.ClientOption{option.WithHTTPClient(hc)}
+	if ep := strings.TrimSpace(endpoint); ep != "" {
+		opts = append(opts, option.WithEndpoint(ep))
+	}
+	return opts
 }
 
 func dialOrReuse(
 	ctx context.Context,
 	existing *grpc.ClientConn,
 	endpoint string,
-	creds *auth.Credentials,
-	quotaProject string,
+	baseOpts []option.ClientOption,
 	closers *[]io.Closer,
-) (grpc.ClientConnInterface, error) {
+) (*grpc.ClientConn, error) {
 	if existing != nil {
 		return existing, nil
 	}
-	var md map[string]string
-	if quotaProject != "" {
-		md = map[string]string{quotaProjectHeader: quotaProject}
-	}
-	pool, err := grpctransport.Dial(ctx, true, &grpctransport.Options{
-		Endpoint:         endpoint,
-		Credentials:      creds,
-		Metadata:         md,
-		DisableTelemetry: true,
-		GRPCDialOpts: []grpc.DialOption{
-			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxGRPCRecvMsgBytes)),
-		},
+	dialOpts := slices.Concat(baseOpts, []option.ClientOption{
+		option.WithEndpoint(endpoint),
+		option.WithGRPCDialOption(grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxGRPCRecvMsgBytes))),
 	})
+	conn, err := gtransport.Dial(ctx, dialOpts...)
 	if err != nil {
 		return nil, err
 	}
-	*closers = append(*closers, pool)
-	return pool, nil
-}
-
-func getJSON(ctx context.Context, hc *http.Client, rawURL string, out any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := hc.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxDrainBodyBytes))
-		_ = resp.Body.Close()
-	}()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return parseHTTPError(resp)
-	}
-	if out == nil {
-		return nil
-	}
-	return json.NewDecoder(resp.Body).Decode(out)
+	*closers = append(*closers, conn)
+	return conn, nil
 }
 
 // ProbeStatus indicates the outcome of a lightweight preflight permission probe.
@@ -884,15 +850,13 @@ func (ps *preflightState) probeProjectEnrichers(ctx context.Context, projectIDs 
 		if err := waitLimiter(ctx, ps.clients.BQLimiter); err != nil {
 			return err
 		}
-		bqURL := fmt.Sprintf("%s/bigquery/v2/projects/%s/jobs?allUsers=true&maxResults=1", ps.clients.bigQueryBaseURL(), url.PathEscape(proj))
-		err = getJSON(ctx, ps.clients.HTTPClient, bqURL, nil)
+		_, err = ps.clients.BigQuery.Jobs.List(proj).AllUsers(true).MaxResults(1).Context(ctx).Do()
 		ps.recordProbe(scope, proj, svcBigQuery, "roles/bigquery.resourceViewer", err)
 
 		if err := waitLimiter(ctx, ps.clients.DataflowLimiter); err != nil {
 			return err
 		}
-		dfURL := fmt.Sprintf("%s/v1b3/projects/%s/locations/-/jobs?filter=ACTIVE&pageSize=1", ps.clients.dataflowBaseURL(), url.PathEscape(proj))
-		err = getJSON(ctx, ps.clients.HTTPClient, dfURL, nil)
+		_, err = ps.clients.Dataflow.Projects.Locations.Jobs.List(proj, "-").Filter("ACTIVE").PageSize(1).Context(ctx).Do()
 		ps.recordProbe(scope, proj, "dataflow.googleapis.com", "roles/dataflow.viewer", err)
 	}
 	return nil
@@ -916,7 +880,7 @@ func (ps *preflightState) probeVertexReadiness(ctx context.Context, vertexOpts V
 	vhc := vertexOpts.HTTPClient
 	if vhc == nil {
 		var authErr error
-		vhc, authErr = newCloudPlatformHTTPClient(vertexProj)
+		vhc, authErr = newCloudPlatformHTTPClient(ctx, vertexProj)
 		if authErr != nil {
 			ps.recordProbe(vertexScope, vertexProj, sourceVertexIAM, roleAIPlatformUser, authErr)
 			return
@@ -993,54 +957,40 @@ func RunPreflight(ctx context.Context, clients *Clients, scopes []string, vertex
 	return ps.report, ps.firstError()
 }
 
-func newCloudPlatformHTTPClient(quotaProject string) (*http.Client, error) {
+func newCloudPlatformHTTPClient(ctx context.Context, quotaProject string) (*http.Client, error) {
 	creds, err := credentials.DetectDefault(&credentials.DetectOptions{
 		Scopes: []string{cloudPlatformScope},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("load Vertex AI cloud-platform credentials: %w", err)
 	}
-	hc, err := newAuthHTTPClient(creds, ResolveQuotaProject(creds, quotaProject))
+	opts := []option.ClientOption{
+		option.WithAuthCredentials(creds),
+		option.WithTelemetryDisabled(),
+	}
+	if qp := ResolveQuotaProject(creds, quotaProject); qp != "" {
+		opts = append(opts, option.WithQuotaProject(qp))
+	}
+	hc, _, err := htransport.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("create Vertex AI oauth2 HTTP client: %w", err)
 	}
+	hc.Timeout = defaultHTTPTimeout
 	return hc, nil
 }
 
 func probeVertexIAMPermission(ctx context.Context, hc *http.Client, crmEndpoint, project string) (bool, error) {
-	base := strings.TrimRight(strings.TrimSpace(crmEndpoint), "/")
-	if base == "" {
-		base = defaultCRMEndpoint
+	svc, err := cloudresourcemanager.NewService(ctx, restClientOptions(hc, crmEndpoint)...)
+	if err != nil {
+		return false, fmt.Errorf("init Cloud Resource Manager client: %w", err)
 	}
-	endpoint := fmt.Sprintf("%s/v1/projects/%s:testIamPermissions", base, project)
-	payload := []byte(`{"permissions":["aiplatform.endpoints.predict"]}`)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
+	resp, err := svc.Projects.TestIamPermissions(project, &cloudresourcemanager.TestIamPermissionsRequest{
+		Permissions: []string{"aiplatform.endpoints.predict"},
+	}).Context(ctx).Do()
 	if err != nil {
 		return false, err
 	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := hc.Do(req)
-	if err != nil {
-		return false, err
-	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxDrainBodyBytes))
-		_ = resp.Body.Close()
-	}()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return false, parseHTTPError(resp)
-	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxDrainBodyBytes))
-	if err != nil {
-		return false, err
-	}
-	var res struct {
-		Permissions []string `json:"permissions"`
-	}
-	if err := json.Unmarshal(body, &res); err != nil {
-		return false, fmt.Errorf("decode testIamPermissions response: %w", err)
-	}
-	return slices.Contains(res.Permissions, "aiplatform.endpoints.predict"), nil
+	return slices.Contains(resp.Permissions, "aiplatform.endpoints.predict"), nil
 }
 
 func probeVertexModelREST(ctx context.Context, hc *http.Client, vertexEndpoint, project, location, model string) error {
@@ -1053,18 +1003,23 @@ func probeVertexModelREST(ctx context.Context, hc *http.Client, vertexEndpoint, 
 		}
 	}
 	endpoint := fmt.Sprintf("%s/v1/projects/%s/locations/%s/publishers/google/models/%s", base, project, location, model)
-	return getJSON(ctx, hc, endpoint, nil)
-}
-
-func parseHTTPError(resp *http.Response) error {
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxDrainBodyBytes))
-	herr := &httpStatusError{
-		Code:    resp.StatusCode,
-		Message: resp.Status,
-		Body:    string(body),
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return err
 	}
-	parseGCPErrorBody(body, herr)
-	return herr
+	resp, err := hc.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxDrainBodyBytes))
+		_ = resp.Body.Close()
+	}()
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return nil
+	}
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxDrainBodyBytes))
+	return googleapi.CheckResponseWithBody(resp, body)
 }
 
 func iamRemediation(scope, role string) string {

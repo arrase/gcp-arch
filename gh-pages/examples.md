@@ -33,9 +33,9 @@ Across all 6 architectures, the gallery covers **75 unique asset types** across 
 
 | # | View ID | Title | Components | Flows | Dimensions (Retina PNG) |
 | :---: | :--- | :--- | :---: | :---: | :---: |
-| `00` | `view_0_system_index` | System Architecture Overview | 17 | 27 | `6278 × 4445` |
-| `01` | `view_1` | Source Control, Ingress & CI/CD Runtime | 10 | 7 | `4164 × 4082` |
-| `02` | `view_2` | Artifacts, State Storage & Target Projects | 7 | 1 | `3400 × 2650` |
+| `00` | `view_0_system_index` | System Architecture Overview | 17 | 27 | `6240 × 4446` |
+| `01` | `view_1` | Source Control, CI/CD Triggers & GKE Tooling | 10 | 7 | `4164 × 4134` |
+| `02` | `view_2` | Artifact Storage, State Backends & Target Envs | 7 | 1 | `3400 × 2718` |
 
 ### Rendered Views
 
@@ -43,13 +43,13 @@ Across all 6 architectures, the gallery covers **75 unique asset types** across 
 
 ![Platform CI/CD — System Architecture Overview](assets/img/platform-cicd/00-view_0_system_index.png)
 
-#### `01` — Source Control, Ingress & CI/CD Runtime (`view_1`)
+#### `01` — Source Control, CI/CD Triggers & GKE Tooling (`view_1`)
 
-![Platform CI/CD — Source Control, Ingress & CI/CD Runtime](assets/img/platform-cicd/01-view_1.png)
+![Platform CI/CD — Source Control, CI/CD Triggers & GKE Tooling](assets/img/platform-cicd/01-view_1.png)
 
-#### `02` — Artifacts, State Storage & Target Projects (`view_2`)
+#### `02` — Artifact Storage, State Backends & Target Envs (`view_2`)
 
-![Platform CI/CD — Artifacts, State Storage & Target Projects](assets/img/platform-cicd/02-view_2.png)
+![Platform CI/CD — Artifact Storage, State Backends & Target Envs](assets/img/platform-cicd/02-view_2.png)
 
 ---
 
@@ -77,9 +77,9 @@ Across all 6 architectures, the gallery covers **75 unique asset types** across 
 
 | # | View ID | Title | Components | Flows | Dimensions (Retina PNG) |
 | :---: | :--- | :--- | :---: | :---: | :---: |
-| `00` | `view_0_system_index` | System Architecture Overview | 18 | 20 | `7797 × 3555` |
-| `01` | `view_1` | Storefront Ingress & Core Runtime | 4 | 3 | `3970 × 2428` |
-| `02` | `view_2` | Event Streaming, Datastores & AI | 14 | 10 | `6954 × 3642` |
+| `00` | `view_0_system_index` | System Architecture Overview | 18 | 20 | `7797 × 3585` |
+| `01` | `view_1` | Edge Ingress & Storefront Compute | 4 | 3 | `3970 × 2454` |
+| `02` | `view_2` | Async Messaging, Data Platform & AI | 14 | 10 | `6954 × 3668` |
 
 ### Rendered Views
 
@@ -87,13 +87,13 @@ Across all 6 architectures, the gallery covers **75 unique asset types** across 
 
 ![Retail Cloud-Native — System Architecture Overview](assets/img/retail-cloud-native/00-view_0_system_index.png)
 
-#### `01` — Storefront Ingress & Core Runtime (`view_1`)
+#### `01` — Edge Ingress & Storefront Compute (`view_1`)
 
-![Retail Cloud-Native — Storefront Ingress & Core Runtime](assets/img/retail-cloud-native/01-view_1.png)
+![Retail Cloud-Native — Edge Ingress & Storefront Compute](assets/img/retail-cloud-native/01-view_1.png)
 
-#### `02` — Event Streaming, Datastores & AI (`view_2`)
+#### `02` — Async Messaging, Data Platform & AI (`view_2`)
 
-![Retail Cloud-Native — Event Streaming, Datastores & AI](assets/img/retail-cloud-native/02-view_2.png)
+![Retail Cloud-Native — Async Messaging, Data Platform & AI](assets/img/retail-cloud-native/02-view_2.png)
 
 ---
 
@@ -121,10 +121,10 @@ Across all 6 architectures, the gallery covers **75 unique asset types** across 
 
 | # | View ID | Title | Components | Flows | Dimensions (Retina PNG) |
 | :---: | :--- | :--- | :---: | :---: | :---: |
-| `00` | `view_0_system_index` | System Architecture Overview | 31 | 36 | `7105 × 3894` |
-| `01` | `view_1` | Edge Ingress, Hybrid Transit & Scheduled Reconcilers | 9 | 6 | `5576 × 2956` |
-| `02` | `view_2` | Core Ledger Services, PSC Fabrics & Event Pipelines | 14 | 14 | `6192 × 4507` |
-| `03` | `view_3` | Ledger Persistence, Vaults, Registries & Acquirer Targets | 8 | 0 *(off-page linked)* | `6554 × 3122` |
+| `00` | `view_0_system_index` | System Architecture Overview | 31 | 36 | `7105 × 3914` |
+| `01` | `view_1` | Edge Ingress, Hybrid Transit & Scheduled Reconciler | 9 | 6 | `5576 × 3036` |
+| `02` | `view_2` | Core Payment Services, PSC Routing & Settlement Pipelines | 14 | 14 | `6124 × 4527` |
+| `03` | `view_3` | Financial Ledger Stores, Vaults & Card Network Egress | 8 | 0 *(off-page linked)* | `6554 × 3148` |
 
 ### Rendered Views
 
@@ -132,17 +132,17 @@ Across all 6 architectures, the gallery covers **75 unique asset types** across 
 
 ![FinTech Global Payments — System Architecture Overview](assets/img/fintech-global-payments/00-view_0_system_index.png)
 
-#### `01` — Edge Ingress, Hybrid Transit & Scheduled Reconcilers (`view_1`)
+#### `01` — Edge Ingress, Hybrid Transit & Scheduled Reconciler (`view_1`)
 
-![FinTech Global Payments — Edge Ingress, Hybrid Transit & Scheduled Reconcilers](assets/img/fintech-global-payments/01-view_1.png)
+![FinTech Global Payments — Edge Ingress, Hybrid Transit & Scheduled Reconciler](assets/img/fintech-global-payments/01-view_1.png)
 
-#### `02` — Core Ledger Services, PSC Fabrics & Event Pipelines (`view_2`)
+#### `02` — Core Payment Services, PSC Routing & Settlement Pipelines (`view_2`)
 
-![FinTech Global Payments — Core Ledger Services, PSC Fabrics & Event Pipelines](assets/img/fintech-global-payments/02-view_2.png)
+![FinTech Global Payments — Core Payment Services, PSC Routing & Settlement Pipelines](assets/img/fintech-global-payments/02-view_2.png)
 
-#### `03` — Ledger Persistence, Vaults, Registries & Acquirer Targets (`view_3`)
+#### `03` — Financial Ledger Stores, Vaults & Card Network Egress (`view_3`)
 
-![FinTech Global Payments — Ledger Persistence, Vaults, Registries & Acquirer Targets](assets/img/fintech-global-payments/03-view_3.png)
+![FinTech Global Payments — Financial Ledger Stores, Vaults & Card Network Egress](assets/img/fintech-global-payments/03-view_3.png)
 
 ---
 
@@ -170,10 +170,10 @@ Across all 6 architectures, the gallery covers **75 unique asset types** across 
 
 | # | View ID | Title | Components | Flows | Dimensions (Retina PNG) |
 | :---: | :--- | :--- | :---: | :---: | :---: |
-| `00` | `view_0_system_index` | System Architecture Overview | 30 | 35 | `6425 × 4329` |
-| `01` | `view_1` | Edge Ingress & ML Serving Gateway | 5 | 2 | `3974 × 2294` |
-| `02` | `view_2` | Streaming Ingestion & Lakehouse Pipelines | 12 | 5 | `3988 × 4892` |
-| `03` | `view_3` | OLTP Databases, Lakehouse Storage & Vertex AI | 13 | 6 | `5822 × 4386` |
+| `00` | `view_0_system_index` | System Architecture Overview | 30 | 35 | `6249 × 4425` |
+| `01` | `view_1` | External Ingress & Inference Gateway | 5 | 2 | `3974 × 2346` |
+| `02` | `view_2` | Streaming CDC, ETL & Orchestration Pipelines | 10 | 5 | `3988 × 4790` |
+| `03` | `view_3` | OLTP, Lakehouse Storage, Analytics & Vertex AI | 15 | 10 | `6450 × 4323` |
 
 ### Rendered Views
 
@@ -181,17 +181,17 @@ Across all 6 architectures, the gallery covers **75 unique asset types** across 
 
 ![Enterprise Lakehouse & MLOps — System Architecture Overview](assets/img/enterprise-lakehouse-mlops/00-view_0_system_index.png)
 
-#### `01` — Edge Ingress & ML Serving Gateway (`view_1`)
+#### `01` — External Ingress & Inference Gateway (`view_1`)
 
-![Enterprise Lakehouse & MLOps — Edge Ingress & ML Serving Gateway](assets/img/enterprise-lakehouse-mlops/01-view_1.png)
+![Enterprise Lakehouse & MLOps — External Ingress & Inference Gateway](assets/img/enterprise-lakehouse-mlops/01-view_1.png)
 
-#### `02` — Streaming Ingestion & Lakehouse Pipelines (`view_2`)
+#### `02` — Streaming CDC, ETL & Orchestration Pipelines (`view_2`)
 
-![Enterprise Lakehouse & MLOps — Streaming Ingestion & Lakehouse Pipelines](assets/img/enterprise-lakehouse-mlops/02-view_2.png)
+![Enterprise Lakehouse & MLOps — Streaming CDC, ETL & Orchestration Pipelines](assets/img/enterprise-lakehouse-mlops/02-view_2.png)
 
-#### `03` — OLTP Databases, Lakehouse Storage & Vertex AI (`view_3`)
+#### `03` — OLTP, Lakehouse Storage, Analytics & Vertex AI (`view_3`)
 
-![Enterprise Lakehouse & MLOps — OLTP Databases, Lakehouse Storage & Vertex AI](assets/img/enterprise-lakehouse-mlops/03-view_3.png)
+![Enterprise Lakehouse & MLOps — OLTP, Lakehouse Storage, Analytics & Vertex AI](assets/img/enterprise-lakehouse-mlops/03-view_3.png)
 
 ---
 
@@ -218,9 +218,9 @@ Across all 6 architectures, the gallery covers **75 unique asset types** across 
 
 | # | View ID | Title | Components | Flows | Dimensions (Retina PNG) |
 | :---: | :--- | :--- | :---: | :---: | :---: |
-| `00` | `view_0_system_index` | System Architecture Overview | 25 | 29 | `6780 × 4117` |
+| `00` | `view_0_system_index` | System Architecture Overview | 25 | 29 | `6809 × 4092` |
 | `01` | `view_1` | Edge Ingress & Ingestion Triggers | 7 | 3 | `4582 × 2944` |
-| `02` | `view_2` | Agentic AI Runtime, OCR Pipeline & Datastores | 18 | 19 | `6112 × 3704` |
+| `02` | `view_2` | RAG Agents, Document Pipelines & Datastores | 18 | 19 | `6400 × 4126` |
 
 ### Rendered Views
 
@@ -232,9 +232,9 @@ Across all 6 architectures, the gallery covers **75 unique asset types** across 
 
 ![Agentic AI & Document Platform — Edge Ingress & Ingestion Triggers](assets/img/agentic-ai-document-platform/01-view_1.png)
 
-#### `02` — Agentic AI Runtime, OCR Pipeline & Datastores (`view_2`)
+#### `02` — RAG Agents, Document Pipelines & Datastores (`view_2`)
 
-![Agentic AI & Document Platform — Agentic AI Runtime, OCR Pipeline & Datastores](assets/img/agentic-ai-document-platform/02-view_2.png)
+![Agentic AI & Document Platform — RAG Agents, Document Pipelines & Datastores](assets/img/agentic-ai-document-platform/02-view_2.png)
 
 ---
 
@@ -262,9 +262,9 @@ Across all 6 architectures, the gallery covers **75 unique asset types** across 
 
 | # | View ID | Title | Components | Flows | Dimensions (Retina PNG) |
 | :---: | :--- | :--- | :---: | :---: | :---: |
-| `00` | `view_0_system_index` | System Architecture Overview | 26 | 32 | `7780 × 3565` |
-| `01` | `view_1` | Ingress, CI Triggers & Scheduled Batch | 8 | 4 | `6448 × 3104` |
-| `02` | `view_2` | Core Microservices, Risk AI & Data Estate | 18 | 20 | `7372 × 3780` |
+| `00` | `view_0_system_index` | System Architecture Overview | 26 | 32 | `7785 × 3566` |
+| `01` | `view_1` | Edge Ingress, CI Triggers & Scheduled Batch | 8 | 4 | `6448 × 3156` |
+| `02` | `view_2` | Commerce Runtime, AI Risk Engine & Datastores | 18 | 20 | `7326 × 3798` |
 
 ### Rendered Views
 
@@ -272,13 +272,13 @@ Across all 6 architectures, the gallery covers **75 unique asset types** across 
 
 ![Enterprise Zero-Trust Mesh — System Architecture Overview](assets/img/enterprise-zero-trust-mesh/00-view_0_system_index.png)
 
-#### `01` — Ingress, CI Triggers & Scheduled Batch (`view_1`)
+#### `01` — Edge Ingress, CI Triggers & Scheduled Batch (`view_1`)
 
-![Enterprise Zero-Trust Mesh — Ingress, CI Triggers & Scheduled Batch](assets/img/enterprise-zero-trust-mesh/01-view_1.png)
+![Enterprise Zero-Trust Mesh — Edge Ingress, CI Triggers & Scheduled Batch](assets/img/enterprise-zero-trust-mesh/01-view_1.png)
 
-#### `02` — Core Microservices, Risk AI & Data Estate (`view_2`)
+#### `02` — Commerce Runtime, AI Risk Engine & Datastores (`view_2`)
 
-![Enterprise Zero-Trust Mesh — Core Microservices, Risk AI & Data Estate](assets/img/enterprise-zero-trust-mesh/02-view_2.png)
+![Enterprise Zero-Trust Mesh — Commerce Runtime, AI Risk Engine & Datastores](assets/img/enterprise-zero-trust-mesh/02-view_2.png)
 
 ---
 

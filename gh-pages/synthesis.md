@@ -1,6 +1,6 @@
 # Stage 2 — Gemini 4 Synthesis & Day-2 Reconciliation
 
-Stage 2 (`gcp-arch synthesize <facts.json>`) transforms a sanitized, read-only `v3` `facts.json` snapshot produced by [Stage 1 — Read-Only Extraction](extraction.md) into a Git-tracked, deterministic `v1` `architecture.yaml` manifest ([`internal/manifest/types.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go)). Rather than prompting an LLM to invent graph topology or raw URIs, Stage 2 executes a **single unified synthesis pipeline**: Go deterministically builds the complete GCP containment skeleton, enriches it with **one bounded Vertex AI Gemini 4 REST call** (`cloud.google.com/go/auth`), assembles `View 0` plus stage-partitioned detail views, and enforces 100% resource/edge conservation and directed-walk provenance.
+Stage 2 (`gcp-arch synthesize <facts.json>`) transforms a sanitized, read-only `v3` `facts.json` snapshot produced by [Stage 1 — Read-Only Extraction](extraction.md) into a Git-tracked, deterministic `v1` `architecture.yaml` manifest ([`internal/manifest/types.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go)). Rather than prompting an LLM to invent graph topology or raw URIs, Stage 2 executes a **single unified synthesis pipeline**: Go deterministically builds the complete GCP containment skeleton, enriches it with **one bounded Vertex AI Gemini 4 call** (`google.golang.org/genai` with `cloud.google.com/go/auth`), assembles `View 0` plus stage-partitioned detail views, and enforces 100% resource/edge conservation and directed-walk provenance.
 
 On Day 2, `gcp-arch synthesize --reconcile` synchronizes fresh cloud facts into your curated `architecture.yaml` in place—finishing in **`< 5 ms` with `0` Vertex AI calls** when unchanged, and preserving human-curated titles, subtitles, and `notes` when infrastructure deltas trigger re-synthesis.
 
@@ -74,7 +74,7 @@ flowchart TD
     Cap -- "No (> 500)" --> ErrCap["ScaleLimitError (exit 2)\n0 Vertex AI calls"]
     Cap -- "Yes" --> Skel["Stage 2A: Go Deterministic Skeleton\nskeleton.go · assets.go · containers.go\nedges.go · ranking.go"]
 
-    Skel -->|"Compact JSON summary\n(nodes, edges, target views)"| Annot["Stage 2B: Single Bounded Vertex AI REST Call\nannotate.go · client.go\n(gemini-4-carbon, ResponseSchema)"]
+    Skel -->|"Compact JSON summary\n(nodes, edges, target views)"| Annot["Stage 2B: Single Bounded Vertex AI GenAI SDK Call\nannotate.go · client.go\n(gemini-4-carbon, *genai.Schema)"]
     Annot -->|"focus_summary, detail_views,\nnode subtitles, edge verbs/tags"| Assemble["assembleManifest (Go)\nLock titles, view IDs, hierarchy,\nView 0 + detail views + OffPageRefs"]
     Assemble --> Gate["Stage 2C: Conservation & Provenance Gate\nValidateWithFactsAndConservation\n(100% URIs & functional edges)"]
     Gate --> Write["manifest.Write (0644 atomic)\narchitecture.yaml (v1)"]
@@ -94,32 +94,32 @@ Without making any LLM call, [`buildSkeleton`](https://github.com/arrase/gcp-arc
 
 ---
 
-## Direct Vertex AI Gemini 4 REST Client ([`internal/synth/client.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go))
+## Vertex AI Gemini 4 SDK Client ([`internal/synth/client.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go))
 
-Stage 2 communicates directly with the Vertex AI REST API over `cloud.google.com/go/auth` (`httptransport`) with zero third-party generative AI SDK dependency:
+Stage 2 uses the official Google GenAI Go SDK (`google.golang.org/genai`, configured with `genai.BackendVertexAI`) authenticated with `cloud.google.com/go/auth`:
 
 | Property | Value / Behavior | Source |
 | :--- | :--- | :--- |
-| **Endpoint** | `https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/google/models/{model}:generateContent` *(or `https://{location}-aiplatform.googleapis.com/...` for regional locations)* | [`internal/synth/client.go#L157-L212`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L157-L212) |
-| **OAuth Scope & ADC Detection** | `credentials.DetectDefault` scoped to `https://www.googleapis.com/auth/cloud-platform` via `cloud.google.com/go/auth/httptransport` | [`internal/synth/client.go#L174-L191`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L174-L191); strictly separated from Stage 1's `cloud-platform.read-only` target discovery credentials |
-| **Default Model & Location** | `gemini-4-carbon` (`DefaultVertexModel`) in `global` (`DefaultVertexLocation`) | [`internal/synth/client.go#L25-L26`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L25-L26) |
-| **Sampling & Schema** | `temperature: 0.1`, `responseMimeType: "application/json"`, `responseSchema: annotationSchema()` | [`internal/synth/client.go#L300-L304`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L300-L304) |
-| **Timeouts & Transient Retries** | `240s` per-attempt timeout (`defaultVertexAttemptTimeout`), up to **`3` attempts** (`maxVertexAttempts = 3`) with exponential backoff (`2s`, `4s`) on HTTP `429`/`503`/`504`, EOF, or timeout | [`internal/synth/client.go#L27-L30`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L27-L30), [`#L326-L344`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L326-L344), [`#L416-L428`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L416-L428) |
-| **Response Cap & Thought Filtering** | `8 MiB` response cap (`maxVertexResponseBytes`); `extractCandidateText` strips `thought: true` parts before JSON decoding | [`internal/synth/client.go#L31`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L31), [`#L403-L414`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L403-L414) |
-| **Zero-Token Model Probe** | [`ProbeVertexModel`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L432-L470) sends REST `GET .../publishers/google/models/{model}` (`30s` timeout) | Plugged into `gcp-arch preflight` via `extract.VertexPreflightOptions.ModelProbe` at **0 token cost** |
+| **SDK & Backend** | `google.golang.org/genai` (`genai.NewClient` with `Backend: genai.BackendVertexAI`, `Project`, `Location`, and optional `HTTPOptions.BaseURL`) | [`internal/synth/client.go#L131-L145`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L131-L145) |
+| **OAuth Scope & ADC Detection** | `credentials.DetectDefault` scoped to `https://www.googleapis.com/auth/cloud-platform` via `cloud.google.com/go/auth/credentials` | [`internal/synth/client.go#L120-L129`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L120-L129); strictly separated from Stage 1's `cloud-platform.read-only` target discovery credentials |
+| **Default Model & Location** | `gemini-4-carbon` (`DefaultVertexModel`) in `global` (`DefaultVertexLocation`) | [`internal/synth/client.go#L22-L23`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L22-L23) |
+| **Sampling & Schema** | `Temperature: 0.1`, `ResponseMIMEType: "application/json"`, `ResponseSchema: annotationSchema()` (`*genai.Schema`) | [`internal/synth/client.go#L188-L193`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L188-L193) |
+| **Timeouts & Transient Retries** | `240s` per-attempt timeout (`defaultVertexAttemptTimeout`), up to **`3` attempts** (`maxVertexAttempts = 3`) with exponential backoff (`2s`, `4s`) on `genai.APIError` `429`/`503`/`504`, `io.EOF`/`io.ErrUnexpectedEOF`, or timeout | [`internal/synth/client.go#L24-L27`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L24-L27), [`#L210-L228`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L210-L228), [`#L258-L270`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L258-L270) |
+| **Thought Filtering & Telemetry** | `resp.Text()` excludes thought parts before JSON decoding; `UsageStats` captures prompt, candidate, thoughts, and total token counts from `resp.UsageMetadata` | [`internal/synth/client.go#L231-L248`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L231-L248) |
+| **Zero-Token Model Probe** | [`ProbeVertexModel`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L274-L295) calls `google.golang.org/genai` `Models.Get(probeCtx, model, nil)` (`30s` timeout) | Plugged into `gcp-arch preflight` via `extract.VertexPreflightOptions.ModelProbe` at **0 token cost** |
 
 ### Thinking Level Options
 
-[`ParseThinkingLevel`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L61-L78) normalizes case-insensitively and accepts five explicit levels plus the empty default:
+[`ParseThinkingLevel`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/client.go#L33-L50) normalizes case-insensitively and accepts five explicit levels plus the empty default:
 
-| `--thinking-level` Value | REST Enum (`ThinkingLevel`) | Behavior |
+| `--thinking-level` Value | SDK Enum (`genai.ThinkingLevel`) | Behavior |
 | :--- | :--- | :--- |
-| *(omitted / empty)* | `""` | Omits `thinkingConfig` so Vertex AI applies the model's built-in default reasoning budget. |
-| `minimal` | `MINIMAL` | Minimal reasoning tokens for fastest latency. |
-| `low` | `LOW` | Light reasoning for small, straightforward topologies. |
-| `medium` | `MEDIUM` | Balanced reasoning depth and latency. |
-| `high` | `HIGH` | Deep architectural reasoning for complex multi-project or Shared VPC graphs. |
-| `xhigh` | `XHIGH` | Maximum reasoning depth. |
+| *(omitted / empty)* | `""` | Omits `ThinkingConfig` so Vertex AI applies the model's built-in default reasoning budget. |
+| `minimal` | `genai.ThinkingLevelMinimal` | Minimal reasoning tokens for fastest latency. |
+| `low` | `genai.ThinkingLevelLow` | Light reasoning for small, straightforward topologies. |
+| `medium` | `genai.ThinkingLevelMedium` | Balanced reasoning depth and latency. |
+| `high` | `genai.ThinkingLevelHigh` | Deep architectural reasoning for complex multi-project or Shared VPC graphs. |
+| `xhigh` | `genai.ThinkingLevelXhigh` | Maximum reasoning depth. |
 
 Passing any unrecognized value fails immediately with CLI exit code `2` before loading `facts.json` or initializing Vertex AI.
 
@@ -127,7 +127,7 @@ Passing any unrecognized value fails immediately with CLI exit code `2` before l
 
 ## Stage 2B — Bounded Annotation & Manifest Assembly ([`internal/synth/annotate.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go))
 
-[`annotateSkeleton`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L169-L244) sends a compact summary of the deterministic skeleton (`scopes`, `target_detail_view_count`, `transversal_count`, `nodes`, `edges`) to Gemini 4 using [`annotationSchema`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L85-L137). The model is strictly bounded to returning:
+[`annotateSkeleton`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L171-L246) sends a compact summary of the deterministic skeleton (`scopes`, `target_detail_view_count`, `transversal_count`, `nodes`, `edges`) to Gemini 4 using [`annotationSchema`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L87-L130). The model is strictly bounded to returning:
 
 1. `focus_summary` — concise architectural overview sentence for `View 0`.
 2. `detail_views` — cohesive subsystem groupings (`view_slot` in `view_1..view_3`, `title`, `subtitle`, `focus_summary`, `node_ids`).
@@ -136,13 +136,13 @@ Passing any unrecognized value fails immediately with CLI exit code `2` before l
 
 ### Deterministic Locking & Multi-View Assembly
 
-[`assembleManifest`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L246-L313) enforces structural stability in Go so repeated Vertex AI runs preserve identical containment, titles, view IDs, and connectivity:
+[`assembleManifest`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L248-L315) enforces structural stability in Go so repeated Vertex AI runs preserve identical containment, titles, view IDs, and connectivity:
 
 * **Locked Structural Identity:** Node IDs, canonical titles, `backed_by` URIs, container tree, `TopoRank`, `SubRank`, `members`, `badges`, `transversal_items`, and `structural_edges` are owned by Go and cannot be altered or dropped by the model.
-* **Annotation Sanitization (`cleanAnnotation`):** Rejects/strips `"..."`, Unicode ellipsis `…` (`U+2026`), and stray trailing punctuation/quotes before writing labels into YAML ([`internal/synth/annotate.go#L720-L767`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L720-L767)).
+* **Annotation Sanitization (`cleanAnnotation`):** Rejects/strips `"..."`, Unicode ellipsis `…` (`U+2026`), and stray trailing punctuation/quotes before writing labels into YAML ([`internal/synth/annotate.go#L722-L769`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L722-L769)).
 * **Deterministic `View 0` (`view_0_system_index`):** Always placed at `views[0]` with `archetype: layered_flow`, placing **100%** of primary components sorted by `(TopoRank, SubRank, ID)` together with all functional edges and `include_transversal_panel: true`.
-* **Stage-Partitioned Detail Views (`targetDetailViewCount`):** Emits `0` detail views when `<= 14` primary nodes exist, `2` detail views (`view_1`, `view_2`) for `15..28` nodes, and `3` detail views (`view_1..view_3`) for `> 28` nodes ([`internal/synth/annotate.go#L154-L163`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L154-L163)). Any node omitted by the model is deterministically assigned via `stageDetailViewBucket` so every component appears in a detail view.
-* **Symmetric Cross-View `off_page_refs` (`populateOffPageRefs`):** Automatically derives matching `OUT` and `IN` badges on placements whenever an edge crosses between detail views ([`internal/synth/annotate.go#L591-L689`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L591-L689)).
+* **Stage-Partitioned Detail Views (`targetDetailViewCount`):** Emits `0` detail views when `<= 14` primary nodes exist, `2` detail views (`view_1`, `view_2`) for `15..28` nodes, and `3` detail views (`view_1..view_3`) for `> 28` nodes ([`internal/synth/annotate.go#L156-L165`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L156-L165)). Any node omitted by the model is deterministically assigned via `stageDetailViewBucket` so every component appears in a detail view.
+* **Symmetric Cross-View `off_page_refs` (`populateOffPageRefs`):** Automatically derives matching `OUT` and `IN` badges on placements whenever an edge crosses between detail views ([`internal/synth/annotate.go#L593-L691`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L593-L691)).
 
 ---
 

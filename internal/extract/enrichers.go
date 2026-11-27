@@ -5,10 +5,8 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"net/url"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -16,6 +14,9 @@ import (
 
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/api/bigquery/v2"
+	"google.golang.org/api/dataflow/v1b3"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -107,44 +108,6 @@ var (
 	}
 )
 
-type bqTableRef struct {
-	ProjectID string `json:"projectId,omitempty"`
-	DatasetID string `json:"datasetId,omitempty"`
-	TableID   string `json:"tableId,omitempty"`
-}
-
-type bqJobConfig struct {
-	Query *struct {
-		DestinationTable *bqTableRef `json:"destinationTable,omitempty"`
-	} `json:"query,omitempty"`
-	Load *struct {
-		DestinationTable *bqTableRef `json:"destinationTable,omitempty"`
-	} `json:"load,omitempty"`
-	Copy *bqCopyConfig `json:"copy,omitempty"`
-}
-
-type bqCopyConfig struct {
-	SourceTable      *bqTableRef   `json:"sourceTable,omitempty"`
-	SourceTables     []*bqTableRef `json:"sourceTables,omitempty"`
-	DestinationTable *bqTableRef   `json:"destinationTable,omitempty"`
-}
-
-type bqJobItem struct {
-	UserEmail        string       `json:"user_email,omitempty"`
-	PrincipalSubject string       `json:"principal_subject,omitempty"`
-	Configuration    *bqJobConfig `json:"configuration,omitempty"`
-	Statistics       *struct {
-		Query *struct {
-			ReferencedTables []*bqTableRef `json:"referencedTables,omitempty"`
-		} `json:"query,omitempty"`
-	} `json:"statistics,omitempty"`
-}
-
-type bqJobListResponse struct {
-	Jobs          []*bqJobItem `json:"jobs,omitempty"`
-	NextPageToken string       `json:"nextPageToken,omitempty"`
-}
-
 type bqDatasetEdgeKey struct {
 	fromDS string
 	toDS   string
@@ -158,45 +121,6 @@ type bqPrincipalDSKey struct {
 type bqEnrichResult struct {
 	lineageEdges []bqDatasetEdgeKey
 	principalDS  []bqPrincipalDSKey
-}
-
-type dfDisplayData struct {
-	StrValue string `json:"strValue,omitempty"`
-	URL      string `json:"url,omitempty"`
-}
-
-type dfWorkerPool struct {
-	Network    string `json:"network,omitempty"`
-	Subnetwork string `json:"subnetwork,omitempty"`
-}
-
-type dfEnvironment struct {
-	ServiceAccountEmail string          `json:"serviceAccountEmail,omitempty"`
-	TempStoragePrefix   string          `json:"tempStoragePrefix,omitempty"`
-	Dataset             string          `json:"dataset,omitempty"`
-	WorkerPools         []*dfWorkerPool `json:"workerPools,omitempty"`
-}
-
-type dfPipelineDescription struct {
-	DisplayData               []*dfDisplayData `json:"displayData,omitempty"`
-	OriginalPipelineTransform []*struct {
-		DisplayData []*dfDisplayData `json:"displayData,omitempty"`
-	} `json:"originalPipelineTransform,omitempty"`
-}
-
-type dfJob struct {
-	ID                  string                 `json:"id,omitempty"`
-	Name                string                 `json:"name,omitempty"`
-	Type                string                 `json:"type,omitempty"`
-	CurrentState        string                 `json:"currentState,omitempty"`
-	Location            string                 `json:"location,omitempty"`
-	Environment         *dfEnvironment         `json:"environment,omitempty"`
-	PipelineDescription *dfPipelineDescription `json:"pipelineDescription,omitempty"`
-}
-
-type dfListJobsResponse struct {
-	Jobs          []*dfJob `json:"jobs,omitempty"`
-	NextPageToken string   `json:"nextPageToken,omitempty"`
 }
 
 type dataflowJobLink struct {
@@ -292,12 +216,14 @@ func (st *extractState) runEnrichers(ctx context.Context, clients *Clients) erro
 	)
 
 	g, gctx := errgroup.WithContext(ctx)
-	if clients.HTTPClient != nil {
+	if clients.BigQuery != nil {
 		g.Go(func() error {
 			var err error
 			bqRes, err = st.fetchBigQueryJobs(gctx, clients)
 			return err
 		})
+	}
+	if clients.Dataflow != nil {
 		g.Go(func() error {
 			var err error
 			dfLinks, err = st.fetchDataflowJobs(gctx, clients)
@@ -457,31 +383,31 @@ func (st *extractState) fetchProjectBigQueryPage(
 	return resp.NextPageToken, false, nil
 }
 
-func listBigQueryJobsPage(ctx context.Context, clients *Clients, proj string, minCreationMs uint64, pageToken string) (*bqJobListResponse, error) {
-	q := url.Values{}
-	q.Set("allUsers", "true")
-	q.Set("projection", "full")
-	q.Set("minCreationTime", strconv.FormatUint(minCreationMs, 10))
-	q.Set("maxResults", strconv.Itoa(bqJobPageSize))
-	q.Set("fields", bqJobListFields)
-	if pageToken != "" {
-		q.Set("pageToken", pageToken)
-	}
-	endpoint := fmt.Sprintf("%s/bigquery/v2/projects/%s/jobs?%s", clients.bigQueryBaseURL(), url.PathEscape(proj), q.Encode())
-
-	var resp bqJobListResponse
+func listBigQueryJobsPage(ctx context.Context, clients *Clients, proj string, minCreationMs uint64, pageToken string) (*bigquery.JobList, error) {
+	var resp *bigquery.JobList
 	err := retryOnRateLimit(ctx, clients.retryBackoff, func() error {
 		if err := waitLimiter(ctx, clients.BQLimiter); err != nil {
 			return err
 		}
-		resp = bqJobListResponse{}
-		return getJSON(ctx, clients.HTTPClient, endpoint, &resp)
+		call := clients.BigQuery.Jobs.List(proj).
+			AllUsers(true).
+			Projection("full").
+			MinCreationTime(minCreationMs).
+			MaxResults(bqJobPageSize).
+			Fields(googleapi.Field(bqJobListFields)).
+			Context(ctx)
+		if pageToken != "" {
+			call = call.PageToken(pageToken)
+		}
+		var doErr error
+		resp, doErr = call.Do()
+		return doErr
 	})
-	return &resp, err
+	return resp, err
 }
 
 func recordBQJob(
-	job *bqJobItem,
+	job *bigquery.JobListJobs,
 	projIdx map[string]string,
 	lineage map[bqDatasetEdgeKey]struct{},
 	principals map[bqPrincipalDSKey]struct{},
@@ -517,7 +443,7 @@ func recordBQJob(
 	}
 }
 
-func extractBQJobConfigDatasets(cfg *bqJobConfig, projIdx map[string]string) (string, []string) {
+func extractBQJobConfigDatasets(cfg *bigquery.JobConfiguration, projIdx map[string]string) (string, []string) {
 	if cfg == nil {
 		return "", nil
 	}
@@ -532,7 +458,7 @@ func extractBQJobConfigDatasets(cfg *bqJobConfig, projIdx map[string]string) (st
 	return "", nil
 }
 
-func extractBQCopyDatasets(cp *bqCopyConfig, projIdx map[string]string) (string, []string) {
+func extractBQCopyDatasets(cp *bigquery.JobConfigurationTableCopy, projIdx map[string]string) (string, []string) {
 	dest := canonicalBQDatasetRef(cp.DestinationTable, projIdx)
 	var refs []string
 	appendUnique(&refs, canonicalBQDatasetRef(cp.SourceTable, projIdx))
@@ -542,14 +468,14 @@ func extractBQCopyDatasets(cp *bqCopyConfig, projIdx map[string]string) (string,
 	return dest, refs
 }
 
-func canonicalBQDatasetRef(tr *bqTableRef, projIdx map[string]string) string {
-	if tr == nil || tr.ProjectID == "" || tr.DatasetID == "" || tr.TableID == "" {
+func canonicalBQDatasetRef(tr *bigquery.TableReference, projIdx map[string]string) string {
+	if tr == nil || tr.ProjectId == "" || tr.DatasetId == "" || tr.TableId == "" {
 		return ""
 	}
-	if strings.HasPrefix(tr.DatasetID, "_") || strings.HasPrefix(tr.TableID, "_script") || anonTableRe.MatchString(tr.TableID) {
+	if strings.HasPrefix(tr.DatasetId, "_") || strings.HasPrefix(tr.TableId, "_script") || anonTableRe.MatchString(tr.TableId) {
 		return ""
 	}
-	return prefixBQProjects + mapProject(tr.ProjectID, projIdx) + segDatasets + tr.DatasetID
+	return prefixBQProjects + mapProject(tr.ProjectId, projIdx) + segDatasets + tr.DatasetId
 }
 
 func (st *extractState) applyBigQueryResult(res *bqEnrichResult, saWorkloads map[string][]string) {
@@ -676,70 +602,69 @@ func (st *extractState) fetchProjectDataflowJobs(ctx context.Context, clients *C
 	return projLinks, nil
 }
 
-func listDataflowJobsPage(ctx context.Context, clients *Clients, proj, pageToken string) (*dfListJobsResponse, error) {
-	q := url.Values{}
-	q.Set("filter", "ACTIVE")
-	q.Set("fields", dataflowJobListFields)
-	if pageToken != "" {
-		q.Set("pageToken", pageToken)
-	}
-	endpoint := fmt.Sprintf("%s/v1b3/projects/%s/locations/-/jobs?%s", clients.dataflowBaseURL(), url.PathEscape(proj), q.Encode())
-
-	var resp dfListJobsResponse
+func listDataflowJobsPage(ctx context.Context, clients *Clients, proj, pageToken string) (*dataflow.ListJobsResponse, error) {
+	var resp *dataflow.ListJobsResponse
 	err := retryOnRateLimit(ctx, clients.retryBackoff, func() error {
 		if err := waitLimiter(ctx, clients.DataflowLimiter); err != nil {
 			return err
 		}
-		resp = dfListJobsResponse{}
-		return getJSON(ctx, clients.HTTPClient, endpoint, &resp)
+		call := clients.Dataflow.Projects.Locations.Jobs.List(proj, "-").
+			Filter("ACTIVE").
+			Fields(googleapi.Field(dataflowJobListFields)).
+			Context(ctx)
+		if pageToken != "" {
+			call = call.PageToken(pageToken)
+		}
+		var doErr error
+		resp, doErr = call.Do()
+		return doErr
 	})
-	return &resp, err
+	return resp, err
 }
 
-func (st *extractState) fetchDataflowJobDetails(ctx context.Context, clients *Clients, proj, projNum, scope string, summaries []*dfJob) ([]*dataflowJobLink, bool, error) {
+func (st *extractState) fetchDataflowJobDetails(ctx context.Context, clients *Clients, proj, projNum, scope string, summaries []*dataflow.Job) ([]*dataflowJobLink, bool, error) {
 	var links []*dataflowJobLink
 	for _, summary := range summaries {
 		loc := summary.Location
 		if loc == "" {
 			loc = "us-central1"
 		}
-		detail, err := getDataflowJob(ctx, clients, proj, loc, summary.ID)
+		detail, err := getDataflowJob(ctx, clients, proj, loc, summary.Id)
 		if err != nil {
 			if deg, fatalErr := st.handleEnrichError(err, clients, proj, projNum, scope, sourceDataflowJobs); fatalErr != nil {
 				return nil, false, fatalErr
 			} else if deg {
 				return links, true, nil
 			}
-			return nil, false, fmt.Errorf("dataflow jobs.get(%s/%s/%s): %w", proj, loc, summary.ID, err)
+			return nil, false, fmt.Errorf("dataflow jobs.get(%s/%s/%s): %w", proj, loc, summary.Id, err)
 		}
 		links = append(links, extractDataflowJobLink(proj, loc, detail, st.projIdx))
 	}
 	return links, false, nil
 }
 
-func getDataflowJob(ctx context.Context, clients *Clients, proj, loc, jobID string) (*dfJob, error) {
-	q := url.Values{}
-	q.Set("view", "JOB_VIEW_DESCRIPTION")
-	q.Set("fields", dataflowJobGetFields)
-	endpoint := fmt.Sprintf("%s/v1b3/projects/%s/locations/%s/jobs/%s?%s",
-		clients.dataflowBaseURL(), url.PathEscape(proj), url.PathEscape(loc), url.PathEscape(jobID), q.Encode())
-
-	var detail dfJob
+func getDataflowJob(ctx context.Context, clients *Clients, proj, loc, jobID string) (*dataflow.Job, error) {
+	var detail *dataflow.Job
 	err := retryOnRateLimit(ctx, clients.retryBackoff, func() error {
 		if err := waitLimiter(ctx, clients.DataflowLimiter); err != nil {
 			return err
 		}
-		detail = dfJob{}
-		return getJSON(ctx, clients.HTTPClient, endpoint, &detail)
+		var doErr error
+		detail, doErr = clients.Dataflow.Projects.Locations.Jobs.Get(proj, loc, jobID).
+			View("JOB_VIEW_DESCRIPTION").
+			Fields(googleapi.Field(dataflowJobGetFields)).
+			Context(ctx).
+			Do()
+		return doErr
 	})
-	return &detail, err
+	return detail, err
 }
 
-func extractDataflowJobLink(proj, loc string, job *dfJob, projIdx map[string]string) *dataflowJobLink {
+func extractDataflowJobLink(proj, loc string, job *dataflow.Job, projIdx map[string]string) *dataflowJobLink {
 	link := &dataflowJobLink{
 		projectID: proj,
 		location:  loc,
-		jobID:     job.ID,
+		jobID:     job.Id,
 		jobName:   job.Name,
 		jobType:   job.Type,
 		state:     job.CurrentState,
@@ -762,7 +687,7 @@ func appendSanitizedRefs(dst *[]string, raw string, projIdx map[string]string) {
 	}
 }
 
-func extractDataflowEnvironment(link *dataflowJobLink, env *dfEnvironment, projIdx map[string]string, refs *[]string) {
+func extractDataflowEnvironment(link *dataflowJobLink, env *dataflow.Environment, projIdx map[string]string, refs *[]string) {
 	if env == nil {
 		return
 	}
@@ -779,7 +704,7 @@ func extractDataflowEnvironment(link *dataflowJobLink, env *dfEnvironment, projI
 	}
 }
 
-func extractDataflowPipelineRefs(desc *dfPipelineDescription, projIdx map[string]string, refs *[]string) {
+func extractDataflowPipelineRefs(desc *dataflow.PipelineDescription, projIdx map[string]string, refs *[]string) {
 	if desc == nil {
 		return
 	}
@@ -789,10 +714,10 @@ func extractDataflowPipelineRefs(desc *dfPipelineDescription, projIdx map[string
 	}
 }
 
-func appendDisplayDataRefs(refs *[]string, items []*dfDisplayData, projIdx map[string]string) {
+func appendDisplayDataRefs(refs *[]string, items []*dataflow.DisplayData, projIdx map[string]string) {
 	for _, dd := range items {
 		appendSanitizedRefs(refs, dd.StrValue, projIdx)
-		appendSanitizedRefs(refs, dd.URL, projIdx)
+		appendSanitizedRefs(refs, dd.Url, projIdx)
 	}
 }
 

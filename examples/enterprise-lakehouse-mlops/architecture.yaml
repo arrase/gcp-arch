@@ -1,1026 +1,1026 @@
 schema_version: v1
 metadata:
-  generated_at: '2026-11-27T15:58:33Z'
+  generated_at: "2026-11-27T19:18:34Z"
   scopes:
-  - organizations/920200001
+    - organizations/920200001
 components:
-- id: n_external_ml_partner_apps
-  title: ml-partner-apps
-  subtitle: External Partner Client Applications
-  icon_key: external_client
-  component_kind: EXTERNAL_CALLER
-  project_id: external
-  backed_by:
-  - uri: //external.internet/clients/ml-partner-apps
-    asset_type: external.internet/ClientGroup
+  - id: n_external_ml_partner_apps
+    title: ml-partner-apps
+    subtitle: External client apps calling ML APIs
+    icon_key: external_client
+    component_kind: EXTERNAL_CALLER
     project_id: external
-  members:
-  - ml-partner-apps
-  badges:
-  - kind: exposure
-    label: EXTERNAL
-- id: n_external_partner_erp_feeds
-  title: partner-erp-feeds
-  subtitle: External ERP Batch & Telemetry Sources
-  icon_key: external_client
-  component_kind: EXTERNAL_CALLER
-  project_id: external
-  sub_rank: 1
-  backed_by:
-  - uri: //external.internet/clients/partner-erp-feeds
-    asset_type: external.internet/ClientGroup
+    backed_by:
+      - uri: //external.internet/clients/ml-partner-apps
+        asset_type: external.internet/ClientGroup
+        project_id: external
+    members:
+      - ml-partner-apps
+    badges:
+      - kind: exposure
+        label: EXTERNAL
+  - id: n_external_partner_erp_feeds
+    title: partner-erp-feeds
+    subtitle: External ERP batch and telemetry sources
+    icon_key: external_client
+    component_kind: EXTERNAL_CALLER
     project_id: external
-  members:
-  - partner-erp-feeds
-  badges:
-  - kind: exposure
-    label: EXTERNAL
-- id: n_stratos_ingest_prod_cdc_change_events
-  title: cdc-change-events
-  subtitle: Pub/Sub Order CDC Event Topic
-  icon_key: pubsub
-  component_kind: MESSAGING
-  project_id: stratos-ingest-prod
-  topo_rank: 7
-  sub_rank: 19
-  backed_by:
-  - uri: //pubsub.googleapis.com/projects/stratos-ingest-prod/subscriptions/dataflow-cdc-sub
-    asset_type: pubsub.googleapis.com/Subscription
+    sub_rank: 1
+    backed_by:
+      - uri: //external.internet/clients/partner-erp-feeds
+        asset_type: external.internet/ClientGroup
+        project_id: external
+    members:
+      - partner-erp-feeds
+    badges:
+      - kind: exposure
+        label: EXTERNAL
+  - id: n_stratos_ingest_prod_cdc_change_events
+    title: cdc-change-events
+    subtitle: Pub/Sub topic for real-time order CDC
+    icon_key: pubsub
+    component_kind: MESSAGING
     project_id: stratos-ingest-prod
-  - uri: //pubsub.googleapis.com/projects/stratos-ingest-prod/topics/cdc-change-events
-    asset_type: pubsub.googleapis.com/Topic
+    topo_rank: 7
+    sub_rank: 19
+    backed_by:
+      - uri: //pubsub.googleapis.com/projects/stratos-ingest-prod/subscriptions/dataflow-cdc-sub
+        asset_type: pubsub.googleapis.com/Subscription
+        project_id: stratos-ingest-prod
+      - uri: //pubsub.googleapis.com/projects/stratos-ingest-prod/topics/cdc-change-events
+        asset_type: pubsub.googleapis.com/Topic
+        project_id: stratos-ingest-prod
+    members:
+      - cdc-change-events
+      - dataflow-cdc-sub
+    badges:
+      - kind: sub
+        label: 'sub: dataflow-cdc-sub'
+    folded_edge_ids:
+      - 114d6a12aeecdf13
+    inline_meta:
+      - label: Subscriptions
+        value: "1"
+  - id: n_stratos_ingest_prod_erp_datafusion_etl
+    title: erp-datafusion-etl
+    subtitle: Private Data Fusion batch ERP ETL instance
+    icon_key: cloud_data_fusion
+    component_kind: PIPELINE
     project_id: stratos-ingest-prod
-  members:
-  - cdc-change-events
-  - dataflow-cdc-sub
-  badges:
-  - kind: sub
-    label: 'sub: dataflow-cdc-sub'
-  folded_edge_ids:
-  - 114d6a12aeecdf13
-  inline_meta:
-  - label: Subscriptions
-    value: '1'
-- id: n_stratos_ingest_prod_erp_datafusion_etl
-  title: erp-datafusion-etl
-  subtitle: Private Cloud Data Fusion ETL
-  icon_key: cloud_data_fusion
-  component_kind: PIPELINE
-  project_id: stratos-ingest-prod
-  topo_rank: 3
-  sub_rank: 7
-  backed_by:
-  - uri: //datafusion.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/instances/erp-datafusion-etl
-    asset_type: datafusion.googleapis.com/Instance
+    topo_rank: 3
+    sub_rank: 7
+    backed_by:
+      - uri: //datafusion.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/instances/erp-datafusion-etl
+        asset_type: datafusion.googleapis.com/Instance
+        project_id: stratos-ingest-prod
+    members:
+      - erp-datafusion-etl
+  - id: n_stratos_ingest_prod_inventory_cdc_stream
+    title: inventory-cdc-stream
+    subtitle: Datastream CDC replication for inventory
+    icon_key: datastream
+    component_kind: PIPELINE
     project_id: stratos-ingest-prod
-  members:
-  - erp-datafusion-etl
-- id: n_stratos_ingest_prod_inventory_cdc_stream
-  title: inventory-cdc-stream
-  subtitle: Datastream Inventory CDC Pipeline
-  icon_key: datastream
-  component_kind: PIPELINE
-  project_id: stratos-ingest-prod
-  topo_rank: 6
-  sub_rank: 16
-  backed_by:
-  - uri: //datastream.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/streams/inventory-cdc-stream
-    asset_type: datastream.googleapis.com/Stream
+    topo_rank: 6
+    sub_rank: 16
+    backed_by:
+      - uri: //datastream.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/streams/inventory-cdc-stream
+        asset_type: datastream.googleapis.com/Stream
+        project_id: stratos-ingest-prod
+    members:
+      - inventory-cdc-stream
+    badges:
+      - kind: sa
+        label: 'SA: datastream-cdc-sa'
+  - id: n_stratos_ingest_prod_oltp_inventory_alloydb
+    title: oltp-inventory-alloydb
+    subtitle: Private PSA AlloyDB inventory cluster
+    icon_key: alloydb
+    component_kind: DATASTORE
     project_id: stratos-ingest-prod
-  members:
-  - inventory-cdc-stream
-  badges:
-  - kind: sa
-    label: 'SA: datastream-cdc-sa'
-- id: n_stratos_ingest_prod_oltp_inventory_alloydb
-  title: oltp-inventory-alloydb
-  subtitle: AlloyDB Transactional Inventory Cluster
-  icon_key: alloydb
-  component_kind: DATASTORE
-  project_id: stratos-ingest-prod
-  topo_rank: 5
-  sub_rank: 14
-  backed_by:
-  - uri: //alloydb.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/clusters/oltp-inventory-alloydb
-    asset_type: alloydb.googleapis.com/Cluster
+    topo_rank: 5
+    sub_rank: 14
+    backed_by:
+      - uri: //alloydb.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/clusters/oltp-inventory-alloydb
+        asset_type: alloydb.googleapis.com/Cluster
+        project_id: stratos-ingest-prod
+    members:
+      - oltp-inventory-alloydb
+    badges:
+      - kind: kms
+        label: 'KMS: ingest-cdc-cmek'
+      - kind: psa
+        label: PSA Peering
+    inline_meta:
+      - label: Engine
+        value: POSTGRES_16
+      - label: Private IP
+        value: 10.70.20.10
+  - id: n_stratos_ingest_prod_oltp_orders_cloudsql
+    title: oltp-orders-cloudsql
+    subtitle: Private PSA Cloud SQL orders database
+    icon_key: cloud_sql
+    component_kind: DATASTORE
     project_id: stratos-ingest-prod
-  members:
-  - oltp-inventory-alloydb
-  badges:
-  - kind: kms
-    label: 'KMS: ingest-cdc-cmek'
-  - kind: psa
-    label: PSA Peering
-  inline_meta:
-  - label: Engine
-    value: POSTGRES_16
-  - label: Private IP
-    value: 10.70.20.10
-- id: n_stratos_ingest_prod_oltp_orders_cloudsql
-  title: oltp-orders-cloudsql
-  subtitle: Cloud SQL Transactional Orders DB
-  icon_key: cloud_sql
-  component_kind: DATASTORE
-  project_id: stratos-ingest-prod
-  topo_rank: 5
-  sub_rank: 15
-  backed_by:
-  - uri: //sqladmin.googleapis.com/projects/stratos-ingest-prod/instances/oltp-orders-cloudsql
-    asset_type: sqladmin.googleapis.com/Instance
+    topo_rank: 5
+    sub_rank: 15
+    backed_by:
+      - uri: //sqladmin.googleapis.com/projects/stratos-ingest-prod/instances/oltp-orders-cloudsql
+        asset_type: sqladmin.googleapis.com/Instance
+        project_id: stratos-ingest-prod
+    members:
+      - oltp-orders-cloudsql
+    badges:
+      - kind: kms
+        label: 'KMS: ingest-cdc-cmek'
+      - kind: psa
+        label: PSA Peering
+    inline_meta:
+      - label: Engine
+        value: POSTGRES_16
+      - label: Private IP
+        value: 10.70.20.5
+  - id: n_stratos_ingest_prod_orders_cdc_stream
+    title: orders-cdc-stream
+    subtitle: Datastream CDC replication for orders
+    icon_key: datastream
+    component_kind: PIPELINE
     project_id: stratos-ingest-prod
-  members:
-  - oltp-orders-cloudsql
-  badges:
-  - kind: kms
-    label: 'KMS: ingest-cdc-cmek'
-  - kind: psa
-    label: PSA Peering
-  inline_meta:
-  - label: Engine
-    value: POSTGRES_16
-  - label: Private IP
-    value: 10.70.20.5
-- id: n_stratos_ingest_prod_orders_cdc_stream
-  title: orders-cdc-stream
-  subtitle: Datastream Orders CDC Pipeline
-  icon_key: datastream
-  component_kind: PIPELINE
-  project_id: stratos-ingest-prod
-  topo_rank: 6
-  sub_rank: 17
-  backed_by:
-  - uri: //datastream.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/streams/orders-cdc-stream
-    asset_type: datastream.googleapis.com/Stream
+    topo_rank: 6
+    sub_rank: 17
+    backed_by:
+      - uri: //datastream.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/streams/orders-cdc-stream
+        asset_type: datastream.googleapis.com/Stream
+        project_id: stratos-ingest-prod
+    members:
+      - orders-cdc-stream
+    badges:
+      - kind: sa
+        label: 'SA: datastream-cdc-sa'
+      - kind: secret
+        label: 'Secret: cdc-replication-user'
+  - id: n_stratos_ingest_prod_stratos_bronze_landing
+    title: stratos-bronze-landing
+    subtitle: Bronze raw landing Cloud Storage bucket
+    icon_key: cloud_storage
+    component_kind: DATASTORE
     project_id: stratos-ingest-prod
-  members:
-  - orders-cdc-stream
-  badges:
-  - kind: sa
-    label: 'SA: datastream-cdc-sa'
-  - kind: secret
-    label: 'Secret: cdc-replication-user'
-- id: n_stratos_ingest_prod_stratos_bronze_landing
-  title: stratos-bronze-landing
-  subtitle: Bronze Raw Landing GCS Bucket
-  icon_key: cloud_storage
-  component_kind: DATASTORE
-  project_id: stratos-ingest-prod
-  topo_rank: 7
-  sub_rank: 18
-  backed_by:
-  - uri: //storage.googleapis.com/stratos-bronze-landing
-    asset_type: storage.googleapis.com/Bucket
+    topo_rank: 7
+    sub_rank: 18
+    backed_by:
+      - uri: //storage.googleapis.com/stratos-bronze-landing
+        asset_type: storage.googleapis.com/Bucket
+        project_id: stratos-ingest-prod
+    members:
+      - stratos-bronze-landing
+    badges:
+      - kind: kms
+        label: 'KMS: ingest-cdc-cmek'
+      - kind: log
+        label: 'Obs: lakehouse-lineage-sink'
+    inline_meta:
+      - label: Class
+        value: STANDARD
+  - id: n_stratos_ingest_prod_telemetry_managed_kafka
+    title: telemetry-managed-kafka
+    subtitle: Managed Kafka cluster for telemetry streams
+    icon_key: managed_kafka
+    component_kind: MESSAGING
     project_id: stratos-ingest-prod
-  members:
-  - stratos-bronze-landing
-  badges:
-  - kind: kms
-    label: 'KMS: ingest-cdc-cmek'
-  - kind: log
-    label: 'Obs: lakehouse-lineage-sink'
-  inline_meta:
-  - label: Class
-    value: STANDARD
-- id: n_stratos_ingest_prod_telemetry_managed_kafka
-  title: telemetry-managed-kafka
-  subtitle: Managed Service for Apache Kafka
-  icon_key: managed_kafka
-  component_kind: MESSAGING
-  project_id: stratos-ingest-prod
-  topo_rank: 3
-  sub_rank: 8
-  backed_by:
-  - uri: //managedkafka.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/clusters/telemetry-managed-kafka
-    asset_type: managedkafka.googleapis.com/Cluster
-    project_id: stratos-ingest-prod
-  members:
-  - telemetry-managed-kafka
-  badges:
-  - kind: kms
-    label: 'KMS: ingest-cdc-cmek'
-- id: n_stratos_lakehouse_prod_alloydb_fed_bqconn
-  title: alloydb-fed-bqconn
-  subtitle: BigQuery Federated AlloyDB Connection
-  icon_key: bigquery
-  component_kind: PIPELINE
-  project_id: stratos-lakehouse-prod
-  topo_rank: 4
-  sub_rank: 11
-  backed_by:
-  - uri: //bigqueryconnection.googleapis.com/projects/stratos-lakehouse-prod/locations/eu/connections/alloydb-fed-bqconn
-    asset_type: bigqueryconnection.googleapis.com/Connection
+    topo_rank: 3
+    sub_rank: 8
+    backed_by:
+      - uri: //managedkafka.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/clusters/telemetry-managed-kafka
+        asset_type: managedkafka.googleapis.com/Cluster
+        project_id: stratos-ingest-prod
+    members:
+      - telemetry-managed-kafka
+    badges:
+      - kind: kms
+        label: 'KMS: ingest-cdc-cmek'
+  - id: n_stratos_lakehouse_prod_alloydb_fed_bqconn
+    title: alloydb-fed-bqconn
+    subtitle: BigQuery federated connection to AlloyDB
+    icon_key: bigquery
+    component_kind: PIPELINE
     project_id: stratos-lakehouse-prod
-  members:
-  - alloydb-fed-bqconn
-- id: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
-  title: cdc-lakehouse-dataflow
-  subtitle: Streaming Dataflow Ingestion Job
-  icon_key: dataflow
-  component_kind: PIPELINE
-  project_id: stratos-lakehouse-prod
-  topo_rank: 8
-  sub_rank: 20
-  backed_by:
-  - uri: //dataflow.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/jobs/cdc-lakehouse-dataflow
-    asset_type: dataflow.googleapis.com/Job
+    topo_rank: 4
+    sub_rank: 11
+    backed_by:
+      - uri: //bigqueryconnection.googleapis.com/projects/stratos-lakehouse-prod/locations/eu/connections/alloydb-fed-bqconn
+        asset_type: bigqueryconnection.googleapis.com/Connection
+        project_id: stratos-lakehouse-prod
+    members:
+      - alloydb-fed-bqconn
+  - id: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
+    title: cdc-lakehouse-dataflow
+    subtitle: Streaming Dataflow job to BigQuery raw CDC
+    icon_key: dataflow
+    component_kind: PIPELINE
     project_id: stratos-lakehouse-prod
-  members:
-  - cdc-lakehouse-dataflow
-  badges:
-  - kind: sa
-    label: 'SA: dataflow-etl-sa'
-- id: n_stratos_lakehouse_prod_curated_enterprise_dw
-  title: curated_enterprise_dw
-  subtitle: BigQuery Curated Enterprise Warehouse
-  icon_key: bigquery
-  component_kind: DATASTORE
-  project_id: stratos-lakehouse-prod
-  topo_rank: 10
-  sub_rank: 25
-  backed_by:
-  - uri: //bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/curated_enterprise_dw
-    asset_type: bigquery.googleapis.com/Dataset
+    topo_rank: 8
+    sub_rank: 20
+    backed_by:
+      - uri: //dataflow.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/jobs/cdc-lakehouse-dataflow
+        asset_type: dataflow.googleapis.com/Job
+        project_id: stratos-lakehouse-prod
+    members:
+      - cdc-lakehouse-dataflow
+    badges:
+      - kind: sa
+        label: 'SA: dataflow-etl-sa'
+  - id: n_stratos_lakehouse_prod_curated_enterprise_dw
+    title: curated_enterprise_dw
+    subtitle: Curated enterprise BigQuery data warehouse
+    icon_key: bigquery
+    component_kind: DATASTORE
     project_id: stratos-lakehouse-prod
-  members:
-  - curated_enterprise_dw
-  badges:
-  - kind: kms
-    label: 'KMS: lakehouse-data-cmek'
-  inline_meta:
-  - label: Location
-    value: EU
-- id: n_stratos_lakehouse_prod_enterprise_airflow
-  title: enterprise-airflow
-  subtitle: Cloud Composer Orchestration Env
-  icon_key: cloud_composer
-  component_kind: PIPELINE
-  project_id: stratos-lakehouse-prod
-  topo_rank: 3
-  sub_rank: 9
-  backed_by:
-  - uri: //composer.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/environments/enterprise-airflow
-    asset_type: composer.googleapis.com/Environment
+    topo_rank: 10
+    sub_rank: 25
+    backed_by:
+      - uri: //bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/curated_enterprise_dw
+        asset_type: bigquery.googleapis.com/Dataset
+        project_id: stratos-lakehouse-prod
+    members:
+      - curated_enterprise_dw
+    badges:
+      - kind: kms
+        label: 'KMS: lakehouse-data-cmek'
+    inline_meta:
+      - label: Location
+        value: EU
+  - id: n_stratos_lakehouse_prod_enterprise_airflow
+    title: enterprise-airflow
+    subtitle: Cloud Composer lakehouse orchestration
+    icon_key: cloud_composer
+    component_kind: PIPELINE
     project_id: stratos-lakehouse-prod
-  members:
-  - enterprise-airflow
-  badges:
-  - kind: kms
-    label: 'KMS: lakehouse-data-cmek'
-  - kind: sa
-    label: 'SA: composer-orch-sa'
-- id: n_stratos_lakehouse_prod_enterprise_dataplex_lake
-  title: enterprise-dataplex-lake
-  subtitle: Dataplex Data Governance Mesh
-  icon_key: dataplex
-  component_kind: DATASTORE
-  project_id: stratos-lakehouse-prod
-  topo_rank: 5
-  sub_rank: 12
-  backed_by:
-  - uri: //dataplex.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/lakes/enterprise-dataplex-lake
-    asset_type: dataplex.googleapis.com/Lake
+    topo_rank: 3
+    sub_rank: 9
+    backed_by:
+      - uri: //composer.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/environments/enterprise-airflow
+        asset_type: composer.googleapis.com/Environment
+        project_id: stratos-lakehouse-prod
+    members:
+      - enterprise-airflow
+    badges:
+      - kind: kms
+        label: 'KMS: lakehouse-data-cmek'
+      - kind: sa
+        label: 'SA: composer-orch-sa'
+  - id: n_stratos_lakehouse_prod_enterprise_dataplex_lake
+    title: enterprise-dataplex-lake
+    subtitle: Dataplex governance across storage zones
+    icon_key: dataplex
+    component_kind: DATASTORE
     project_id: stratos-lakehouse-prod
-  members:
-  - enterprise-dataplex-lake
-- id: n_stratos_lakehouse_prod_lakehouse_hive_metastore
-  title: lakehouse-hive-metastore
-  subtitle: Dataproc Metastore Catalog Service
-  icon_key: dataproc_metastore
-  component_kind: DATASTORE
-  project_id: stratos-lakehouse-prod
-  topo_rank: 9
-  sub_rank: 24
-  backed_by:
-  - uri: //metastore.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/services/lakehouse-hive-metastore
-    asset_type: metastore.googleapis.com/Service
+    topo_rank: 5
+    sub_rank: 12
+    backed_by:
+      - uri: //dataplex.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/lakes/enterprise-dataplex-lake
+        asset_type: dataplex.googleapis.com/Lake
+        project_id: stratos-lakehouse-prod
+    members:
+      - enterprise-dataplex-lake
+  - id: n_stratos_lakehouse_prod_lakehouse_hive_metastore
+    title: lakehouse-hive-metastore
+    subtitle: Dataproc Metastore Hive table catalog
+    icon_key: dataproc_metastore
+    component_kind: DATASTORE
     project_id: stratos-lakehouse-prod
-  members:
-  - lakehouse-hive-metastore
-- id: n_stratos_lakehouse_prod_raw_cdc
-  title: raw_cdc
-  subtitle: BigQuery Raw CDC Staging Dataset
-  icon_key: bigquery
-  component_kind: DATASTORE
-  project_id: stratos-lakehouse-prod
-  topo_rank: 9
-  sub_rank: 23
-  backed_by:
-  - uri: //bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/raw_cdc
-    asset_type: bigquery.googleapis.com/Dataset
+    topo_rank: 9
+    sub_rank: 24
+    backed_by:
+      - uri: //metastore.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/services/lakehouse-hive-metastore
+        asset_type: metastore.googleapis.com/Service
+        project_id: stratos-lakehouse-prod
+    members:
+      - lakehouse-hive-metastore
+  - id: n_stratos_lakehouse_prod_raw_cdc
+    title: raw_cdc
+    subtitle: BigQuery staging dataset for raw CDC
+    icon_key: bigquery
+    component_kind: DATASTORE
     project_id: stratos-lakehouse-prod
-  members:
-  - raw_cdc
-  badges:
-  - kind: kms
-    label: 'KMS: lakehouse-data-cmek'
-  - kind: sa
-    label: 'SA: dataflow-etl-sa'
-  inline_meta:
-  - label: Location
-    value: EU
-- id: n_stratos_lakehouse_prod_silver_spark_batch
-  title: silver-spark-batch
-  subtitle: Dataproc Serverless Spark Batch
-  icon_key: dataproc
-  component_kind: PIPELINE
-  project_id: stratos-lakehouse-prod
-  topo_rank: 8
-  sub_rank: 21
-  backed_by:
-  - uri: //dataproc.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/batches/silver-spark-batch
-    asset_type: dataproc.googleapis.com/Batch
+    topo_rank: 9
+    sub_rank: 23
+    backed_by:
+      - uri: //bigquery.googleapis.com/projects/stratos-lakehouse-prod/datasets/raw_cdc
+        asset_type: bigquery.googleapis.com/Dataset
+        project_id: stratos-lakehouse-prod
+    members:
+      - raw_cdc
+    badges:
+      - kind: kms
+        label: 'KMS: lakehouse-data-cmek'
+      - kind: sa
+        label: 'SA: dataflow-etl-sa'
+    inline_meta:
+      - label: Location
+        value: EU
+  - id: n_stratos_lakehouse_prod_silver_spark_batch
+    title: silver-spark-batch
+    subtitle: Serverless Spark batch curation job
+    icon_key: dataproc
+    component_kind: PIPELINE
     project_id: stratos-lakehouse-prod
-  members:
-  - silver-spark-batch
-  badges:
-  - kind: sa
-    label: 'SA: dataproc-spark-sa'
-- id: n_stratos_lakehouse_prod_stratos_gold_exports
-  title: stratos-gold-exports
-  subtitle: Gold Curated Parquet GCS Bucket
-  icon_key: cloud_storage
-  component_kind: DATASTORE
-  project_id: stratos-lakehouse-prod
-  topo_rank: 9
-  sub_rank: 22
-  backed_by:
-  - uri: //storage.googleapis.com/stratos-gold-exports
-    asset_type: storage.googleapis.com/Bucket
+    topo_rank: 8
+    sub_rank: 21
+    backed_by:
+      - uri: //dataproc.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/batches/silver-spark-batch
+        asset_type: dataproc.googleapis.com/Batch
+        project_id: stratos-lakehouse-prod
+    members:
+      - silver-spark-batch
+    badges:
+      - kind: sa
+        label: 'SA: dataproc-spark-sa'
+  - id: n_stratos_lakehouse_prod_stratos_gold_exports
+    title: stratos-gold-exports
+    subtitle: Gold Parquet export Cloud Storage bucket
+    icon_key: cloud_storage
+    component_kind: DATASTORE
     project_id: stratos-lakehouse-prod
-  members:
-  - stratos-gold-exports
-  badges:
-  - kind: kms
-    label: 'KMS: lakehouse-data-cmek'
-  inline_meta:
-  - label: Class
-    value: STANDARD
-- id: n_stratos_lakehouse_prod_warehouse_dataform_repo
-  title: warehouse-dataform-repo
-  subtitle: Dataform SQLX Transformation Repo
-  icon_key: dataform
-  component_kind: PIPELINE
-  project_id: stratos-lakehouse-prod
-  topo_rank: 4
-  sub_rank: 10
-  backed_by:
-  - uri: //dataform.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/repositories/warehouse-dataform-repo
-    asset_type: dataform.googleapis.com/Repository
+    topo_rank: 9
+    sub_rank: 22
+    backed_by:
+      - uri: //storage.googleapis.com/stratos-gold-exports
+        asset_type: storage.googleapis.com/Bucket
+        project_id: stratos-lakehouse-prod
+    members:
+      - stratos-gold-exports
+    badges:
+      - kind: kms
+        label: 'KMS: lakehouse-data-cmek'
+    inline_meta:
+      - label: Class
+        value: STANDARD
+  - id: n_stratos_lakehouse_prod_warehouse_dataform_repo
+    title: warehouse-dataform-repo
+    subtitle: Dataform SQLX transformation repository
+    icon_key: dataform
+    component_kind: PIPELINE
     project_id: stratos-lakehouse-prod
-  members:
-  - warehouse-dataform-repo
-- id: n_stratos_mlops_prod_churn_predictor_v4
-  title: churn-predictor-v4
-  subtitle: Private Vertex AI Prediction Endpoint
-  icon_key: vertexai
-  component_kind: WORKLOAD
-  project_id: stratos-mlops-prod
-  topo_rank: 12
-  sub_rank: 29
-  backed_by:
-  - uri: //aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/endpoints/churn-predictor-v4
-    asset_type: aiplatform.googleapis.com/Endpoint
+    topo_rank: 4
+    sub_rank: 10
+    backed_by:
+      - uri: //dataform.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/repositories/warehouse-dataform-repo
+        asset_type: dataform.googleapis.com/Repository
+        project_id: stratos-lakehouse-prod
+    members:
+      - warehouse-dataform-repo
+  - id: n_stratos_mlops_prod_churn_predictor_v4
+    title: churn-predictor-v4
+    subtitle: Private Vertex AI churn model endpoint
+    icon_key: vertexai
+    component_kind: WORKLOAD
     project_id: stratos-mlops-prod
-  members:
-  - churn-predictor-v4
-  badges:
-  - kind: kms
-    label: 'KMS: vertex-model-cmek'
-  - kind: log
-    label: 'Obs: ml-drift-alert-policy'
-  - kind: sa
-    label: 'SA: vertex-serving-sa'
-- id: n_stratos_mlops_prod_executive_looker_bi
-  title: executive-looker-bi
-  subtitle: Looker Enterprise BI Platform
-  icon_key: looker
-  component_kind: WORKLOAD
-  project_id: stratos-mlops-prod
-  topo_rank: 11
-  sub_rank: 27
-  backed_by:
-  - uri: //looker.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/instances/executive-looker-bi
-    asset_type: looker.googleapis.com/Instance
+    topo_rank: 12
+    sub_rank: 29
+    backed_by:
+      - uri: //aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/endpoints/churn-predictor-v4
+        asset_type: aiplatform.googleapis.com/Endpoint
+        project_id: stratos-mlops-prod
+    members:
+      - churn-predictor-v4
+    badges:
+      - kind: kms
+        label: 'KMS: vertex-model-cmek'
+      - kind: log
+        label: 'Obs: ml-drift-alert-policy'
+      - kind: sa
+        label: 'SA: vertex-serving-sa'
+  - id: n_stratos_mlops_prod_executive_looker_bi
+    title: executive-looker-bi
+    subtitle: Executive Looker BI analytics platform
+    icon_key: looker
+    component_kind: WORKLOAD
     project_id: stratos-mlops-prod
-  members:
-  - executive-looker-bi
-- id: n_stratos_mlops_prod_gemini_4_carbon
-  title: gemini-4-carbon
-  subtitle: Vertex AI Foundation Model Endpoint
-  icon_key: foundation_model
-  component_kind: DATASTORE
-  project_id: stratos-mlops-prod
-  topo_rank: 5
-  sub_rank: 13
-  backed_by:
-  - uri: //aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/global/publishers/google/models/gemini-4-carbon
-    asset_type: aiplatform.googleapis.com/PublisherModel
+    topo_rank: 11
+    sub_rank: 27
+    backed_by:
+      - uri: //looker.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/instances/executive-looker-bi
+        asset_type: looker.googleapis.com/Instance
+        project_id: stratos-mlops-prod
+    members:
+      - executive-looker-bi
+  - id: n_stratos_mlops_prod_gemini_4_carbon
+    title: gemini-4-carbon
+    subtitle: Vertex AI foundation model for summaries
+    icon_key: foundation_model
+    component_kind: DATASTORE
     project_id: stratos-mlops-prod
-  members:
-  - gemini-4-carbon
-- id: n_stratos_mlops_prod_hourly_feature_transfer
-  title: hourly-feature-transfer
-  subtitle: BigQuery Data Transfer Schedule
-  icon_key: data_transfer
-  component_kind: PIPELINE
-  project_id: stratos-mlops-prod
-  topo_rank: 3
-  sub_rank: 5
-  backed_by:
-  - uri: //bigquerydatatransfer.googleapis.com/projects/stratos-mlops-prod/locations/eu/transferConfigs/hourly-feature-transfer
-    asset_type: bigquerydatatransfer.googleapis.com/TransferConfig
+    topo_rank: 5
+    sub_rank: 13
+    backed_by:
+      - uri: //aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/global/publishers/google/models/gemini-4-carbon
+        asset_type: aiplatform.googleapis.com/PublisherModel
+        project_id: stratos-mlops-prod
+    members:
+      - gemini-4-carbon
+  - id: n_stratos_mlops_prod_hourly_feature_transfer
+    title: hourly-feature-transfer
+    subtitle: Scheduled BigQuery feature sync config
+    icon_key: data_transfer
+    component_kind: PIPELINE
     project_id: stratos-mlops-prod
-  members:
-  - hourly-feature-transfer
-- id: n_stratos_mlops_prod_ml_feature_mart
-  title: ml_feature_mart
-  subtitle: BigQuery Offline ML Feature Mart
-  icon_key: bigquery
-  component_kind: DATASTORE
-  project_id: stratos-mlops-prod
-  topo_rank: 11
-  sub_rank: 26
-  backed_by:
-  - uri: //bigquery.googleapis.com/projects/stratos-mlops-prod/datasets/ml_feature_mart
-    asset_type: bigquery.googleapis.com/Dataset
+    topo_rank: 3
+    sub_rank: 5
+    backed_by:
+      - uri: //bigquerydatatransfer.googleapis.com/projects/stratos-mlops-prod/locations/eu/transferConfigs/hourly-feature-transfer
+        asset_type: bigquerydatatransfer.googleapis.com/TransferConfig
+        project_id: stratos-mlops-prod
+    members:
+      - hourly-feature-transfer
+  - id: n_stratos_mlops_prod_ml_feature_mart
+    title: ml_feature_mart
+    subtitle: BigQuery ML offline feature mart dataset
+    icon_key: bigquery
+    component_kind: DATASTORE
     project_id: stratos-mlops-prod
-  members:
-  - ml_feature_mart
-  badges:
-  - kind: kms
-    label: 'KMS: vertex-model-cmek'
-  - kind: sa
-    label: 'SA: vertex-serving-sa'
-  inline_meta:
-  - label: Location
-    value: EU
-- id: n_stratos_mlops_prod_ml_inference_gateway
-  title: ml-inference-gateway
-  subtitle: Cloud Run Inference Orchestrator
-  icon_key: cloud_run
-  component_kind: WORKLOAD
-  project_id: stratos-mlops-prod
-  topo_rank: 2
-  sub_rank: 4
-  backed_by:
-  - uri: //run.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/services/ml-inference-gateway
-    asset_type: run.googleapis.com/Service
+    topo_rank: 11
+    sub_rank: 26
+    backed_by:
+      - uri: //bigquery.googleapis.com/projects/stratos-mlops-prod/datasets/ml_feature_mart
+        asset_type: bigquery.googleapis.com/Dataset
+        project_id: stratos-mlops-prod
+    members:
+      - ml_feature_mart
+    badges:
+      - kind: kms
+        label: 'KMS: vertex-model-cmek'
+      - kind: sa
+        label: 'SA: vertex-serving-sa'
+    inline_meta:
+      - label: Location
+        value: EU
+  - id: n_stratos_mlops_prod_ml_inference_gateway
+    title: ml-inference-gateway
+    subtitle: Private Cloud Run ML inference gateway
+    icon_key: cloud_run
+    component_kind: WORKLOAD
     project_id: stratos-mlops-prod
-  members:
-  - ml-inference-gateway
-  badges:
-  - kind: sa
-    label: 'SA: ml-gateway-sa'
-  - kind: secret
-    label: 'Secret: ml-feature-api-token'
-  inline_meta:
-  - label: Ingress
-    value: INTERNAL_LOAD_BALANCER
-- id: n_stratos_mlops_prod_ml_models_registry
-  title: ml-models-registry
-  subtitle: Artifact Registry ML Container Repo
-  icon_key: artifact_registry
-  component_kind: DATASTORE
-  project_id: stratos-mlops-prod
-  topo_rank: 3
-  sub_rank: 6
-  backed_by:
-  - uri: //artifactregistry.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/repositories/ml-models-registry
-    asset_type: artifactregistry.googleapis.com/Repository
+    topo_rank: 2
+    sub_rank: 4
+    backed_by:
+      - uri: //run.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/services/ml-inference-gateway
+        asset_type: run.googleapis.com/Service
+        project_id: stratos-mlops-prod
+    members:
+      - ml-inference-gateway
+    badges:
+      - kind: sa
+        label: 'SA: ml-gateway-sa'
+      - kind: secret
+        label: 'Secret: ml-feature-api-token'
+    inline_meta:
+      - label: Ingress
+        value: INTERNAL_LOAD_BALANCER
+  - id: n_stratos_mlops_prod_ml_models_registry
+    title: ml-models-registry
+    subtitle: Artifact Registry for custom ML containers
+    icon_key: artifact_registry
+    component_kind: DATASTORE
     project_id: stratos-mlops-prod
-  members:
-  - ml-models-registry
-  inline_meta:
-  - label: Format
-    value: DOCKER
-- id: n_stratos_mlops_prod_ml_serving_https_lb
-  title: ml-serving-https-lb
-  subtitle: Global External HTTPS Load Balancer
-  icon_key: cloud_load_balancing
-  component_kind: INGRESS
-  project_id: stratos-mlops-prod
-  topo_rank: 1
-  sub_rank: 3
-  backed_by:
-  - uri: //compute.googleapis.com/projects/stratos-mlops-prod/global/forwardingRules/ml-serving-https-lb
-    asset_type: compute.googleapis.com/GlobalForwardingRule
+    topo_rank: 3
+    sub_rank: 6
+    backed_by:
+      - uri: //artifactregistry.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/repositories/ml-models-registry
+        asset_type: artifactregistry.googleapis.com/Repository
+        project_id: stratos-mlops-prod
+    members:
+      - ml-models-registry
+    inline_meta:
+      - label: Format
+        value: DOCKER
+  - id: n_stratos_mlops_prod_ml_serving_https_lb
+    title: ml-serving-https-lb
+    subtitle: Public global HTTPS load balancer
+    icon_key: cloud_load_balancing
+    component_kind: INGRESS
     project_id: stratos-mlops-prod
-  members:
-  - ml-serving-https-lb
-  badges:
-  - kind: exposure
-    label: PUBLIC
-  inline_meta:
-  - label: VIP
-    value: 203.0.113.150:443-443
-  - label: Scheme
-    value: EXTERNAL_MANAGED
-- id: n_stratos_mlops_prod_nightly_retrain_tick
-  title: nightly-retrain-tick
-  subtitle: Cloud Scheduler Cron Job (Private)
-  icon_key: cloud_scheduler
-  component_kind: PIPELINE
-  project_id: stratos-mlops-prod
-  topo_rank: 1
-  sub_rank: 2
-  backed_by:
-  - uri: //cloudscheduler.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/jobs/nightly-retrain-tick
-    asset_type: cloudscheduler.googleapis.com/Job
+    topo_rank: 1
+    sub_rank: 3
+    backed_by:
+      - uri: //compute.googleapis.com/projects/stratos-mlops-prod/global/forwardingRules/ml-serving-https-lb
+        asset_type: compute.googleapis.com/GlobalForwardingRule
+        project_id: stratos-mlops-prod
+    members:
+      - ml-serving-https-lb
+    badges:
+      - kind: exposure
+        label: PUBLIC
+    inline_meta:
+      - label: VIP
+        value: 203.0.113.150:443-443
+      - label: Scheme
+        value: EXTERNAL_MANAGED
+  - id: n_stratos_mlops_prod_nightly_retrain_tick
+    title: nightly-retrain-tick
+    subtitle: Nightly cron trigger for DAG orchestration
+    icon_key: cloud_scheduler
+    component_kind: PIPELINE
     project_id: stratos-mlops-prod
-  members:
-  - nightly-retrain-tick
-- id: n_stratos_mlops_prod_realtime_customer_fos
-  title: realtime-customer-fos
-  subtitle: Vertex AI Feature Online Store
-  icon_key: vertexai
-  component_kind: DATASTORE
-  project_id: stratos-mlops-prod
-  topo_rank: 12
-  sub_rank: 28
-  backed_by:
-  - uri: //aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/featureOnlineStores/realtime-customer-fos
-    asset_type: aiplatform.googleapis.com/FeatureOnlineStore
+    topo_rank: 1
+    sub_rank: 2
+    backed_by:
+      - uri: //cloudscheduler.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/jobs/nightly-retrain-tick
+        asset_type: cloudscheduler.googleapis.com/Job
+        project_id: stratos-mlops-prod
+    members:
+      - nightly-retrain-tick
+  - id: n_stratos_mlops_prod_realtime_customer_fos
+    title: realtime-customer-fos
+    subtitle: Vertex AI low-latency feature online store
+    icon_key: vertexai
+    component_kind: DATASTORE
     project_id: stratos-mlops-prod
-  members:
-  - realtime-customer-fos
+    topo_rank: 12
+    sub_rank: 28
+    backed_by:
+      - uri: //aiplatform.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/featureOnlineStores/realtime-customer-fos
+        asset_type: aiplatform.googleapis.com/FeatureOnlineStore
+        project_id: stratos-mlops-prod
+    members:
+      - realtime-customer-fos
 containers:
-- id: ext_sources
-  title: External Callers & Sources
-  kind: EXTERNAL_ZONE
-  exposure: EXTERNAL
-  order_hint: -100
-- id: folder_530201
-  title: 'Folder: data-ingestion-lakehouse'
-  subtitle: folders/530201
-  kind: FOLDER
-  parent_container_id: org_920200001
-  order_hint: 20
-- id: folder_530202
-  title: 'Folder: mlops-bi-serving'
-  subtitle: folders/530202
-  kind: FOLDER
-  parent_container_id: org_920200001
-  order_hint: 20
-- id: org_920200001
-  title: 'Org: Stratos Analytics Corp'
-  subtitle: organizations/920200001
-  kind: ORG
-  order_hint: 10
-- id: proj_stratos_ingest_prod
-  title: Stratos Ingest Prod (stratos-ingest-prod)
-  kind: PROJECT
-  parent_container_id: folder_530201
-  order_hint: 30
-- id: proj_stratos_lakehouse_prod
-  title: Stratos Lakehouse Prod (stratos-lakehouse-prod)
-  kind: PROJECT
-  parent_container_id: folder_530201
-  order_hint: 30
-- id: proj_stratos_mlops_prod
-  title: Stratos MLOps Prod (stratos-mlops-prod)
-  kind: PROJECT
-  parent_container_id: folder_530202
-  order_hint: 30
-- id: reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
-  title: 'Region: europe-west1'
-  kind: REGION
-  parent_container_id: vpc_stratos_ingest_prod_ingest_vpc
-  order_hint: 50
-- id: reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
-  title: 'Region: europe-west1'
-  kind: REGION
-  parent_container_id: vpc_stratos_lakehouse_prod_lakehouse_vpc
-  order_hint: 50
-- id: reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
-  title: 'Region: europe-west1'
-  kind: REGION
-  parent_container_id: vpc_stratos_mlops_prod_mlops_vpc
-  order_hint: 50
-- id: sub_stratos_ingest_prod_ingest_kafka_subnet
-  title: 'Subnet: ingest-kafka-subnet'
-  subtitle: 10.70.0.0/22
-  kind: SUBNET
-  exposure: PRIVATE
-  parent_container_id: reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
-  badges:
-  - PRIVATE
-  order_hint: 62
-  backed_by:
-  - uri: //compute.googleapis.com/projects/stratos-ingest-prod/regions/europe-west1/subnetworks/ingest-kafka-subnet
-    asset_type: compute.googleapis.com/Subnetwork
-    project_id: stratos-ingest-prod
-- id: sub_stratos_lakehouse_prod_dataflow_dataproc_subnet
-  title: 'Subnet: dataflow-dataproc-subnet'
-  subtitle: 10.71.0.0/20
-  kind: SUBNET
-  exposure: PRIVATE
-  parent_container_id: reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
-  badges:
-  - PRIVATE
-  order_hint: 65
-  backed_by:
-  - uri: //compute.googleapis.com/projects/stratos-lakehouse-prod/regions/europe-west1/subnetworks/dataflow-dataproc-subnet
-    asset_type: compute.googleapis.com/Subnetwork
-    project_id: stratos-lakehouse-prod
-- id: sub_stratos_mlops_prod_ml_serving_subnet
-  title: 'Subnet: ml-serving-subnet'
-  subtitle: 10.72.0.0/22
-  kind: SUBNET
-  exposure: PRIVATE
-  parent_container_id: reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
-  badges:
-  - PRIVATE
-  order_hint: 62
-  backed_by:
-  - uri: //compute.googleapis.com/projects/stratos-mlops-prod/regions/europe-west1/subnetworks/ml-serving-subnet
-    asset_type: compute.googleapis.com/Subnetwork
-    project_id: stratos-mlops-prod
-- id: vpc_stratos_ingest_prod_ingest_vpc
-  title: 'VPC: ingest-vpc'
-  subtitle: 'Host: stratos-ingest-prod'
-  kind: VPC
-  parent_container_id: proj_stratos_ingest_prod
-  badges:
-  - 'Peering: lakehouse-vpc'
-  order_hint: 40
-  folded_edge_ids:
-  - 4a47a82b443e043b
-  - 5ae108524c5bcadd
-  - a5ead31462151c8b
-  backed_by:
-  - uri: //compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc
-    asset_type: compute.googleapis.com/Network
-    project_id: stratos-ingest-prod
-- id: vpc_stratos_lakehouse_prod_lakehouse_vpc
-  title: 'VPC: lakehouse-vpc'
-  subtitle: 'Host: stratos-lakehouse-prod'
-  kind: VPC
-  parent_container_id: proj_stratos_lakehouse_prod
-  badges:
-  - 'NAT: lakehouse-nat-router'
-  - 'Peering: ingest-vpc'
-  - 'Peering: mlops-vpc'
-  order_hint: 40
-  folded_edge_ids:
-  - 1928ad3d079d1b7b
-  - 5ae108524c5bcadd
-  - a51613574c1a79a4
-  backed_by:
-  - uri: //compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc
-    asset_type: compute.googleapis.com/Network
-    project_id: stratos-lakehouse-prod
-- id: vpc_stratos_mlops_prod_mlops_vpc
-  title: 'VPC: mlops-vpc'
-  subtitle: 'Host: stratos-mlops-prod'
-  kind: VPC
-  parent_container_id: proj_stratos_mlops_prod
-  badges:
-  - 'NAT: mlops-nat-router'
-  - 'Peering: lakehouse-vpc'
-  order_hint: 40
-  folded_edge_ids:
-  - 1928ad3d079d1b7b
-  - 469e2b7540287641
-  backed_by:
-  - uri: //compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc
-    asset_type: compute.googleapis.com/Network
-    project_id: stratos-mlops-prod
-- id: zone_exposure_zone_private_proj_stratos_ingest_prod
-  title: Managed Services & Messaging
-  kind: EXPOSURE_ZONE
-  exposure: PRIVATE
-  parent_container_id: proj_stratos_ingest_prod
-  order_hint: 80
-- id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
-  title: Managed Services & Messaging
-  kind: EXPOSURE_ZONE
-  exposure: PRIVATE
-  parent_container_id: proj_stratos_lakehouse_prod
-  order_hint: 80
-- id: zone_exposure_zone_private_proj_stratos_mlops_prod
-  title: Managed Services & Messaging
-  kind: EXPOSURE_ZONE
-  exposure: PRIVATE
-  parent_container_id: proj_stratos_mlops_prod
-  order_hint: 80
-- id: zone_exposure_zone_private_reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
-  title: Private VPC Services
-  kind: EXPOSURE_ZONE
-  exposure: PRIVATE
-  parent_container_id: reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
-  order_hint: 72
-- id: zone_exposure_zone_private_reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
-  title: Private VPC Services
-  kind: EXPOSURE_ZONE
-  exposure: PRIVATE
-  parent_container_id: reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
-  order_hint: 72
-- id: zone_exposure_zone_private_sub_stratos_ingest_prod_ingest_kafka_subnet
-  title: Private Workloads
-  kind: EXPOSURE_ZONE
-  exposure: PRIVATE
-  parent_container_id: sub_stratos_ingest_prod_ingest_kafka_subnet
-  order_hint: 64
-- id: zone_exposure_zone_private_sub_stratos_lakehouse_prod_dataflow_dataproc_subnet
-  title: Private Workloads
-  kind: EXPOSURE_ZONE
-  exposure: PRIVATE
-  parent_container_id: sub_stratos_lakehouse_prod_dataflow_dataproc_subnet
-  order_hint: 64
-- id: zone_exposure_zone_private_sub_stratos_mlops_prod_ml_serving_subnet
-  title: Private Workloads
-  kind: EXPOSURE_ZONE
-  exposure: PRIVATE
-  parent_container_id: sub_stratos_mlops_prod_ml_serving_subnet
-  order_hint: 64
-- id: zone_exposure_zone_public_vpc_stratos_mlops_prod_mlops_vpc
-  title: Public Edge Ingress
-  subtitle: EXTERNAL_MANAGED
-  kind: EXPOSURE_ZONE
-  exposure: PUBLIC
-  parent_container_id: vpc_stratos_mlops_prod_mlops_vpc
-  order_hint: 45
-- id: zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
-  title: PSA Private Service Access
-  subtitle: 'Tenant: p920200abcdef12-tp'
-  kind: PSA_ZONE
-  exposure: PRIVATE
-  parent_container_id: reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
-  badges:
-  - PSA Peering
-  order_hint: 75
-  folded_edge_ids:
-  - 4a47a82b443e043b
-  - a5ead31462151c8b
+  - id: ext_sources
+    title: External Callers & Sources
+    kind: EXTERNAL_ZONE
+    exposure: EXTERNAL
+    order_hint: -100
+  - id: folder_530201
+    title: 'Folder: data-ingestion-lakehouse'
+    subtitle: folders/530201
+    kind: FOLDER
+    parent_container_id: org_920200001
+    order_hint: 20
+  - id: folder_530202
+    title: 'Folder: mlops-bi-serving'
+    subtitle: folders/530202
+    kind: FOLDER
+    parent_container_id: org_920200001
+    order_hint: 20
+  - id: org_920200001
+    title: 'Org: Stratos Analytics Corp'
+    subtitle: organizations/920200001
+    kind: ORG
+    order_hint: 10
+  - id: proj_stratos_ingest_prod
+    title: Stratos Ingest Prod (stratos-ingest-prod)
+    kind: PROJECT
+    parent_container_id: folder_530201
+    order_hint: 30
+  - id: proj_stratos_lakehouse_prod
+    title: Stratos Lakehouse Prod (stratos-lakehouse-prod)
+    kind: PROJECT
+    parent_container_id: folder_530201
+    order_hint: 30
+  - id: proj_stratos_mlops_prod
+    title: Stratos MLOps Prod (stratos-mlops-prod)
+    kind: PROJECT
+    parent_container_id: folder_530202
+    order_hint: 30
+  - id: reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
+    title: 'Region: europe-west1'
+    kind: REGION
+    parent_container_id: vpc_stratos_ingest_prod_ingest_vpc
+    order_hint: 50
+  - id: reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
+    title: 'Region: europe-west1'
+    kind: REGION
+    parent_container_id: vpc_stratos_lakehouse_prod_lakehouse_vpc
+    order_hint: 50
+  - id: reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
+    title: 'Region: europe-west1'
+    kind: REGION
+    parent_container_id: vpc_stratos_mlops_prod_mlops_vpc
+    order_hint: 50
+  - id: sub_stratos_ingest_prod_europe_west1_ingest_kafka_subnet
+    title: 'Subnet: ingest-kafka-subnet'
+    subtitle: 10.70.0.0/22
+    kind: SUBNET
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
+    badges:
+      - PRIVATE
+    order_hint: 62
+    backed_by:
+      - uri: //compute.googleapis.com/projects/stratos-ingest-prod/regions/europe-west1/subnetworks/ingest-kafka-subnet
+        asset_type: compute.googleapis.com/Subnetwork
+        project_id: stratos-ingest-prod
+  - id: sub_stratos_lakehouse_prod_europe_west1_dataflow_dataproc_subnet
+    title: 'Subnet: dataflow-dataproc-subnet'
+    subtitle: 10.71.0.0/20
+    kind: SUBNET
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
+    badges:
+      - PRIVATE
+    order_hint: 65
+    backed_by:
+      - uri: //compute.googleapis.com/projects/stratos-lakehouse-prod/regions/europe-west1/subnetworks/dataflow-dataproc-subnet
+        asset_type: compute.googleapis.com/Subnetwork
+        project_id: stratos-lakehouse-prod
+  - id: sub_stratos_mlops_prod_europe_west1_ml_serving_subnet
+    title: 'Subnet: ml-serving-subnet'
+    subtitle: 10.72.0.0/22
+    kind: SUBNET
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
+    badges:
+      - PRIVATE
+    order_hint: 62
+    backed_by:
+      - uri: //compute.googleapis.com/projects/stratos-mlops-prod/regions/europe-west1/subnetworks/ml-serving-subnet
+        asset_type: compute.googleapis.com/Subnetwork
+        project_id: stratos-mlops-prod
+  - id: vpc_stratos_ingest_prod_ingest_vpc
+    title: 'VPC: ingest-vpc'
+    subtitle: 'Host: stratos-ingest-prod'
+    kind: VPC
+    parent_container_id: proj_stratos_ingest_prod
+    badges:
+      - 'Peering: lakehouse-vpc'
+    order_hint: 40
+    folded_edge_ids:
+      - 4a47a82b443e043b
+      - 5ae108524c5bcadd
+      - a5ead31462151c8b
+    backed_by:
+      - uri: //compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc
+        asset_type: compute.googleapis.com/Network
+        project_id: stratos-ingest-prod
+  - id: vpc_stratos_lakehouse_prod_lakehouse_vpc
+    title: 'VPC: lakehouse-vpc'
+    subtitle: 'Host: stratos-lakehouse-prod'
+    kind: VPC
+    parent_container_id: proj_stratos_lakehouse_prod
+    badges:
+      - 'NAT: lakehouse-nat-router'
+      - 'Peering: ingest-vpc'
+      - 'Peering: mlops-vpc'
+    order_hint: 40
+    folded_edge_ids:
+      - 1928ad3d079d1b7b
+      - 5ae108524c5bcadd
+      - a51613574c1a79a4
+    backed_by:
+      - uri: //compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc
+        asset_type: compute.googleapis.com/Network
+        project_id: stratos-lakehouse-prod
+  - id: vpc_stratos_mlops_prod_mlops_vpc
+    title: 'VPC: mlops-vpc'
+    subtitle: 'Host: stratos-mlops-prod'
+    kind: VPC
+    parent_container_id: proj_stratos_mlops_prod
+    badges:
+      - 'NAT: mlops-nat-router'
+      - 'Peering: lakehouse-vpc'
+    order_hint: 40
+    folded_edge_ids:
+      - 1928ad3d079d1b7b
+      - 469e2b7540287641
+    backed_by:
+      - uri: //compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc
+        asset_type: compute.googleapis.com/Network
+        project_id: stratos-mlops-prod
+  - id: zone_exposure_zone_private_proj_stratos_ingest_prod
+    title: Managed Services & Messaging
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: proj_stratos_ingest_prod
+    order_hint: 80
+  - id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
+    title: Managed Services & Messaging
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: proj_stratos_lakehouse_prod
+    order_hint: 80
+  - id: zone_exposure_zone_private_proj_stratos_mlops_prod
+    title: Managed Services & Messaging
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: proj_stratos_mlops_prod
+    order_hint: 80
+  - id: zone_exposure_zone_private_reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
+    title: Private VPC Services
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
+    order_hint: 72
+  - id: zone_exposure_zone_private_reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
+    title: Private VPC Services
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
+    order_hint: 72
+  - id: zone_exposure_zone_private_sub_stratos_ingest_prod_europe_west1_ingest_kafka_subnet
+    title: Private Workloads
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: sub_stratos_ingest_prod_europe_west1_ingest_kafka_subnet
+    order_hint: 64
+  - id: zone_exposure_zone_private_sub_stratos_lakehouse_prod_europe_west1_dataflow_dataproc_subnet
+    title: Private Workloads
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: sub_stratos_lakehouse_prod_europe_west1_dataflow_dataproc_subnet
+    order_hint: 64
+  - id: zone_exposure_zone_private_sub_stratos_mlops_prod_europe_west1_ml_serving_subnet
+    title: Private Workloads
+    kind: EXPOSURE_ZONE
+    exposure: PRIVATE
+    parent_container_id: sub_stratos_mlops_prod_europe_west1_ml_serving_subnet
+    order_hint: 64
+  - id: zone_exposure_zone_public_vpc_stratos_mlops_prod_mlops_vpc_external_managed
+    title: Public Edge Ingress
+    subtitle: EXTERNAL_MANAGED
+    kind: EXPOSURE_ZONE
+    exposure: PUBLIC
+    parent_container_id: vpc_stratos_mlops_prod_mlops_vpc
+    order_hint: 45
+  - id: zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1_p920200abcdef12_tp
+    title: PSA Private Service Access
+    subtitle: 'Tenant: p920200abcdef12-tp'
+    kind: PSA_ZONE
+    exposure: PRIVATE
+    parent_container_id: reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
+    badges:
+      - PSA Peering
+    order_hint: 75
+    folded_edge_ids:
+      - 4a47a82b443e043b
+      - a5ead31462151c8b
 transversal_items:
-- id: tr_006_datastream_cdc_sa_stratos_ingest_prod_iam
-  category: IAM_SA
-  asset_type: iam.googleapis.com/ServiceAccount
-  display_name: datastream-cdc-sa@stratos-ingest-prod.iam.gserviceaccount.com
-  detail: ServiceAccount
-  project_id: stratos-ingest-prod
-  owner_container_id: proj_stratos_ingest_prod
-  attached_node_ids:
-  - n_stratos_ingest_prod_inventory_cdc_stream
-  - n_stratos_ingest_prod_orders_cdc_stream
-  backed_by:
-  - uri: //iam.googleapis.com/projects/stratos-ingest-prod/serviceAccounts/datastream-cdc-sa@stratos-ingest-prod.iam.gserviceaccount.com
+  - id: tr_stratos_ingest_prod_serviceaccount_datastream_cdc_sa_stratos
+    category: IAM_SA
     asset_type: iam.googleapis.com/ServiceAccount
+    display_name: datastream-cdc-sa@stratos-ingest-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
     project_id: stratos-ingest-prod
-  backed_edge_ids:
-  - 811d3023496274e7
-  - cec25fb0b042fec8
-- id: tr_007_composer_orch_sa_stratos_lakehouse_prod_i
-  category: IAM_SA
-  asset_type: iam.googleapis.com/ServiceAccount
-  display_name: composer-orch-sa@stratos-lakehouse-prod.iam.gserviceaccount.com
-  detail: ServiceAccount
-  project_id: stratos-lakehouse-prod
-  owner_container_id: proj_stratos_lakehouse_prod
-  attached_node_ids:
-  - n_stratos_lakehouse_prod_enterprise_airflow
-  backed_by:
-  - uri: //iam.googleapis.com/projects/stratos-lakehouse-prod/serviceAccounts/composer-orch-sa@stratos-lakehouse-prod.iam.gserviceaccount.com
+    owner_container_id: proj_stratos_ingest_prod
+    attached_node_ids:
+      - n_stratos_ingest_prod_inventory_cdc_stream
+      - n_stratos_ingest_prod_orders_cdc_stream
+    backed_by:
+      - uri: //iam.googleapis.com/projects/stratos-ingest-prod/serviceAccounts/datastream-cdc-sa@stratos-ingest-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: stratos-ingest-prod
+    backed_edge_ids:
+      - 811d3023496274e7
+      - cec25fb0b042fec8
+  - id: tr_stratos_lakehouse_prod_serviceaccount_composer_orch_sa_strato
+    category: IAM_SA
     asset_type: iam.googleapis.com/ServiceAccount
+    display_name: composer-orch-sa@stratos-lakehouse-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
     project_id: stratos-lakehouse-prod
-  backed_edge_ids:
-  - 84c0394cdfad107e
-- id: tr_008_dataflow_etl_sa_stratos_lakehouse_prod_ia
-  category: IAM_SA
-  asset_type: iam.googleapis.com/ServiceAccount
-  display_name: dataflow-etl-sa@stratos-lakehouse-prod.iam.gserviceaccount.com
-  detail: ServiceAccount
-  project_id: stratos-lakehouse-prod
-  owner_container_id: proj_stratos_lakehouse_prod
-  attached_node_ids:
-  - n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
-  - n_stratos_lakehouse_prod_raw_cdc
-  backed_by:
-  - uri: //iam.googleapis.com/projects/stratos-lakehouse-prod/serviceAccounts/dataflow-etl-sa@stratos-lakehouse-prod.iam.gserviceaccount.com
+    owner_container_id: proj_stratos_lakehouse_prod
+    attached_node_ids:
+      - n_stratos_lakehouse_prod_enterprise_airflow
+    backed_by:
+      - uri: //iam.googleapis.com/projects/stratos-lakehouse-prod/serviceAccounts/composer-orch-sa@stratos-lakehouse-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: stratos-lakehouse-prod
+    backed_edge_ids:
+      - 84c0394cdfad107e
+  - id: tr_stratos_lakehouse_prod_serviceaccount_dataflow_etl_sa_stratos
+    category: IAM_SA
     asset_type: iam.googleapis.com/ServiceAccount
+    display_name: dataflow-etl-sa@stratos-lakehouse-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
     project_id: stratos-lakehouse-prod
-  backed_edge_ids:
-  - 5eb2caadd1b3798c
-  - d5bb7e2c9c4e8122
-  roles:
-  - roles/bigquery.dataEditor
-- id: tr_009_dataproc_spark_sa_stratos_lakehouse_prod_
-  category: IAM_SA
-  asset_type: iam.googleapis.com/ServiceAccount
-  display_name: dataproc-spark-sa@stratos-lakehouse-prod.iam.gserviceaccount.com
-  detail: ServiceAccount
-  project_id: stratos-lakehouse-prod
-  owner_container_id: proj_stratos_lakehouse_prod
-  attached_node_ids:
-  - n_stratos_lakehouse_prod_silver_spark_batch
-  backed_by:
-  - uri: //iam.googleapis.com/projects/stratos-lakehouse-prod/serviceAccounts/dataproc-spark-sa@stratos-lakehouse-prod.iam.gserviceaccount.com
+    owner_container_id: proj_stratos_lakehouse_prod
+    attached_node_ids:
+      - n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
+      - n_stratos_lakehouse_prod_raw_cdc
+    backed_by:
+      - uri: //iam.googleapis.com/projects/stratos-lakehouse-prod/serviceAccounts/dataflow-etl-sa@stratos-lakehouse-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: stratos-lakehouse-prod
+    backed_edge_ids:
+      - 5eb2caadd1b3798c
+      - d5bb7e2c9c4e8122
+    roles:
+      - roles/bigquery.dataEditor
+  - id: tr_stratos_lakehouse_prod_serviceaccount_dataproc_spark_sa_strat
+    category: IAM_SA
     asset_type: iam.googleapis.com/ServiceAccount
+    display_name: dataproc-spark-sa@stratos-lakehouse-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
     project_id: stratos-lakehouse-prod
-  backed_edge_ids:
-  - 10fe2f8fe67614c2
-- id: tr_010_ml_gateway_sa_stratos_mlops_prod_iam_gser
-  category: IAM_SA
-  asset_type: iam.googleapis.com/ServiceAccount
-  display_name: ml-gateway-sa@stratos-mlops-prod.iam.gserviceaccount.com
-  detail: ServiceAccount
-  project_id: stratos-mlops-prod
-  owner_container_id: proj_stratos_mlops_prod
-  attached_node_ids:
-  - n_stratos_mlops_prod_ml_inference_gateway
-  backed_by:
-  - uri: //iam.googleapis.com/projects/stratos-mlops-prod/serviceAccounts/ml-gateway-sa@stratos-mlops-prod.iam.gserviceaccount.com
+    owner_container_id: proj_stratos_lakehouse_prod
+    attached_node_ids:
+      - n_stratos_lakehouse_prod_silver_spark_batch
+    backed_by:
+      - uri: //iam.googleapis.com/projects/stratos-lakehouse-prod/serviceAccounts/dataproc-spark-sa@stratos-lakehouse-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: stratos-lakehouse-prod
+    backed_edge_ids:
+      - 10fe2f8fe67614c2
+  - id: tr_stratos_mlops_prod_serviceaccount_ml_gateway_sa_stratos_mlops
+    category: IAM_SA
     asset_type: iam.googleapis.com/ServiceAccount
+    display_name: ml-gateway-sa@stratos-mlops-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
     project_id: stratos-mlops-prod
-  backed_edge_ids:
-  - 068741d32803981b
-- id: tr_011_vertex_serving_sa_stratos_mlops_prod_iam_
-  category: IAM_SA
-  asset_type: iam.googleapis.com/ServiceAccount
-  display_name: vertex-serving-sa@stratos-mlops-prod.iam.gserviceaccount.com
-  detail: ServiceAccount
-  project_id: stratos-mlops-prod
-  owner_container_id: proj_stratos_mlops_prod
-  attached_node_ids:
-  - n_stratos_mlops_prod_churn_predictor_v4
-  - n_stratos_mlops_prod_ml_feature_mart
-  backed_by:
-  - uri: //iam.googleapis.com/projects/stratos-mlops-prod/serviceAccounts/vertex-serving-sa@stratos-mlops-prod.iam.gserviceaccount.com
+    owner_container_id: proj_stratos_mlops_prod
+    attached_node_ids:
+      - n_stratos_mlops_prod_ml_inference_gateway
+    backed_by:
+      - uri: //iam.googleapis.com/projects/stratos-mlops-prod/serviceAccounts/ml-gateway-sa@stratos-mlops-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: stratos-mlops-prod
+    backed_edge_ids:
+      - 068741d32803981b
+  - id: tr_stratos_mlops_prod_serviceaccount_vertex_serving_sa_stratos_m
+    category: IAM_SA
     asset_type: iam.googleapis.com/ServiceAccount
+    display_name: vertex-serving-sa@stratos-mlops-prod.iam.gserviceaccount.com
+    detail: ServiceAccount
     project_id: stratos-mlops-prod
-  backed_edge_ids:
-  - 056577e4d0d5da49
-  - 55367f6dcce8a9d9
-  roles:
-  - roles/bigquery.dataViewer
-- id: tr_001_ingest_cdc_cmek
-  category: KMS
-  asset_type: cloudkms.googleapis.com/CryptoKey
-  display_name: ingest-cdc-cmek
-  detail: europe-west1 | ENCRYPT_DECRYPT
-  project_id: stratos-ingest-prod
-  owner_container_id: proj_stratos_ingest_prod
-  attached_node_ids:
-  - n_stratos_ingest_prod_oltp_inventory_alloydb
-  - n_stratos_ingest_prod_oltp_orders_cloudsql
-  - n_stratos_ingest_prod_telemetry_managed_kafka
-  backed_by:
-  - uri: //cloudkms.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/keyRings/ingest-keyring/cryptoKeys/ingest-cdc-cmek
+    owner_container_id: proj_stratos_mlops_prod
+    attached_node_ids:
+      - n_stratos_mlops_prod_churn_predictor_v4
+      - n_stratos_mlops_prod_ml_feature_mart
+    backed_by:
+      - uri: //iam.googleapis.com/projects/stratos-mlops-prod/serviceAccounts/vertex-serving-sa@stratos-mlops-prod.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: stratos-mlops-prod
+    backed_edge_ids:
+      - 056577e4d0d5da49
+      - 55367f6dcce8a9d9
+    roles:
+      - roles/bigquery.dataViewer
+  - id: tr_stratos_ingest_prod_cryptokey_ingest_cdc_cmek
+    category: KMS
     asset_type: cloudkms.googleapis.com/CryptoKey
+    display_name: ingest-cdc-cmek
+    detail: europe-west1 | ENCRYPT_DECRYPT
     project_id: stratos-ingest-prod
-  backed_edge_ids:
-  - 1c86bbe2a1282c39
-  - 8b69da1998b135c2
-  - 8d1b9180e7fc182a
-- id: tr_002_lakehouse_data_cmek
-  category: KMS
-  asset_type: cloudkms.googleapis.com/CryptoKey
-  display_name: lakehouse-data-cmek
-  detail: europe-west1 | ENCRYPT_DECRYPT
-  project_id: stratos-lakehouse-prod
-  owner_container_id: proj_stratos_lakehouse_prod
-  attached_node_ids:
-  - n_stratos_lakehouse_prod_curated_enterprise_dw
-  - n_stratos_lakehouse_prod_raw_cdc
-  backed_by:
-  - uri: //cloudkms.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lakehouse-data-cmek
+    owner_container_id: proj_stratos_ingest_prod
+    attached_node_ids:
+      - n_stratos_ingest_prod_oltp_inventory_alloydb
+      - n_stratos_ingest_prod_oltp_orders_cloudsql
+      - n_stratos_ingest_prod_telemetry_managed_kafka
+    backed_by:
+      - uri: //cloudkms.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/keyRings/ingest-keyring/cryptoKeys/ingest-cdc-cmek
+        asset_type: cloudkms.googleapis.com/CryptoKey
+        project_id: stratos-ingest-prod
+    backed_edge_ids:
+      - 1c86bbe2a1282c39
+      - 8b69da1998b135c2
+      - 8d1b9180e7fc182a
+  - id: tr_stratos_lakehouse_prod_cryptokey_lakehouse_data_cmek
+    category: KMS
     asset_type: cloudkms.googleapis.com/CryptoKey
+    display_name: lakehouse-data-cmek
+    detail: europe-west1 | ENCRYPT_DECRYPT
     project_id: stratos-lakehouse-prod
-  backed_edge_ids:
-  - 196f54b4cba6c945
-  - 9ee3aa91b565c63e
-- id: tr_003_vertex_model_cmek
-  category: KMS
-  asset_type: cloudkms.googleapis.com/CryptoKey
-  display_name: vertex-model-cmek
-  detail: europe-west1 | ENCRYPT_DECRYPT
-  project_id: stratos-mlops-prod
-  owner_container_id: proj_stratos_mlops_prod
-  attached_node_ids:
-  - n_stratos_mlops_prod_churn_predictor_v4
-  backed_by:
-  - uri: //cloudkms.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/keyRings/ml-keyring/cryptoKeys/vertex-model-cmek
+    owner_container_id: proj_stratos_lakehouse_prod
+    attached_node_ids:
+      - n_stratos_lakehouse_prod_curated_enterprise_dw
+      - n_stratos_lakehouse_prod_raw_cdc
+    backed_by:
+      - uri: //cloudkms.googleapis.com/projects/stratos-lakehouse-prod/locations/europe-west1/keyRings/lake-keyring/cryptoKeys/lakehouse-data-cmek
+        asset_type: cloudkms.googleapis.com/CryptoKey
+        project_id: stratos-lakehouse-prod
+    backed_edge_ids:
+      - 196f54b4cba6c945
+      - 9ee3aa91b565c63e
+  - id: tr_stratos_mlops_prod_cryptokey_vertex_model_cmek
+    category: KMS
     asset_type: cloudkms.googleapis.com/CryptoKey
+    display_name: vertex-model-cmek
+    detail: europe-west1 | ENCRYPT_DECRYPT
     project_id: stratos-mlops-prod
-  backed_edge_ids:
-  - 409ef5942eff812e
-- id: tr_004_lakehouse_nat_router
-  category: NAT_ROUTER
-  asset_type: compute.googleapis.com/Router
-  display_name: lakehouse-nat-router
-  detail: europe-west1
-  project_id: stratos-lakehouse-prod
-  owner_container_id: vpc_stratos_lakehouse_prod_lakehouse_vpc
-  backed_by:
-  - uri: //compute.googleapis.com/projects/stratos-lakehouse-prod/regions/europe-west1/routers/lakehouse-nat-router
+    owner_container_id: proj_stratos_mlops_prod
+    attached_node_ids:
+      - n_stratos_mlops_prod_churn_predictor_v4
+    backed_by:
+      - uri: //cloudkms.googleapis.com/projects/stratos-mlops-prod/locations/europe-west1/keyRings/ml-keyring/cryptoKeys/vertex-model-cmek
+        asset_type: cloudkms.googleapis.com/CryptoKey
+        project_id: stratos-mlops-prod
+    backed_edge_ids:
+      - 409ef5942eff812e
+  - id: tr_stratos_lakehouse_prod_router_lakehouse_nat_router
+    category: NAT_ROUTER
     asset_type: compute.googleapis.com/Router
+    display_name: lakehouse-nat-router
+    detail: europe-west1
     project_id: stratos-lakehouse-prod
-  backed_edge_ids:
-  - a51613574c1a79a4
-- id: tr_005_mlops_nat_router
-  category: NAT_ROUTER
-  asset_type: compute.googleapis.com/Router
-  display_name: mlops-nat-router
-  detail: europe-west1
-  project_id: stratos-mlops-prod
-  owner_container_id: vpc_stratos_mlops_prod_mlops_vpc
-  backed_by:
-  - uri: //compute.googleapis.com/projects/stratos-mlops-prod/regions/europe-west1/routers/mlops-nat-router
+    owner_container_id: vpc_stratos_lakehouse_prod_lakehouse_vpc
+    backed_by:
+      - uri: //compute.googleapis.com/projects/stratos-lakehouse-prod/regions/europe-west1/routers/lakehouse-nat-router
+        asset_type: compute.googleapis.com/Router
+        project_id: stratos-lakehouse-prod
+    backed_edge_ids:
+      - a51613574c1a79a4
+  - id: tr_stratos_mlops_prod_router_mlops_nat_router
+    category: NAT_ROUTER
     asset_type: compute.googleapis.com/Router
+    display_name: mlops-nat-router
+    detail: europe-west1
     project_id: stratos-mlops-prod
-  backed_edge_ids:
-  - 469e2b7540287641
-- id: tr_012_lakehouse_lineage_sink
-  category: OBSERVABILITY
-  asset_type: logging.googleapis.com/LogSink
-  display_name: lakehouse-lineage-sink
-  detail: global
-  project_id: stratos-lakehouse-prod
-  owner_container_id: proj_stratos_lakehouse_prod
-  attached_node_ids:
-  - n_stratos_ingest_prod_stratos_bronze_landing
-  backed_by:
-  - uri: //logging.googleapis.com/projects/stratos-lakehouse-prod/sinks/lakehouse-lineage-sink
+    owner_container_id: vpc_stratos_mlops_prod_mlops_vpc
+    backed_by:
+      - uri: //compute.googleapis.com/projects/stratos-mlops-prod/regions/europe-west1/routers/mlops-nat-router
+        asset_type: compute.googleapis.com/Router
+        project_id: stratos-mlops-prod
+    backed_edge_ids:
+      - 469e2b7540287641
+  - id: tr_stratos_lakehouse_prod_logsink_lakehouse_lineage_sink
+    category: OBSERVABILITY
     asset_type: logging.googleapis.com/LogSink
+    display_name: lakehouse-lineage-sink
+    detail: global
     project_id: stratos-lakehouse-prod
-  backed_edge_ids:
-  - 63e1792258816e46
-- id: tr_013_ml_drift_alert_policy
-  category: OBSERVABILITY
-  asset_type: monitoring.googleapis.com/AlertPolicy
-  display_name: ml-drift-alert-policy
-  detail: global
-  project_id: stratos-mlops-prod
-  owner_container_id: proj_stratos_mlops_prod
-  attached_node_ids:
-  - n_stratos_mlops_prod_churn_predictor_v4
-  backed_by:
-  - uri: //monitoring.googleapis.com/projects/stratos-mlops-prod/alertPolicies/9303001
+    owner_container_id: proj_stratos_lakehouse_prod
+    attached_node_ids:
+      - n_stratos_ingest_prod_stratos_bronze_landing
+    backed_by:
+      - uri: //logging.googleapis.com/projects/stratos-lakehouse-prod/sinks/lakehouse-lineage-sink
+        asset_type: logging.googleapis.com/LogSink
+        project_id: stratos-lakehouse-prod
+    backed_edge_ids:
+      - 63e1792258816e46
+  - id: tr_stratos_mlops_prod_alertpolicy_ml_drift_alert_policy
+    category: OBSERVABILITY
     asset_type: monitoring.googleapis.com/AlertPolicy
+    display_name: ml-drift-alert-policy
+    detail: global
     project_id: stratos-mlops-prod
-  backed_edge_ids:
-  - af7ccc09af37fe5f
-- id: tr_014_cdc_replication_user
-  category: SECRET
-  asset_type: secretmanager.googleapis.com/Secret
-  display_name: cdc-replication-user
-  detail: automatic
-  project_id: stratos-ingest-prod
-  owner_container_id: proj_stratos_ingest_prod
-  attached_node_ids:
-  - n_stratos_ingest_prod_orders_cdc_stream
-  backed_by:
-  - uri: //secretmanager.googleapis.com/projects/stratos-ingest-prod/secrets/cdc-replication-user
+    owner_container_id: proj_stratos_mlops_prod
+    attached_node_ids:
+      - n_stratos_mlops_prod_churn_predictor_v4
+    backed_by:
+      - uri: //monitoring.googleapis.com/projects/stratos-mlops-prod/alertPolicies/9303001
+        asset_type: monitoring.googleapis.com/AlertPolicy
+        project_id: stratos-mlops-prod
+    backed_edge_ids:
+      - af7ccc09af37fe5f
+  - id: tr_stratos_ingest_prod_secret_cdc_replication_user
+    category: SECRET
     asset_type: secretmanager.googleapis.com/Secret
+    display_name: cdc-replication-user
+    detail: automatic
     project_id: stratos-ingest-prod
-  backed_edge_ids:
-  - 26c834947f8e177c
-- id: tr_015_ml_feature_api_token
-  category: SECRET
-  asset_type: secretmanager.googleapis.com/Secret
-  display_name: ml-feature-api-token
-  detail: automatic
-  project_id: stratos-mlops-prod
-  owner_container_id: proj_stratos_mlops_prod
-  attached_node_ids:
-  - n_stratos_mlops_prod_ml_inference_gateway
-  backed_by:
-  - uri: //secretmanager.googleapis.com/projects/stratos-mlops-prod/secrets/ml-feature-api-token
+    owner_container_id: proj_stratos_ingest_prod
+    attached_node_ids:
+      - n_stratos_ingest_prod_orders_cdc_stream
+    backed_by:
+      - uri: //secretmanager.googleapis.com/projects/stratos-ingest-prod/secrets/cdc-replication-user
+        asset_type: secretmanager.googleapis.com/Secret
+        project_id: stratos-ingest-prod
+    backed_edge_ids:
+      - 26c834947f8e177c
+  - id: tr_stratos_mlops_prod_secret_ml_feature_api_token
+    category: SECRET
     asset_type: secretmanager.googleapis.com/Secret
+    display_name: ml-feature-api-token
+    detail: automatic
     project_id: stratos-mlops-prod
-  backed_edge_ids:
-  - e1f1bf8a28224cc4
+    owner_container_id: proj_stratos_mlops_prod
+    attached_node_ids:
+      - n_stratos_mlops_prod_ml_inference_gateway
+    backed_by:
+      - uri: //secretmanager.googleapis.com/projects/stratos-mlops-prod/secrets/ml-feature-api-token
+        asset_type: secretmanager.googleapis.com/Secret
+        project_id: stratos-mlops-prod
+    backed_edge_ids:
+      - e1f1bf8a28224cc4
 structural_edges:
-- edge_id: 114d6a12aeecdf13
-  kind: CONFIG_REF
-  from_uri: //pubsub.googleapis.com/projects/stratos-ingest-prod/topics/cdc-change-events
-  to_uri: //pubsub.googleapis.com/projects/stratos-ingest-prod/subscriptions/dataflow-cdc-sub
-  reason: 1to1_plumbing_fold
-  target_id: n_stratos_ingest_prod_cdc_change_events
-- edge_id: 1928ad3d079d1b7b
-  kind: VPC_PEERING
-  from_uri: //compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc
-  to_uri: //compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc
-  reason: vpc_peering_container_link
-  target_id: vpc_stratos_mlops_prod_mlops_vpc
-- edge_id: 4a47a82b443e043b
-  kind: PSA_PEERING
-  from_uri: //compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc
-  to_uri: //alloydb.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/clusters/oltp-inventory-alloydb
-  reason: psa_container_boundary
-  target_id: zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
-- edge_id: 5ae108524c5bcadd
-  kind: VPC_PEERING
-  from_uri: //compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc
-  to_uri: //compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc
-  reason: vpc_peering_container_link
-  target_id: vpc_stratos_lakehouse_prod_lakehouse_vpc
-- edge_id: a5ead31462151c8b
-  kind: PSA_PEERING
-  from_uri: //compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc
-  to_uri: //sqladmin.googleapis.com/projects/stratos-ingest-prod/instances/oltp-orders-cloudsql
-  reason: psa_container_boundary
-  target_id: zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
+  - edge_id: 114d6a12aeecdf13
+    kind: CONFIG_REF
+    from_uri: //pubsub.googleapis.com/projects/stratos-ingest-prod/topics/cdc-change-events
+    to_uri: //pubsub.googleapis.com/projects/stratos-ingest-prod/subscriptions/dataflow-cdc-sub
+    reason: 1to1_plumbing_fold
+    target_id: n_stratos_ingest_prod_cdc_change_events
+  - edge_id: 1928ad3d079d1b7b
+    kind: VPC_PEERING
+    from_uri: //compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc
+    to_uri: //compute.googleapis.com/projects/stratos-mlops-prod/global/networks/mlops-vpc
+    reason: vpc_peering_container_link
+    target_id: vpc_stratos_mlops_prod_mlops_vpc
+  - edge_id: 4a47a82b443e043b
+    kind: PSA_PEERING
+    from_uri: //compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc
+    to_uri: //alloydb.googleapis.com/projects/stratos-ingest-prod/locations/europe-west1/clusters/oltp-inventory-alloydb
+    reason: psa_container_boundary
+    target_id: zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1_p920200abcdef12_tp
+  - edge_id: 5ae108524c5bcadd
+    kind: VPC_PEERING
+    from_uri: //compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc
+    to_uri: //compute.googleapis.com/projects/stratos-lakehouse-prod/global/networks/lakehouse-vpc
+    reason: vpc_peering_container_link
+    target_id: vpc_stratos_lakehouse_prod_lakehouse_vpc
+  - edge_id: a5ead31462151c8b
+    kind: PSA_PEERING
+    from_uri: //compute.googleapis.com/projects/stratos-ingest-prod/global/networks/ingest-vpc
+    to_uri: //sqladmin.googleapis.com/projects/stratos-ingest-prod/instances/oltp-orders-cloudsql
+    reason: psa_container_boundary
+    target_id: zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1_p920200abcdef12_tp
 suppressed_plumbing_counts:
   aiplatform.googleapis.com/Model: 6
   bigquery.googleapis.com/Table: 51
@@ -1030,801 +1030,817 @@ suppressed_plumbing_counts:
   dataplex.googleapis.com/Asset: 8
   datastream.googleapis.com/ConnectionProfile: 4
 views:
-- id: view_0_system_index
-  title: System Architecture Overview
-  subtitle: 30 components · 35 flows · 15 governance items
-  focus_summary: Multi-project enterprise Lakehouse and MLOps platform ingesting OLTP
-    CDC and partner ERP streams into Dataplex-governed BigQuery tiers to power Looker
-    BI and real-time Vertex AI inference.
-  include_transversal_panel: true
-  archetype: layered_flow
-  accent_mode: MIXED
-  container_ids:
-  - ext_sources
-  - folder_530201
-  - folder_530202
-  - org_920200001
-  - proj_stratos_ingest_prod
-  - proj_stratos_lakehouse_prod
-  - proj_stratos_mlops_prod
-  - reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
-  - reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
-  - reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
-  - sub_stratos_ingest_prod_ingest_kafka_subnet
-  - sub_stratos_lakehouse_prod_dataflow_dataproc_subnet
-  - sub_stratos_mlops_prod_ml_serving_subnet
-  - vpc_stratos_ingest_prod_ingest_vpc
-  - vpc_stratos_lakehouse_prod_lakehouse_vpc
-  - vpc_stratos_mlops_prod_mlops_vpc
-  - zone_exposure_zone_private_proj_stratos_ingest_prod
-  - zone_exposure_zone_private_proj_stratos_lakehouse_prod
-  - zone_exposure_zone_private_proj_stratos_mlops_prod
-  - zone_exposure_zone_private_reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
-  - zone_exposure_zone_private_reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
-  - zone_exposure_zone_private_sub_stratos_ingest_prod_ingest_kafka_subnet
-  - zone_exposure_zone_private_sub_stratos_lakehouse_prod_dataflow_dataproc_subnet
-  - zone_exposure_zone_private_sub_stratos_mlops_prod_ml_serving_subnet
-  - zone_exposure_zone_public_vpc_stratos_mlops_prod_mlops_vpc
-  - zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
-  placements:
-  - component_id: n_external_ml_partner_apps
-    container_id: ext_sources
-    column: 0
-  - component_id: n_external_partner_erp_feeds
-    container_id: ext_sources
-    column: 0
-  - component_id: n_stratos_mlops_prod_nightly_retrain_tick
-    container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
-    column: 1
-  - component_id: n_stratos_mlops_prod_ml_serving_https_lb
-    container_id: zone_exposure_zone_public_vpc_stratos_mlops_prod_mlops_vpc
-    column: 1
-  - component_id: n_stratos_mlops_prod_ml_inference_gateway
-    container_id: zone_exposure_zone_private_sub_stratos_mlops_prod_ml_serving_subnet
-    column: 2
-  - component_id: n_stratos_mlops_prod_hourly_feature_transfer
-    container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
-    column: 3
-  - component_id: n_stratos_mlops_prod_ml_models_registry
-    container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
-    column: 3
-  - component_id: n_stratos_ingest_prod_erp_datafusion_etl
-    container_id: zone_exposure_zone_private_sub_stratos_ingest_prod_ingest_kafka_subnet
-    column: 3
-  - component_id: n_stratos_ingest_prod_telemetry_managed_kafka
-    container_id: zone_exposure_zone_private_sub_stratos_ingest_prod_ingest_kafka_subnet
-    column: 3
-  - component_id: n_stratos_lakehouse_prod_enterprise_airflow
-    container_id: zone_exposure_zone_private_sub_stratos_lakehouse_prod_dataflow_dataproc_subnet
-    column: 3
-  - component_id: n_stratos_lakehouse_prod_warehouse_dataform_repo
-    container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
-    column: 4
-  - component_id: n_stratos_lakehouse_prod_alloydb_fed_bqconn
-    container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
-    column: 4
-  - component_id: n_stratos_lakehouse_prod_enterprise_dataplex_lake
-    container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
-    column: 5
-  - component_id: n_stratos_mlops_prod_gemini_4_carbon
-    container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
-    column: 5
-  - component_id: n_stratos_ingest_prod_oltp_inventory_alloydb
-    container_id: zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
-    column: 5
-  - component_id: n_stratos_ingest_prod_oltp_orders_cloudsql
-    container_id: zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
-    column: 5
-  - component_id: n_stratos_ingest_prod_inventory_cdc_stream
-    container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
-    column: 6
-  - component_id: n_stratos_ingest_prod_orders_cdc_stream
-    container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
-    column: 6
-  - component_id: n_stratos_ingest_prod_stratos_bronze_landing
-    container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
-    column: 7
-  - component_id: n_stratos_ingest_prod_cdc_change_events
-    container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
-    column: 7
-  - component_id: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
-    container_id: zone_exposure_zone_private_sub_stratos_lakehouse_prod_dataflow_dataproc_subnet
-    column: 8
-  - component_id: n_stratos_lakehouse_prod_silver_spark_batch
-    container_id: zone_exposure_zone_private_sub_stratos_lakehouse_prod_dataflow_dataproc_subnet
-    column: 8
-  - component_id: n_stratos_lakehouse_prod_stratos_gold_exports
-    container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
-    column: 9
-  - component_id: n_stratos_lakehouse_prod_raw_cdc
-    container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
-    column: 9
-  - component_id: n_stratos_lakehouse_prod_lakehouse_hive_metastore
-    container_id: zone_exposure_zone_private_reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
-    column: 9
-  - component_id: n_stratos_lakehouse_prod_curated_enterprise_dw
-    container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
-    column: 10
-  - component_id: n_stratos_mlops_prod_ml_feature_mart
-    container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
-    column: 11
-  - component_id: n_stratos_mlops_prod_executive_looker_bi
-    container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
-    column: 11
-  - component_id: n_stratos_mlops_prod_realtime_customer_fos
-    container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
-    column: 12
-  - component_id: n_stratos_mlops_prod_churn_predictor_v4
-    container_id: zone_exposure_zone_private_reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
-    column: 12
-  edges:
-  - from: n_external_ml_partner_apps
-    to: n_stratos_mlops_prod_ml_serving_https_lb
-    verb: HTTPS :443
-    flow_kind: RUNTIME
-    semantic_tag: ingress
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - dd6671aa335002c7
-  - from: n_external_partner_erp_feeds
-    to: n_stratos_ingest_prod_erp_datafusion_etl
-    verb: Pushes ERP
-    flow_kind: RUNTIME
-    semantic_tag: ingress
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 3d43b6ad035f0277
-  - from: n_external_partner_erp_feeds
-    to: n_stratos_ingest_prod_telemetry_managed_kafka
-    verb: Streams Kafka
-    flow_kind: RUNTIME
-    semantic_tag: ingress
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - bfd6aafafda3c0a5
-  - from: n_stratos_ingest_prod_cdc_change_events
-    to: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
-    verb: Pulls events
-    flow_kind: RUNTIME
-    semantic_tag: async
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 9d2a320228aeb3ab
-  - from: n_stratos_ingest_prod_erp_datafusion_etl
-    to: n_stratos_ingest_prod_stratos_bronze_landing
-    verb: Writes bronze
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 28c312393a1bb389
-  - from: n_stratos_ingest_prod_inventory_cdc_stream
-    to: n_stratos_ingest_prod_stratos_bronze_landing
-    verb: Sinks CDC
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 8ff104555a4e81fc
-  - from: n_stratos_ingest_prod_oltp_inventory_alloydb
-    to: n_stratos_ingest_prod_inventory_cdc_stream
-    verb: Streams CDC
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - f9c082bd9600730a
-  - from: n_stratos_ingest_prod_oltp_orders_cloudsql
-    to: n_stratos_ingest_prod_orders_cdc_stream
-    verb: Streams CDC
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 5b31ca9743dc86d7
-  - from: n_stratos_ingest_prod_orders_cdc_stream
-    to: n_stratos_ingest_prod_cdc_change_events
-    verb: Publishes CDC
-    flow_kind: RUNTIME
-    semantic_tag: async
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 2eb637e4eddf5748
-  - from: n_stratos_ingest_prod_orders_cdc_stream
-    to: n_stratos_ingest_prod_stratos_bronze_landing
-    verb: Sinks CDC
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - a6c370601fe120d3
-  - from: n_stratos_ingest_prod_stratos_bronze_landing
-    to: n_stratos_lakehouse_prod_silver_spark_batch
-    verb: Reads bronze
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 2b6fba8d20064a97
-  - from: n_stratos_ingest_prod_telemetry_managed_kafka
-    to: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
-    verb: Consumes Kafka
-    flow_kind: RUNTIME
-    semantic_tag: async
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 88ae70106bf01479
-  - from: n_stratos_lakehouse_prod_alloydb_fed_bqconn
-    to: n_stratos_ingest_prod_oltp_inventory_alloydb
-    verb: Federated SQL
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 0c478e38f1372e84
-  - from: n_stratos_lakehouse_prod_alloydb_fed_bqconn
-    to: n_stratos_lakehouse_prod_curated_enterprise_dw
-    verb: Joins live DB
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 225e6f456c5943e8
-  - from: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
-    to: n_stratos_lakehouse_prod_raw_cdc
-    verb: Streams BQ
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 56291977c8054b26
-  - from: n_stratos_lakehouse_prod_curated_enterprise_dw
-    to: n_stratos_mlops_prod_executive_looker_bi
-    verb: Reads BQ API
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 59792c198df6b07d
-  - from: n_stratos_lakehouse_prod_curated_enterprise_dw
-    to: n_stratos_mlops_prod_ml_feature_mart
-    verb: Derives SQL
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - e88c7781daee24e9
-  - from: n_stratos_lakehouse_prod_enterprise_airflow
-    to: n_stratos_lakehouse_prod_silver_spark_batch
-    verb: Submits Spark
-    flow_kind: ADMIN
-    semantic_tag: async
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - cbdb62df7ae78b56
-  - from: n_stratos_lakehouse_prod_enterprise_airflow
-    to: n_stratos_lakehouse_prod_warehouse_dataform_repo
-    verb: Runs SQLX
-    flow_kind: ADMIN
-    semantic_tag: async
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 0e634771c4b1d54f
-  - from: n_stratos_lakehouse_prod_enterprise_dataplex_lake
-    to: n_stratos_ingest_prod_stratos_bronze_landing
-    verb: Governs zone
-    flow_kind: ADMIN
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - f4a045b188d63897
-  - from: n_stratos_lakehouse_prod_enterprise_dataplex_lake
-    to: n_stratos_lakehouse_prod_stratos_gold_exports
-    verb: Governs zone
-    flow_kind: ADMIN
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 75b933375b7165ec
-  - from: n_stratos_lakehouse_prod_raw_cdc
-    to: n_stratos_lakehouse_prod_curated_enterprise_dw
-    verb: Transforms SQL
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 8f336cf0d0dbba12
-  - from: n_stratos_lakehouse_prod_silver_spark_batch
-    to: n_stratos_lakehouse_prod_lakehouse_hive_metastore
-    verb: Reads catalog
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 635322eea1a13e71
-  - from: n_stratos_lakehouse_prod_silver_spark_batch
-    to: n_stratos_lakehouse_prod_raw_cdc
-    verb: Loads BQ
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 224f97b8eb411f20
-  - from: n_stratos_lakehouse_prod_silver_spark_batch
-    to: n_stratos_lakehouse_prod_stratos_gold_exports
-    verb: Writes Parquet
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 252ec3b68f5c0357
-  - from: n_stratos_lakehouse_prod_warehouse_dataform_repo
-    to: n_stratos_lakehouse_prod_curated_enterprise_dw
-    verb: Compiles SQLX
-    flow_kind: CICD
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 2a0ec3b152e14766
-  - from: n_stratos_mlops_prod_hourly_feature_transfer
-    to: n_stratos_mlops_prod_ml_feature_mart
-    verb: Syncs hourly
-    flow_kind: RUNTIME
-    semantic_tag: async
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 7fd651a0eb370569
-  - from: n_stratos_mlops_prod_ml_feature_mart
-    to: n_stratos_mlops_prod_churn_predictor_v4
-    verb: Trains model
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - af69a184e6328358
-  - from: n_stratos_mlops_prod_ml_feature_mart
-    to: n_stratos_mlops_prod_realtime_customer_fos
-    verb: Syncs features
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - f0ef7faeacdf0844
-  - from: n_stratos_mlops_prod_ml_inference_gateway
-    to: n_stratos_mlops_prod_churn_predictor_v4
-    verb: Predicts gRPC
-    flow_kind: RUNTIME
-    semantic_tag: traffic
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 6a0c928c49fe31bc
-  - from: n_stratos_mlops_prod_ml_inference_gateway
-    to: n_stratos_mlops_prod_gemini_4_carbon
-    verb: Summarizes AI
-    flow_kind: RUNTIME
-    semantic_tag: traffic
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - d3c6ca50fd15c07d
-  - from: n_stratos_mlops_prod_ml_inference_gateway
-    to: n_stratos_mlops_prod_realtime_customer_fos
-    verb: Fetches online
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 78d1f28f3eb566cd
-  - from: n_stratos_mlops_prod_ml_models_registry
-    to: n_stratos_mlops_prod_churn_predictor_v4
-    verb: Pulls image
-    flow_kind: CICD
-    semantic_tag: cicd
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 25931af3d46e5a74
-  - from: n_stratos_mlops_prod_ml_serving_https_lb
-    to: n_stratos_mlops_prod_ml_inference_gateway
-    verb: Routes HTTPS
-    flow_kind: RUNTIME
-    semantic_tag: traffic
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 1dc06567ae91066e
-  - from: n_stratos_mlops_prod_nightly_retrain_tick
-    to: n_stratos_lakehouse_prod_enterprise_airflow
-    verb: Triggers DAG
-    flow_kind: ADMIN
-    semantic_tag: async
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - cc13c983dbd10df6
-- id: view_1
-  title: Edge Ingress & ML Serving Gateway
-  subtitle: External callers, HTTPS load balancing & Cloud Run gateway
-  focus_summary: Handles external partner ERP feeds, scheduled triggers, and low-latency
-    HTTPS ML inference requests via Cloud Run.
-  include_transversal_panel: true
-  archetype: layered_flow
-  accent_mode: MIXED
-  container_ids:
-  - ext_sources
-  - folder_530202
-  - org_920200001
-  - proj_stratos_mlops_prod
-  - reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
-  - sub_stratos_mlops_prod_ml_serving_subnet
-  - vpc_stratos_mlops_prod_mlops_vpc
-  - zone_exposure_zone_private_proj_stratos_mlops_prod
-  - zone_exposure_zone_private_sub_stratos_mlops_prod_ml_serving_subnet
-  - zone_exposure_zone_public_vpc_stratos_mlops_prod_mlops_vpc
-  placements:
-  - component_id: n_external_ml_partner_apps
-    container_id: ext_sources
-    column: 0
-  - component_id: n_external_partner_erp_feeds
-    container_id: ext_sources
-    column: 0
-    off_page_refs:
-    - target_view_id: view_2
-      label: erp-datafusion-etl (+1 in view_2)
-      direction: OUT
-  - component_id: n_stratos_mlops_prod_nightly_retrain_tick
-    container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
-    column: 1
-    off_page_refs:
-    - target_view_id: view_2
-      label: enterprise-airflow (view_2)
-      direction: OUT
-  - component_id: n_stratos_mlops_prod_ml_serving_https_lb
-    container_id: zone_exposure_zone_public_vpc_stratos_mlops_prod_mlops_vpc
-    column: 1
-  - component_id: n_stratos_mlops_prod_ml_inference_gateway
-    container_id: zone_exposure_zone_private_sub_stratos_mlops_prod_ml_serving_subnet
-    column: 2
-    off_page_refs:
-    - target_view_id: view_3
-      label: churn-predictor-v4 (+2 in view_3)
-      direction: OUT
-  edges:
-  - from: n_external_ml_partner_apps
-    to: n_stratos_mlops_prod_ml_serving_https_lb
-    verb: HTTPS :443
-    flow_kind: RUNTIME
-    semantic_tag: ingress
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - dd6671aa335002c7
-  - from: n_stratos_mlops_prod_ml_serving_https_lb
-    to: n_stratos_mlops_prod_ml_inference_gateway
-    verb: Routes HTTPS
-    flow_kind: RUNTIME
-    semantic_tag: traffic
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 1dc06567ae91066e
-- id: view_2
-  title: Streaming Ingestion & Lakehouse Pipelines
-  subtitle: CDC streams, Kafka, Dataflow, Spark & Airflow orchestration
-  focus_summary: Orchestrates batch ERP ETL, real-time CDC streaming, Kafka telemetry
-    consumption, Spark processing, and Dataform SQL compilation.
-  include_transversal_panel: true
-  archetype: layered_flow
-  accent_mode: MIXED
-  container_ids:
-  - folder_530201
-  - folder_530202
-  - org_920200001
-  - proj_stratos_ingest_prod
-  - proj_stratos_lakehouse_prod
-  - proj_stratos_mlops_prod
-  - reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
-  - reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
-  - sub_stratos_ingest_prod_ingest_kafka_subnet
-  - sub_stratos_lakehouse_prod_dataflow_dataproc_subnet
-  - vpc_stratos_ingest_prod_ingest_vpc
-  - vpc_stratos_lakehouse_prod_lakehouse_vpc
-  - zone_exposure_zone_private_proj_stratos_ingest_prod
-  - zone_exposure_zone_private_proj_stratos_lakehouse_prod
-  - zone_exposure_zone_private_proj_stratos_mlops_prod
-  - zone_exposure_zone_private_sub_stratos_ingest_prod_ingest_kafka_subnet
-  - zone_exposure_zone_private_sub_stratos_lakehouse_prod_dataflow_dataproc_subnet
-  placements:
-  - component_id: n_stratos_mlops_prod_hourly_feature_transfer
-    container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
-    column: 3
-    off_page_refs:
-    - target_view_id: view_3
-      label: ml_feature_mart (view_3)
-      direction: OUT
-  - component_id: n_stratos_ingest_prod_erp_datafusion_etl
-    container_id: zone_exposure_zone_private_sub_stratos_ingest_prod_ingest_kafka_subnet
-    column: 3
-    off_page_refs:
-    - target_view_id: view_1
-      label: partner-erp-feeds (view_1)
-      direction: IN
-    - target_view_id: view_3
-      label: stratos-bronze-landing (view_3)
-      direction: OUT
-  - component_id: n_stratos_ingest_prod_telemetry_managed_kafka
-    container_id: zone_exposure_zone_private_sub_stratos_ingest_prod_ingest_kafka_subnet
-    column: 3
-    off_page_refs:
-    - target_view_id: view_1
-      label: partner-erp-feeds (view_1)
-      direction: IN
-  - component_id: n_stratos_lakehouse_prod_enterprise_airflow
-    container_id: zone_exposure_zone_private_sub_stratos_lakehouse_prod_dataflow_dataproc_subnet
-    column: 3
-    off_page_refs:
-    - target_view_id: view_1
-      label: nightly-retrain-tick (view_1)
-      direction: IN
-  - component_id: n_stratos_lakehouse_prod_warehouse_dataform_repo
-    container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
-    column: 4
-    off_page_refs:
-    - target_view_id: view_3
-      label: curated_enterprise_dw (view_3)
-      direction: OUT
-  - component_id: n_stratos_lakehouse_prod_alloydb_fed_bqconn
-    container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
-    column: 4
-    off_page_refs:
-    - target_view_id: view_3
-      label: curated_enterprise_dw (+1 in view_3)
-      direction: OUT
-  - component_id: n_stratos_lakehouse_prod_enterprise_dataplex_lake
-    container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
-    column: 5
-    off_page_refs:
-    - target_view_id: view_3
-      label: stratos-bronze-landing (+1 in view_3)
-      direction: OUT
-  - component_id: n_stratos_ingest_prod_inventory_cdc_stream
-    container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
-    column: 6
-    off_page_refs:
-    - target_view_id: view_3
-      label: oltp-inventory-alloydb (view_3)
-      direction: IN
-    - target_view_id: view_3
-      label: stratos-bronze-landing (view_3)
-      direction: OUT
-  - component_id: n_stratos_ingest_prod_orders_cdc_stream
-    container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
-    column: 6
-    off_page_refs:
-    - target_view_id: view_3
-      label: oltp-orders-cloudsql (view_3)
-      direction: IN
-    - target_view_id: view_3
-      label: stratos-bronze-landing (view_3)
-      direction: OUT
-  - component_id: n_stratos_ingest_prod_cdc_change_events
-    container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
-    column: 7
-  - component_id: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
-    container_id: zone_exposure_zone_private_sub_stratos_lakehouse_prod_dataflow_dataproc_subnet
-    column: 8
-    off_page_refs:
-    - target_view_id: view_3
-      label: raw_cdc (view_3)
-      direction: OUT
-  - component_id: n_stratos_lakehouse_prod_silver_spark_batch
-    container_id: zone_exposure_zone_private_sub_stratos_lakehouse_prod_dataflow_dataproc_subnet
-    column: 8
-    off_page_refs:
-    - target_view_id: view_3
-      label: stratos-bronze-landing (view_3)
-      direction: IN
-    - target_view_id: view_3
-      label: lakehouse-hive-metastore (+2 in view_3)
-      direction: OUT
-  edges:
-  - from: n_stratos_ingest_prod_cdc_change_events
-    to: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
-    verb: Pulls events
-    flow_kind: RUNTIME
-    semantic_tag: async
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 9d2a320228aeb3ab
-  - from: n_stratos_ingest_prod_orders_cdc_stream
-    to: n_stratos_ingest_prod_cdc_change_events
-    verb: Publishes CDC
-    flow_kind: RUNTIME
-    semantic_tag: async
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 2eb637e4eddf5748
-  - from: n_stratos_ingest_prod_telemetry_managed_kafka
-    to: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
-    verb: Consumes Kafka
-    flow_kind: RUNTIME
-    semantic_tag: async
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 88ae70106bf01479
-  - from: n_stratos_lakehouse_prod_enterprise_airflow
-    to: n_stratos_lakehouse_prod_silver_spark_batch
-    verb: Submits Spark
-    flow_kind: ADMIN
-    semantic_tag: async
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - cbdb62df7ae78b56
-  - from: n_stratos_lakehouse_prod_enterprise_airflow
-    to: n_stratos_lakehouse_prod_warehouse_dataform_repo
-    verb: Runs SQLX
-    flow_kind: ADMIN
-    semantic_tag: async
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 0e634771c4b1d54f
-- id: view_3
-  title: OLTP Databases, Lakehouse Storage & Vertex AI
-  subtitle: AlloyDB, Cloud SQL, GCS, BigQuery, Looker & Vertex AI
-  focus_summary: Stores transactional OLTP records, bronze/gold GCS objects, curated
-    BigQuery datasets, online feature stores, and Vertex AI endpoints.
-  include_transversal_panel: true
-  archetype: layered_flow
-  accent_mode: MIXED
-  container_ids:
-  - folder_530201
-  - folder_530202
-  - org_920200001
-  - proj_stratos_ingest_prod
-  - proj_stratos_lakehouse_prod
-  - proj_stratos_mlops_prod
-  - reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
-  - reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
-  - reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
-  - vpc_stratos_ingest_prod_ingest_vpc
-  - vpc_stratos_lakehouse_prod_lakehouse_vpc
-  - vpc_stratos_mlops_prod_mlops_vpc
-  - zone_exposure_zone_private_proj_stratos_ingest_prod
-  - zone_exposure_zone_private_proj_stratos_lakehouse_prod
-  - zone_exposure_zone_private_proj_stratos_mlops_prod
-  - zone_exposure_zone_private_reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
-  - zone_exposure_zone_private_reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
-  - zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
-  placements:
-  - component_id: n_stratos_mlops_prod_ml_models_registry
-    container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
-    column: 3
-  - component_id: n_stratos_mlops_prod_gemini_4_carbon
-    container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
-    column: 5
-    off_page_refs:
-    - target_view_id: view_1
-      label: ml-inference-gateway (view_1)
-      direction: IN
-  - component_id: n_stratos_ingest_prod_oltp_inventory_alloydb
-    container_id: zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
-    column: 5
-    off_page_refs:
-    - target_view_id: view_2
-      label: alloydb-fed-bqconn (view_2)
-      direction: IN
-    - target_view_id: view_2
-      label: inventory-cdc-stream (view_2)
-      direction: OUT
-  - component_id: n_stratos_ingest_prod_oltp_orders_cloudsql
-    container_id: zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
-    column: 5
-    off_page_refs:
-    - target_view_id: view_2
-      label: orders-cdc-stream (view_2)
-      direction: OUT
-  - component_id: n_stratos_ingest_prod_stratos_bronze_landing
-    container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
-    column: 7
-    off_page_refs:
-    - target_view_id: view_2
-      label: enterprise-dataplex-lake (+3 in view_2)
-      direction: IN
-    - target_view_id: view_2
-      label: silver-spark-batch (view_2)
-      direction: OUT
-  - component_id: n_stratos_lakehouse_prod_stratos_gold_exports
-    container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
-    column: 9
-    off_page_refs:
-    - target_view_id: view_2
-      label: enterprise-dataplex-lake (+1 in view_2)
-      direction: IN
-  - component_id: n_stratos_lakehouse_prod_raw_cdc
-    container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
-    column: 9
-    off_page_refs:
-    - target_view_id: view_2
-      label: cdc-lakehouse-dataflow (+1 in view_2)
-      direction: IN
-  - component_id: n_stratos_lakehouse_prod_lakehouse_hive_metastore
-    container_id: zone_exposure_zone_private_reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
-    column: 9
-    off_page_refs:
-    - target_view_id: view_2
-      label: silver-spark-batch (view_2)
-      direction: IN
-  - component_id: n_stratos_lakehouse_prod_curated_enterprise_dw
-    container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
-    column: 10
-    off_page_refs:
-    - target_view_id: view_2
-      label: alloydb-fed-bqconn (+1 in view_2)
-      direction: IN
-  - component_id: n_stratos_mlops_prod_ml_feature_mart
-    container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
-    column: 11
-    off_page_refs:
-    - target_view_id: view_2
-      label: hourly-feature-transfer (view_2)
-      direction: IN
-  - component_id: n_stratos_mlops_prod_executive_looker_bi
-    container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
-    column: 11
-  - component_id: n_stratos_mlops_prod_realtime_customer_fos
-    container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
-    column: 12
-    off_page_refs:
-    - target_view_id: view_1
-      label: ml-inference-gateway (view_1)
-      direction: IN
-  - component_id: n_stratos_mlops_prod_churn_predictor_v4
-    container_id: zone_exposure_zone_private_reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
-    column: 12
-    off_page_refs:
-    - target_view_id: view_1
-      label: ml-inference-gateway (view_1)
-      direction: IN
-  edges:
-  - from: n_stratos_lakehouse_prod_curated_enterprise_dw
-    to: n_stratos_mlops_prod_executive_looker_bi
-    verb: Reads BQ API
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 59792c198df6b07d
-  - from: n_stratos_lakehouse_prod_curated_enterprise_dw
-    to: n_stratos_mlops_prod_ml_feature_mart
-    verb: Derives SQL
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - e88c7781daee24e9
-  - from: n_stratos_lakehouse_prod_raw_cdc
-    to: n_stratos_lakehouse_prod_curated_enterprise_dw
-    verb: Transforms SQL
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 8f336cf0d0dbba12
-  - from: n_stratos_mlops_prod_ml_feature_mart
-    to: n_stratos_mlops_prod_churn_predictor_v4
-    verb: Trains model
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - af69a184e6328358
-  - from: n_stratos_mlops_prod_ml_feature_mart
-    to: n_stratos_mlops_prod_realtime_customer_fos
-    verb: Syncs features
-    flow_kind: RUNTIME
-    semantic_tag: data
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - f0ef7faeacdf0844
-  - from: n_stratos_mlops_prod_ml_models_registry
-    to: n_stratos_mlops_prod_churn_predictor_v4
-    verb: Pulls image
-    flow_kind: CICD
-    semantic_tag: cicd
-    provenance: VERIFIED
-    evidence_edge_ids:
-    - 25931af3d46e5a74
+  - id: view_0_system_index
+    title: System Architecture Overview
+    subtitle: 30 components · 35 flows · 15 governance items
+    focus_summary: Multi-project enterprise Lakehouse and MLOps platform ingesting OLTP CDC and partner ERP streams into Dataplex-governed BigQuery and GCS tiers to power Looker BI and real-time Vertex AI inference via Cloud Run.
+    include_transversal_panel: true
+    archetype: layered_flow
+    accent_mode: MIXED
+    container_ids:
+      - ext_sources
+      - folder_530201
+      - folder_530202
+      - org_920200001
+      - proj_stratos_ingest_prod
+      - proj_stratos_lakehouse_prod
+      - proj_stratos_mlops_prod
+      - reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
+      - reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
+      - reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
+      - sub_stratos_ingest_prod_europe_west1_ingest_kafka_subnet
+      - sub_stratos_lakehouse_prod_europe_west1_dataflow_dataproc_subnet
+      - sub_stratos_mlops_prod_europe_west1_ml_serving_subnet
+      - vpc_stratos_ingest_prod_ingest_vpc
+      - vpc_stratos_lakehouse_prod_lakehouse_vpc
+      - vpc_stratos_mlops_prod_mlops_vpc
+      - zone_exposure_zone_private_proj_stratos_ingest_prod
+      - zone_exposure_zone_private_proj_stratos_lakehouse_prod
+      - zone_exposure_zone_private_proj_stratos_mlops_prod
+      - zone_exposure_zone_private_reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
+      - zone_exposure_zone_private_reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
+      - zone_exposure_zone_private_sub_stratos_ingest_prod_europe_west1_ingest_kafka_subnet
+      - zone_exposure_zone_private_sub_stratos_lakehouse_prod_europe_west1_dataflow_dataproc_subnet
+      - zone_exposure_zone_private_sub_stratos_mlops_prod_europe_west1_ml_serving_subnet
+      - zone_exposure_zone_public_vpc_stratos_mlops_prod_mlops_vpc_external_managed
+      - zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1_p920200abcdef12_tp
+    placements:
+      - component_id: n_external_ml_partner_apps
+        container_id: ext_sources
+        column: 0
+      - component_id: n_external_partner_erp_feeds
+        container_id: ext_sources
+        column: 0
+      - component_id: n_stratos_mlops_prod_nightly_retrain_tick
+        container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
+        column: 1
+      - component_id: n_stratos_mlops_prod_ml_serving_https_lb
+        container_id: zone_exposure_zone_public_vpc_stratos_mlops_prod_mlops_vpc_external_managed
+        column: 1
+      - component_id: n_stratos_mlops_prod_ml_inference_gateway
+        container_id: zone_exposure_zone_private_sub_stratos_mlops_prod_europe_west1_ml_serving_subnet
+        column: 2
+      - component_id: n_stratos_mlops_prod_hourly_feature_transfer
+        container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
+        column: 3
+      - component_id: n_stratos_mlops_prod_ml_models_registry
+        container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
+        column: 3
+      - component_id: n_stratos_ingest_prod_erp_datafusion_etl
+        container_id: zone_exposure_zone_private_sub_stratos_ingest_prod_europe_west1_ingest_kafka_subnet
+        column: 3
+      - component_id: n_stratos_ingest_prod_telemetry_managed_kafka
+        container_id: zone_exposure_zone_private_sub_stratos_ingest_prod_europe_west1_ingest_kafka_subnet
+        column: 3
+      - component_id: n_stratos_lakehouse_prod_enterprise_airflow
+        container_id: zone_exposure_zone_private_sub_stratos_lakehouse_prod_europe_west1_dataflow_dataproc_subnet
+        column: 3
+      - component_id: n_stratos_lakehouse_prod_warehouse_dataform_repo
+        container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
+        column: 4
+      - component_id: n_stratos_lakehouse_prod_alloydb_fed_bqconn
+        container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
+        column: 4
+      - component_id: n_stratos_lakehouse_prod_enterprise_dataplex_lake
+        container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
+        column: 5
+      - component_id: n_stratos_mlops_prod_gemini_4_carbon
+        container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
+        column: 5
+      - component_id: n_stratos_ingest_prod_oltp_inventory_alloydb
+        container_id: zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1_p920200abcdef12_tp
+        column: 5
+      - component_id: n_stratos_ingest_prod_oltp_orders_cloudsql
+        container_id: zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1_p920200abcdef12_tp
+        column: 5
+      - component_id: n_stratos_ingest_prod_inventory_cdc_stream
+        container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
+        column: 6
+      - component_id: n_stratos_ingest_prod_orders_cdc_stream
+        container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
+        column: 6
+      - component_id: n_stratos_ingest_prod_stratos_bronze_landing
+        container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
+        column: 7
+      - component_id: n_stratos_ingest_prod_cdc_change_events
+        container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
+        column: 7
+      - component_id: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
+        container_id: zone_exposure_zone_private_sub_stratos_lakehouse_prod_europe_west1_dataflow_dataproc_subnet
+        column: 8
+      - component_id: n_stratos_lakehouse_prod_silver_spark_batch
+        container_id: zone_exposure_zone_private_sub_stratos_lakehouse_prod_europe_west1_dataflow_dataproc_subnet
+        column: 8
+      - component_id: n_stratos_lakehouse_prod_stratos_gold_exports
+        container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
+        column: 9
+      - component_id: n_stratos_lakehouse_prod_raw_cdc
+        container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
+        column: 9
+      - component_id: n_stratos_lakehouse_prod_lakehouse_hive_metastore
+        container_id: zone_exposure_zone_private_reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
+        column: 9
+      - component_id: n_stratos_lakehouse_prod_curated_enterprise_dw
+        container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
+        column: 10
+      - component_id: n_stratos_mlops_prod_ml_feature_mart
+        container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
+        column: 11
+      - component_id: n_stratos_mlops_prod_executive_looker_bi
+        container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
+        column: 11
+      - component_id: n_stratos_mlops_prod_realtime_customer_fos
+        container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
+        column: 12
+      - component_id: n_stratos_mlops_prod_churn_predictor_v4
+        container_id: zone_exposure_zone_private_reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
+        column: 12
+    edges:
+      - from: n_external_ml_partner_apps
+        to: n_stratos_mlops_prod_ml_serving_https_lb
+        verb: HTTPS :443
+        flow_kind: RUNTIME
+        semantic_tag: ingress
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - dd6671aa335002c7
+      - from: n_external_partner_erp_feeds
+        to: n_stratos_ingest_prod_erp_datafusion_etl
+        verb: Ingests ERP
+        flow_kind: RUNTIME
+        semantic_tag: ingress
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 3d43b6ad035f0277
+      - from: n_external_partner_erp_feeds
+        to: n_stratos_ingest_prod_telemetry_managed_kafka
+        verb: Streams Kafka
+        flow_kind: RUNTIME
+        semantic_tag: ingress
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - bfd6aafafda3c0a5
+      - from: n_stratos_ingest_prod_cdc_change_events
+        to: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
+        verb: Pulls Pub/Sub
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 9d2a320228aeb3ab
+      - from: n_stratos_ingest_prod_erp_datafusion_etl
+        to: n_stratos_ingest_prod_stratos_bronze_landing
+        verb: Writes bronze
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 28c312393a1bb389
+      - from: n_stratos_ingest_prod_inventory_cdc_stream
+        to: n_stratos_ingest_prod_stratos_bronze_landing
+        verb: Sinks CDC
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 8ff104555a4e81fc
+      - from: n_stratos_ingest_prod_oltp_inventory_alloydb
+        to: n_stratos_ingest_prod_inventory_cdc_stream
+        verb: Streams CDC
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - f9c082bd9600730a
+      - from: n_stratos_ingest_prod_oltp_orders_cloudsql
+        to: n_stratos_ingest_prod_orders_cdc_stream
+        verb: Streams CDC
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 5b31ca9743dc86d7
+      - from: n_stratos_ingest_prod_orders_cdc_stream
+        to: n_stratos_ingest_prod_cdc_change_events
+        verb: Publishes CDC
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 2eb637e4eddf5748
+      - from: n_stratos_ingest_prod_orders_cdc_stream
+        to: n_stratos_ingest_prod_stratos_bronze_landing
+        verb: Sinks CDC
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - a6c370601fe120d3
+      - from: n_stratos_ingest_prod_stratos_bronze_landing
+        to: n_stratos_lakehouse_prod_silver_spark_batch
+        verb: Reads bronze
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 2b6fba8d20064a97
+      - from: n_stratos_ingest_prod_telemetry_managed_kafka
+        to: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
+        verb: Consumes Kafka
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 88ae70106bf01479
+      - from: n_stratos_lakehouse_prod_alloydb_fed_bqconn
+        to: n_stratos_ingest_prod_oltp_inventory_alloydb
+        verb: Federated SQL
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 0c478e38f1372e84
+      - from: n_stratos_lakehouse_prod_alloydb_fed_bqconn
+        to: n_stratos_lakehouse_prod_curated_enterprise_dw
+        verb: Federated join
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 225e6f456c5943e8
+      - from: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
+        to: n_stratos_lakehouse_prod_raw_cdc
+        verb: Streams BQ
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 56291977c8054b26
+      - from: n_stratos_lakehouse_prod_curated_enterprise_dw
+        to: n_stratos_mlops_prod_executive_looker_bi
+        verb: Reads BQ API
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 59792c198df6b07d
+      - from: n_stratos_lakehouse_prod_curated_enterprise_dw
+        to: n_stratos_mlops_prod_ml_feature_mart
+        verb: Derives SQL
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - e88c7781daee24e9
+      - from: n_stratos_lakehouse_prod_enterprise_airflow
+        to: n_stratos_lakehouse_prod_silver_spark_batch
+        verb: Submits Spark
+        flow_kind: ADMIN
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - cbdb62df7ae78b56
+      - from: n_stratos_lakehouse_prod_enterprise_airflow
+        to: n_stratos_lakehouse_prod_warehouse_dataform_repo
+        verb: Runs Dataform
+        flow_kind: ADMIN
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 0e634771c4b1d54f
+      - from: n_stratos_lakehouse_prod_enterprise_dataplex_lake
+        to: n_stratos_ingest_prod_stratos_bronze_landing
+        verb: Governs zone
+        flow_kind: ADMIN
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - f4a045b188d63897
+      - from: n_stratos_lakehouse_prod_enterprise_dataplex_lake
+        to: n_stratos_lakehouse_prod_stratos_gold_exports
+        verb: Governs zone
+        flow_kind: ADMIN
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 75b933375b7165ec
+      - from: n_stratos_lakehouse_prod_raw_cdc
+        to: n_stratos_lakehouse_prod_curated_enterprise_dw
+        verb: Transforms SQL
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 8f336cf0d0dbba12
+      - from: n_stratos_lakehouse_prod_silver_spark_batch
+        to: n_stratos_lakehouse_prod_lakehouse_hive_metastore
+        verb: Reads catalog
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 635322eea1a13e71
+      - from: n_stratos_lakehouse_prod_silver_spark_batch
+        to: n_stratos_lakehouse_prod_raw_cdc
+        verb: Loads BQ
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 224f97b8eb411f20
+      - from: n_stratos_lakehouse_prod_silver_spark_batch
+        to: n_stratos_lakehouse_prod_stratos_gold_exports
+        verb: Writes Parquet
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 252ec3b68f5c0357
+      - from: n_stratos_lakehouse_prod_warehouse_dataform_repo
+        to: n_stratos_lakehouse_prod_curated_enterprise_dw
+        verb: Compiles SQLX
+        flow_kind: CICD
+        semantic_tag: cicd
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 2a0ec3b152e14766
+      - from: n_stratos_mlops_prod_hourly_feature_transfer
+        to: n_stratos_mlops_prod_ml_feature_mart
+        verb: Scheduled sync
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 7fd651a0eb370569
+      - from: n_stratos_mlops_prod_ml_feature_mart
+        to: n_stratos_mlops_prod_churn_predictor_v4
+        verb: Trains & evals
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - af69a184e6328358
+      - from: n_stratos_mlops_prod_ml_feature_mart
+        to: n_stratos_mlops_prod_realtime_customer_fos
+        verb: Syncs features
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - f0ef7faeacdf0844
+      - from: n_stratos_mlops_prod_ml_inference_gateway
+        to: n_stratos_mlops_prod_churn_predictor_v4
+        verb: Predicts churn
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 6a0c928c49fe31bc
+      - from: n_stratos_mlops_prod_ml_inference_gateway
+        to: n_stratos_mlops_prod_gemini_4_carbon
+        verb: Summarizes AI
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - d3c6ca50fd15c07d
+      - from: n_stratos_mlops_prod_ml_inference_gateway
+        to: n_stratos_mlops_prod_realtime_customer_fos
+        verb: Fetches online
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 78d1f28f3eb566cd
+      - from: n_stratos_mlops_prod_ml_models_registry
+        to: n_stratos_mlops_prod_churn_predictor_v4
+        verb: Deploys image
+        flow_kind: CICD
+        semantic_tag: cicd
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 25931af3d46e5a74
+      - from: n_stratos_mlops_prod_ml_serving_https_lb
+        to: n_stratos_mlops_prod_ml_inference_gateway
+        verb: Routes NEG
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 1dc06567ae91066e
+      - from: n_stratos_mlops_prod_nightly_retrain_tick
+        to: n_stratos_lakehouse_prod_enterprise_airflow
+        verb: Triggers DAG
+        flow_kind: ADMIN
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - cc13c983dbd10df6
+  - id: view_1
+    title: External Ingress & Inference Gateway
+    subtitle: Partner callers, HTTPS load balancing, and Cloud Run gateway
+    focus_summary: External partner applications and ERP feeds enter via HTTPS load balancing and scheduled triggers into the Cloud Run ML inference gateway.
+    include_transversal_panel: true
+    archetype: layered_flow
+    accent_mode: MIXED
+    container_ids:
+      - ext_sources
+      - folder_530202
+      - org_920200001
+      - proj_stratos_mlops_prod
+      - reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
+      - sub_stratos_mlops_prod_europe_west1_ml_serving_subnet
+      - vpc_stratos_mlops_prod_mlops_vpc
+      - zone_exposure_zone_private_proj_stratos_mlops_prod
+      - zone_exposure_zone_private_sub_stratos_mlops_prod_europe_west1_ml_serving_subnet
+      - zone_exposure_zone_public_vpc_stratos_mlops_prod_mlops_vpc_external_managed
+    placements:
+      - component_id: n_external_ml_partner_apps
+        container_id: ext_sources
+        column: 0
+      - component_id: n_external_partner_erp_feeds
+        container_id: ext_sources
+        column: 0
+        off_page_refs:
+          - target_view_id: view_2
+            label: erp-datafusion-etl (+1 in view_2)
+            direction: OUT
+      - component_id: n_stratos_mlops_prod_nightly_retrain_tick
+        container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
+        column: 1
+        off_page_refs:
+          - target_view_id: view_2
+            label: enterprise-airflow (view_2)
+            direction: OUT
+      - component_id: n_stratos_mlops_prod_ml_serving_https_lb
+        container_id: zone_exposure_zone_public_vpc_stratos_mlops_prod_mlops_vpc_external_managed
+        column: 1
+      - component_id: n_stratos_mlops_prod_ml_inference_gateway
+        container_id: zone_exposure_zone_private_sub_stratos_mlops_prod_europe_west1_ml_serving_subnet
+        column: 2
+        off_page_refs:
+          - target_view_id: view_3
+            label: churn-predictor-v4 (+2 in view_3)
+            direction: OUT
+    edges:
+      - from: n_external_ml_partner_apps
+        to: n_stratos_mlops_prod_ml_serving_https_lb
+        verb: HTTPS :443
+        flow_kind: RUNTIME
+        semantic_tag: ingress
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - dd6671aa335002c7
+      - from: n_stratos_mlops_prod_ml_serving_https_lb
+        to: n_stratos_mlops_prod_ml_inference_gateway
+        verb: Routes NEG
+        flow_kind: RUNTIME
+        semantic_tag: traffic
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 1dc06567ae91066e
+  - id: view_2
+    title: Streaming CDC, ETL & Orchestration Pipelines
+    subtitle: Kafka, Pub/Sub, Datastream, Dataflow, Spark, and Airflow
+    focus_summary: Event streaming, CDC replication, Data Fusion ETL, and Composer-orchestrated Spark and Dataform jobs process raw feeds into lakehouse tables.
+    include_transversal_panel: true
+    archetype: layered_flow
+    accent_mode: MIXED
+    container_ids:
+      - folder_530201
+      - folder_530202
+      - org_920200001
+      - proj_stratos_ingest_prod
+      - proj_stratos_lakehouse_prod
+      - proj_stratos_mlops_prod
+      - reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
+      - reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
+      - sub_stratos_ingest_prod_europe_west1_ingest_kafka_subnet
+      - sub_stratos_lakehouse_prod_europe_west1_dataflow_dataproc_subnet
+      - vpc_stratos_ingest_prod_ingest_vpc
+      - vpc_stratos_lakehouse_prod_lakehouse_vpc
+      - zone_exposure_zone_private_proj_stratos_ingest_prod
+      - zone_exposure_zone_private_proj_stratos_lakehouse_prod
+      - zone_exposure_zone_private_proj_stratos_mlops_prod
+      - zone_exposure_zone_private_sub_stratos_ingest_prod_europe_west1_ingest_kafka_subnet
+      - zone_exposure_zone_private_sub_stratos_lakehouse_prod_europe_west1_dataflow_dataproc_subnet
+    placements:
+      - component_id: n_stratos_mlops_prod_hourly_feature_transfer
+        container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
+        column: 3
+        off_page_refs:
+          - target_view_id: view_3
+            label: ml_feature_mart (view_3)
+            direction: OUT
+      - component_id: n_stratos_ingest_prod_erp_datafusion_etl
+        container_id: zone_exposure_zone_private_sub_stratos_ingest_prod_europe_west1_ingest_kafka_subnet
+        column: 3
+        off_page_refs:
+          - target_view_id: view_1
+            label: partner-erp-feeds (view_1)
+            direction: IN
+          - target_view_id: view_3
+            label: stratos-bronze-landing (view_3)
+            direction: OUT
+      - component_id: n_stratos_ingest_prod_telemetry_managed_kafka
+        container_id: zone_exposure_zone_private_sub_stratos_ingest_prod_europe_west1_ingest_kafka_subnet
+        column: 3
+        off_page_refs:
+          - target_view_id: view_1
+            label: partner-erp-feeds (view_1)
+            direction: IN
+      - component_id: n_stratos_lakehouse_prod_enterprise_airflow
+        container_id: zone_exposure_zone_private_sub_stratos_lakehouse_prod_europe_west1_dataflow_dataproc_subnet
+        column: 3
+        off_page_refs:
+          - target_view_id: view_1
+            label: nightly-retrain-tick (view_1)
+            direction: IN
+      - component_id: n_stratos_lakehouse_prod_warehouse_dataform_repo
+        container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
+        column: 4
+        off_page_refs:
+          - target_view_id: view_3
+            label: curated_enterprise_dw (view_3)
+            direction: OUT
+      - component_id: n_stratos_ingest_prod_inventory_cdc_stream
+        container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
+        column: 6
+        off_page_refs:
+          - target_view_id: view_3
+            label: oltp-inventory-alloydb (view_3)
+            direction: IN
+          - target_view_id: view_3
+            label: stratos-bronze-landing (view_3)
+            direction: OUT
+      - component_id: n_stratos_ingest_prod_orders_cdc_stream
+        container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
+        column: 6
+        off_page_refs:
+          - target_view_id: view_3
+            label: oltp-orders-cloudsql (view_3)
+            direction: IN
+          - target_view_id: view_3
+            label: stratos-bronze-landing (view_3)
+            direction: OUT
+      - component_id: n_stratos_ingest_prod_cdc_change_events
+        container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
+        column: 7
+      - component_id: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
+        container_id: zone_exposure_zone_private_sub_stratos_lakehouse_prod_europe_west1_dataflow_dataproc_subnet
+        column: 8
+        off_page_refs:
+          - target_view_id: view_3
+            label: raw_cdc (view_3)
+            direction: OUT
+      - component_id: n_stratos_lakehouse_prod_silver_spark_batch
+        container_id: zone_exposure_zone_private_sub_stratos_lakehouse_prod_europe_west1_dataflow_dataproc_subnet
+        column: 8
+        off_page_refs:
+          - target_view_id: view_3
+            label: stratos-bronze-landing (view_3)
+            direction: IN
+          - target_view_id: view_3
+            label: lakehouse-hive-metastore (+2 in view_3)
+            direction: OUT
+    edges:
+      - from: n_stratos_ingest_prod_cdc_change_events
+        to: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
+        verb: Pulls Pub/Sub
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 9d2a320228aeb3ab
+      - from: n_stratos_ingest_prod_orders_cdc_stream
+        to: n_stratos_ingest_prod_cdc_change_events
+        verb: Publishes CDC
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 2eb637e4eddf5748
+      - from: n_stratos_ingest_prod_telemetry_managed_kafka
+        to: n_stratos_lakehouse_prod_cdc_lakehouse_dataflow
+        verb: Consumes Kafka
+        flow_kind: RUNTIME
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 88ae70106bf01479
+      - from: n_stratos_lakehouse_prod_enterprise_airflow
+        to: n_stratos_lakehouse_prod_silver_spark_batch
+        verb: Submits Spark
+        flow_kind: ADMIN
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - cbdb62df7ae78b56
+      - from: n_stratos_lakehouse_prod_enterprise_airflow
+        to: n_stratos_lakehouse_prod_warehouse_dataform_repo
+        verb: Runs Dataform
+        flow_kind: ADMIN
+        semantic_tag: async
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 0e634771c4b1d54f
+  - id: view_3
+    title: OLTP, Lakehouse Storage, Analytics & Vertex AI
+    subtitle: AlloyDB, Cloud SQL, GCS, BigQuery, Looker, and Vertex AI
+    focus_summary: Persistent OLTP databases, Dataplex-governed GCS buckets, BigQuery marts, Looker BI, and Vertex AI online feature and prediction endpoints.
+    include_transversal_panel: true
+    archetype: layered_flow
+    accent_mode: MIXED
+    container_ids:
+      - folder_530201
+      - folder_530202
+      - org_920200001
+      - proj_stratos_ingest_prod
+      - proj_stratos_lakehouse_prod
+      - proj_stratos_mlops_prod
+      - reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1
+      - reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
+      - reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
+      - vpc_stratos_ingest_prod_ingest_vpc
+      - vpc_stratos_lakehouse_prod_lakehouse_vpc
+      - vpc_stratos_mlops_prod_mlops_vpc
+      - zone_exposure_zone_private_proj_stratos_ingest_prod
+      - zone_exposure_zone_private_proj_stratos_lakehouse_prod
+      - zone_exposure_zone_private_proj_stratos_mlops_prod
+      - zone_exposure_zone_private_reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
+      - zone_exposure_zone_private_reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
+      - zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1_p920200abcdef12_tp
+    placements:
+      - component_id: n_stratos_mlops_prod_ml_models_registry
+        container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
+        column: 3
+      - component_id: n_stratos_lakehouse_prod_alloydb_fed_bqconn
+        container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
+        column: 4
+      - component_id: n_stratos_lakehouse_prod_enterprise_dataplex_lake
+        container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
+        column: 5
+      - component_id: n_stratos_mlops_prod_gemini_4_carbon
+        container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
+        column: 5
+        off_page_refs:
+          - target_view_id: view_1
+            label: ml-inference-gateway (view_1)
+            direction: IN
+      - component_id: n_stratos_ingest_prod_oltp_inventory_alloydb
+        container_id: zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1_p920200abcdef12_tp
+        column: 5
+        off_page_refs:
+          - target_view_id: view_2
+            label: inventory-cdc-stream (view_2)
+            direction: OUT
+      - component_id: n_stratos_ingest_prod_oltp_orders_cloudsql
+        container_id: zone_psa_zone_private_reg_vpc_stratos_ingest_prod_ingest_vpc_europe_west1_p920200abcdef12_tp
+        column: 5
+        off_page_refs:
+          - target_view_id: view_2
+            label: orders-cdc-stream (view_2)
+            direction: OUT
+      - component_id: n_stratos_ingest_prod_stratos_bronze_landing
+        container_id: zone_exposure_zone_private_proj_stratos_ingest_prod
+        column: 7
+        off_page_refs:
+          - target_view_id: view_2
+            label: erp-datafusion-etl (+2 in view_2)
+            direction: IN
+          - target_view_id: view_2
+            label: silver-spark-batch (view_2)
+            direction: OUT
+      - component_id: n_stratos_lakehouse_prod_stratos_gold_exports
+        container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
+        column: 9
+        off_page_refs:
+          - target_view_id: view_2
+            label: silver-spark-batch (view_2)
+            direction: IN
+      - component_id: n_stratos_lakehouse_prod_raw_cdc
+        container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
+        column: 9
+        off_page_refs:
+          - target_view_id: view_2
+            label: cdc-lakehouse-dataflow (+1 in view_2)
+            direction: IN
+      - component_id: n_stratos_lakehouse_prod_lakehouse_hive_metastore
+        container_id: zone_exposure_zone_private_reg_vpc_stratos_lakehouse_prod_lakehouse_vpc_europe_west1
+        column: 9
+        off_page_refs:
+          - target_view_id: view_2
+            label: silver-spark-batch (view_2)
+            direction: IN
+      - component_id: n_stratos_lakehouse_prod_curated_enterprise_dw
+        container_id: zone_exposure_zone_private_proj_stratos_lakehouse_prod
+        column: 10
+        off_page_refs:
+          - target_view_id: view_2
+            label: warehouse-dataform-repo (view_2)
+            direction: IN
+      - component_id: n_stratos_mlops_prod_ml_feature_mart
+        container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
+        column: 11
+        off_page_refs:
+          - target_view_id: view_2
+            label: hourly-feature-transfer (view_2)
+            direction: IN
+      - component_id: n_stratos_mlops_prod_executive_looker_bi
+        container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
+        column: 11
+      - component_id: n_stratos_mlops_prod_realtime_customer_fos
+        container_id: zone_exposure_zone_private_proj_stratos_mlops_prod
+        column: 12
+        off_page_refs:
+          - target_view_id: view_1
+            label: ml-inference-gateway (view_1)
+            direction: IN
+      - component_id: n_stratos_mlops_prod_churn_predictor_v4
+        container_id: zone_exposure_zone_private_reg_vpc_stratos_mlops_prod_mlops_vpc_europe_west1
+        column: 12
+        off_page_refs:
+          - target_view_id: view_1
+            label: ml-inference-gateway (view_1)
+            direction: IN
+    edges:
+      - from: n_stratos_lakehouse_prod_alloydb_fed_bqconn
+        to: n_stratos_ingest_prod_oltp_inventory_alloydb
+        verb: Federated SQL
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 0c478e38f1372e84
+      - from: n_stratos_lakehouse_prod_alloydb_fed_bqconn
+        to: n_stratos_lakehouse_prod_curated_enterprise_dw
+        verb: Federated join
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 225e6f456c5943e8
+      - from: n_stratos_lakehouse_prod_curated_enterprise_dw
+        to: n_stratos_mlops_prod_executive_looker_bi
+        verb: Reads BQ API
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 59792c198df6b07d
+      - from: n_stratos_lakehouse_prod_curated_enterprise_dw
+        to: n_stratos_mlops_prod_ml_feature_mart
+        verb: Derives SQL
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - e88c7781daee24e9
+      - from: n_stratos_lakehouse_prod_enterprise_dataplex_lake
+        to: n_stratos_ingest_prod_stratos_bronze_landing
+        verb: Governs zone
+        flow_kind: ADMIN
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - f4a045b188d63897
+      - from: n_stratos_lakehouse_prod_enterprise_dataplex_lake
+        to: n_stratos_lakehouse_prod_stratos_gold_exports
+        verb: Governs zone
+        flow_kind: ADMIN
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 75b933375b7165ec
+      - from: n_stratos_lakehouse_prod_raw_cdc
+        to: n_stratos_lakehouse_prod_curated_enterprise_dw
+        verb: Transforms SQL
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 8f336cf0d0dbba12
+      - from: n_stratos_mlops_prod_ml_feature_mart
+        to: n_stratos_mlops_prod_churn_predictor_v4
+        verb: Trains & evals
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - af69a184e6328358
+      - from: n_stratos_mlops_prod_ml_feature_mart
+        to: n_stratos_mlops_prod_realtime_customer_fos
+        verb: Syncs features
+        flow_kind: RUNTIME
+        semantic_tag: data
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - f0ef7faeacdf0844
+      - from: n_stratos_mlops_prod_ml_models_registry
+        to: n_stratos_mlops_prod_churn_predictor_v4
+        verb: Deploys image
+        flow_kind: CICD
+        semantic_tag: cicd
+        provenance: VERIFIED
+        evidence_edge_ids:
+          - 25931af3d46e5a74

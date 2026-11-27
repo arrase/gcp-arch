@@ -53,7 +53,7 @@ CGO_ENABLED=0 go build \
 
 ## Core Dependencies ([`go.mod`](https://github.com/arrase/gcp-arch/blob/main/go.mod))
 
-Every direct dependency in [`go.mod`](https://github.com/arrase/gcp-arch/blob/main/go.mod#L5-L22) maps cleanly to one stage of the pipeline:
+Every direct dependency in [`go.mod`](https://github.com/arrase/gcp-arch/blob/main/go.mod#L5-L24) maps cleanly to one stage of the pipeline:
 
 | Module | Version | Role in `gcp-arch` |
 | :--- | :--- | :--- |
@@ -61,8 +61,10 @@ Every direct dependency in [`go.mod`](https://github.com/arrase/gcp-arch/blob/ma
 | `github.com/spf13/pflag` | `v1.1.0` | POSIX flag parsing and `--project` → `--projects` flag normalization |
 | `cloud.google.com/go/asset` | `v1.30.1` | Cloud Asset Inventory (`assetpb`) `ListAssets` gRPC streaming (`RESOURCE` & `IAM_POLICY`) |
 | `cloud.google.com/go/monitoring` | `v1.32.1` | Cloud Monitoring (`monitoringpb`) 7-day `consumed_api` and Vertex `PublisherModel` queries |
-| `cloud.google.com/go/auth` | `v0.24.4` | ADC credential loading and `grpctransport` / `httptransport` (isolated `cloud-platform.read-only` for extraction & `cloud-platform` for direct Vertex AI REST calls) |
+| `cloud.google.com/go/auth` | `v0.24.4` | Unified ADC credential loading (`credentials.DetectDefault`) with isolated `cloud-platform.read-only` (Stage 1) and `cloud-platform` (Stage 2 / Vertex preflight), plus `QuotaProjectID` |
 | `cloud.google.com/go/iam` | `v1.15.1` | IAM policy protobuf structures attached to CAI `IAM_POLICY` responses |
+| `google.golang.org/api` | `v0.316.0` | Official BigQuery v2 (`jobs.list`), Dataflow v1b3 (`projects.locations.jobs.list` / `.get` with partial `Fields`), Cloud Resource Manager v1 (`projects.testIamPermissions`), `*googleapi.Error`, `option.WithAuthCredentials`/`option.WithQuotaProject`, and gRPC/HTTP transports |
+| `google.golang.org/genai` | `v1.79.1` | Official Vertex AI Gemini 4 Go SDK (`BackendVertexAI`, `*genai.Schema`, `genai.ThinkingLevel`, `resp.UsageMetadata`, `Models.Get`) |
 | `golang.org/x/sync` | `v0.25.0` | Bounded concurrency via `errgroup` (Stage 1 enricher workers) |
 | `golang.org/x/time` | `v0.16.0` | Token-bucket `rate.Limiter` enforcing `80` RPM CAI and `10` QPS Monitoring/enricher caps |
 | `google.golang.org/grpc` | `v1.85.0` | gRPC dial options, status code inspection, and `32 MiB` max recv message sizing |
@@ -205,9 +207,9 @@ Every GitHub Actions workflow pins actions to immutable full commit SHAs and dec
   2. Register the `asset_type` key in the `assetAttrProjectors` map in [`internal/extract/sanitize.go#L469-L554`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/sanitize.go#L469-L554).
   3. Add unit tests in [`internal/extract/extract_test.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/extract_test.go) covering both extracted attributes and secret scrubbing guarantees.
 - **Runtime API Enricher ([`internal/extract/enrichers.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/enrichers.go)):**
-  1. Gate the new enricher on `st.enabledProjects(candidates, "<service>.googleapis.com")`, share the `fetchProjectItemsConcurrently` worker helper (`maxEnrichWorkers = 8`), and follow the per-enricher rate-limiter pattern on `Clients` (`clients.BQLimiter`, `clients.DataflowLimiter`, `clients.MonitoringLimiter` — each initialized at `DefaultEnricherQPS = 10` / `DefaultMonitoringQPS = 10` in [`internal/extract/client.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go)).
+  1. Gate the new enricher on `st.enabledProjects(candidates, "<service>.googleapis.com")`, fan out across projects with `errgroup.WithContext` bounded by `g.SetLimit(maxEnrichWorkers)` (`maxEnrichWorkers = 8`), and follow the per-enricher rate-limiter pattern on `Clients` (`clients.BQLimiter`, `clients.DataflowLimiter`, `clients.MonitoringLimiter` — each initialized at `DefaultEnricherQPS = 10` / `DefaultMonitoringQPS = 10` in [`internal/extract/client.go`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go)).
   2. Record degraded outcomes (`IAM_DENIED`, `VPC_SC_BLOCKED`, `SERVICE_DISABLED`, `TRUNCATING_CAP`) in `CoverageLedger` rather than aborting the entire extraction on non-fatal target permissions.
-  3. Wire an optional readiness probe in `RunPreflight` ([`internal/extract/client.go#L971`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L971)) and document the minimum read-only IAM role in [Security, IAM & Preflight](security_iam.md).
+  3. Wire an optional readiness probe in `RunPreflight` ([`internal/extract/client.go#L935`](https://github.com/arrase/gcp-arch/blob/main/internal/extract/client.go#L935)) and document the minimum read-only IAM role in [Security, IAM & Preflight](security_iam.md).
 
 ### 3. Regenerating Reference Examples & Running Live Catalog E2E
 

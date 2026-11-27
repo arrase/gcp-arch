@@ -10,20 +10,28 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"google.golang.org/genai"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
+}
 
 func TestParseThinkingLevel(t *testing.T) {
 	cases := []struct {
 		in   string
-		want ThinkingLevel
+		want genai.ThinkingLevel
 	}{
 		{"", ""},
 		{"  ", ""},
-		{"minimal", ThinkingLevelMinimal},
-		{"LOW", ThinkingLevelLow},
-		{"Medium", ThinkingLevelMedium},
-		{"high", ThinkingLevelHigh},
-		{"XHigh", ThinkingLevelXHigh},
+		{"minimal", genai.ThinkingLevelMinimal},
+		{"LOW", genai.ThinkingLevelLow},
+		{"Medium", genai.ThinkingLevelMedium},
+		{"high", genai.ThinkingLevelHigh},
+		{"XHigh", genai.ThinkingLevelXhigh},
 	}
 	for _, tc := range cases {
 		got, err := ParseThinkingLevel(tc.in)
@@ -37,29 +45,41 @@ func TestParseThinkingLevel(t *testing.T) {
 }
 
 func TestVertexClientEndpointResolution(t *testing.T) {
-	hc := &http.Client{}
-	cGlobal, err := NewVertexClient(context.Background(), VertexClientOptions{
-		Project:    "my-proj",
-		Location:   "global",
-		HTTPClient: hc,
-	})
-	if err != nil {
-		t.Fatalf("NewVertexClient global: %v", err)
-	}
-	if cGlobal.baseURL != "https://aiplatform.googleapis.com" {
-		t.Fatalf("global baseURL = %q, want https://aiplatform.googleapis.com", cGlobal.baseURL)
+	var gotHost string
+	hc := &http.Client{
+		Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			gotHost = r.URL.Host
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(`{"candidates":[{"content":{"parts":[{"text":"{\"ok\":true}"}]}}]}`)),
+			}, nil
+		}),
 	}
 
-	cReg, err := NewVertexClient(context.Background(), VertexClientOptions{
-		Project:    "my-proj",
-		Location:   "europe-west1",
-		HTTPClient: hc,
-	})
-	if err != nil {
-		t.Fatalf("NewVertexClient regional: %v", err)
+	cases := []struct {
+		location string
+		wantHost string
+	}{
+		{"global", "aiplatform.googleapis.com"},
+		{"europe-west1", "europe-west1-aiplatform.googleapis.com"},
 	}
-	if cReg.baseURL != "https://europe-west1-aiplatform.googleapis.com" {
-		t.Fatalf("regional baseURL = %q, want https://europe-west1-aiplatform.googleapis.com", cReg.baseURL)
+	for _, tc := range cases {
+		gotHost = ""
+		vc, err := NewVertexClient(context.Background(), VertexClientOptions{
+			Project:    "my-proj",
+			Location:   tc.location,
+			HTTPClient: hc,
+		})
+		if err != nil {
+			t.Fatalf("NewVertexClient(%s): %v", tc.location, err)
+		}
+		if _, err := vc.GenerateJSON(context.Background(), "", "ping", &genai.Schema{Type: genai.TypeObject}); err != nil {
+			t.Fatalf("GenerateJSON(%s): %v", tc.location, err)
+		}
+		if gotHost != tc.wantHost {
+			t.Fatalf("location %q host = %q, want %q", tc.location, gotHost, tc.wantHost)
+		}
 	}
 
 	if _, err := NewVertexClient(context.Background(), VertexClientOptions{HTTPClient: hc}); err == nil {
@@ -112,11 +132,11 @@ func TestVertexClientGenerateJSONWithUsageAndThinking(t *testing.T) {
 		t.Fatalf("NewVertexClient: %v", err)
 	}
 
-	raw, stats, err := vc.GenerateJSONWithUsage(context.Background(), "sys prompt", "usr prompt", &Schema{Type: "OBJECT"})
+	raw, stats, err := vc.GenerateJSONWithUsage(context.Background(), "sys prompt", "usr prompt", &genai.Schema{Type: genai.TypeObject})
 	if err != nil {
 		t.Fatalf("GenerateJSONWithUsage: %v", err)
 	}
-	wantPath := "/v1/projects/ai-billing-proj/locations/global/publishers/google/models/gemini-4-carbon:generateContent"
+	wantPath := "/v1beta1/projects/ai-billing-proj/locations/global/publishers/google/models/gemini-4-carbon:generateContent"
 	if gotPath != wantPath {
 		t.Fatalf("request path = %q, want %q", gotPath, wantPath)
 	}
@@ -158,7 +178,7 @@ func TestVertexClientRetryOn429_503_504AndTimeout(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		raw, err := vc.GenerateJSON(context.Background(), "sys", "usr", &Schema{Type: "OBJECT"})
+		raw, err := vc.GenerateJSON(context.Background(), "sys", "usr", &genai.Schema{Type: genai.TypeObject})
 		if err != nil {
 			t.Fatalf("expected retry success, got %v", err)
 		}
@@ -193,7 +213,7 @@ func TestVertexClientRetryOn429_503_504AndTimeout(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		raw, err := vc.GenerateJSON(context.Background(), "sys", "usr", &Schema{Type: "OBJECT"})
+		raw, err := vc.GenerateJSON(context.Background(), "sys", "usr", &genai.Schema{Type: genai.TypeObject})
 		if err != nil {
 			t.Fatalf("expected timeout+504 retry success, got %v", err)
 		}
@@ -219,7 +239,7 @@ func TestVertexClientRetryOn429_503_504AndTimeout(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := vc.GenerateJSON(context.Background(), "sys", "usr", &Schema{Type: "OBJECT"}); err == nil {
+		if _, err := vc.GenerateJSON(context.Background(), "sys", "usr", &genai.Schema{Type: genai.TypeObject}); err == nil {
 			t.Fatal("expected HTTP 400 error")
 		}
 		if attempts.Load() != 1 {
@@ -243,7 +263,7 @@ func TestVertexClientRetryOn429_503_504AndTimeout(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := vc.GenerateJSON(context.Background(), "sys", "usr", &Schema{Type: "OBJECT"}); err == nil {
+		if _, err := vc.GenerateJSON(context.Background(), "sys", "usr", &genai.Schema{Type: genai.TypeObject}); err == nil {
 			t.Fatal("expected timeout exhaustion error")
 		}
 	})
@@ -273,7 +293,7 @@ func TestProbeVertexModel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("probeVertexModelWithOptions failed: %v", err)
 	}
-	wantPath := "/v1/projects/my-proj/locations/global/publishers/google/models/gemini-4-carbon"
+	wantPath := "/v1beta1/publishers/google/models/gemini-4-carbon"
 	if gotMethod != http.MethodGet || gotPath != wantPath {
 		t.Fatalf("probe = %s %s, want GET %s", gotMethod, gotPath, wantPath)
 	}

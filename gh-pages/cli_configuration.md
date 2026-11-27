@@ -89,7 +89,7 @@ gcp-arch preflight [flags]
 | `--projects` | `--project` | `stringArray` | `[]` | `projects` | Repeatable or comma-separated Project IDs (`--project` is normalized to `--projects`). Optional `projects/` prefix is stripped. |
 | `--project-alias` | — | `stringArray` | `[]` | `project_aliases` | Repeatable `<NUMBER=ID>` mappings. `NUMBER` must be all ASCII digits; `ID` must start with `[a-zA-Z0-9]` and contain only `[a-zA-Z0-9_-]`. Conflicting aliases for the same number exit `2`. Overlays `config.yaml`. |
 | `--quota-project` | — | `string` | `""` *(ADC `quota_project_id`)* | `quota_project` | Explicit GCP quota/billing project ID (`X-Goog-User-Project`). Never falls back to target workload projects. |
-| `--vertex-project` | — | `string` | `""` | `vertex_project` | Optional GCP billing project ID for zero-token `vertex.iam` (`:testIamPermissions`) and `vertex.model` (REST `GET` model metadata) probes. |
+| `--vertex-project` | — | `string` | `""` | `vertex_project` | Optional GCP billing project ID for zero-token `vertex.iam` (`cloudresourcemanager/v1` `Projects.TestIamPermissions`) and `vertex.model` (`google.golang.org/genai` `Models.Get`) probes. |
 | `--vertex-location` | — | `string` | `"global"` | `vertex_location` | Vertex AI location for `vertex.model` probe (`extract.DefaultVertexLocation`). |
 | `--model` | — | `string` | `"gemini-4-carbon"` | `model` | Vertex AI model ID for `vertex.model` probe (`extract.DefaultVertexModel`). |
 | `--quiet` | `-q` | `bool` | `false` | — | Suppresses progress messages on `stderr`. The formatted table or `--json` report still writes to `stdout`. |
@@ -212,7 +212,7 @@ gcp-arch extract [flags]
 
 ### 3. `synthesize` — Stage 2 Gemini 4 Synthesis & Day-2 Reconciliation
 
-Builds a deterministic GCP containment skeleton from a `v3` `facts.json` file and enriches it via a single bounded Vertex AI Gemini 4 REST call (`cloud.google.com/go/auth`) to generate a Git-tracked `architecture.yaml` (`v1`) manifest (Day 1), or incrementally reconciles resource and edge deltas into an existing `architecture.yaml` (Day 2 via `--reconcile`). See [Stage 2 — Gemini 4 Synthesis & Day-2](synthesis.md) for synthesis internals.
+Builds a deterministic GCP containment skeleton from a `v3` `facts.json` file and enriches it via a single bounded Vertex AI Gemini 4 call (`google.golang.org/genai` with `cloud.google.com/go/auth`) to generate a Git-tracked `architecture.yaml` (`v1`) manifest (Day 1), or incrementally reconciles resource and edge deltas into an existing `architecture.yaml` (Day 2 via `--reconcile`). See [Stage 2 — Gemini 4 Synthesis & Day-2](synthesis.md) for synthesis internals.
 
 ```bash
 gcp-arch synthesize <facts.json> [flags]

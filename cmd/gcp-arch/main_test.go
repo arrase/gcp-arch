@@ -16,6 +16,8 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/genai"
+
 	"github.com/arrase/gcp-arch/internal/extract"
 	"github.com/arrase/gcp-arch/internal/manifest"
 	"github.com/arrase/gcp-arch/internal/render"
@@ -25,10 +27,10 @@ import (
 type stubModelClient struct {
 	mu      sync.Mutex
 	calls   int
-	handler func(call int, systemPrompt, userPrompt string, schema *synth.Schema) ([]byte, error)
+	handler func(call int, systemPrompt, userPrompt string, schema *genai.Schema) ([]byte, error)
 }
 
-func (s *stubModelClient) GenerateJSON(_ context.Context, systemPrompt, userPrompt string, schema *synth.Schema) ([]byte, error) {
+func (s *stubModelClient) GenerateJSON(_ context.Context, systemPrompt, userPrompt string, schema *genai.Schema) ([]byte, error) {
 	s.mu.Lock()
 	call := s.calls
 	s.calls++
@@ -492,7 +494,7 @@ func writeMinimalFactsFile(t *testing.T, path string, extraBucket bool) *extract
 
 func minimalModelStub(_ *extract.FactsFile) *stubModelClient {
 	return &stubModelClient{
-		handler: func(int, string, string, *synth.Schema) ([]byte, error) {
+		handler: func(int, string, string, *genai.Schema) ([]byte, error) {
 			return []byte(`{"focus_summary":"Minimal test","detail_views":[],"node_enrichments":[],"edge_enrichments":[]}`), nil
 		},
 	}
@@ -601,7 +603,7 @@ func testSynthesizeDay1Outcomes(t *testing.T, tmp, factsPath string, facts *extr
 
 	rpcFailDeps := appDeps{
 		newModelClient: func(_ context.Context, _ synth.VertexClientOptions) (synth.ModelClient, error) {
-			return &stubModelClient{handler: func(int, string, string, *synth.Schema) ([]byte, error) {
+			return &stubModelClient{handler: func(int, string, string, *genai.Schema) ([]byte, error) {
 				return nil, errors.New("vertex rpc unavailable")
 			}}, nil
 		},

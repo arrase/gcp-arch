@@ -11,6 +11,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"google.golang.org/genai"
+
 	"github.com/arrase/gcp-arch/internal/extract"
 	"github.com/arrase/gcp-arch/internal/icons"
 	"github.com/arrase/gcp-arch/internal/manifest"
@@ -19,11 +21,11 @@ import (
 type stubModelClient struct {
 	resp       annotationResponse
 	lastPrompt string
-	lastSchema *Schema
+	lastSchema *genai.Schema
 	calls      int
 }
 
-func (s *stubModelClient) GenerateJSON(_ context.Context, _, userPrompt string, schema *Schema) ([]byte, error) {
+func (s *stubModelClient) GenerateJSON(_ context.Context, _, userPrompt string, schema *genai.Schema) ([]byte, error) {
 	s.calls++
 	s.lastPrompt = userPrompt
 	s.lastSchema = schema

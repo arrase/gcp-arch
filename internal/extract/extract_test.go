@@ -23,6 +23,9 @@ import (
 	"cloud.google.com/go/iam/apiv1/iampb"
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 	"golang.org/x/time/rate"
+	"google.golang.org/api/bigquery/v2"
+	"google.golang.org/api/dataflow/v1b3"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/genproto/googleapis/api/metric"
 	"google.golang.org/genproto/googleapis/api/monitoredres"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -264,12 +267,19 @@ func assertDegradedAndAuthErrors(t *testing.T) {
 		},
 		{
 			name: "REST VPC-SC",
-			err: &httpStatusError{
-				Code:     http.StatusForbidden,
-				Message:  "blocked",
-				Reason:   "VPC_SERVICE_CONTROLS",
-				Domain:   "googleapis.com",
-				Metadata: map[string]string{"vpcServiceControlsUniqueIdentifier": "rest-uuid-9"},
+			err: &googleapi.Error{
+				Code:    http.StatusForbidden,
+				Message: "blocked",
+				Details: []any{
+					map[string]any{
+						"@type":  "type.googleapis.com/google.rpc.ErrorInfo",
+						"reason": "VPC_SERVICE_CONTROLS",
+						"domain": "googleapis.com",
+						"metadata": map[string]any{
+							"vpcServiceControlsUniqueIdentifier": "rest-uuid-9",
+						},
+					},
+				},
 			},
 			target:    "child-a",
 			wantState: CoverageVPCSCBlocked,
@@ -277,14 +287,14 @@ func assertDegradedAndAuthErrors(t *testing.T) {
 		},
 		{
 			name: "REST body fallback",
-			err: &httpStatusError{
+			err: &googleapi.Error{
 				Code: http.StatusForbidden,
 				Body: `{"error":{"details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"IAM_PERMISSION_DENIED","domain":"iam.googleapis.com","metadata":{"vpcServiceControlsUniqueIdentifier":""}}]}}`,
 			},
 			target:    "child-a",
 			wantState: CoverageIAMDenied,
 		},
-		{name: "REST 401", err: &httpStatusError{Code: http.StatusUnauthorized}, wantKind: ErrorKindUnauthenticated},
+		{name: "REST 401", err: &googleapi.Error{Code: http.StatusUnauthorized}, wantKind: ErrorKindUnauthenticated},
 		{name: "gRPC Unauthenticated", err: status.Error(codes.Unauthenticated, "expired"), wantKind: ErrorKindUnauthenticated},
 		{name: "raw PermissionDenied", err: status.Error(codes.PermissionDenied, "403"), wantState: CoverageIAMDenied},
 		{name: "network timeout", err: errors.New("network timeout"), wantKind: ErrorKindOther},
@@ -318,15 +328,15 @@ func assertRateLimitAndRetry(t *testing.T) {
 	}
 	if !isRateLimitError(status.Error(codes.ResourceExhausted, "quota")) ||
 		!isRateLimitError(grpcErrorWithInfo(codes.Unavailable, "rl", "RATE_LIMIT_EXCEEDED", "googleapis.com", nil)) ||
-		!isRateLimitError(&httpStatusError{Code: http.StatusTooManyRequests}) ||
-		!isRateLimitError(&httpStatusError{Code: http.StatusForbidden, Body: `{"error":{"errors":[{"reason":"rateLimitExceeded"}]}}`}) {
+		!isRateLimitError(&googleapi.Error{Code: http.StatusTooManyRequests}) ||
+		!isRateLimitError(&googleapi.Error{Code: http.StatusForbidden, Errors: []googleapi.ErrorItem{{Reason: "rateLimitExceeded"}}}) {
 		t.Fatal("failed to detect rate limit errors")
 	}
 	attempts := 0
 	err := retryOnRateLimit(context.Background(), time.Millisecond, func() error {
 		attempts++
 		if attempts < 3 {
-			return &httpStatusError{Code: http.StatusTooManyRequests}
+			return &googleapi.Error{Code: http.StatusTooManyRequests}
 		}
 		return nil
 	})
@@ -435,7 +445,7 @@ func setupPreflightProbeClients(t *testing.T) (*Clients, *httptest.Server, *pref
 	}
 
 	httpMux := http.NewServeMux()
-	httpMux.HandleFunc("/bigquery/v2/projects/app-prod/jobs", func(w http.ResponseWriter, r *http.Request) {
+	httpMux.HandleFunc("/projects/app-prod/jobs", func(w http.ResponseWriter, r *http.Request) {
 		counters.bqCalls.Add(1)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"jobs":[]}`))
@@ -520,7 +530,7 @@ func assertCustomModelDeniedPreflight(t *testing.T, clients *Clients) {
 			if proj != "ai-sandbox" || loc != "europe-west1" || model != "gemini-4-custom" {
 				t.Errorf("unexpected ModelProbe args: %s %s %s", proj, loc, model)
 			}
-			return &httpStatusError{Code: http.StatusForbidden, Message: "model denied"}
+			return &googleapi.Error{Code: http.StatusForbidden, Message: "model denied"}
 		},
 	})
 	if err != nil {
@@ -1837,23 +1847,23 @@ func newEnricherMonitoringHandler(t *testing.T, sawResourceMethodGroup *atomic.B
 
 func newEnricherBQDataflowMux() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/bigquery/v2/projects/data-p/jobs", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/projects/data-p/jobs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		resp := map[string]any{
-			"jobs": []map[string]any{{
-				"id":                "job-elt-1",
-				"principal_subject": "serviceAccount:worker@data-p.iam.gserviceaccount.com",
-				"statistics": map[string]any{
-					"query": map[string]any{
-						"referencedTables": []map[string]any{
-							{"projectId": "data-p", "datasetId": "raw_ds", "tableId": "events"},
-							{"projectId": "data-p", "datasetId": "_temp", "tableId": "anon12345678"},
+		resp := &bigquery.JobList{
+			Jobs: []*bigquery.JobListJobs{{
+				Id:               "job-elt-1",
+				PrincipalSubject: "serviceAccount:worker@data-p.iam.gserviceaccount.com",
+				Statistics: &bigquery.JobStatistics{
+					Query: &bigquery.JobStatistics2{
+						ReferencedTables: []*bigquery.TableReference{
+							{ProjectId: "data-p", DatasetId: "raw_ds", TableId: "events"},
+							{ProjectId: "data-p", DatasetId: "_temp", TableId: "anon12345678"},
 						},
 					},
 				},
-				"configuration": map[string]any{
-					"query": map[string]any{
-						"destinationTable": map[string]any{"projectId": "data-p", "datasetId": "gold_ds", "tableId": "agg"},
+				Configuration: &bigquery.JobConfiguration{
+					Query: &bigquery.JobConfigurationQuery{
+						DestinationTable: &bigquery.TableReference{ProjectId: "data-p", DatasetId: "gold_ds", TableId: "agg"},
 					},
 				},
 			}},
@@ -1862,25 +1872,25 @@ func newEnricherBQDataflowMux() *http.ServeMux {
 	})
 	mux.HandleFunc("/v1b3/projects/data-p/locations/-/jobs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"jobs": []map[string]any{{"id": "df-1", "name": "stream-orders", "location": "us-central1"}},
+		_ = json.NewEncoder(w).Encode(&dataflow.ListJobsResponse{
+			Jobs: []*dataflow.Job{{Id: "df-1", Name: "stream-orders", Location: "us-central1"}},
 		})
 	})
 	mux.HandleFunc("/v1b3/projects/data-p/locations/us-central1/jobs/df-1", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"id":           "df-1",
-			"name":         "stream-orders",
-			"type":         "JOB_TYPE_STREAMING",
-			"currentState": "JOB_STATE_RUNNING",
-			"environment": map[string]any{
-				"serviceAccountEmail": "df-worker@data-p.iam.gserviceaccount.com",
-				"tempStoragePrefix":   "gs://landing-bkt/tmp",
+		_ = json.NewEncoder(w).Encode(&dataflow.Job{
+			Id:           "df-1",
+			Name:         "stream-orders",
+			Type:         "JOB_TYPE_STREAMING",
+			CurrentState: "JOB_STATE_RUNNING",
+			Environment: &dataflow.Environment{
+				ServiceAccountEmail: "df-worker@data-p.iam.gserviceaccount.com",
+				TempStoragePrefix:   "gs://landing-bkt/tmp",
 			},
-			"pipelineDescription": map[string]any{
-				"displayData": []map[string]any{
-					{"strValue": "projects/data-p/subscriptions/events-sub"},
-					{"strValue": "data-p.gold_ds.stream_out"},
+			PipelineDescription: &dataflow.PipelineDescription{
+				DisplayData: []*dataflow.DisplayData{
+					{StrValue: "projects/data-p/subscriptions/events-sub"},
+					{StrValue: "data-p.gold_ds.stream_out"},
 				},
 			},
 		})
@@ -2593,32 +2603,32 @@ func setupEnricherErrorTestClients(t *testing.T) (*Clients, *httptest.Server) {
 
 	var bqPage atomic.Int32
 	mux := http.NewServeMux()
-	mux.HandleFunc("/bigquery/v2/projects/p-err/jobs", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/projects/p-err/jobs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if bqPage.Add(1) == 1 {
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"nextPageToken": "page2",
-				"jobs": []map[string]any{{
-					"jobReference": map[string]any{"jobId": "copy-1"},
-					"user_email":   "svc@p-err.iam.gserviceaccount.com",
-					"configuration": map[string]any{
-						"copy": map[string]any{
-							"sourceTable":      map[string]any{"projectId": "p-err", "datasetId": "src_ds", "tableId": "t1"},
-							"sourceTables":     []map[string]any{{"projectId": "p-err", "datasetId": "src_ds", "tableId": "t2"}},
-							"destinationTable": map[string]any{"projectId": "p-err", "datasetId": "dst_ds", "tableId": "t3"},
+			_ = json.NewEncoder(w).Encode(&bigquery.JobList{
+				NextPageToken: "page2",
+				Jobs: []*bigquery.JobListJobs{{
+					JobReference: &bigquery.JobReference{JobId: "copy-1"},
+					UserEmail:    "svc@p-err.iam.gserviceaccount.com",
+					Configuration: &bigquery.JobConfiguration{
+						Copy: &bigquery.JobConfigurationTableCopy{
+							SourceTable:      &bigquery.TableReference{ProjectId: "p-err", DatasetId: "src_ds", TableId: "t1"},
+							SourceTables:     []*bigquery.TableReference{{ProjectId: "p-err", DatasetId: "src_ds", TableId: "t2"}},
+							DestinationTable: &bigquery.TableReference{ProjectId: "p-err", DatasetId: "dst_ds", TableId: "t3"},
 						},
 					},
 				}},
 			})
 			return
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"jobs": []map[string]any{{
-				"id":         "load-1",
-				"user_email": "svc@p-err.iam.gserviceaccount.com",
-				"configuration": map[string]any{
-					"load": map[string]any{
-						"destinationTable": map[string]any{"projectId": "p-err", "datasetId": "dst_ds", "tableId": "t4"},
+		_ = json.NewEncoder(w).Encode(&bigquery.JobList{
+			Jobs: []*bigquery.JobListJobs{{
+				Id:        "load-1",
+				UserEmail: "svc@p-err.iam.gserviceaccount.com",
+				Configuration: &bigquery.JobConfiguration{
+					Load: &bigquery.JobConfigurationLoad{
+						DestinationTable: &bigquery.TableReference{ProjectId: "p-err", DatasetId: "dst_ds", TableId: "t4"},
 					},
 				},
 			}},
@@ -2668,7 +2678,7 @@ func assertEnricherPaginationAndDegradedExtract(t *testing.T, clients *Clients) 
 
 func assertDegradedVertexPreflightProbes(t *testing.T, clients *Clients, httpSrv *httptest.Server) {
 	t.Helper()
-	// Exercise parseHTTPError via RunPreflight against failing Vertex CRM & model endpoints.
+	// Exercise googleapi error classification via RunPreflight against failing Vertex CRM & model endpoints.
 	rep, err := RunPreflight(context.Background(), clients, []string{"projects/p-err"}, VertexPreflightOptions{
 		Project:        "ai-err",
 		HTTPClient:     httpSrv.Client(),
@@ -3024,21 +3034,21 @@ func TestExtractInboundCrossProjectEdges(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{}`))
 	})
-	mux.HandleFunc("/bigquery/v2/projects/sub-p/jobs", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/projects/sub-p/jobs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"jobs": []map[string]any{{
-				"id": "bq-cross-1",
-				"statistics": map[string]any{
-					"query": map[string]any{
-						"referencedTables": []map[string]any{
-							{"projectId": "ext-bq", "datasetId": "raw_ext", "tableId": "t1"},
+		_ = json.NewEncoder(w).Encode(&bigquery.JobList{
+			Jobs: []*bigquery.JobListJobs{{
+				Id: "bq-cross-1",
+				Statistics: &bigquery.JobStatistics{
+					Query: &bigquery.JobStatistics2{
+						ReferencedTables: []*bigquery.TableReference{
+							{ProjectId: "ext-bq", DatasetId: "raw_ext", TableId: "t1"},
 						},
 					},
 				},
-				"configuration": map[string]any{
-					"query": map[string]any{
-						"destinationTable": map[string]any{"projectId": "sub-p", "datasetId": "gold_ds", "tableId": "out"},
+				Configuration: &bigquery.JobConfiguration{
+					Query: &bigquery.JobConfigurationQuery{
+						DestinationTable: &bigquery.TableReference{ProjectId: "sub-p", DatasetId: "gold_ds", TableId: "out"},
 					},
 				},
 			}},

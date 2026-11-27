@@ -12,6 +12,8 @@ import (
 	"cloud.google.com/go/asset/apiv1/assetpb"
 	"cloud.google.com/go/iam/apiv1/iampb"
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
+	"google.golang.org/api/bigquery/v2"
+	"google.golang.org/api/dataflow/v1b3"
 	"google.golang.org/genproto/googleapis/api/monitoredres"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -120,21 +122,21 @@ func TestSharedServiceAccountAmbiguityAndEnricherDefaultSARetention(t *testing.T
 	}
 	bqHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if !strings.HasPrefix(r.URL.Path, "/bigquery/v2/") {
+		if !strings.HasPrefix(r.URL.Path, "/projects/") {
 			_, _ = w.Write([]byte(`{}`))
 			return
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"jobs": []map[string]any{{
-				"user_email": sharedEmail,
-				"configuration": map[string]any{
-					"query": map[string]any{
-						"destinationTable": map[string]any{"projectId": "p1", "datasetId": "analytics", "tableId": "t"},
+		_ = json.NewEncoder(w).Encode(&bigquery.JobList{
+			Jobs: []*bigquery.JobListJobs{{
+				UserEmail: sharedEmail,
+				Configuration: &bigquery.JobConfiguration{
+					Query: &bigquery.JobConfigurationQuery{
+						DestinationTable: &bigquery.TableReference{ProjectId: "p1", DatasetId: "analytics", TableId: "t"},
 					},
 				},
-				"statistics": map[string]any{
-					"query": map[string]any{
-						"referencedTables": []map[string]any{{"projectId": "p1", "datasetId": "analytics", "tableId": "src"}},
+				Statistics: &bigquery.JobStatistics{
+					Query: &bigquery.JobStatistics2{
+						ReferencedTables: []*bigquery.TableReference{{ProjectId: "p1", DatasetId: "analytics", TableId: "src"}},
 					},
 				},
 			}},
@@ -309,7 +311,7 @@ func TestExtractCAIScopeAndSingleProjectEnricherServiceDisabled(t *testing.T) {
 	httpMux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`{}`))
 	})
-	httpMux.HandleFunc("/bigquery/v2/projects/solo-p/jobs", func(w http.ResponseWriter, _ *http.Request) {
+	httpMux.HandleFunc("/projects/solo-p/jobs", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		_, _ = w.Write([]byte(`{"error":{"message":"BQ disabled","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"SERVICE_DISABLED","domain":"googleapis.com","metadata":{"consumer":"projects/solo-p","service":"bigquery.googleapis.com"}}]}}`))
 	})
@@ -367,7 +369,7 @@ func TestPreflightOrgScopeSamplesProjectAssetType(t *testing.T) {
 		}, nil
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/bigquery/v2/projects/org-child/jobs", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/projects/org-child/jobs", func(w http.ResponseWriter, _ *http.Request) {
 		bqProbed.Store(true)
 		_, _ = w.Write([]byte(`{"jobs":[]}`))
 	})
@@ -400,7 +402,7 @@ func TestPreflightOrgScopeFallbackSampling(t *testing.T) {
 		return &assetpb.ListAssetsResponse{}, nil
 	}
 	fbMux := http.NewServeMux()
-	fbMux.HandleFunc("/bigquery/v2/projects/fb-proj/jobs", func(w http.ResponseWriter, _ *http.Request) {
+	fbMux.HandleFunc("/projects/fb-proj/jobs", func(w http.ResponseWriter, _ *http.Request) {
 		fallbackBQ.Store(true)
 		_, _ = w.Write([]byte(`{"jobs":[]}`))
 	})
@@ -448,30 +450,36 @@ func TestBigQueryStreamingDedupAndDataflowFields(t *testing.T) {
 
 	var sawDFFields atomic.Bool
 	mux := http.NewServeMux()
-	mux.HandleFunc("/bigquery/v2/projects/p-df/jobs", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/projects/p-df/jobs", func(w http.ResponseWriter, _ *http.Request) {
 		// Emit duplicate ETL jobs plus a read-only query to verify streaming dedup.
-		job := map[string]any{
-			"id":         "dup-job",
-			"user_email": "etl@p-df.iam.gserviceaccount.com",
-			"statistics": map[string]any{"query": map[string]any{
-				"referencedTables": []map[string]any{{"projectId": "p-df", "datasetId": "raw", "tableId": "t1"}},
-			}},
-			"configuration": map[string]any{"query": map[string]any{
-				"destinationTable": map[string]any{"projectId": "p-df", "datasetId": "gold", "tableId": "t2"},
-			}},
+		job := &bigquery.JobListJobs{
+			Id:        "dup-job",
+			UserEmail: "etl@p-df.iam.gserviceaccount.com",
+			Statistics: &bigquery.JobStatistics{
+				Query: &bigquery.JobStatistics2{
+					ReferencedTables: []*bigquery.TableReference{{ProjectId: "p-df", DatasetId: "raw", TableId: "t1"}},
+				},
+			},
+			Configuration: &bigquery.JobConfiguration{
+				Query: &bigquery.JobConfigurationQuery{
+					DestinationTable: &bigquery.TableReference{ProjectId: "p-df", DatasetId: "gold", TableId: "t2"},
+				},
+			},
 		}
-		readOnly := map[string]any{
-			"id":         "ro-job",
-			"user_email": "etl@p-df.iam.gserviceaccount.com",
-			"statistics": map[string]any{"query": map[string]any{
-				"referencedTables": []map[string]any{{"projectId": "p-df", "datasetId": "staging", "tableId": "t3"}},
-			}},
+		readOnly := &bigquery.JobListJobs{
+			Id:        "ro-job",
+			UserEmail: "etl@p-df.iam.gserviceaccount.com",
+			Statistics: &bigquery.JobStatistics{
+				Query: &bigquery.JobStatistics2{
+					ReferencedTables: []*bigquery.TableReference{{ProjectId: "p-df", DatasetId: "staging", TableId: "t3"}},
+				},
+			},
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"jobs": []map[string]any{job, job, readOnly}})
+		_ = json.NewEncoder(w).Encode(&bigquery.JobList{Jobs: []*bigquery.JobListJobs{job, job, readOnly}})
 	})
 	mux.HandleFunc("/v1b3/projects/p-df/locations/-/jobs", func(w http.ResponseWriter, _ *http.Request) {
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"jobs": []map[string]any{{"id": "job-1", "name": "etl-pipe", "location": "us-central1"}},
+		_ = json.NewEncoder(w).Encode(&dataflow.ListJobsResponse{
+			Jobs: []*dataflow.Job{{Id: "job-1", Name: "etl-pipe", Location: "us-central1"}},
 		})
 	})
 	mux.HandleFunc("/v1b3/projects/p-df/locations/us-central1/jobs/job-1", func(w http.ResponseWriter, r *http.Request) {
@@ -479,22 +487,22 @@ func TestBigQueryStreamingDedupAndDataflowFields(t *testing.T) {
 		if strings.Contains(fields, "workerPools(network,subnetwork)") && strings.Contains(fields, "dataset") {
 			sawDFFields.Store(true)
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"id":           "job-1",
-			"name":         "etl-pipe",
-			"type":         "JOB_TYPE_BATCH",
-			"currentState": "JOB_STATE_RUNNING",
-			"environment": map[string]any{
-				"serviceAccountEmail": "etl@p-df.iam.gserviceaccount.com",
-				"dataset":             "p-df.staging",
-				"workerPools": []map[string]any{{
-					"network":    "data-vpc",
-					"subnetwork": "projects/p-df/regions/us-central1/subnetworks/data-sub",
+		_ = json.NewEncoder(w).Encode(&dataflow.Job{
+			Id:           "job-1",
+			Name:         "etl-pipe",
+			Type:         "JOB_TYPE_BATCH",
+			CurrentState: "JOB_STATE_RUNNING",
+			Environment: &dataflow.Environment{
+				ServiceAccountEmail: "etl@p-df.iam.gserviceaccount.com",
+				Dataset:             "p-df.staging",
+				WorkerPools: []*dataflow.WorkerPool{{
+					Network:    "data-vpc",
+					Subnetwork: "projects/p-df/regions/us-central1/subnetworks/data-sub",
 				}},
 			},
-			"pipelineDescription": map[string]any{
-				"originalPipelineTransform": []map[string]any{{
-					"displayData": []map[string]any{{"url": "gs://p-df-out/export"}},
+			PipelineDescription: &dataflow.PipelineDescription{
+				OriginalPipelineTransform: []*dataflow.TransformSummary{{
+					DisplayData: []*dataflow.DisplayData{{Url: "gs://p-df-out/export"}},
 				}},
 			},
 		})

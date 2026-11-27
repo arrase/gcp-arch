@@ -11,6 +11,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"google.golang.org/genai"
+
 	"github.com/arrase/gcp-arch/internal/icons"
 	"github.com/arrase/gcp-arch/internal/manifest"
 )
@@ -82,46 +84,46 @@ var semanticTagEnum = []string{
 	"ingress", "traffic", "data", "async", "retry", "dlq", "cicd", "peering", "hybrid",
 }
 
-func annotationSchema() *Schema {
-	viewSchema := &Schema{
-		Type: "OBJECT",
-		Properties: map[string]*Schema{
-			"view_slot":     {Type: "STRING", Enum: []string{"view_1", "view_2", "view_3"}},
-			"title":         {Type: "STRING", Description: "Short cohesive subsystem title"},
-			"subtitle":      {Type: "STRING", Description: "Concise scope summary (<=60 chars)"},
-			"focus_summary": {Type: "STRING", Description: "One-line architectural focus"},
-			"node_ids":      {Type: "ARRAY", Items: &Schema{Type: "STRING"}},
+func annotationSchema() *genai.Schema {
+	viewSchema := &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"view_slot":     {Type: genai.TypeString, Enum: []string{"view_1", "view_2", "view_3"}},
+			"title":         {Type: genai.TypeString, Description: "Short cohesive subsystem title"},
+			"subtitle":      {Type: genai.TypeString, Description: "Concise scope summary (<=60 chars)"},
+			"focus_summary": {Type: genai.TypeString, Description: "One-line architectural focus"},
+			"node_ids":      {Type: genai.TypeArray, Items: &genai.Schema{Type: genai.TypeString}},
 		},
 		Required: []string{"view_slot", "title", "subtitle", "focus_summary", "node_ids"},
 	}
 
-	nodeEnrichSchema := &Schema{
-		Type: "OBJECT",
-		Properties: map[string]*Schema{
-			"node_id":  {Type: "STRING"},
-			"subtitle": {Type: "STRING", Description: "Concise runtime/role label (<=44 chars)"},
+	nodeEnrichSchema := &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"node_id":  {Type: genai.TypeString},
+			"subtitle": {Type: genai.TypeString, Description: "Concise runtime/role label (<=44 chars)"},
 		},
 		Required: []string{"node_id", "subtitle"},
 	}
 
-	edgeEnrichSchema := &Schema{
-		Type: "OBJECT",
-		Properties: map[string]*Schema{
-			"edge_id":      {Type: "STRING"},
-			"verb":         {Type: "STRING", Description: "Concise action verb <= 14 chars"},
-			"flow_kind":    {Type: "STRING", Enum: flowKindEnum},
-			"semantic_tag": {Type: "STRING", Enum: semanticTagEnum},
+	edgeEnrichSchema := &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"edge_id":      {Type: genai.TypeString},
+			"verb":         {Type: genai.TypeString, Description: "Concise action verb <= 14 chars"},
+			"flow_kind":    {Type: genai.TypeString, Enum: flowKindEnum},
+			"semantic_tag": {Type: genai.TypeString, Enum: semanticTagEnum},
 		},
 		Required: []string{"edge_id", "verb", "flow_kind", "semantic_tag"},
 	}
 
-	return &Schema{
-		Type: "OBJECT",
-		Properties: map[string]*Schema{
-			"focus_summary":    {Type: "STRING", Description: "One-line end-to-end architecture summary"},
-			"detail_views":     {Type: "ARRAY", Items: viewSchema},
-			"node_enrichments": {Type: "ARRAY", Items: nodeEnrichSchema},
-			"edge_enrichments": {Type: "ARRAY", Items: edgeEnrichSchema},
+	return &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"focus_summary":    {Type: genai.TypeString, Description: "One-line end-to-end architecture summary"},
+			"detail_views":     {Type: genai.TypeArray, Items: viewSchema},
+			"node_enrichments": {Type: genai.TypeArray, Items: nodeEnrichSchema},
+			"edge_enrichments": {Type: genai.TypeArray, Items: edgeEnrichSchema},
 		},
 		Required: []string{"focus_summary", "detail_views", "node_enrichments", "edge_enrichments"},
 	}

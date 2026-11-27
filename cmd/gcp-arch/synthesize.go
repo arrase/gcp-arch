@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"google.golang.org/genai"
 
 	"github.com/arrase/gcp-arch/internal/extract"
 	"github.com/arrase/gcp-arch/internal/icons"
@@ -29,7 +30,7 @@ type lazyModelClient struct {
 	err    error
 }
 
-func (l *lazyModelClient) GenerateJSON(ctx context.Context, systemPrompt, userPrompt string, schema *synth.Schema) ([]byte, error) {
+func (l *lazyModelClient) GenerateJSON(ctx context.Context, systemPrompt, userPrompt string, schema *genai.Schema) ([]byte, error) {
 	l.once.Do(func() {
 		l.client, l.err = l.initFn(ctx)
 	})
@@ -39,7 +40,7 @@ func (l *lazyModelClient) GenerateJSON(ctx context.Context, systemPrompt, userPr
 	return l.client.GenerateJSON(ctx, systemPrompt, userPrompt, schema)
 }
 
-func (l *lazyModelClient) GenerateJSONWithUsage(ctx context.Context, systemPrompt, userPrompt string, schema *synth.Schema) ([]byte, synth.UsageStats, error) {
+func (l *lazyModelClient) GenerateJSONWithUsage(ctx context.Context, systemPrompt, userPrompt string, schema *genai.Schema) ([]byte, synth.UsageStats, error) {
 	l.once.Do(func() {
 		l.client, l.err = l.initFn(ctx)
 	})

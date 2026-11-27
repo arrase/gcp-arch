@@ -16,6 +16,8 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/genai"
+
 	"github.com/arrase/gcp-arch/internal/extract"
 	"github.com/arrase/gcp-arch/internal/icons"
 	"github.com/arrase/gcp-arch/internal/manifest"
@@ -94,7 +96,7 @@ func pdfStreamHasText(streamBody []byte) bool {
 
 func buildAnnotationStubClient(calls *atomic.Int32) synth.ModelClient {
 	return &stubModelClient{
-		handler: func(int, string, string, *synth.Schema) ([]byte, error) {
+		handler: func(int, string, string, *genai.Schema) ([]byte, error) {
 			if calls != nil {
 				calls.Add(1)
 			}
