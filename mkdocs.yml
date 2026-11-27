@@ -1,5 +1,5 @@
 site_name: GCP Arch
-site_description: Semantic multi-view Google Cloud Platform architecture pipeline — read-only discovery, Gemini 4 synthesis on Vertex AI, and offline vector PDF, 3x PNG, and HTML dossiers.
+site_description: Semantic multi-view Google Cloud Platform architecture pipeline — read-only discovery, Gemini 4 synthesis on Vertex AI, and offline vector PDF, adaptive up to 2.0x Retina PNG, and HTML dossiers.
 site_author: Arrase
 site_url: https://arrase.github.io/gcp-arch/
 docs_dir: gh-pages
