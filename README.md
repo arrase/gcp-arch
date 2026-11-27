@@ -7,8 +7,18 @@
 [![Docs](https://img.shields.io/badge/Docs-arrase.github.io%2Fgcp--arch-4f46e5?logo=materialformkdocs&logoColor=white)](https://arrase.github.io/gcp-arch/)
 [![Release](https://img.shields.io/github/v/release/arrase/gcp-arch?logo=github&color=0ea5e9)](https://github.com/arrase/gcp-arch/releases)
 [![Go](https://img.shields.io/badge/Go-1.26%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=alert_status)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=coverage)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=bugs)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=vulnerabilities)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=code_smells)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=sqale_index)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=duplicated_lines_density)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=security_rating)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=reliability_rating)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=sqale_rating)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=ncloc)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
 
 [Documentation](https://arrase.github.io/gcp-arch/) · [Quick Start](#quick-start) · [Example Gallery](#example-gallery) · [Releases](https://github.com/arrase/gcp-arch/releases)
 
@@ -147,23 +157,3 @@ Full technical guides, flag references, IAM matrices, schema specifications, and
 | **[Examples & Visual Gallery](https://arrase.github.io/gcp-arch/examples/)** | Walkthrough of all 6 reference bundles and 20 high-DPI diagrams |
 | **[System Architecture](https://arrase.github.io/gcp-arch/architecture/)** & **[Developer Guide](https://arrase.github.io/gcp-arch/developer_guide/)** | Package map, design specification, local testing, linting, and release workflow |
 
----
-
-<details>
-<summary>Code Quality & Security Metrics (SonarCloud)</summary>
-
-<br>
-
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=alert_status)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=coverage)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=bugs)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=vulnerabilities)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
-[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=code_smells)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
-[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=sqale_index)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
-[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=duplicated_lines_density)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=security_rating)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=reliability_rating)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=sqale_rating)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
-[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=arrase_gcp-arch&metric=ncloc)](https://sonarcloud.io/summary/overall?id=arrase_gcp-arch)
-
-</details>
