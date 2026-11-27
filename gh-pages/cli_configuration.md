@@ -234,10 +234,10 @@ gcp-arch synthesize <facts.json> [flags]
 
 #### Stdout, Lazy Vertex Initialization & Day-2 Fast Path
 
-* **Lazy Vertex AI Client (`lazyModelClient`):** Vertex AI ADC discovery and client creation are deferred behind a `sync.Once` wrapper until `GenerateJSON` / `GenerateJSONWithUsage` is actually invoked ([`cmd/gcp-arch/synthesize.go#L22-L55`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go#L22-L55)). Consequently:
+* **Lazy Vertex AI Client (`lazyModelClient`):** Vertex AI ADC discovery and client creation are deferred behind a `sync.Once` wrapper until `GenerateJSON` / `GenerateJSONWithUsage` is actually invoked ([`cmd/gcp-arch/synthesize.go#L25-L56`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go#L25-L56)). Consequently:
   * Scale-limit overflow (`> 500` active resources -> `ScaleLimitError`, exit `2`) fails immediately before touching Vertex AI credentials.
   * Day-2 `--reconcile` with zero resource or edge deltas (`tryZeroDeltaFastPath` in [`internal/synth/reconcile.go#L75-L106`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/reconcile.go#L75-L106)) completes in `< 5 ms` with **0 LLM calls** and requires no `--vertex-project` or Vertex ADC.
-* **In-Place `Unchanged` Fast Path vs. 0-LLM Provenance Refresh:** On the zero-delta fast path, `Reconcile` runs `refreshEdgeProvenance` (downgrading any `VERIFIED` edge whose walk vanished to `INFERRED` with a rationale footnote, or restoring a recovered edge back to `VERIFIED`; [`internal/synth/reconcile.go#L180-L215`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/reconcile.go#L180-L215)). When reconciling in place (`filepath.Clean(targetPath) == filepath.Clean(reconcilePath)`), `gcp-arch` compares canonical marshaled YAML bytes (`manifestsEqualInPlace`, [`cmd/gcp-arch/synthesize.go#L236-L249`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go#L236-L249)):
+* **In-Place `Unchanged` Fast Path vs. 0-LLM Provenance Refresh:** On the zero-delta fast path, `Reconcile` runs `refreshEdgeProvenance` (downgrading any `VERIFIED` edge whose walk vanished to `INFERRED` with a rationale footnote, or restoring a recovered edge back to `VERIFIED`; [`internal/synth/reconcile.go#L176-L211`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/reconcile.go#L176-L211)). When reconciling in place (`filepath.Clean(targetPath) == filepath.Clean(reconcilePath)`), `gcp-arch` compares canonical marshaled YAML bytes (`manifestsEqualInPlace`, [`cmd/gcp-arch/synthesize.go#L237-L250`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go#L237-L250)):
   * If canonical bytes are identical, the existing file is left untouched on disk (preserving mtime) and `stdout` prints:
     ```text
     Unchanged architecture.yaml (0 deltas)
@@ -251,7 +251,7 @@ gcp-arch synthesize <facts.json> [flags]
 
 ### 4. `validate` — Offline Manifest & Provenance Validation
 
-Validates an `architecture.yaml` manifest completely offline with zero network calls ([`cmd/gcp-arch/validate.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go), [`internal/manifest/validate.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go)). Without `--facts`, enforces strict YAML decoding (`KnownFields(true)`, single document), schema version `v1`, `1..16` detail views (`TOO_MANY_DETAIL_VIEWS`), disjoint view/component IDs (`VIEW_COMPONENT_ID_COLLISION`), archetype column bounds, placement caps, container nesting depth `<= 2`, embedded icon keys, single-source/single-target `via_bus_id`, datastore homogeneity, non-exclusion of stateful datastores (`EXCLUDED_DATASTORE`), unique `1:1` URI accounting (`DUPLICATE_ACCOUNTED_URI`), `rejected_edges` / `acknowledged_edges` component checks (`UNKNOWN_PAIR_COMPONENT`), and cross-view edge verb/provenance consistency (`INCONSISTENT_CROSS_VIEW_EDGE`). With `--facts <facts.json>`, additionally enforces 100% `FactsFile` resource accounting, `parent_uri` container ancestry (`PLACEMENT_CONTAINER_MISMATCH`), and strict directed-walk `FactEdge` provenance via [`EvidenceIndex.WalkIssue`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/evidence.go#L76-L104) on every detail-view `VERIFIED` edge (rejecting `heuristic: true` edges, blocking walks through container-backed or third-component URIs, and requiring `flow_kind: ADMIN` on permission-only walks). See [Manifest Schema & Validation](manifest_schema.md) for the complete rule catalog.
+Validates an `architecture.yaml` manifest completely offline with zero network calls ([`cmd/gcp-arch/validate.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go), [`internal/manifest/validate.go`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go)). Without `--facts`, enforces strict YAML decoding (`KnownFields(true)`, single document), schema version `v1`, up to `16` detail views (`TOO_MANY_DETAIL_VIEWS`), disjoint view/component IDs (`VIEW_COMPONENT_ID_COLLISION`), archetype column bounds (`0..N` for `layered_flow`, `0..4` for `landscape_matrix`/`stage_pipeline`, `0..2` for `hub_spoke`), at least `1` placement per view (`VIEW_PLACEMENT_COUNT`, no upper cap), acyclic unlimited-depth container nesting, embedded icon keys, single-source/single-target `via_bus_id`, datastore homogeneity, non-exclusion of stateful datastores (`EXCLUDED_DATASTORE`), unique `1:1` URI accounting across `components`, `containers`, `transversal_items`, and `excluded_resources` (`DUPLICATE_ACCOUNTED_URI`), `rejected_edges` / `acknowledged_edges` component checks (`UNKNOWN_PAIR_COMPONENT`), and cross-view edge verb/provenance consistency (`INCONSISTENT_CROSS_VIEW_EDGE`). With `--facts <facts.json>`, runs [`ValidateWithFactsAndConservation`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L128-L140) and [`VerifyConservation`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/conservation.go#L188-L240) to enforce 100% `FactsFile` resource accounting, `parent_uri` container ancestry (`PLACEMENT_CONTAINER_MISMATCH`), strict directed-walk `FactEdge` provenance via [`EvidenceIndex.WalkIssue`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/evidence.go#L83-L111) on every detail-view and `layered_flow` `view_0_system_index` `VERIFIED` edge (rejecting `heuristic: true` edges, blocking walks through container-backed or third-component URIs, and requiring `flow_kind: ADMIN` on permission-only walks), and strict conservation (`CONSERVATION_*` errors -> exit `2`) for `layered_flow` manifests ([`cmd/gcp-arch/validate.go#L61-L71`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L61-L71)). See [Manifest Schema & Validation](manifest_schema.md) for the complete rule catalog.
 
 ```bash
 gcp-arch validate <architecture.yaml> [flags]
@@ -263,34 +263,47 @@ gcp-arch validate <architecture.yaml> [flags]
 
 | Flag | Short / Alias | Type | Default | `config.yaml` Key | Validation & Behavior |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `--facts` | — | `string` | `""` | — | Optional `v3` `facts.json` file for 100% resource coverage, container ancestry, and directed-walk edge provenance verification. |
+| `--facts` | — | `string` | `""` | — | Optional `v3` `facts.json` file for 100% resource coverage, container ancestry, directed-walk edge provenance, and deterministic conservation verification. |
 | `--json` | — | `bool` | `false` | — | Emits `ValidationReport` JSON to `stdout`. |
 
 #### Stdout vs. Stderr Behavior
 
 | Outcome | Text Mode (`stdout` / `stderr`) | `--json` Mode (`stdout` / `stderr`) | Exit Code |
 | :--- | :--- | :--- | :---: |
-| **Valid manifest** | `stdout`: `Valid: <path> (<V> views, <C> components)` — or `Valid: <path> (<V> views, <C> components, <E> excluded)` when `len(excluded_resources) > 0` ([`cmd/gcp-arch/validate.go#L78-L83`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L78-L83)) | `stdout`: `{"valid": true}` (includes `"excluded_count": <E>` when `len(excluded_resources) > 0`, [`cmd/gcp-arch/validate.go#L71-L76`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L71-L76)) | `0` |
-| **Structural or `--facts` error** (`*manifest.ValidationError`) | `stderr`: `Error: manifest validation failed (N issue(s)): ...` | `stdout`: full `ValidationReport` JSON; `stderr`: `Error: manifest validation failed (...)` | `2` |
+| **Valid manifest** | `stdout`: `Valid: <path> (<V> views, <C> components)` — appending `, <E> excluded` when `len(excluded_resources) > 0` and `, conservation=<STATUS> primary=<R>/<F>, view0=<V0>` when `--facts` is provided ([`cmd/gcp-arch/validate.go#L95-L106`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L95-L106)) | `stdout`: `{"valid": true}` (includes `"excluded_count": <E>` when `len(excluded_resources) > 0` and `"conservation": {...}` when `--facts` is provided, [`cmd/gcp-arch/validate.go#L84-L93`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L84-L93)) | `0` |
+| **Structural, conservation, or `--facts` error** (`*manifest.ValidationError`) | `stderr`: `Error: manifest validation failed (N issue(s)): ...` | `stdout`: full `ValidationReport` JSON (including `"conservation"` when `--facts` was provided, [`cmd/gcp-arch/validate.go#L72-L82`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L72-L82)); `stderr`: `Error: manifest validation failed (...)` | `2` |
 | **YAML syntax, unknown field, or trailing document** | `stderr`: `Error: decode manifest ...` | `stdout`: `ValidationReport` with `code: "YAML_DECODE_ERROR"`; `stderr`: `Error: decode manifest ...` | `2` |
 | **Missing/unreadable file** (`*os.PathError`) | `stderr`: `Error: read manifest ...` | `stderr` only (no JSON written to `stdout`) | `1` |
 
 #### `ValidationReport` JSON Schema (`validate --json`)
 
-Defined in [`internal/manifest/types.go#L210-L222`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L210-L222) (`ValidationReport`, `ValidationIssue`) and [`cmd/gcp-arch/validate.go#L71-L102`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L71-L102) (`YAML_DECODE_ERROR`):
+Defined in [`internal/manifest/types.go#L280-L293`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L280-L293) (`ValidationReport`, `ValidationIssue`), [`internal/manifest/conservation.go#L56-L68`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/conservation.go#L56-L68) (`ConservationReport`), and [`cmd/gcp-arch/validate.go#L72-L126`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L72-L126) (`YAML_DECODE_ERROR`):
 
-=== "Valid Manifest (No Exclusions)"
+=== "Valid Manifest (Offline)"
     ```json
     {
       "valid": true
     }
     ```
 
-=== "Valid Manifest (With `excluded_resources`)"
+=== "Valid Manifest (With `--facts` & Conservation)"
     ```json
     {
       "valid": true,
-      "excluded_count": 2
+      "excluded_count": 1,
+      "conservation": {
+        "status": "PASS",
+        "facts_primary_count": 39,
+        "represented_primary_count": 39,
+        "missing_primary_uris": [],
+        "hallucinated_primary_uris": [],
+        "facts_functional_edge_count": 42,
+        "missing_edge_ids": [],
+        "unrepresented_transversal_uris": [],
+        "missing_transversal_edge_ids": [],
+        "view0_coverage": 1,
+        "view0_missing_node_ids": []
+      }
     }
     ```
 
@@ -330,12 +343,13 @@ Defined in [`internal/manifest/types.go#L210-L222`](https://github.com/arrase/gc
 
 | Field | Type | Presence | Description |
 | :--- | :--- | :--- | :--- |
-| `valid` | `bool` | Always | `true` when zero structural and provenance issues exist. |
-| `excluded_count` | `int` | `omitempty` | Number of entries in `excluded_resources`; emitted on valid manifests when `len(m.ExcludedResources) > 0` ([`internal/manifest/types.go#L212`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L212), [`cmd/gcp-arch/validate.go#L72`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L72)). |
+| `valid` | `bool` | Always | `true` when zero structural, provenance, and (for `layered_flow` with `--facts`) conservation issues exist. |
+| `excluded_count` | `int` | `omitempty` | Number of entries in `excluded_resources`; emitted on valid manifests when `len(m.ExcludedResources) > 0` ([`internal/manifest/types.go#L282`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L282), [`cmd/gcp-arch/validate.go#L87`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L87)). |
+| `conservation` | `*ConservationReport` | `omitempty` | Deterministic conservation summary populated whenever `--facts` is supplied ([`internal/manifest/types.go#L283`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/types.go#L283), [`internal/manifest/conservation.go#L56-L68`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/conservation.go#L56-L68), [`cmd/gcp-arch/validate.go#L76`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L76), [`#L88`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/validate.go#L88)). Contains `status` (`"PASS"`/`"FAIL"`), `facts_primary_count`, `represented_primary_count`, `missing_primary_uris`, `hallucinated_primary_uris`, `facts_functional_edge_count`, `missing_edge_ids`, `unrepresented_transversal_uris`, `missing_transversal_edge_ids`, `view0_coverage`, and `view0_missing_node_ids`. |
 | `errors` | `[]ValidationIssue` | `omitempty` | Non-empty slice of validation issues when `valid` is `false`. |
-| `errors[].code` | `string` | Always | Machine-readable validation error code (e.g., `INVALID_ICON_KEY`, `UNACCOUNTED_FACT_RESOURCE`, `INVALID_EDGE_PROVENANCE`, or `YAML_DECODE_ERROR`). |
+| `errors[].code` | `string` | Always | Machine-readable validation error code (e.g., `INVALID_ICON_KEY`, `UNACCOUNTED_FACT_RESOURCE`, `INVALID_EDGE_PROVENANCE`, `CONSERVATION_MISSING_PRIMARY`, or `YAML_DECODE_ERROR`). |
 | `errors[].view_id` | `string` | `omitempty` | View ID where a view-scoped issue occurred. |
-| `errors[].subject` | `string` | `omitempty` | Component ID, container ID, edge `from -> to` ([`internal/manifest/validate.go#L268`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L268), [`#L762`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L762)), resource URI, or manifest file path (for `YAML_DECODE_ERROR`). |
+| `errors[].subject` | `string` | `omitempty` | Component ID, container ID, edge `from -> to` ([`internal/manifest/validate.go#L300`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L300), [`#L753`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L753)), resource URI, edge ID, or manifest file path (for `YAML_DECODE_ERROR`). |
 | `errors[].message` | `string` | Always | Human-readable diagnostic explanation. |
 
 ---

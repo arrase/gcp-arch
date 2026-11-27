@@ -14,11 +14,11 @@
 
 `gcp-arch` is a standalone static Go binary (`CGO_ENABLED=0`) that generates page-fitted Google Cloud Platform (GCP) architecture deliverables — vector `.pdf` reports (1:1 per-view pagination), high-DPI Retina `.png` images (adaptive up to `2.0x`) for Google Docs, and self-contained offline `.html` dossiers — from a Git-tracked `architecture.yaml` manifest.
 
-It runs as a strictly linear three-stage pipeline across five CLI subcommands (`preflight`, `extract`, `synthesize`, `validate`, `render`); see the architecture specifications in [`docs/designs/diagram-redesign-architecture.md`](docs/designs/diagram-redesign-architecture.md) and [`docs/designs/semantic-multi-view-pipeline.md`](docs/designs/semantic-multi-view-pipeline.md):
+It runs as a strictly linear three-stage pipeline across five CLI subcommands (`preflight`, `extract`, `synthesize`, `validate`, `render`); see the unified architecture specification in [`docs/designs/semantic-multi-view-pipeline.md`](docs/designs/semantic-multi-view-pipeline.md):
 
 1. **Stage 1 (`extract` → `facts.json`, [`internal/extract/`](internal/extract/)):** Collects rate-limited, read-only multi-project metadata from Cloud Asset Inventory (CAI), IAM policies, GKE (`Ingress`, `Service` NEG/L4 annotations, workloads, Workload Identity), in-stream Cloud Build triggers and top-`N` succeeded builds, Cloud Monitoring runtime traffic (including Vertex AI `PublisherModel` metrics `model_invocation_count` and `consumed_token_throughput` when `aiplatform.googleapis.com` is enabled, synthesizing `aiplatform.googleapis.com/PublisherModel` resources and `MONITORING_TRAFFIC` edges), active Dataflow jobs, and BigQuery SQL lineage into a credential-scrubbed `v3` `facts.json` (`0600`, gitignored).
 2. **Stage 2 (`synthesize` → `architecture.yaml`, [`internal/synth/`](internal/synth/), [`internal/manifest/`](internal/manifest/)):** Builds a deterministic GCP containment skeleton in Go (`<= 500` active resources, with 1:1 plumbing folds, homogeneous cohorts, transversal separation, topological ranking, and barycenter ordering), enriches it via a single bounded Vertex AI Gemini 4 call (`google.golang.org/genai` with `cloud.google.com/go/auth`, billed to a separate `--vertex-project`) into `View 0` (`view_0_system_index`) plus stage-partitioned detail views (`layered_flow`), and verifies 100% resource/edge conservation and directed-walk `FactEdge` provenance.
-3. **Stage 3 (`render` → `.pdf`, Retina `.png`, `.html`, [`internal/render/`](internal/render/), [`internal/icons/`](internal/icons/)):** Renders `architecture.yaml` completely offline (zero network calls, zero `facts.json` dependency) using embedded `Inter` and `JetBrains Mono` `.woff2` fonts, inline SVG `<symbol>` service icons, nested Flexbox containers (`layered_flow`) and CSS Grid archetypes, an in-page DOM-measured Hanan-grid A* orthogonal router with zero-collision checks, streaming scanline PNG verification (`< 1 MB` Go RAM), and a single isolated local headless Chrome/Chromium session via `chromedp`.
+3. **Stage 3 (`render` → `.pdf`, Retina `.png`, `.html`, [`internal/render/`](internal/render/), [`internal/icons/`](internal/icons/)):** Renders `architecture.yaml` completely offline (zero network calls, zero `facts.json` dependency) using embedded `Inter` and `JetBrains Mono` `.woff2` fonts, 85 inline SVG `<symbol>` service icons, unlimited-depth nested Flexbox containers with a responsive transversal governance panel, an in-page DOM-measured Hanan-grid A* orthogonal router with zero-collision checks, streaming scanline PNG verification (`< 1 MB` Go RAM), and a single isolated local headless Chrome/Chromium session via `chromedp`.
 
 ---
 
@@ -176,8 +176,8 @@ Flags:
 
 Validates `architecture.yaml` strictly offline with zero network calls ([`cmd/gcp-arch/validate.go`](cmd/gcp-arch/validate.go)):
 
-- **Without `--facts` (Git PR CI):** Enforces strict `yaml.v3` `KnownFields(true)` decoding, `schema_version: v1`, valid icon keys, 1:1 unique URI accounting across components/containers/`excluded_resources`, stateful datastore homogeneity (and forbids excluding stateful datastores), every component placed in `>= 1` detail view, `View 0` rules (`view_0_system_index` iff `2..16` detail views, disjoint view and component IDs), `1..12` placements per detail view (`1..16` on `View 0`), archetype column bounds (`0..4` for `landscape_matrix`/`stage_pipeline`, `0..2` for `hub_spoke`), structural container nesting depth `<= 2`, `len(verb) <= 16`, cross-view `(from, to, flow_kind)` verb/provenance consistency, single-source/single-target `via_bus_id`, and `rejected_edges` / `acknowledged_edges` integrity.
-- **With `--facts <facts.json>` (Extraction/Artifact CI):** Additionally verifies 100% `FactsFile` resource accounting, checks that placements inside resource-backed containers (`VPC`, `GKE_CLUSTER`) match `FactResource.ParentURI` chains, and enforces that every detail-view `VERIFIED` edge's `evidence_edge_ids` form a connected non-heuristic directed walk in `facts.Edges` from `from.backed_by` to `to.backed_by` without shortcutting other components or containers (requiring `flow_kind: ADMIN` when backed solely by IAM/Workload Identity permissions).
+- **Without `--facts` (Git PR CI):** Enforces strict `yaml.v3` `KnownFields(true)` decoding, `schema_version: v1`, valid icon keys (`85` icons), 1:1 unique URI accounting across `components[].backed_by`, `containers[].backed_by`, `transversal_items[].backed_by`, and `excluded_resources`, stateful datastore homogeneity (and forbids excluding stateful datastores), every component placed in `>= 1` detail view (or in `view_0_system_index` on single-view `layered_flow` manifests), `View 0` rules (`view_0_system_index` required when `2..16` detail views exist, forbidden only when `1` detail view exists, valid standalone when `0` detail views exist; disjoint view and component IDs), `>= 1` placements per view, archetype column bounds (`>= 0` for `layered_flow`, `0..4` for `landscape_matrix`/`stage_pipeline`, `0..2` for `hub_spoke`), cycle-free unlimited container nesting, `len(verb) <= 16`, cross-view `(from, to, flow_kind)` verb/provenance consistency, single-source/single-target `via_bus_id`, and `rejected_edges` / `acknowledged_edges` integrity.
+- **With `--facts <facts.json>` (Extraction/Artifact CI):** Runs `ValidateWithFactsAndConservation`, verifying 100% `FactsFile` resource accounting across all four buckets, checking that placements inside resource-backed containers (`VPC`, `GKE_CLUSTER`) match `FactResource.ParentURI` chains across all views, enforcing that every `VERIFIED` edge's `evidence_edge_ids` (including `View 0` on `layered_flow` manifests) form a connected non-heuristic directed walk in `facts.Edges` from `from.backed_by` to `to.backed_by` without shortcutting other components or containers (requiring `flow_kind: ADMIN` when backed solely by IAM/Workload Identity permissions), and gating `layered_flow` manifests on deterministic `VerifyConservation` (`Status == "PASS"`).
 
 ```bash
 # Clean-checkout Git PR CI (no facts.json needed)
@@ -188,8 +188,8 @@ gcp-arch validate architecture.yaml --facts facts.json --json
 ```
 
 Flags:
-- `--facts <FILE>`: Optional `v3` `facts.json` for provenance and 100% resource coverage verification.
-- `--json`: Emit `ValidationReport` JSON (`{"valid": true|false, "excluded_count": <N>, "errors": [...]}`; `"excluded_count"` is omitted when `0` and emitted whenever `excluded_resources` is non-empty, while text output appends `, <E> excluded` when exclusions exist).
+- `--facts <FILE>`: Optional `v3` `facts.json` for provenance, conservation, and 100% resource coverage verification.
+- `--json`: Emit `ValidationReport` JSON (`{"valid": true|false, "excluded_count": <N>, "conservation": {...}, "errors": [...]}`; `"excluded_count"` is omitted when `0`, `"conservation"` is emitted whenever `--facts` is supplied, and text output appends `, <E> excluded` and/or `, conservation=<STATUS> primary=<R>/<F>, view0=<V0>` when applicable).
 
 ### 5. `gcp-arch render <architecture.yaml>`
 
@@ -228,7 +228,7 @@ Flags:
 ```yaml
 schema_version: v1
 metadata:
-  generated_at: "2026-11-23T02:00:00Z"
+  generated_at: "2026-11-27T02:00:00Z"
   scopes:
     - projects/acme-cicd
 components:
@@ -238,11 +238,16 @@ components:
     icon_key: k8s_workload
     component_kind: WORKLOAD
     project_id: acme-cicd
+    topo_rank: 2
+    sub_rank: 1
     notes: Curated title for client handoff   # Preserved across Day-2 --reconcile
     backed_by:
       - uri: //container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd/k8s/namespaces/atlantis/apps/deployments/atlantis
         asset_type: apps.k8s.io/Deployment
         project_id: acme-cicd
+    badges:
+      - kind: sa
+        label: atlantis
     inline_meta:
       - label: Service Account
         value: atlantis@acme-cicd.iam
@@ -256,29 +261,38 @@ containers:
       - uri: //container.googleapis.com/projects/acme-cicd/locations/europe-southwest1-b/clusters/cicd
         asset_type: container.googleapis.com/Cluster
         project_id: acme-cicd
+transversal_items:
+  - id: sa_atlantis
+    category: IAM_SA
+    asset_type: iam.googleapis.com/ServiceAccount
+    display_name: atlantis@acme-cicd.iam.gserviceaccount.com
+    project_id: acme-cicd
+    attached_node_ids: [atlantis]
+    backed_by:
+      - uri: //iam.googleapis.com/projects/acme-cicd/serviceAccounts/atlantis@acme-cicd.iam.gserviceaccount.com
+        asset_type: iam.googleapis.com/ServiceAccount
+        project_id: acme-cicd
+structural_edges: []
+suppressed_plumbing_counts: {}
 excluded_resources: []
-rejected_edges:
-  - from: atlantis
-    to: sonarqube_db
-    reason: Suppress unrelated monitoring correlation
-acknowledged_edges:                           # Undrawn projected pairs settled across Day-2 --reconcile
-  - from: cloudbuild_triggers
-    to: atlantis
 views:
-  - id: gke_developer_platform
-    title: GKE Developer Platform & Ingress
-    archetype: landscape_matrix               # landscape_matrix | stage_pipeline | hub_spoke
-    accent_mode: RUNTIME                      # RUNTIME | CICD | MIXED
+  - id: view_0_system_index
+    title: System Architecture Overview
+    focus_summary: End-to-end CI/CD delivery and GKE tooling topology
+    include_transversal_panel: true
+    archetype: layered_flow                   # layered_flow (default) | landscape_matrix | stage_pipeline | hub_spoke
+    accent_mode: MIXED                        # RUNTIME | CICD | MIXED
     container_ids: [proj_acme_cicd, gke_cicd]
     placements:
       - component_id: atlantis
         container_id: gke_cicd
-        column: 1
+        column: 2
     edges:
       - from: atlantis
         to: acme_tfstate
-        verb: locks tfstate                   # <= 16 chars
+        verb: locks tfstate                   # <= 16 chars (synthesized <= 14)
         flow_kind: CICD                       # RUNTIME | CICD | ADMIN
+        semantic_tag: cicd                    # ingress | traffic | data | async | retry | dlq | cicd | peering | hybrid
         provenance: VERIFIED                  # VERIFIED | INFERRED
         evidence_edge_ids: ["c21876e6fb659711"]
 ```
@@ -290,14 +304,14 @@ When your environment changes after teams have edited titles, subtitles, or `not
 1. Re-run `gcp-arch extract --projects <p> -o facts.json`.
 2. Run `gcp-arch synthesize facts.json --reconcile architecture.yaml --vertex-project <ai-proj>` ([`internal/synth/reconcile.go`](internal/synth/reconcile.go)):
    - **Zero-delta fast path (all active URIs and functional/transversal edges match):** completes in `< 5 ms` with `0` Vertex AI calls (even without `--vertex-project`), refreshes `VERIFIED` edge provenance in place (downgrading vanished transient lineage to `INFERRED` with rationale footnote rather than deleting it), validates with `ValidateWithFactsAndConservation`, and leaves `architecture.yaml` untouched on disk when canonical YAML is unchanged.
-   - **Topology or edge delta detected:** runs the unified synthesis pipeline (deterministic containment skeleton + single bounded Vertex AI Gemini 4 call with automatic transient `genai.APIError` `429`/`503`/`504` retries in [`internal/synth/client.go`](internal/synth/client.go)), preserves curated human edits (`title`, `subtitle`, `notes` on matching components and `title`, `subtitle`, `focus_summary` on matching views), verifies 100% resource and functional-edge conservation, and atomically writes `architecture.yaml`.
+   - **Topology or edge delta detected:** runs the unified synthesis pipeline (deterministic containment skeleton + single bounded Vertex AI Gemini 4 call with automatic transient `genai.APIError` `429`/`503`/`504` retries in [`internal/synth/client.go`](internal/synth/client.go)), preserves curated human edits (`title`, `subtitle`, `notes` on matching components and `title`, non-auto `subtitle`, `notes` on matching views), verifies 100% resource and functional-edge conservation, and atomically writes `architecture.yaml`.
 3. Re-render via `gcp-arch render architecture.yaml -o out/`.
 
 ---
 
 ## Architecture & Source Map
 
-Design specifications: [`docs/designs/diagram-redesign-architecture.md`](docs/designs/diagram-redesign-architecture.md) and [`docs/designs/semantic-multi-view-pipeline.md`](docs/designs/semantic-multi-view-pipeline.md)
+Design specification: [`docs/designs/semantic-multi-view-pipeline.md`](docs/designs/semantic-multi-view-pipeline.md)
 
 | Area | Source | Responsibility |
 | :--- | :--- | :--- |
@@ -307,8 +321,9 @@ Design specifications: [`docs/designs/diagram-redesign-architecture.md`](docs/de
 | Stage 2 (`synthesize`) | [`internal/synth/`](internal/synth/) | Deterministic containment skeleton (`skeleton.go`, `containers.go`, `edges.go`, `ranking.go`, `assets.go`), Vertex AI Gemini 4 SDK client (`google.golang.org/genai`) & bounded annotator (`synth.go`, `client.go`, `annotate.go`), and Day-2 `--reconcile` (`reconcile.go`) |
 | Manifest & Validation | [`internal/manifest/`](internal/manifest/) | `architecture.yaml` (`v1`) schema, strict `KnownFields` YAML codec, deterministic conservation (`conservation.go`), and structural/provenance validation |
 | Stage 3 (`render`) | [`internal/render/`](internal/render/) | Offline HTML/CSS/SVG/JS generation (`prepare.go`, `html.go`), Hanan-grid A* orthogonal router, headless Chrome (`chromedp`) PDF/PNG export (`render.go`, `chrome.go`), and streaming PNG pixel & geometry verification (`geometry.go`, `pngcheck.go`) |
-| Embedded Icons | [`internal/icons/`](internal/icons/) | Embedded GCP and third-party SVG icon registry (`icons.yaml`) |
-| Atomic File I/O | [`internal/atomicfile/`](internal/atomicfile/) | Crash-safe atomic writes with explicit file and directory permissions |
+| Embedded Icons | [`internal/icons/`](internal/icons/) | `85` embedded GCP and third-party SVG icons (`icons.yaml`), XSS validation (`validate.go`), and `<symbol>` sprite compiler (`registry.go`) |
+| Atomic File I/O | [`internal/atomicfile/`](internal/atomicfile/) | Crash-safe atomic writes (`Write`, `WriteFunc`) with explicit file and directory permissions |
+| E2E & Catalog Suite | [`e2e/`](e2e/), [`testdata/catalog/`](testdata/catalog/README.md) | Offline catalog fixture & examples PNG streaming regressions (`go test ./e2e`) and live Vertex AI + Chrome catalog & stability verification (`GCP_ARCH_E2E=1 GCP_ARCH_VERTEX_PROJECT=<proj> go test -v ./e2e`) |
 
 ---
 

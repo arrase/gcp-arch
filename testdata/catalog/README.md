@@ -23,4 +23,4 @@ Realistic synthetic `FactsFile` (`schema_version: "v3"`) snapshots injected at t
 - Every fixture passes `extract.LoadFacts`, `extract.WriteFacts` byte-determinism, unique canonical AIP-122 URIs, `len(Resources) <= 500`, complete edge closure, valid `parent_uri` chains, and zero `extract.IsPlumbingAssetType` leaks in `Resources`.
 - [`manifest.json`](./manifest.json) pins `expected_primary_uris`, `expected_transversal_uris`, and `expected_functional_edge_ids` (non-heuristic functional dependencies between primary resources) for deterministic conservation checks in `e2e/catalog_fixtures_test.go` and `e2e/catalog_e2e_test.go`.
 - Offline fixture validation: `go test -count=1 ./e2e/...`
-- Live Vertex AI + Chrome E2E & stability gate: `GCP_ARCH_E2E=1 go test -v -count=1 -timeout 20m ./e2e/...`
+- Live Vertex AI + Chrome E2E & stability gate: `GCP_ARCH_E2E=1 GCP_ARCH_VERTEX_PROJECT=<project> go test -v -count=1 -timeout 20m ./e2e/...` (optional: `GCP_ARCH_VERTEX_LOCATION`, `GCP_ARCH_VERTEX_MODEL`)

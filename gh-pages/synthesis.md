@@ -59,7 +59,7 @@ Settings resolve in standard precedence order: **CLI flags > `~/.config/gcp-arch
 Both `synth.Synthesize` (Day 1, [`internal/synth/synth.go#L36-L66`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/synth.go#L36-L66)) and `synth.Reconcile` (Day 2, [`internal/synth/reconcile.go#L22-L57`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/reconcile.go#L22-L57)) enforce a hard ceiling of **`500` active resources** ([`MaxActiveResources = 500`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/synth.go#L14)):
 
 * If `len(facts.Resources) > 500`, Stage 2 returns `*synth.ScaleLimitError`, which maps directly to **CLI exit code `2`**.
-* **Zero wasted Vertex ADC calls:** [`cmd/gcp-arch/synthesize.go#L22-L55`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go#L22-L55) wraps the Vertex AI client in a `lazyModelClient` (`sync.Once`) that defers `NewVertexClient` initialization until `GenerateJSON` / `GenerateJSONWithUsage` is actually called. Scale-limit checks run *before* any Vertex AI credentials are loaded or billed.
+* **Zero wasted Vertex ADC calls:** [`cmd/gcp-arch/synthesize.go#L25-L56`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go#L25-L56) wraps the Vertex AI client in a `lazyModelClient` (`sync.Once`) that defers `NewVertexClient` initialization until `GenerateJSON` / `GenerateJSONWithUsage` is actually called. Scale-limit checks run *before* any Vertex AI credentials are loaded or billed.
 
 !!! warning "Exceeding the 500-Resource Ceiling"
     `gcp-arch` is engineered for focused, readable application-domain architecture dossiers rather than organization-wide inventory dumps. If extraction produces more than `500` active resources after Stage 1 plumbing folding, narrow your Stage 1 scope with `--projects` or `--folder` to a single application domain or platform boundary and re-run `gcp-arch extract`.
@@ -82,14 +82,14 @@ flowchart TD
 
 ### Stage 2A — Deterministic Containment Skeleton
 
-Without making any LLM call, [`buildSkeleton`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/skeleton.go#L67-L114) constructs the complete topological and visual skeleton directly from `facts.json`:
+Without making any LLM call, [`buildSkeleton`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/skeleton.go#L72-L132) constructs the complete topological and visual skeleton directly from `facts.json`:
 
 | Module | Source File | Deterministic Responsibilities |
 | :--- | :--- | :--- |
 | **Asset Classification** | [`internal/synth/assets.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/assets.go) | Maps GCP/Kubernetes/external asset types to `ComponentKind`, `icon_key`, exposure defaults, structural container types, transversal governance categories (`IAM_SA`, `KMS`, `SECRET`, `OBSERVABILITY`, `NAT_ROUTER`, `FIREWALL_ARMOR`, `VPC_ACCESS`), and retry/DLQ role overrides. |
-| **1:1 Plumbing Folds & Cohorts** | [`internal/synth/skeleton.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/skeleton.go) | Folds 1:1 plumbing (`k8s.io/Service -> Deployment`, `Ingress -> Workload/LB`, `BackendService -> ForwardingRule`, `VpnGateway -> Tunnel`, `PubSub Subscription -> Topic`), groups homogeneous cohorts (such as Cloud Build triggers and identically wired sibling resources with 100% `members` retention), attaches badges and `inline_meta`, and separates transversal governance items. |
-| **Containment Tree** | [`internal/synth/containers.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/containers.go) | Builds unlimited-depth containment (`ORG > FOLDER > PROJECT > VPC > REGION > SUBNET > EXPOSURE_ZONE / GKE_CLUSTER / PSA_ZONE / HYBRID_ZONE / EXTERNAL_ZONE`), keeps Shared VPC hosts consolidated as a single `VPC` box with service-project badges, and scopes container IDs by region to prevent collisions. |
-| **Edge Wiring & Orphan Bridging** | [`internal/synth/edges.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/edges.go) | Maps `FactEdge`s to component-to-component flows, attaches transversal badges/references, records strict `structural_edges` (VPC peering, Shared VPC, PSA, PSC), and bridges structural orphans (Private DNS, NCC Hub spokes, Hybrid VPN/Interconnect, CI staging) with explicit `INFERRED` rationale. |
+| **1:1 Plumbing Folds & Cohorts** | [`internal/synth/skeleton.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/skeleton.go) | Folds 1:1 plumbing (`k8s.io/Service -> apps.k8s.io/Deployment`, `networking.k8s.io/Ingress -> apps.k8s.io/Deployment` directly or via a folded `k8s.io/Service`, `compute.googleapis.com/BackendService -> GlobalForwardingRule / ForwardingRule`, `compute.googleapis.com/VpnGateway -> VpnTunnel`, `pubsub.googleapis.com/Subscription -> Topic`), groups homogeneous cohorts (such as Cloud Build triggers and identically wired sibling workloads with 100% `members` retention), attaches badges and `inline_meta`, and separates transversal governance items. |
+| **Containment Tree** | [`internal/synth/containers.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/containers.go) | Builds unlimited-depth containment (`ORG > FOLDER > PROJECT > VPC / SHARED_HUB > REGION > SUBNET > EXPOSURE_ZONE / GKE_CLUSTER / PSA_ZONE / HYBRID_ZONE / EXTERNAL_ZONE`), keeps Shared VPC hosts consolidated as a single `VPC` box with service-project badges, and scopes container IDs by region to prevent collisions. |
+| **Edge Wiring & Orphan Bridging** | [`internal/synth/edges.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/edges.go) | Maps `FactEdge`s to component-to-component flows, attaches transversal badges/references, records strict `structural_edges` (`1to1_plumbing_fold`, `intra_component_fold`, `psa_container_boundary`, `vpc_peering`, `vpc_peering_container_link`, `container_attachment`, `heuristic_correlation`, `structural_link`), and bridges structural orphans (Private DNS, NCC Hub spokes, Hybrid VPN/Interconnect, CI staging) with explicit `INFERRED` rationale. |
 | **Topological Ranking & Ordering** | [`internal/synth/ranking.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/ranking.go) | Runs Tarjan SCC detection (`tarjanCyclicSCCs`) to break cycles cleanly, applies longest-path `TopoRank` propagation (`propagateLongestTopoRank`) for left-to-right data/traffic flow, and runs 3-pass barycenter sub-ranking (`refineSubRanks`) to minimize wire crossings. |
 
 ---
@@ -132,17 +132,17 @@ Passing any unrecognized value fails immediately with CLI exit code `2` before l
 1. `focus_summary` — concise architectural overview sentence for `View 0`.
 2. `detail_views` — cohesive subsystem groupings (`view_slot` in `view_1..view_3`, `title`, `subtitle`, `focus_summary`, `node_ids`).
 3. `node_enrichments` — concise subtitles per `node_id`.
-4. `edge_enrichments` — action `verb` (`<= 14` chars, clamped to `<= 16` runes by `clampVerb`), `flow_kind` (`RUNTIME`, `CICD`, `ADMIN`), and `semantic_tag` (`ingress`, `traffic`, `data`, `async`, `retry`, `dlq`, `cicd`, `peering`, `hybrid`).
+4. `edge_enrichments` — action `verb` (prompted `<= 14` chars and clamped to `<= 14` UTF-8 runes by [`clampVerb`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L774-L797) at [`#L400`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L400) and [`#L420`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L420), staying within the `16`-rune `maxEdgeVerbRunes` schema ceiling in [`validate.go#L79`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/validate.go#L79)), `flow_kind` (`RUNTIME`, `CICD`, `ADMIN`), and `semantic_tag` (`ingress`, `traffic`, `data`, `async`, `retry`, `dlq`, `cicd`, `peering`, `hybrid`).
 
 ### Deterministic Locking & Multi-View Assembly
 
 [`assembleManifest`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L248-L315) enforces structural stability in Go so repeated Vertex AI runs preserve identical containment, titles, view IDs, and connectivity:
 
 * **Locked Structural Identity:** Node IDs, canonical titles, `backed_by` URIs, container tree, `TopoRank`, `SubRank`, `members`, `badges`, `transversal_items`, and `structural_edges` are owned by Go and cannot be altered or dropped by the model.
-* **Annotation Sanitization (`cleanAnnotation`):** Rejects/strips `"..."`, Unicode ellipsis `…` (`U+2026`), and stray trailing punctuation/quotes before writing labels into YAML ([`internal/synth/annotate.go#L722-L769`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L722-L769)).
+* **Annotation Sanitization (`cleanAnnotation`):** Rejects/strips `"..."`, Unicode ellipsis `…` (`U+2026`), and stray trailing punctuation/quotes before writing labels into YAML ([`internal/synth/annotate.go#L725-L772`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L725-L772)).
 * **Deterministic `View 0` (`view_0_system_index`):** Always placed at `views[0]` with `archetype: layered_flow`, placing **100%** of primary components sorted by `(TopoRank, SubRank, ID)` together with all functional edges and `include_transversal_panel: true`.
 * **Stage-Partitioned Detail Views (`targetDetailViewCount`):** Emits `0` detail views when `<= 14` primary nodes exist, `2` detail views (`view_1`, `view_2`) for `15..28` nodes, and `3` detail views (`view_1..view_3`) for `> 28` nodes ([`internal/synth/annotate.go#L156-L165`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L156-L165)). Any node omitted by the model is deterministically assigned via `stageDetailViewBucket` so every component appears in a detail view.
-* **Symmetric Cross-View `off_page_refs` (`populateOffPageRefs`):** Automatically derives matching `OUT` and `IN` badges on placements whenever an edge crosses between detail views ([`internal/synth/annotate.go#L593-L691`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L593-L691)).
+* **Symmetric Cross-View `off_page_refs` (`populateOffPageRefs`):** Automatically derives matching `OUT` and `IN` badges on placements whenever an edge crosses between detail views ([`internal/synth/annotate.go#L596-L694`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/annotate.go#L596-L694)).
 
 ---
 
@@ -153,13 +153,13 @@ Before `Synthesize` returns, [`manifest.ValidateWithFactsAndConservation`](https
 1. **100% Primary Resource Conservation:** Zero missing and zero hallucinated active `FactResource` URIs across `components[].backed_by`, `containers[].backed_by`, `transversal_items[].backed_by`, and `excluded_resources`.
 2. **100% Functional & Transversal Edge Accounting:** Every functional `FactEdge` in `facts.json` must be represented in `View 0` edges, component/container folded edges, `structural_edges`, or transversal item attachments—never silently dropped.
 3. **100% `View 0` Coverage (`view0=1.00`):** Every primary component in `manifest.components` is placed in `view_0_system_index`.
-4. **Strict Directed-Walk Provenance ([`EvidenceIndex.WalkIssue`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/evidence.go#L81-L120)):** Every `VERIFIED` edge's `evidence_edge_ids` must form a connected, non-heuristic directed walk in `facts.Edges` from `from.backed_by` to `to.backed_by` without traversing container-backed or third-component URIs (and requiring `flow_kind: ADMIN` when backed solely by IAM/Workload Identity edges).
+4. **Strict Directed-Walk Provenance ([`EvidenceIndex.WalkIssue`](https://github.com/arrase/gcp-arch/blob/main/internal/manifest/evidence.go#L83-L120)):** Every `VERIFIED` edge's `evidence_edge_ids` must form a connected, non-heuristic directed walk in `facts.Edges` from `from.backed_by` to `to.backed_by` without traversing container-backed or third-component URIs (and requiring `flow_kind: ADMIN` when backed solely by IAM/Workload Identity edges).
 
 ---
 
 ## Day-2 Reconciliation (`--reconcile`)
 
-Implemented in [`internal/synth/reconcile.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/reconcile.go): infrastructure evolves continuously while `architecture.yaml` accumulates human curation in Git (curated component/view titles, subtitles, `focus_summary`, and `notes`). `synth.Reconcile` implements two clean paths:
+Implemented in [`internal/synth/reconcile.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/reconcile.go): infrastructure evolves continuously while `architecture.yaml` accumulates human curation in Git (curated component and view titles, subtitles, and `notes`). `synth.Reconcile` implements two clean paths:
 
 ```mermaid
 flowchart TD
@@ -174,7 +174,7 @@ flowchart TD
 
     FastCheck -- "No (Delta Detected)" --> ClientCheck{"--vertex-project\nconfigured?"}
     ClientCheck -- "No" --> ErrClient["Usage error (exit 2)\npass --vertex-project"]
-    ClientCheck -- "Yes" --> DeltaSynth["Synthesize (1 bounded Vertex AI call)\n+ preserveCuratedEdits (titles, subtitles, notes, focus_summary)\n+ ValidateWithFactsAndConservation"]
+    ClientCheck -- "Yes" --> DeltaSynth["Synthesize (1 bounded Vertex AI call)\n+ preserveCuratedEdits (component & view titles, subtitles, notes)\n+ ValidateWithFactsAndConservation"]
     DeltaSynth --> WriteDelta["Atomic Write (0644)"]
 ```
 
@@ -183,7 +183,7 @@ flowchart TD
 Implemented in [`tryZeroDeltaFastPath`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/reconcile.go#L75-L106):
 
 * Verifies that the set of accounted URIs across `components`, `containers`, `transversal_items`, and `excluded_resources` matches `facts.Resources` 1:1 (`resourcesMatch`).
-* Runs [`refreshEdgeProvenance`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/reconcile.go#L180-L215) in place:
+* Runs [`refreshEdgeProvenance`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/reconcile.go#L176-L211) in place:
   * Valid `VERIFIED` edges remain untouched.
   * If a `VERIFIED` edge's `FactEdge.ID` shifted or broke, Go searches `idx.ShortestWalk(e.From, e.To)`; if a valid walk exists, `evidence_edge_ids` updates silently; otherwise the edge is downgraded to `INFERRED` with `"Not verifiable from facts.json: " + msg` rather than deleted.
   * Previously downgraded edges whose walk recovers are automatically restored to `VERIFIED`. Human-curated `INFERRED` edges are untouched.
@@ -195,7 +195,7 @@ Implemented in [`tryZeroDeltaFastPath`](https://github.com/arrase/gcp-arch/blob/
 When added/removed resources or new structural/functional edges are detected:
 
 * Runs `Synthesize` (deterministic skeleton + single bounded Vertex AI Gemini 4 call) to guarantee 100% resource and edge conservation against the updated `facts.json`.
-* Calls [`preserveCuratedEdits`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/reconcile.go#L217-L264) to carry forward human-curated `Title`, `Subtitle`, and `Notes` on every matching component ID, plus `Title`, `FocusSummary`, and non-auto-generated `Subtitle` on every matching view ID.
+* Calls [`preserveCuratedEdits`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/reconcile.go#L213-L261) to carry forward human-curated `Title`, `Subtitle`, and `Notes` on every matching component ID, plus `Title`, `Notes`, and non-auto-generated `Subtitle` on every matching view ID (`view_0_system_index`'s auto-generated `overviewSubtitle` refreshes automatically unless manually customized; `focus_summary` is regenerated from the latest synthesis rather than carried forward).
 * Validates with `ValidateWithFactsAndConservation` and writes atomically via `manifest.Write` (`0644`).
 
 ---

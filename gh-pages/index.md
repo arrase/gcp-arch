@@ -159,7 +159,7 @@ gcp-arch render architecture.yaml --format pdf,png,html -o out/
     gcp-arch synthesize facts.json --reconcile architecture.yaml --vertex-project my-vertex-project
     gcp-arch render architecture.yaml -o out/
     ```
-    When all active resource URIs and conserved functional/transversal edges match (ignoring transient `heuristic: true` monitoring fluctuations), `--reconcile` finishes on the zero-delta fast path in **`< 5 ms` with `0` Vertex AI calls** without needing `--vertex-project`, running `refreshEdgeProvenance` in place and leaving `architecture.yaml` untouched when canonical bytes are unchanged ([`internal/synth/reconcile.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/reconcile.go#L75-L106), [`cmd/gcp-arch/synthesize.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go#L205-L234)).
+    When all active resource URIs and conserved functional/transversal edges match (ignoring transient `heuristic: true` monitoring fluctuations), `--reconcile` finishes on the zero-delta fast path in **`< 5 ms` with `0` Vertex AI calls** without needing `--vertex-project`, running `refreshEdgeProvenance` in place and leaving `architecture.yaml` untouched when canonical bytes are unchanged ([`internal/synth/reconcile.go`](https://github.com/arrase/gcp-arch/blob/main/internal/synth/reconcile.go#L75-L106), [`cmd/gcp-arch/synthesize.go`](https://github.com/arrase/gcp-arch/blob/main/cmd/gcp-arch/synthesize.go#L206-L235)).
 
 ---
 
@@ -207,7 +207,7 @@ flowchart LR
     Extract -->|"0600 gitignored"| Facts["facts.json (v3)"]
     Facts -->|"<= 500 active resources\ndeterministic skeleton"| Synth["Stage 2: synthesize"]
     Vertex["Vertex AI Gemini 4\n(--vertex-project, google.golang.org/genai)"] <-->|"Single bounded call\nor --reconcile delta"| Synth
-    Synth -->|"Conservation gate\nValidateWithFacts"| Manifest["architecture.yaml (v1)\nGit-tracked"]
+    Synth -->|"Conservation gate\nValidateWithFactsAndConservation"| Manifest["architecture.yaml (v1)\nGit-tracked"]
     Manifest -->|"offline, zero network"| Validate["validate"]
     Manifest -->|"offline, embedded fonts & icons"| Render["Stage 3: render\n(Headless Chrome + router.js)"]
     Render --> Deliverables["architecture.pdf (1:1)\nviews/*.png (<= 2.0x)\narchitecture.html"]
