@@ -132,7 +132,8 @@ func verifyResourcesAndParentChains(
 		resByURI[r.URI] = r
 
 		// Baseline acme_cicd_v3 carries 2 out-of-scope Project stubs with is_external: true.
-		if extract.IsPlumbingAssetType(r.AssetType) && !(mc.Category == "baseline" && r.IsExternal && r.AssetType == "cloudresourcemanager.googleapis.com/Project") {
+		isAllowedBaselineProject := mc.Category == "baseline" && r.IsExternal && r.AssetType == "cloudresourcemanager.googleapis.com/Project"
+		if extract.IsPlumbingAssetType(r.AssetType) && !isAllowedBaselineProject {
 			t.Fatalf("plumbing asset type %q leaked into active resources (%s)", r.AssetType, r.URI)
 		}
 		if manifest.TransversalAccountingAssetTypes[r.AssetType] {

@@ -435,9 +435,10 @@ func (cb *containerBuilder) placeSubnetOrConnectorResource(r extract.FactResourc
 	subCID := cb.ensureSubnet(subRes)
 	exp := classifyResourceExposure(r, cb.subExposureByURI[subnetURI])
 	zoneTitle, order := "Private Workloads", 64
-	if exp == "PUBLIC" {
+	switch exp {
+	case "PUBLIC":
 		zoneTitle, order = "Public Exposure", 61
-	} else if exp == "INTERNAL" {
+	case "INTERNAL":
 		zoneTitle, order = "Internal Exposure", 63
 	}
 	return cb.ensureZone(subCID, manifest.ContainerExposureZone, exp, "", zoneTitle, "", order), exp, true

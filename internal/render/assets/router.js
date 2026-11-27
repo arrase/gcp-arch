@@ -2172,10 +2172,10 @@
         if (!rc) return;
         const txt = g.querySelector('text');
         const lbl = txt ? txt.textContent : '';
-        const rx = parseFloat(rc.getAttribute('x') || '0');
-        const ry = parseFloat(rc.getAttribute('y') || '0');
-        const rw = parseFloat(rc.getAttribute('width') || '0');
-        const rh = parseFloat(rc.getAttribute('height') || '0');
+        const rx = Number.parseFloat(rc.getAttribute('x') || '0');
+        const ry = Number.parseFloat(rc.getAttribute('y') || '0');
+        const rw = Number.parseFloat(rc.getAttribute('width') || '0');
+        const rh = Number.parseFloat(rc.getAttribute('height') || '0');
         labelBoxes.push({
           id: `pill_${pi}_${lbl}`,
           x: Math.round((rx + dx) * 100) / 100,
@@ -2267,7 +2267,7 @@
       return res;
     }
 
-    if (document.fonts && document.fonts.ready) {
+    if (document.fonts) {
       await document.fonts.ready;
     }
     await nextDoubleAnimationFrame();

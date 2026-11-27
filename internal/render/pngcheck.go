@@ -224,61 +224,71 @@ func parsePNGHeader(br *bufio.Reader) (*pngHeader, error) {
 
 	hdr := &pngHeader{}
 	ihdrSeen := false
-	var chunkHdr [8]byte
 	for {
-		if _, err := io.ReadFull(br, chunkHdr[:]); err != nil {
-			return nil, fmt.Errorf("read chunk header: %w", err)
+		done, err := parsePNGChunk(br, hdr, &ihdrSeen)
+		if err != nil {
+			return nil, err
 		}
-		length := binary.BigEndian.Uint32(chunkHdr[:4])
-		if length > 0x7fffffff {
-			return nil, fmt.Errorf("png chunk length %d exceeds limit", length)
-		}
-		typ := string(chunkHdr[4:8])
-
-		switch typ {
-		case "IHDR":
-			if ihdrSeen {
-				return nil, fmt.Errorf("duplicate IHDR chunk")
-			}
-			if err := parseIHDRChunk(br, length, hdr); err != nil {
-				return nil, err
-			}
-			ihdrSeen = true
-		case "PLTE":
-			if !ihdrSeen {
-				return nil, fmt.Errorf("PLTE before IHDR")
-			}
-			if err := parsePLTEChunk(br, length, hdr); err != nil {
-				return nil, err
-			}
-		case "tRNS":
-			if !ihdrSeen {
-				return nil, fmt.Errorf("tRNS before IHDR")
-			}
-			if err := parseTRNSChunk(br, length, hdr); err != nil {
-				return nil, err
-			}
-		case "IDAT":
-			if !ihdrSeen {
-				return nil, fmt.Errorf("IDAT before IHDR")
-			}
-			if hdr.colorType == 3 && hdr.paletteLen == 0 {
-				return nil, fmt.Errorf("indexed png missing PLTE")
-			}
-			hdr.idatLen = length
-			hdr.idatCRC = crc32.NewIEEE()
-			_, _ = hdr.idatCRC.Write(chunkHdr[4:8])
+		if done {
 			return hdr, nil
-		case "IEND":
-			return nil, fmt.Errorf("png missing IDAT chunk")
-		default:
-			if !ihdrSeen {
-				return nil, fmt.Errorf("expected IHDR first, got %q", typ)
-			}
-			if _, err := io.CopyN(io.Discard, br, int64(length)+4); err != nil {
-				return nil, fmt.Errorf("skip chunk %q: %w", typ, err)
-			}
 		}
+	}
+}
+
+func readPNGChunkHeader(br *bufio.Reader) (string, uint32, [4]byte, error) {
+	var chunkHdr [8]byte
+	if _, err := io.ReadFull(br, chunkHdr[:]); err != nil {
+		return "", 0, [4]byte{}, fmt.Errorf("read chunk header: %w", err)
+	}
+	length := binary.BigEndian.Uint32(chunkHdr[:4])
+	if length > 0x7fffffff {
+		return "", 0, [4]byte{}, fmt.Errorf("png chunk length %d exceeds limit", length)
+	}
+	var rawType [4]byte
+	copy(rawType[:], chunkHdr[4:8])
+	return string(rawType[:]), length, rawType, nil
+}
+
+func parsePNGChunk(br *bufio.Reader, hdr *pngHeader, ihdrSeen *bool) (bool, error) {
+	typ, length, rawType, err := readPNGChunkHeader(br)
+	if err != nil {
+		return false, err
+	}
+	if typ == "IHDR" {
+		if *ihdrSeen {
+			return false, fmt.Errorf("duplicate IHDR chunk")
+		}
+		if err := parseIHDRChunk(br, length, hdr); err != nil {
+			return false, err
+		}
+		*ihdrSeen = true
+		return false, nil
+	}
+	if typ == "IEND" {
+		return false, fmt.Errorf("png missing IDAT chunk")
+	}
+	if !*ihdrSeen {
+		return false, fmt.Errorf("expected IHDR first, got %q", typ)
+	}
+
+	switch typ {
+	case "PLTE":
+		return false, parsePLTEChunk(br, length, hdr)
+	case "tRNS":
+		return false, parseTRNSChunk(br, length, hdr)
+	case "IDAT":
+		if hdr.colorType == 3 && hdr.paletteLen == 0 {
+			return false, fmt.Errorf("indexed png missing PLTE")
+		}
+		hdr.idatLen = length
+		hdr.idatCRC = crc32.NewIEEE()
+		_, _ = hdr.idatCRC.Write(rawType[:])
+		return true, nil
+	default:
+		if _, err := io.CopyN(io.Discard, br, int64(length)+4); err != nil {
+			return false, fmt.Errorf("skip chunk %q: %w", typ, err)
+		}
+		return false, nil
 	}
 }
 
@@ -781,53 +791,45 @@ func accumulateRowPixel(c, bg color.NRGBA, seen *[4096]bool, nonBG, highContrast
 	}
 }
 
-func (a *pngRowAnalyzer) scanRowBorders(y int, cur []byte, hdr *pngHeader) {
-	bg := a.bg
-	if y == 0 {
-		for x := range a.w {
-			if pngColorDiff(decodeRowPixel(cur, x, hdr), bg) > pngBGColorDelta {
-				a.top0++
-			}
+func (a *pngRowAnalyzer) countRowBorderHits(cur []byte, hdr *pngHeader, x0, x1 int) int {
+	hits := 0
+	for x := x0; x < x1; x++ {
+		if pngColorDiff(decodeRowPixel(cur, x, hdr), a.bg) > pngBGColorDelta {
+			hits++
 		}
+	}
+	return hits
+}
+
+func (a *pngRowAnalyzer) isBorderHit(cur []byte, hdr *pngHeader, x int) int {
+	if pngColorDiff(decodeRowPixel(cur, x, hdr), a.bg) > pngBGColorDelta {
+		return 1
+	}
+	return 0
+}
+
+func (a *pngRowAnalyzer) scanRowBorders(y int, cur []byte, hdr *pngHeader) {
+	if y == 0 {
+		a.top0 += a.countRowBorderHits(cur, hdr, 0, a.w)
 	}
 	if y == a.h-1 {
-		for x := range a.w {
-			if pngColorDiff(decodeRowPixel(cur, x, hdr), bg) > pngBGColorDelta {
-				a.bot0++
-			}
-		}
+		a.bot0 += a.countRowBorderHits(cur, hdr, 0, a.w)
 	}
-	if pngColorDiff(decodeRowPixel(cur, 0, hdr), bg) > pngBGColorDelta {
-		a.left0++
-	}
-	if pngColorDiff(decodeRowPixel(cur, a.w-1, hdr), bg) > pngBGColorDelta {
-		a.right0++
-	}
+	a.left0 += a.isBorderHit(cur, hdr, 0)
+	a.right0 += a.isBorderHit(cur, hdr, a.w-1)
 
 	if a.w < 10 || a.h < 10 {
 		return
 	}
 	if y == 1 {
-		for x := 1; x < a.w-1; x++ {
-			if pngColorDiff(decodeRowPixel(cur, x, hdr), bg) > pngBGColorDelta {
-				a.top1++
-			}
-		}
+		a.top1 += a.countRowBorderHits(cur, hdr, 1, a.w-1)
 	}
 	if y == a.h-2 {
-		for x := 1; x < a.w-1; x++ {
-			if pngColorDiff(decodeRowPixel(cur, x, hdr), bg) > pngBGColorDelta {
-				a.bot1++
-			}
-		}
+		a.bot1 += a.countRowBorderHits(cur, hdr, 1, a.w-1)
 	}
 	if y >= 1 && y <= a.h-2 {
-		if pngColorDiff(decodeRowPixel(cur, 1, hdr), bg) > pngBGColorDelta {
-			a.left1++
-		}
-		if pngColorDiff(decodeRowPixel(cur, a.w-2, hdr), bg) > pngBGColorDelta {
-			a.right1++
-		}
+		a.left1 += a.isBorderHit(cur, hdr, 1)
+		a.right1 += a.isBorderHit(cur, hdr, a.w-2)
 	}
 }
 

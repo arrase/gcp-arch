@@ -434,7 +434,11 @@ func TestSynthesizePromptTrimmingAndAnnotationBoundaries(t *testing.T) {
 		t.Fatal("schema must not request deterministic icon_key")
 	}
 
-	m := result.Manifest
+	assertAnnotationBoundaries(t, result.Manifest, reg)
+}
+
+func assertAnnotationBoundaries(t *testing.T, m *manifest.Manifest, reg *icons.Registry) {
+	t.Helper()
 	for _, c := range m.Components {
 		if !reg.Has(c.IconKey) {
 			t.Errorf("component %q has invalid icon %q", c.ID, c.IconKey)
