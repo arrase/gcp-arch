@@ -3679,3 +3679,43 @@ func TestCloudTasksQueueStructuralRefs(t *testing.T) {
 		t.Errorf("expected q-http-fn oauthToken service_account attribute, got %+v", qRes)
 	}
 }
+
+func TestVPCPeeringInScopeAndMissingPeer(t *testing.T) {
+	vpcA := "//compute.googleapis.com/projects/p1/global/networks/vpc-a"
+	vpcB := "//compute.googleapis.com/projects/p1/global/networks/vpc-b"
+
+	assetHandler := func(_ context.Context, _ *assetpb.ListAssetsRequest) (*assetpb.ListAssetsResponse, error) {
+		return &assetpb.ListAssetsResponse{
+			ReadTime: timestamppb.Now(),
+			Assets: []*assetpb.Asset{
+				{Name: "//cloudresourcemanager.googleapis.com/projects/p1", AssetType: "cloudresourcemanager.googleapis.com/Project", Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{"projectId": "p1", "projectNumber": "1001"})}},
+				{Name: vpcA, AssetType: "compute.googleapis.com/Network", Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{})}},
+				{
+					Name:      vpcB,
+					AssetType: "compute.googleapis.com/Network",
+					Resource: &assetpb.Resource{Data: mustStruct(t, map[string]any{
+						"peerings": []any{
+							map[string]any{"name": "peer-to-a", "network": "projects/p1/global/networks/vpc-a", "state": "ACTIVE"},
+							map[string]any{"name": "peer-missing", "network": "projects/p1/global/networks/missing-vpc", "state": "ACTIVE"},
+						},
+					})},
+				},
+			},
+		}, nil
+	}
+
+	clients, _ := newTestClients(t, assetHandler, nil, nil, nil)
+	facts, err := Extract(context.Background(), clients, ExtractOptions{Scopes: []string{"projects/p1"}})
+	if err != nil {
+		t.Fatalf("Extract error: %v", err)
+	}
+
+	if !hasEdgeDetail(facts.Edges, vpcA, vpcB, EdgeVPCPeering, "peer-to-a") {
+		t.Errorf("expected canonical in-scope peering edge %s -> %s, got %+v", vpcA, vpcB, facts.Edges)
+	}
+	for _, e := range facts.Edges {
+		if e.Detail == "peer-missing" {
+			t.Errorf("peering to missing VPC in an in-scope project must not emit edge: %+v", e)
+		}
+	}
+}

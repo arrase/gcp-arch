@@ -119,13 +119,26 @@ func permissionOnly(edges []extract.FactEdge) bool {
 	return true
 }
 
+type walkStep struct {
+	fromURI string
+	edgeID  string
+}
+
+func reconstructWalk(parent map[string]walkStep, cur, lastEdgeID string) []string {
+	path := []string{lastEdgeID}
+	for s, ok := parent[cur]; ok; s, ok = parent[s.fromURI] {
+		path = append(path, s.edgeID)
+	}
+	slices.Reverse(path)
+	return path
+}
+
 // ShortestWalk returns the evidence edge IDs of the shortest usable directed walk from component
 // from to component to, or nil when none exists.
 func (x *EvidenceIndex) ShortestWalk(from, to string) []string {
-	type step struct{ fromURI, edgeID string }
 	queue := slices.Sorted(maps.Keys(x.backed[from]))
 	visited := maps.Clone(x.backed[from])
-	parent := make(map[string]step)
+	parent := make(map[string]walkStep)
 	for len(queue) > 0 {
 		cur := queue[0]
 		queue = queue[1:]
@@ -134,16 +147,11 @@ func (x *EvidenceIndex) ShortestWalk(from, to string) []string {
 				continue
 			}
 			if x.backed[to][fe.ToURI] {
-				path := []string{fe.ID}
-				for s, ok := parent[cur]; ok; s, ok = parent[s.fromURI] {
-					path = append(path, s.edgeID)
-				}
-				slices.Reverse(path)
-				return path
+				return reconstructWalk(parent, cur, fe.ID)
 			}
 			if !visited[fe.ToURI] {
 				visited[fe.ToURI] = true
-				parent[fe.ToURI] = step{fromURI: cur, edgeID: fe.ID}
+				parent[fe.ToURI] = walkStep{fromURI: cur, edgeID: fe.ID}
 				queue = append(queue, fe.ToURI)
 			}
 		}
